@@ -25,6 +25,3 @@ def sample(draws=1000, tune=500, as_xarray=True):
     else:
         return np.array(array[Tune])
                     
-        
-def traceplot(trace):
-    for 

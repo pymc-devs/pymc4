@@ -1,13 +1,9 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import tensorflow as tf
 import seaborn as sns
 import threading
 import matplotlib.pyplot as plt
 
-############################
+
 class Context(object):
     """Functionality for objects that put themselves in a context using
     the `with` statement.
@@ -21,6 +17,7 @@ class Context(object):
     def __exit__(self, typ, value, traceback):
         type(self).get_contexts().pop()
 
+
 def withparent(meth):
     """Helper wrapper that passes calls to parent's instance"""
     def wrapped(self, *args, **kwargs):
@@ -33,6 +30,7 @@ def withparent(meth):
     # need to fix that improper behaviour
     wrapped.__name__ = meth.__name__
     return wrapped
+
 
 class treedict(dict):
     """A dict that passes mutable extending operations used in Model
@@ -59,7 +57,7 @@ class treedict(dict):
                     self.parent.__contains__(item))
         else:
             return dict.__contains__(self, item)
-################################
+
 
 class Model(Context):
     def __new__(cls, *args, **kwargs):
@@ -71,23 +69,22 @@ class Model(Context):
         else:
             instance.parent = None
         return instance
-    
+
     def __init__(self, name="", model=None, ):
         self.name = name
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
         else:
             self.named_vars = treedict()
-        
-    
+
     @property
     def model(self):
         return self
-    
+
     @property
     def decription(self):
-        return 
-    
+        return
+
     @classmethod
     def get_contexts(cls):
         # no race-condition here, cls.contexts is a thread-local object
@@ -103,14 +100,14 @@ class Model(Context):
             return cls.get_contexts()[-1]
         except IndexError:
             raise TypeError("No context on context stack")
-            
-    
+
     def add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""
         if self.named_vars.tree_contains(var.name):
             raise ValueError(
                 "Variable name {} already exists.".format(var.name))
         self.named_vars[var.name] = var
+
 
 def modelcontext(model):
     """return the given model or try to find it in the context if there was

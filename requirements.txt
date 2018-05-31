@@ -1,0 +1,5 @@
+tensorflow==1.8.0
+xarray==0.10.4
+numpy==1.14.3
+tqdm==4.23.3
+tfp-nightly==0.0.1.dev20180515

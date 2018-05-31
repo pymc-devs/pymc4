@@ -1,6 +1,8 @@
 from tensorflow_probability import edward2 as ed
 from pymc4 import Model
 
+__all__ = ["RandomVariable"]
+
 
 class RandomVariable(ed.RandomVariable):
 

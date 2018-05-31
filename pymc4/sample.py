@@ -5,6 +5,8 @@ import xarray as xr
 from pymc4 import Model
 import tqdm
 
+__all__ = ["sample"]
+
 
 def sample(draws=1000, tune=500, as_xarray=True):
     """To sample from a defined model with one or more random variable.

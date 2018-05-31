@@ -3,6 +3,8 @@ import seaborn as sns
 import threading
 import matplotlib.pyplot as plt
 
+__all__ = ["Model"]
+
 
 class Context(object):
     """Functionality for objects that put themselves in a context using
@@ -116,11 +118,3 @@ def modelcontext(model):
     if model is None:
         return Model.get_context()
     return model
-
-
-def plot(trace):
-    for i in range(trace.shape[0]):
-        sns.distplot(trace.numpy()[i])
-        plt.show()
-        plt.plot(trace.numpy()[i])
-        plt.show()

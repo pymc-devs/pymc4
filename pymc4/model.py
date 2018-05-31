@@ -1,4 +1,3 @@
-import tensorflow as tf
 import threading
 
 __all__ = ["Model"]
@@ -19,7 +18,7 @@ class Context(object):
 
 
 class Model(Context):
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, **kwargs):
         instance = super(Model, cls).__new__(cls)
         if kwargs.get('model') is not None:
             instance.parent = kwargs.get('model')
@@ -32,6 +31,7 @@ class Model(Context):
     def __init__(self, name="", model=None, ):
         self.name = name
         self.named_vars = {}
+        self.parent = model
 
     @property
     def model(self):

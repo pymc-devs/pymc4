@@ -22,7 +22,7 @@ install:
 
 script:
   - pylint pymc4/
-  - pytest -xv --cov=pymc4/ test/
+  - python -m pytest -xv --cov=pymc4/ test/
 
 after_success:
   - coveralls

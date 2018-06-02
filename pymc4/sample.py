@@ -12,7 +12,7 @@ def sample(draws=1000, tune=500, as_xarray=True):
     """
     model = Model.get_context()
     array = []
-    with tf.Session() as sess:
+    with tf.Session() as __:
         for _ in tqdm.trange(draws+tune):
 
             # Sampling methods are applied here.

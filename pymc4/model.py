@@ -1,6 +1,6 @@
 import threading
 
-__all__ = ["Model"]
+__all__ = ["Model", "modelcontext"]
 
 
 class Context(object):

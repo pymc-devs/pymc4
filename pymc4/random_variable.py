@@ -13,8 +13,12 @@ class RandomVariable(ed.RandomVariable):
             sample_shape=(),
             value=None,
     ):
+        self.context_stack = Model.get_contexts()
         self.model = Model.get_context()
-        self.name = name
+        if self.model.name is not "":
+            self.name = self.model.name + "_" + name
+        else:
+            self.name = name
 
         super(RandomVariable, self).__init__(
             distribution,
@@ -22,4 +26,5 @@ class RandomVariable(ed.RandomVariable):
             value,
         )
 
-        self.model.add_random_variable(self)
+        for model in self.context_stack:
+            model.add_random_variable(self)

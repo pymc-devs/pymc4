@@ -15,7 +15,7 @@ class RandomVariable(ed.RandomVariable):
     ):
         self.context_stack = Model.get_contexts()
         self.model = Model.get_context()
-        if self.model.name is not "":
+        if self.model.name != "":
             self.name = self.model.name + "_" + name
         else:
             self.name = name

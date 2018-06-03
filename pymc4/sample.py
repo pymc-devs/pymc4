@@ -24,5 +24,5 @@ def sample(draws=1000, tune=500, as_xarray=True):
                 data=array[tune:],
                 dims=("Val", "RV"),
                 coords={"RV": list(model.named_vars.keys())}))
-    else:
-        return np.array(array[tune:])
+
+    return np.array(array[tune:])

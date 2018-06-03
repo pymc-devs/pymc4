@@ -3,7 +3,7 @@ import threading
 __all__ = ["Model", "modelcontext"]
 
 
-class Context(object):
+class Context(object): # pylint: disable=too-few-public-methods
     """Functionality for objects that put themselves in a context using
     the `with` statement.
     """

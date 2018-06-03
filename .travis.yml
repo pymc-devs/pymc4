@@ -21,7 +21,7 @@ install:
   - pip install coveralls
 
 script:
-  - pylint pymc4/
+  - python -m pylint pymc4/
   - python -m pytest -xv --cov=pymc4/ test/
 
 after_success:

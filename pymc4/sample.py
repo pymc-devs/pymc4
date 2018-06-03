@@ -19,11 +19,10 @@ def sample(draws=1000, tune=500, as_xarray=True):
             # Directly using tensorflow's default sampling method for now
             array.append([i.eval() for i in model.named_vars.values()])
     if as_xarray:
-        return (xr.DataArray(
-            data=array[tune:],
-            dims=("Val", "RV"),
-            coords={"RV": list(model.named_vars.keys())}
-                    )
-               )
+        return (
+            xr.DataArray(
+                data=array[tune:],
+                dims=("Val", "RV"),
+                coords={"RV": list(model.named_vars.keys())}))
     else:
         return np.array(array[tune:])

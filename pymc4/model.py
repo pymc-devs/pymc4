@@ -55,7 +55,7 @@ class Model(Context):
         try:
             return cls.get_contexts()[-1]
         except IndexError:
-            raise TypeError("No context on context stack")
+            raise TypeError("This must be called from inside a Model context manager")
 
     def add_random_variable(self, var):
         """Add a random variable to the named variables of the model."""

@@ -1,9 +1,7 @@
-import tensorflow_probability as tfp
+from tensorflow_probability import distributions as tfd
 import pymc4 as pm
 from pymc4.random_variable import RandomVariable as RV
-tfd = tfp.distributions
-tfb = tfp.distributions.bijectors
-ed = tfp.edward2
+
 
 class NewModel(pm.Model):
     def __init__(self, name='', model=None):

@@ -37,10 +37,6 @@ class Model(Context):
     def model(self):
         return self
 
-    @property
-    def decription(self):
-        return
-
     @classmethod
     def get_contexts(cls):
         # no race-condition here, cls.contexts is a thread-local object

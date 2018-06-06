@@ -28,7 +28,7 @@ class Model(Context):
             instance.parent = None
         return instance
 
-    def __init__(self, name="", model=None, ):
+    def __init__(self, name="", model=None):
         self.name = name
         self.named_vars = {}
         self.parent = model

@@ -1,74 +1,51 @@
-import threading
+import tensorflow_probability as tfp
+import tensorflow as tf
+from tensorflow_probability import edward2 as ed
+from pymc4.util import interceptors, graph as graph_utils
 
-__all__ = ["Model", "modelcontext"]
 
-
-class Context(object): # pylint: disable=too-few-public-methods
-    """Functionality for objects that put themselves in a context using
-    the `with` statement.
+class InputDistribution(tf.contrib.distributions.Deterministic):
     """
-    contexts = threading.local()
-
-    def __enter__(self):
-        type(self).get_contexts().append(self)
-        return self
-
-    def __exit__(self, typ, value, traceback):
-        type(self).get_contexts().pop()
+    detectable class for input
+    is input <==> isinstance(rv.distribution, InputDistribution)
+    """
 
 
-class Model(Context):
-    def __new__(cls, **kwargs):
-        instance = super(Model, cls).__new__(cls)
-        if kwargs.get('model') is not None:
-            instance.parent = kwargs.get('model')
-        elif cls.get_contexts():
-            instance.parent = cls.get_contexts()[-1]
-        else:
-            instance.parent = None
-        return instance
+def Input(name, shape, dtype=None):
+    return ed.as_random_variable(InputDistribution(name=name, shape=shape, dtype=dtype))
 
-    def __init__(self, name="", model=None, ):
+
+class Model(object):
+    def __init__(self, name=None, graph=None, session=None, **config):
+        self.__dict__.update(config)
         self.name = name
-        self.named_vars = {}
-        self.parent = model
+        self._f = None
+        self._variables = None
+        self._observed = dict()
+        if session is None:
+            session = tf.Session(graph=graph)
+        self.session = session
 
     @property
-    def model(self):
+    def graph(self):
+        return self.session.graph
+
+    def define(self, f):
+        self._f = f
+        shapes_collector = interceptors.CollectShapes()
+        def not_input_dependent(collector, rv):
+            return len(graph_utils.inputs([rv])) == 0
+        rv_collector = interceptors.CollectVariables(filter=not_input_dependent)
+        with self.graph.as_default(), ed.interception(interceptors.Chain(shapes_collector, rv_collector)):
+            f(self)
+        self._variables = shapes_collector.result
+        with self.session.as_default():
+            test_vals = rv_collector
+
+    def observe(self, **observations):
+        self._observed = observations
         return self
 
-    @property
-    def decription(self):
-        return
-
-    @classmethod
-    def get_contexts(cls):
-        # no race-condition here, cls.contexts is a thread-local object
-        # be sure not to override contexts in a subclass however!
-        if not hasattr(cls.contexts, 'stack'):
-            cls.contexts.stack = []
-        return cls.contexts.stack
-
-    @classmethod
-    def get_context(cls):
-        """Return the deepest context on the stack."""
-        try:
-            return cls.get_contexts()[-1]
-        except IndexError:
-            raise TypeError("No context on context stack")
-
-    def add_random_variable(self, var):
-        """Add a random variable to the named variables of the model."""
-        if var.name in self.named_vars:
-            raise ValueError(
-                "Variable name {} already exists.".format(var.name))
-        self.named_vars[var.name] = var
-
-
-def modelcontext(model):
-    """return the given model or try to find it in the context if there was
-    none supplied.
-    """
-    if model is None:
-        return Model.get_context()
-    return model
+    def reset(self):
+        self._observed = dict()
+        return self

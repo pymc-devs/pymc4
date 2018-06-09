@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import xarray as xr
 import tqdm
-from pymc4 import Model
+from pymc4.model import Model
 
 __all__ = ["sample"]
 
@@ -12,7 +12,7 @@ def sample(draws=1000, tune=500, as_xarray=True):
     """
     model = Model.get_context()
     array = []
-    with tf.Session() as __:
+    with tf.Session():
         for _ in tqdm.trange(draws+tune):
 
             # Sampling methods are applied here.

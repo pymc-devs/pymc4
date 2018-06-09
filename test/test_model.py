@@ -1,6 +1,6 @@
 import tensorflow_probability as tfp
 import pymc4 as pm
-from pymc4.random_variable import RandomVariable as RV
+from pymc4._interceptors import RandomVariable as RV
 tfd = tfp.distributions
 tfb = tfp.distributions.bijectors
 ed = tfp.edward2

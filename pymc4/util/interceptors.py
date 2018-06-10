@@ -3,11 +3,13 @@ import tensorflow as tf
 
 __all__ = [
     'SetState',
-    'CollectShapes',
+    'CollectVariablesInfo',
     'CollectVariables',
     'Chain',
     'CollectLogProb'
 ]
+
+VariableDescription = collections.namedtuple('VariableDescription', 'Dist,shape')
 
 
 class Interceptor(object):
@@ -18,9 +20,7 @@ class Interceptor(object):
         if kwargs.get('name') is None:
             raise SyntaxError('Every random variable should have a name')
         f, args, kwargs = self.before(f, *args, **kwargs)
-        observed = kwargs.pop('observed', False)
         rv = f(*args, **kwargs)
-        kwargs['observed'] = observed
         return self.after(rv, *args, **kwargs)
 
     def before(self, f, *args, **kwargs):
@@ -28,6 +28,19 @@ class Interceptor(object):
 
     def after(self, rv, *args, **kwargs):
         return rv
+
+
+class Generic(Interceptor):
+    def __init__(self, before=None, after=None, state=None):
+        self._before = before or Interceptor.before
+        self._after = after or Interceptor.after
+        self.state = state or {}
+
+    def before(self, f, *args, **kwargs):
+        return self._before(self.state, f, *args, **kwargs)
+
+    def after(self, f, *args, **kwargs):
+        return self._after(self.state, f, *args, **kwargs)
 
 
 class Chain(Interceptor):
@@ -65,14 +78,14 @@ class SetState(Interceptor):
         return f, args, kwargs
 
 
-class CollectShapes(Interceptor):
+class CollectVariablesInfo(Interceptor):
     def __init__(self):
         self.result = collections.OrderedDict()
 
     def after(self, rv, *args, **kwargs):
-        name = kwargs.get("name")
+        name = kwargs["name"]
         if name not in self.result:
-            self.result[name] = rv.shape
+            self.result[name] = VariableDescription(rv.distribution.__class__, rv.shape)
         else:
             raise KeyError(name, 'Duplicate name')
         return rv
@@ -84,7 +97,7 @@ class CollectVariables(Interceptor):
         self.result = collections.OrderedDict()
 
     def after(self, rv, *args, **kwargs):
-        if self.filter is not None and self.filter(self, rv):
+        if self.filter is not None and not self.filter(rv, *args, **kwargs):
             return rv
         name = kwargs.get("name")
         if name not in self.result:

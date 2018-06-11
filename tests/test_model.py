@@ -11,7 +11,7 @@ def test_model_definition_type1():
         ed.Normal(0., 1., name='normal')
 
     assert 'normal' in model.variables
-    assert [] == model.variables['normal'].as_list()
+    assert [] == model.variables['normal'].shape.as_list()
 
 
 def test_model_definition_type2():
@@ -26,7 +26,7 @@ def test_model_definition_type2():
         ed.Normal(0., 1., name='normal', sample_shape=cfg.shape_for_normal)
 
     assert 'normal' in model.variables
-    assert [10] == model.variables['normal'].as_list()
+    assert [10] == model.variables['normal'].shape.as_list()
 
 
 def test_model_reconfigure():
@@ -35,9 +35,9 @@ def test_model_reconfigure():
         ed.Normal(0., 1., name='normal', sample_shape=cfg.shape_for_normal)
 
     assert 'normal' in model.variables
-    assert [10] == model.variables['normal'].as_list()
+    assert [10] == model.variables['normal'].shape.as_list()
     model.configure(shape_for_normal=3)
-    assert [3] == model.variables['normal'].as_list()
+    assert [3] == model.variables['normal'].shape.as_list()
 
 
 def test_testvalue():

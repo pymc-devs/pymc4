@@ -16,4 +16,3 @@ class InputDistribution(tf.contrib.distributions.Deterministic):
 
 def Input(name, shape, dtype=None):
     return ed.as_random_variable(InputDistribution(name=name, shape=shape, dtype=dtype))
-

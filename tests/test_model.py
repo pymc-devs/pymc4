@@ -49,4 +49,3 @@ def test_testvalue():
     testval_mode = model.test_point(sample=False)
     assert testval_mode['normal'] == 0.
     assert testval_mode['normal'] != testval_random['normal']
-

@@ -28,4 +28,3 @@ def sample(model,
             accepted = np.sum(is_accepted_)
             print("Acceptance rate: {}".format(accepted / num_results))
     return dict(zip(model.unobserved.keys(), states))
-

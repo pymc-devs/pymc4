@@ -1,3 +1,4 @@
+import collections
 import biwrap
 import tensorflow as tf
 from tensorflow_probability import edward2 as ed
@@ -67,6 +68,14 @@ class Model(object):
             returns = self.session.run(list(values_collector.result.values()))
         return dict(zip(values_collector.result.keys(), returns))
 
+    def target_log_prob_fn(self, *args, **kwargs):
+        logp = 0
+        for i in self.unobserved.keys():
+            print(kwargs.get(i))
+            logp += self.unobserved[i].rv.distribution.log_prob(value=kwargs.get(i))
+
+        return logp
+
     def observe(self, **observations):
         self._observed = observations
         return self
@@ -82,6 +91,16 @@ class Model(object):
     @property
     def observed(self):
         return self._observed
+
+    @property
+    def unobserved(self):
+        unobserved = {}
+        for i in self.variables:
+            if self.variables[i] not in self.observed.values():
+                unobserved[i] = self.variables[i]
+
+        unobserved = collections.OrderedDict(unobserved)
+        return unobserved
 
     @property
     def variables(self):

@@ -9,7 +9,7 @@ __all__ = [
     'CollectLogProb'
 ]
 
-VariableDescription = collections.namedtuple('VariableDescription', 'Dist,shape')
+VariableDescription = collections.namedtuple('VariableDescription', 'Dist,shape,rv')
 
 
 class Interceptor(object):
@@ -85,7 +85,7 @@ class CollectVariablesInfo(Interceptor):
     def after(self, rv, *args, **kwargs):
         name = kwargs["name"]
         if name not in self.result:
-            self.result[name] = VariableDescription(rv.distribution.__class__, rv.shape)
+            self.result[name] = VariableDescription(rv.distribution.__class__, rv.shape, rv)
         else:
             raise KeyError(name, 'Duplicate name')
         return rv

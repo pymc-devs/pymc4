@@ -68,7 +68,10 @@ class Model(object):
             returns = self.session.run(list(values_collector.result.values()))
         return dict(zip(values_collector.result.keys(), returns))
 
-    def log_prob_fn(self, x,  *args, **kwargs):
+    def log_prob_fn(self, *args, **kwargs):
+        """
+        Pass the states of RVs as kwargs.
+        """
         logp = 0
         for i in self.unobserved.keys():
             logp += self.unobserved[i].rv.distribution.log_prob(value=kwargs.get(i))
@@ -77,29 +80,17 @@ class Model(object):
 
     def target_log_prob_fn(self, *args, **kwargs):
         """
-        Unnormalized target density as a function of unobserved states.
+        Pass the states of the RVs as args in alphabetical order of the RVs. Compatible as `target_log_prob_fn` for tfp samplers.
         """
 
         def log_joint_fn(*args, **kwargs):
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
-            log_probs = []
-
-            def interceptor(f, *args, **kwargs):
-                name = kwargs.get("name")
-                for name in states:
-                    value = states[name]
-                    if kwargs.get("name") == name:
-                        kwargs["value"] = value
-                rv = f(*args, **kwargs)
-                log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
-                log_probs.append(log_prob)
-                return rv
-
-            with ed.interception(interceptor):
+            collect_log_prob = interceptors.CollectLogProb(states)
+            with ed.interception(collect_log_prob):
                 self._f(self._cfg)
-            log_prob = sum(log_probs)
-            return log_prob
+            
+            return collect_log_prob.result
         
         return log_joint_fn
 

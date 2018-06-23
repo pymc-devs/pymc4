@@ -68,16 +68,6 @@ class Model(object):
             returns = self.session.run(list(values_collector.result.values()))
         return dict(zip(values_collector.result.keys(), returns))
 
-    def log_prob_fn(self, *args, **kwargs):
-        """
-        Pass the states of RVs as kwargs.
-        """
-        logp = 0
-        for i in self.unobserved.keys():
-            logp += self.unobserved[i].rv.distribution.log_prob(value=kwargs.get(i))
-
-        return logp
-
     def target_log_prob_fn(self, *args, **kwargs):
         """
         Pass the states of the RVs as args in alphabetical order of the RVs. Compatible as `target_log_prob_fn` for tfp samplers.

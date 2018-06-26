@@ -10,8 +10,7 @@ def sample(model,
            num_leapfrog_steps=3,
            numpy=True):
     initial_state = []
-    for name in model.unobserved.keys():
-        dist, shape, rv = model.unobserved[name]
+    for name, (_, shape, _) in model.unobserved.items():
         initial_state.append(.5 * tf.ones(shape, name="init_{}".format(name)))
 
     states, kernel_results = tfp.mcmc.sample_chain(

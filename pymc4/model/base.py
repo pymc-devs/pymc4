@@ -73,15 +73,33 @@ class Model(object):
         Pass the states of the RVs as args in alphabetical order of the RVs. Compatible as `target_log_prob_fn` for tfp samplers.
         """
 
+        # def log_joint_fn(*args, **kwargs):
+        #     states = dict(zip(self.unobserved.keys(), args))
+        #     states.update(self.observed)
+        #     collect_log_prob = interceptors.CollectLogProb(states)
+        #     with ed.interception(collect_log_prob):
+        #         self._f(self._cfg)
+            
+        #     return collect_log_prob.result
         def log_joint_fn(*args, **kwargs):
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
-            collect_log_prob = interceptors.CollectLogProb(states)
-            with ed.interception(collect_log_prob):
+            log_probs = []
+            def interceptor(f, *args, **kwargs):
+                name = kwargs.get("name")
+                for name in states:
+                    value  = states[name]
+                    if kwargs.get("name") == name:
+                        kwargs["value"] = value
+                rv = f(*args, **kwargs)
+                log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
+                log_probs.append(log_prob)
+                return rv
+            with ed.interception(interceptor):
                 self._f(self._cfg)
-            
-            return collect_log_prob.result
-        
+
+            log_prob = sum(log_probs)
+            return log_prob    
         return log_joint_fn
 
     def observe(self, **observations):
@@ -102,12 +120,11 @@ class Model(object):
 
     @property
     def unobserved(self):
-        unobserved = {}
-        for i in self.variables:
-            if self.variables[i] not in self.observed.values():
-                unobserved[i] = self.variables[i]
+        unobserved = collections.OrderedDict()
+        for name, variable in self.variables.items():
+            if variable not in self.observed.values():
+                unobserved[name] = variable
 
-        unobserved = collections.OrderedDict(unobserved)
         return unobserved
 
     @property

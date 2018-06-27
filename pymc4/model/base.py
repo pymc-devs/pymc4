@@ -73,14 +73,6 @@ class Model(object):
         Pass the states of the RVs as args in alphabetical order of the RVs. Compatible as `target_log_prob_fn` for tfp samplers.
         """
 
-        # def log_joint_fn(*args, **kwargs):
-        #     states = dict(zip(self.unobserved.keys(), args))
-        #     states.update(self.observed)
-        #     collect_log_prob = interceptors.CollectLogProb(states)
-        #     with ed.interception(collect_log_prob):
-        #         self._f(self._cfg)
-            
-        #     return collect_log_prob.result
         def log_joint_fn(*args, **kwargs):
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
@@ -122,7 +114,7 @@ class Model(object):
     def unobserved(self):
         unobserved = collections.OrderedDict()
         for name, variable in self.variables.items():
-            if variable not in self.observed.values():
+            if name not in self.observed:
                 unobserved[name] = variable
 
         return unobserved

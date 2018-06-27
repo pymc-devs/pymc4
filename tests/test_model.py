@@ -4,7 +4,7 @@ import pymc4 as pm
 
 
 def test_model_definition_type1():
-    model = pm.Model()
+    model = pm.Model(name="testName")
 
     @model.define
     def simple(cfg):
@@ -12,6 +12,7 @@ def test_model_definition_type1():
 
     assert 'normal' in model.variables
     assert [] == model.variables['normal'].shape.as_list()
+    assert model.name == "testName"
 
 
 def test_model_definition_type2():
@@ -49,3 +50,64 @@ def test_testvalue():
     testval_mode = model.test_point(sample=False)
     assert testval_mode['normal'] == 0.
     assert testval_mode['normal'] != testval_random['normal']
+
+def test_variables():
+    model = pm.Model()
+
+    @model.define
+    def simple(cfg):
+        ed.Normal(0., 1., name='normal')
+    
+    assert len(model.variables) == 1
+    assert len(model.unobserved) == 1
+    assert "normal" in model.variables
+
+
+def test_model_target_log_prob_fn():
+    model = pm.Model()
+
+    @model.define
+    def simple(cfg):
+        ed.Normal(0., 1., name='normal')
+
+    model.target_log_prob_fn()
+
+def test_model_observe():
+
+    model = pm.Model()
+
+    @model.define
+    def simple(cfg):
+        ed.Normal(0., 1., name='normal')
+
+    model.observe(normal=1)
+
+    assert len(model.observed) == 1
+    assert len(model.unobserved) == 0
+
+def test_model_reset():
+    model = pm.Model()
+
+    @model.define
+    def simple(cfg):
+        ed.Normal(0., 1., name='normal')
+
+    model.observe(normal=1)
+
+    assert len(model.observed) == 1
+    assert len(model.unobserved) == 0
+
+    model.reset()
+
+    assert len(model.observed) == 0
+    assert len(model.unobserved) == 1
+
+def test_model_session():
+    model = pm.Model()
+
+    @model.define
+    def simple(cfg):
+        ed.Normal(0., 1., name='normal')
+
+    assert isinstance(model.session, tf.Session)
+    

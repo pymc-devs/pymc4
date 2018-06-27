@@ -34,6 +34,7 @@ class Model(object):
         if session is None:
             session = tf.Session(graph=graph)
         self.session = session
+        self.observe(**config)
 
     def define(self, f):
         self._f = f
@@ -43,6 +44,7 @@ class Model(object):
     def configure(self, **override):
         self._cfg.update(**override)
         self._init_variables()
+        self.observe(**self._cfg) 
         return self
 
     def _init_variables(self):

@@ -7,7 +7,7 @@ __all__ = [
 ]
 
 
-class InputDistribution(tf.contrib.distributions.Deterministic):
+class InputDistribution(tf.contrib.distributions.Deterministic): #pylint: disable=too-few-public-methods
     """
     detectable class for input
     is input <==> isinstance(rv.distribution, InputDistribution)
@@ -15,4 +15,4 @@ class InputDistribution(tf.contrib.distributions.Deterministic):
 
 
 def Input(name, shape, dtype=None):
-    return ed.as_random_variable(InputDistribution(name=name, shape=shape, dtype=dtype))
+    return ed.RandomVariable(InputDistribution(name=name, shape=shape, dtype=dtype))

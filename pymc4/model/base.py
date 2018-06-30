@@ -6,7 +6,6 @@ from pymc4.util import interceptors
 
 __all__ = ['Model', 'inline']
 
-
 class Config(dict):
     def __getattr__(self, item):
         try:
@@ -44,7 +43,7 @@ class Model(object):
     def configure(self, **override):
         self._cfg.update(**override)
         self._init_variables()
-        self.observe(**self._cfg) 
+        self.observe(**self._cfg)
         return self
 
     def _init_variables(self):
@@ -55,12 +54,14 @@ class Model(object):
 
     def test_point(self, sample=True):
         def not_observed(var, *args, **kwargs):
+            #pylint: disable=unused-argument
             return kwargs['name'] not in self.observed
         values_collector = interceptors.CollectVariables(filter=not_observed)
         chain = [values_collector]
         if not sample:
 
             def get_mode(state, rv, *args, **kwargs):
+                #pylint: disable=unused-argument
                 return rv.distribution.mode()
             chain.insert(0, interceptors.Generic(after=get_mode))
 
@@ -71,8 +72,10 @@ class Model(object):
         return dict(zip(values_collector.result.keys(), returns))
 
     def target_log_prob_fn(self, *args, **kwargs):
+        #pylint: disable=unused-argument
         """
-        Pass the states of the RVs as args in alphabetical order of the RVs. Compatible as `target_log_prob_fn` for tfp samplers.
+        Pass the states of the RVs as args in alphabetical order of the RVs.
+        Compatible as `target_log_prob_fn` for tfp samplers.
         """
 
         def log_joint_fn(*args, **kwargs):
@@ -82,7 +85,7 @@ class Model(object):
             def interceptor(f, *args, **kwargs):
                 name = kwargs.get("name")
                 for name in states:
-                    value  = states[name]
+                    value = states[name]
                     if kwargs.get("name") == name:
                         kwargs["value"] = value
                 rv = f(*args, **kwargs)
@@ -93,7 +96,7 @@ class Model(object):
                 self._f(self._cfg)
 
             log_prob = sum(log_probs)
-            return log_prob    
+            return log_prob
         return log_joint_fn
 
     def observe(self, **observations):

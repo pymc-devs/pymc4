@@ -1,7 +1,9 @@
 from tensorflow_probability import edward2 as ed
+import tensorflow as tf
 import pytest
 import pymc4 as pm
-
+#pylint: disable=unused-variable, unused-argument
+#pylint: disable-msg=E0102
 
 def test_model_definition_type1():
     model = pm.Model(name="testName")
@@ -22,7 +24,7 @@ def test_model_definition_type2():
             ed.Normal(0., 1., name='normal', sample_shape=cfg.shape_for_normal)
     assert e.match('you probably need to pass "shape_for_normal" in model definition')
 
-    @pm.inline(shape_for_normal=(10,))
+    @pm.inline(shape_for_normal=(10,)) #pylint: disable-msg=E1120
     def model(cfg):
         ed.Normal(0., 1., name='normal', sample_shape=cfg.shape_for_normal)
 
@@ -31,7 +33,7 @@ def test_model_definition_type2():
 
 
 def test_model_reconfigure():
-    @pm.inline(shape_for_normal=(10,))
+    @pm.inline(shape_for_normal=(10,)) #pylint: disable-msg=E1120
     def model(cfg):
         ed.Normal(0., 1., name='normal', sample_shape=cfg.shape_for_normal)
 
@@ -57,7 +59,7 @@ def test_variables():
     @model.define
     def simple(cfg):
         ed.Normal(0., 1., name='normal')
-    
+
     assert len(model.variables) == 1
     assert len(model.unobserved) == 1
     assert "normal" in model.variables
@@ -83,7 +85,7 @@ def test_model_observe():
     model.observe(normal=1)
 
     assert len(model.observed) == 1
-    assert len(model.unobserved) == 0
+    assert not model.unobserved
 
 def test_model_reset():
     model = pm.Model()
@@ -95,11 +97,11 @@ def test_model_reset():
     model.observe(normal=1)
 
     assert len(model.observed) == 1
-    assert len(model.unobserved) == 0
+    assert not model.unobserved
 
     model.reset()
 
-    assert len(model.observed) == 0
+    assert not model.observed
     assert len(model.unobserved) == 1
 
 def test_model_session():

@@ -7,6 +7,9 @@ from pymc4.util import interceptors
 __all__ = ['Model', 'inline']
 
 class Config(dict):
+    """
+    Super class over dict class. Gives an error when a particular attribute does not exist.
+    """
     def __getattr__(self, item):
         try:
             return self.__getitem__(item)
@@ -88,10 +91,12 @@ class Model(object):
                     value = states[name]
                     if kwargs.get("name") == name:
                         kwargs["value"] = value
+                
                 rv = f(*args, **kwargs)
                 log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
                 log_probs.append(log_prob)
                 return rv
+            
             with ed.interception(interceptor):
                 self._f(self._cfg)
 

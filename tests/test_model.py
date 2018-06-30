@@ -2,6 +2,7 @@ from tensorflow_probability import edward2 as ed
 import tensorflow as tf
 import pytest
 import pymc4 as pm
+from pymc4.model.base import Config
 #pylint: disable=unused-variable, unused-argument
 #pylint: disable-msg=E0102
 
@@ -112,4 +113,63 @@ def test_model_session():
         ed.Normal(0., 1., name='normal')
 
     assert isinstance(model.session, tf.Session)
+    
+def test_model_config():
+    model = pm.Model()
+
+    assert model.cfg == {}
+
+    model = pm.Model(var1=123)
+
+    @model.define
+    def simple(cfg):
+        assert cfg["var1"] == 123
+    
+    model = pm.Model(var1=123)
+
+    @model.define
+    def simple(cfg={
+        "var1": 12
+    }):
+        assert cfg["var1"] == 123
+
+    model = pm.Model(var1=123)
+    @model.define
+    def simple(cfg):
+        pass
+    
+    model = model.configure(var1=12)
+
+    @model.define
+    def simple(cfg):
+        assert cfg["var1"] == 12
+
+def test_Config_class():
+    dictionary = {
+        "Var1": 1,
+        "Var2": 2
+    }
+
+    cfg = Config(dictionary)
+    assert cfg.Var1 == 1
+    assert cfg["Var1"] == 1
+    assert cfg.Var2 == 2
+    with pytest.raises(KeyError):
+        cfg.Var3
+
+def test_model_graph():
+    model = pm.Model()
+    assert isinstance(model.graph, tf.Graph)
+
+def test_model_log_prob_fn():
+    model = pm.Model()
+
+    @model.define
+    def simple(cfg):
+        mu = ed.Normal(0., 1., name="mu")
+    
+    log_prob_fn = model.target_log_prob_fn()
+
+    with tf.Session():
+        assert -0.91893853 == pytest.approx(log_prob_fn(0).eval(), 0.00001)
     

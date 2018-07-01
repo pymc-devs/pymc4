@@ -124,14 +124,6 @@ def test_model_config():
     @model.define
     def simple(cfg):
         assert cfg["var1"] == 123
-    
-    model = pm.Model(var1=123)
-
-    @model.define
-    def simple(cfg={
-        "var1": 12
-    }):
-        assert cfg["var1"] == 123
 
     model = pm.Model(var1=123)
     @model.define
@@ -143,23 +135,6 @@ def test_model_config():
     @model.define
     def simple(cfg):
         assert cfg["var1"] == 12
-
-def test_Config_class():
-    dictionary = {
-        "Var1": 1,
-        "Var2": 2
-    }
-
-    cfg = Config(dictionary)
-    assert cfg.Var1 == 1
-    assert cfg["Var1"] == 1
-    assert cfg.Var2 == 2
-    with pytest.raises(KeyError):
-        cfg.Var3
-
-def test_model_graph():
-    model = pm.Model()
-    assert isinstance(model.graph, tf.Graph)
 
 def test_model_log_prob_fn():
     model = pm.Model()

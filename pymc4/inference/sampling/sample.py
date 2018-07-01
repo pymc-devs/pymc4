@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 
-def sample(model, #pylint: disable-msg=too-many-arguments
+def sample(model,  # pylint: disable-msg=too-many-arguments
            num_results=5000,
            num_burnin_steps=3000,
            step_size=.4,

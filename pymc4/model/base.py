@@ -6,6 +6,7 @@ from pymc4.util import interceptors
 
 __all__ = ['Model', 'inline']
 
+
 class Config(dict):
     """
     Super class over dict class. Gives an error when a particular attribute does not exist.
@@ -56,15 +57,13 @@ class Model(object):
         self._variables = info_collector.result
 
     def test_point(self, sample=True):
-        def not_observed(var, *args, **kwargs):
-            #pylint: disable=unused-argument
+        def not_observed(var, *args, **kwargs):  # pylint: disable=unused-argument
             return kwargs['name'] not in self.observed
         values_collector = interceptors.CollectVariables(filter=not_observed)
         chain = [values_collector]
         if not sample:
 
-            def get_mode(state, rv, *args, **kwargs):
-                #pylint: disable=unused-argument
+            def get_mode(state, rv, *args, **kwargs):  # pylint: disable=unused-argument
                 return rv.distribution.mode()
             chain.insert(0, interceptors.Generic(after=get_mode))
 
@@ -74,29 +73,29 @@ class Model(object):
             returns = self.session.run(list(values_collector.result.values()))
         return dict(zip(values_collector.result.keys(), returns))
 
-    def target_log_prob_fn(self, *args, **kwargs):
-        #pylint: disable=unused-argument
+    def target_log_prob_fn(self, *args, **kwargs):  # pylint: disable=unused-argument
         """
         Pass the states of the RVs as args in alphabetical order of the RVs.
         Compatible as `target_log_prob_fn` for tfp samplers.
         """
 
-        def log_joint_fn(*args, **kwargs):
+        def log_joint_fn(*args, **kwargs):  # pylint: disable=unused-argument
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
             log_probs = []
+
             def interceptor(f, *args, **kwargs):
                 name = kwargs.get("name")
                 for name in states:
                     value = states[name]
                     if kwargs.get("name") == name:
                         kwargs["value"] = value
-                
+
                 rv = f(*args, **kwargs)
                 log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
                 log_probs.append(log_prob)
                 return rv
-            
+
             with ed.interception(interceptor):
                 self._f(self._cfg)
 

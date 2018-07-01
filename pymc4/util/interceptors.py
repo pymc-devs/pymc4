@@ -23,11 +23,11 @@ class Interceptor(object):
         rv = f(*args, **kwargs)
         return self.after(rv, *args, **kwargs)
 
-    def before(self, f, *args, **kwargs): #pylint: disable=no-self-use
+    def before(self, f, *args, **kwargs):  # pylint: disable=no-self-use
         return f, args, kwargs
 
-    def after(self, rv, *args, **kwargs): #pylint: disable=no-self-use
-        #pylint: disable=unused-argument
+    def after(self, rv, *args, **kwargs):  # pylint: disable=no-self-use, unused-argument
+
         return rv
 
 
@@ -40,8 +40,7 @@ class Generic(Interceptor):
     def before(self, f, *args, **kwargs):
         return self._before(self.state, f, *args, **kwargs)
 
-    def after(self, f, *args, **kwargs):
-        #pylint: disable=arguments-differ
+    def after(self, f, *args, **kwargs):  # pylint: disable=arguments-differ
         return self._after(self.state, f, *args, **kwargs)
 
 
@@ -94,7 +93,7 @@ class CollectVariablesInfo(Interceptor):
 
 
 class CollectVariables(Interceptor):
-    def __init__(self, filter=None): #pylint: disable=redefined-builtin
+    def __init__(self, filter=None):  # pylint: disable=redefined-builtin
         self.filter = filter
         self.result = collections.OrderedDict()
 

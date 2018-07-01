@@ -7,7 +7,7 @@ __all__ = [
 ]
 
 
-class InputDistribution(tf.contrib.distributions.Deterministic): #pylint: disable=too-few-public-methods
+class InputDistribution(tf.contrib.distributions.Deterministic):  # pylint: disable=too-few-public-methods
     """
     detectable class for input
     is input <==> isinstance(rv.distribution, InputDistribution)

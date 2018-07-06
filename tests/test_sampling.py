@@ -3,6 +3,7 @@ import tensorflow as tf
 import pytest
 import pymc4 as pm
 
+
 def test_sample():
     model = pm.Model()
 

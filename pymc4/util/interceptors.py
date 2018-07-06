@@ -9,7 +9,7 @@ __all__ = [
     'CollectLogProb'
 ]
 
-VariableDescription = collections.namedtuple('VariableDescription', 'Dist,shape')
+VariableDescription = collections.namedtuple('VariableDescription', 'Dist,shape,rv')
 
 
 class Interceptor(object):
@@ -23,10 +23,11 @@ class Interceptor(object):
         rv = f(*args, **kwargs)
         return self.after(rv, *args, **kwargs)
 
-    def before(self, f, *args, **kwargs):
+    def before(self, f, *args, **kwargs):  # pylint: disable=no-self-use
         return f, args, kwargs
 
-    def after(self, rv, *args, **kwargs):
+    def after(self, rv, *args, **kwargs):  # pylint: disable=no-self-use, unused-argument
+
         return rv
 
 
@@ -39,7 +40,7 @@ class Generic(Interceptor):
     def before(self, f, *args, **kwargs):
         return self._before(self.state, f, *args, **kwargs)
 
-    def after(self, f, *args, **kwargs):
+    def after(self, f, *args, **kwargs):  # pylint: disable=arguments-differ
         return self._after(self.state, f, *args, **kwargs)
 
 
@@ -85,14 +86,14 @@ class CollectVariablesInfo(Interceptor):
     def after(self, rv, *args, **kwargs):
         name = kwargs["name"]
         if name not in self.result:
-            self.result[name] = VariableDescription(rv.distribution.__class__, rv.shape)
+            self.result[name] = VariableDescription(rv.distribution.__class__, rv.shape, rv)
         else:
             raise KeyError(name, 'Duplicate name')
         return rv
 
 
 class CollectVariables(Interceptor):
-    def __init__(self, filter=None):
+    def __init__(self, filter=None):  # pylint: disable=redefined-builtin
         self.filter = filter
         self.result = collections.OrderedDict()
 
@@ -108,10 +109,9 @@ class CollectVariables(Interceptor):
 
 
 class CollectLogProb(SetState):
-    def __init__(self, state):
-        super().__init__(state)
-        with self.name_scope():
-            self._result = tf.constant(0.)
+    def __init__(self, states):
+        super().__init__(states)
+        self.log_probs = []
 
     def before(self, f, *args, **kwargs):
         if kwargs['name'] not in self.state:
@@ -119,11 +119,15 @@ class CollectLogProb(SetState):
         return super().before(f, *args, **kwargs)
 
     def after(self, rv, *args, **kwargs):
-        with self.name_scope():
-            log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
-            self._result += log_prob
+        name = kwargs.get("name")
+        for name in self.state:
+            value = self.state[name]
+            if kwargs.get("name") == name:
+                kwargs["value"] = value
+        log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
+        self.log_probs.append(log_prob)
+        return rv
 
     @property
     def result(self):
-        with self.name_scope():
-            return tf.identity(self._result, 'result')
+        return self.log_probs

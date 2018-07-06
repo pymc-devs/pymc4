@@ -1,3 +1,4 @@
+import collections
 import biwrap
 import tensorflow as tf
 from tensorflow_probability import edward2 as ed
@@ -7,6 +8,9 @@ __all__ = ['Model', 'inline']
 
 
 class Config(dict):
+    """
+    Super class over dict class. Gives an error when a particular attribute does not exist.
+    """
     def __getattr__(self, item):
         try:
             return self.__getitem__(item)
@@ -33,6 +37,7 @@ class Model(object):
         if session is None:
             session = tf.Session(graph=graph)
         self.session = session
+        self.observe(**config)
 
     def define(self, f):
         self._f = f
@@ -42,6 +47,7 @@ class Model(object):
     def configure(self, **override):
         self._cfg.update(**override)
         self._init_variables()
+        self.observe(**self._cfg)
         return self
 
     def _init_variables(self):
@@ -51,13 +57,13 @@ class Model(object):
         self._variables = info_collector.result
 
     def test_point(self, sample=True):
-        def not_observed(var, *args, **kwargs):
+        def not_observed(var, *args, **kwargs):  # pylint: disable=unused-argument
             return kwargs['name'] not in self.observed
         values_collector = interceptors.CollectVariables(filter=not_observed)
         chain = [values_collector]
         if not sample:
 
-            def get_mode(state, rv, *args, **kwargs):
+            def get_mode(state, rv, *args, **kwargs):  # pylint: disable=unused-argument
                 return rv.distribution.mode()
             chain.insert(0, interceptors.Generic(after=get_mode))
 
@@ -66,6 +72,23 @@ class Model(object):
         with self.session.as_default():
             returns = self.session.run(list(values_collector.result.values()))
         return dict(zip(values_collector.result.keys(), returns))
+
+    def target_log_prob_fn(self, *args, **kwargs):  # pylint: disable=unused-argument
+        """
+        Pass the states of the RVs as args in alphabetical order of the RVs.
+        Compatible as `target_log_prob_fn` for tfp samplers.
+        """
+
+        def log_joint_fn(*args, **kwargs):  # pylint: disable=unused-argument
+            states = dict(zip(self.unobserved.keys(), args))
+            states.update(self.observed)
+            interceptor = interceptors.CollectLogProb(states)
+            with ed.interception(interceptor):
+                self._f(self._cfg)
+
+            log_prob = sum(interceptor.log_probs)
+            return log_prob
+        return log_joint_fn
 
     def observe(self, **observations):
         self._observed = observations
@@ -82,6 +105,15 @@ class Model(object):
     @property
     def observed(self):
         return self._observed
+
+    @property
+    def unobserved(self):
+        unobserved = collections.OrderedDict()
+        for name, variable in self.variables.items():
+            if name not in self.observed:
+                unobserved[name] = variable
+
+        return unobserved
 
     @property
     def variables(self):

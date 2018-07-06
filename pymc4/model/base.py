@@ -82,7 +82,6 @@ class Model(object):
         def log_joint_fn(*args, **kwargs):  # pylint: disable=unused-argument
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
-            log_probs = []
             interceptor = interceptors.CollectLogProb(states)
             with ed.interception(interceptor):
                 self._f(self._cfg)

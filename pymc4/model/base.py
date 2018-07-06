@@ -83,23 +83,11 @@ class Model(object):
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
             log_probs = []
-
-            def interceptor(f, *args, **kwargs):
-                name = kwargs.get("name")
-                for name in states:
-                    value = states[name]
-                    if kwargs.get("name") == name:
-                        kwargs["value"] = value
-
-                rv = f(*args, **kwargs)
-                log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
-                log_probs.append(log_prob)
-                return rv
-
+            interceptor = interceptors.CollectLogProb(states)
             with ed.interception(interceptor):
                 self._f(self._cfg)
 
-            log_prob = sum(log_probs)
+            log_prob = sum(interceptor.log_probs)
             return log_prob
         return log_joint_fn
 

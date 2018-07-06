@@ -109,10 +109,9 @@ class CollectVariables(Interceptor):
 
 
 class CollectLogProb(SetState):
-    def __init__(self, state):
-        super().__init__(state)
-        with self.name_scope():
-            self._result = tf.constant(0.)
+    def __init__(self, states):
+        super().__init__(states)
+        self.log_probs = []
 
     def before(self, f, *args, **kwargs):
         if kwargs['name'] not in self.state:
@@ -120,11 +119,15 @@ class CollectLogProb(SetState):
         return super().before(f, *args, **kwargs)
 
     def after(self, rv, *args, **kwargs):
-        with self.name_scope():
-            log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
-            self._result += log_prob
+        name = kwargs.get("name")
+        for name in self.state:
+            value = self.state[name]
+            if kwargs.get("name") == name:
+                kwargs["value"] = value
+        log_prob = tf.reduce_sum(rv.distribution.log_prob(rv.value))
+        self.log_probs.append(log_prob)
+        return rv
 
     @property
     def result(self):
-        with self.name_scope():
-            return tf.identity(self._result, 'result')
+        return self.log_probs

@@ -8,4 +8,5 @@ from . import inference
 from .inference import (
     sampling
 )
+from .inference.sampling.sample import sample
 from . import util

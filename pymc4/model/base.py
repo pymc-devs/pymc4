@@ -66,8 +66,9 @@ class Model(object):
             def get_mode(state, rv, *args, **kwargs):  # pylint: disable=unused-argument
                 return rv.distribution.mode()
             chain.insert(0, interceptors.Generic(after=get_mode))
-
-        with self.graph.as_default(), ed.interception(interceptors.Chain(*chain)):
+        temp_graph = tf.Graph()
+        tf.contrib.graph_editor.copy(self.graph, temp_graph)
+        with temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):
             self._f(self.cfg)
         with self.session.as_default():
             returns = self.session.run(list(values_collector.result.values()))
@@ -83,7 +84,9 @@ class Model(object):
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
             interceptor = interceptors.CollectLogProb(states)
-            with ed.interception(interceptor):
+            temp_graph = tf.Graph()
+            tf.contrib.graph_editor.copy(self.graph, temp_graph)
+            with temp_graph.as_default(), ed.interception(interceptor):
                 self._f(self._cfg)
 
             log_prob = sum(interceptor.log_probs)

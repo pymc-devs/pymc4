@@ -153,5 +153,5 @@ def test_model_log_prob_fn():
 
     log_prob_fn = model.target_log_prob_fn()
 
-    with tf.Session():
+    with tf.Session(graph=model.temp_graph):
         assert -0.91893853 == pytest.approx(log_prob_fn(0).eval(), 0.00001)

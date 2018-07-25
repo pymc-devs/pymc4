@@ -38,6 +38,7 @@ class Model(object):
             session = tf.Session(graph=graph)
         self.session = session
         self.observe(**config)
+        self.temp_graph = tf.Graph()
 
     def define(self, f):
         self._f = f
@@ -54,6 +55,7 @@ class Model(object):
         info_collector = interceptors.CollectVariablesInfo()
         with self.graph.as_default(), ed.interception(info_collector):
             self._f(self.cfg)
+        tf.contrib.graph_editor.copy(self.graph, self.temp_graph)
         self._variables = info_collector.result
 
     def test_point(self, sample=True):
@@ -70,26 +72,26 @@ class Model(object):
         tf.contrib.graph_editor.copy(self.graph, temp_graph)
         with temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):
             self._f(self.cfg)
+        with tf.Session(graph=temp_graph) as sess:
+            returns = sess.run(list(values_collector.result.values()))
+        keys = values_collector.result.keys()
         del temp_graph
-        with self.session.as_default():
-            returns = self.session.run(list(values_collector.result.values()))
-        return dict(zip(values_collector.result.keys(), returns))
+        return dict(zip(keys, returns))
 
     def target_log_prob_fn(self, *args, **kwargs):  # pylint: disable=unused-argument
         """
         Pass the states of the RVs as args in alphabetical order of the RVs.
         Compatible as `target_log_prob_fn` for tfp samplers.
         """
+        # self.temp_graph = tf.Graph()
 
         def log_joint_fn(*args, **kwargs):  # pylint: disable=unused-argument
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
             interceptor = interceptors.CollectLogProb(states)
-            temp_graph = tf.Graph()
-            tf.contrib.graph_editor.copy(self.graph, temp_graph)
-            with temp_graph.as_default(), ed.interception(interceptor):
+            with self.temp_graph.as_default(), ed.interception(interceptor):
                 self._f(self._cfg)
-            del temp_graph
+            # del temp_graph
             log_prob = sum(interceptor.log_probs)
             return log_prob
         return log_joint_fn

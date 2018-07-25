@@ -68,14 +68,12 @@ class Model():
             def get_mode(state, rv, *args, **kwargs):  # pylint: disable=unused-argument
                 return rv.distribution.mode()
             chain.insert(0, interceptors.Generic(after=get_mode))
-        temp_graph = tf.Graph()
         tf.contrib.graph_editor.copy(self.graph, self.temp_graph)
-        with temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):
+        with self.temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):  # pylint: disable=not-context-manager
             self._f(self.cfg)
-        with tf.Session(graph=temp_graph) as sess:
+        with tf.Session(graph=self.temp_graph) as sess:
             returns = sess.run(list(values_collector.result.values()))
         keys = values_collector.result.keys()
-        del temp_graph
         return dict(zip(keys, returns))
 
     def target_log_prob_fn(self, *args, **kwargs):  # pylint: disable=unused-argument
@@ -89,7 +87,7 @@ class Model():
             states.update(self.observed)
             interceptor = interceptors.CollectLogProb(states)
             tf.contrib.graph_editor.copy(self.graph, self.temp_graph)
-            with self.temp_graph.as_default(), ed.interception(interceptor):
+            with self.temp_graph.as_default(), ed.interception(interceptor):  # pylint: disable=not-context-manager
                 self._f(self._cfg)
 
             log_prob = sum(interceptor.log_probs)

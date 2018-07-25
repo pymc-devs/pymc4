@@ -1,3 +1,7 @@
+"""
+Partially derived from a prototype written by Josh Safyan.
+"""
+
 import collections
 import biwrap
 import tensorflow as tf
@@ -10,6 +14,7 @@ __all__ = ['Model', 'inline']
 class Config(dict):
     """
     Super class over dict class. Gives an error when a particular attribute does not exist.
+    Contributor
     """
     def __getattr__(self, item):
         try:
@@ -27,7 +32,7 @@ class Config(dict):
             raise error from e
 
 
-class Model(object):
+class Model():
     def __init__(self, name=None, graph=None, session=None, **config):
         self._cfg = Config(**config)
         self.name = name

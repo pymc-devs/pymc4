@@ -14,7 +14,6 @@ __all__ = ['Model', 'inline']
 class Config(dict):
     """
     Super class over dict class. Gives an error when a particular attribute does not exist.
-    Contributor
     """
     def __getattr__(self, item):
         try:

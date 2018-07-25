@@ -70,6 +70,7 @@ class Model(object):
         tf.contrib.graph_editor.copy(self.graph, temp_graph)
         with temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):
             self._f(self.cfg)
+        del temp_graph
         with self.session.as_default():
             returns = self.session.run(list(values_collector.result.values()))
         return dict(zip(values_collector.result.keys(), returns))
@@ -88,7 +89,7 @@ class Model(object):
             tf.contrib.graph_editor.copy(self.graph, temp_graph)
             with temp_graph.as_default(), ed.interception(interceptor):
                 self._f(self._cfg)
-
+            del temp_graph
             log_prob = sum(interceptor.log_probs)
             return log_prob
         return log_joint_fn

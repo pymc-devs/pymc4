@@ -27,7 +27,7 @@ class Config(dict):
             raise error from e
 
 
-class Model(object):
+class Model():
     def __init__(self, name=None, graph=None, session=None, **config):
         self._cfg = Config(**config)
         self.name = name
@@ -69,7 +69,7 @@ class Model(object):
                 return rv.distribution.mode()
             chain.insert(0, interceptors.Generic(after=get_mode))
         temp_graph = tf.Graph()
-        tf.contrib.graph_editor.copy(self.graph, temp_graph)
+        tf.contrib.graph_editor.copy(self.graph, self.temp_graph)
         with temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):
             self._f(self.cfg)
         with tf.Session(graph=temp_graph) as sess:
@@ -83,15 +83,15 @@ class Model(object):
         Pass the states of the RVs as args in alphabetical order of the RVs.
         Compatible as `target_log_prob_fn` for tfp samplers.
         """
-        # self.temp_graph = tf.Graph()
 
         def log_joint_fn(*args, **kwargs):  # pylint: disable=unused-argument
             states = dict(zip(self.unobserved.keys(), args))
             states.update(self.observed)
             interceptor = interceptors.CollectLogProb(states)
+            tf.contrib.graph_editor.copy(self.graph, self.temp_graph)
             with self.temp_graph.as_default(), ed.interception(interceptor):
                 self._f(self._cfg)
-            # del temp_graph
+
             log_prob = sum(interceptor.log_probs)
             return log_prob
         return log_joint_fn

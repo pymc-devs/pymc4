@@ -69,8 +69,10 @@ class Model():
                 return rv.distribution.mode()
             chain.insert(0, interceptors.Generic(after=get_mode))
         tf.contrib.graph_editor.copy(self.graph, self.temp_graph)
-        with self.temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):  # pylint: disable=not-context-manager
+        # pylint: disable=not-context-manager
+        with self.temp_graph.as_default(), ed.interception(interceptors.Chain(*chain)):
             self._f(self.cfg)
+        # pylint: enable=not-context-manager
         with tf.Session(graph=self.temp_graph) as sess:
             returns = sess.run(list(values_collector.result.values()))
         keys = values_collector.result.keys()

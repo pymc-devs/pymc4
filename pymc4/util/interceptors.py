@@ -16,7 +16,7 @@ __all__ = [
 VariableDescription = collections.namedtuple('VariableDescription', 'Dist,shape,rv')
 
 
-class Interceptor(object):
+class Interceptor():
     def name_scope(self):
         return tf.name_scope(self.__class__.__name__.lower())
 

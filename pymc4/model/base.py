@@ -1,3 +1,7 @@
+"""
+Partially derived from a prototype written by Josh Safyan.
+"""
+
 import collections
 import biwrap
 import tensorflow as tf
@@ -27,7 +31,7 @@ class Config(dict):
             raise error from e
 
 
-class Model(object):
+class Model():
     def __init__(self, name=None, graph=None, session=None, **config):
         self._cfg = Config(**config)
         self.name = name

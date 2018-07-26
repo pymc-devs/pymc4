@@ -1,3 +1,7 @@
+"""
+Partially derived from a prototype written by Josh Safyan.
+"""
+
 import collections
 import tensorflow as tf
 

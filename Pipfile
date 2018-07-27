@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+xarray = "*"
+numpy = "*"
+tqdm = "*"
+biwrap = "*"
+tf-nightly = "*"
+tfp-nightly = "*"
+tb-nightly = "*"
+
+[dev-packages]
+pylint = "*"
+pytest = "*"
+pytest-cov = "*"
+"pytest-pep8" = "*"
+pycodestyle = "*"
+
+[requires]
+python_version = "3.6"

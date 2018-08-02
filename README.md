@@ -2,6 +2,44 @@
 
 Pre-release development of high-level probabilistic programming interface for TensorFlow.  Please contribute or participate [on github](https://github.com/pymc-devs/pymc4).
 
+## Installation Instructions
+ - Install using `pip`
+ ``` bash
+ pip install git+https://github.com/pymc-devs/pymc4.git
+ ```
+ 
+## Simple Example
+### Import pymc4 and Edward2
+``` python
+import pymc4 as pm
+from tensorflow_probability import edward2 as ed
+```
+### Model Initialization
+``` python
+model = pm.Model()
+```
+
+### Model Definition
+The model has to be defined in a single function with `@[model-name].define` decorator.
+``` python
+@model.define
+def simple(cfg):
+    normal = ed.Normal(loc=0. scale=1., name='normal')
+```
+
+### Sampling
+``` python
+trace = pm.sample(model)
+```
+
+### Visualize the trace using arviz
+``` python
+# Add code here
+```
+
+
+Here is a [blog post](https://sharanry.github.io/post/eight-schools-model/) showcasing the differences between PyMC3 and PyMC4 using the Eight Schools model.
+ 
 ## Contributors
 
 For a full list of code contributors based on code checkin activity, see the [GitHub contributor page](https://github.com/pymc-devs/pymc4/graphs/contributors).

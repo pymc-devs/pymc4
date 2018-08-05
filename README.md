@@ -5,7 +5,7 @@ Pre-release development of high-level probabilistic programming interface for Te
 ## Installation Instructions
  - Install using `pip`
  ``` bash
- pip install git+https://github.com/pymc-devs/pymc4.git
+ pip install --user git+https://github.com/pymc-devs/pymc4.git@functional#egg=pymc4
  ```
  
 ## Simple Example

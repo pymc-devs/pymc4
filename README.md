@@ -24,7 +24,7 @@ The model has to be defined in a single function with `@[model-name].define` dec
 ``` python
 @model.define
 def simple(cfg):
-    normal = ed.Normal(loc=0. scale=1., name='normal')
+    normal = ed.Normal(loc=0., scale=1., name='normal')
 ```
 
 ### Sampling
@@ -34,7 +34,12 @@ trace = pm.sample(model)
 
 ### Visualize the trace using arviz
 ``` python
-# Add code here
+# See https://github.com/arviz-devs/arviz
+# pip install git+git://github.com/arviz-devs/arviz.git
+import arviz as az
+
+posterior_data = az.convert_to_xarray(trace, chains=1)
+az.posteriorplot(posterior_data, figsize=(8, 4), textsize=15, round_to=2);
 ```
 
 

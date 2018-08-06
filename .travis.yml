@@ -1,7 +1,6 @@
 language: python
 
 python:
-  - "3.5"
   - "3.6"
 
 install:
@@ -21,8 +20,10 @@ install:
   - pip install coveralls
 
 script:
-  - pylint pymc4/
-  - pytest -xv --cov=pymc4/ test/
+  - python -m pylint pymc4/
+  - python -m pytest -xv --cov=pymc4/ tests/
+  - pycodestyle --show-source --show-pep8 pymc4/ tests/
+
 
 after_success:
   - coveralls

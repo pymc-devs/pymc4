@@ -37,9 +37,10 @@ trace = pm.sample(model)
 # See https://github.com/arviz-devs/arviz
 # pip install git+git://github.com/arviz-devs/arviz.git
 import arviz as az
+%matplotlib inline
 
-posterior_data = az.convert_to_xarray(trace, chains=1)
-az.posteriorplot(posterior_data, figsize=(8, 4), textsize=15, round_to=2);
+posterior_data = az.convert_to_dataset(trace)
+az.plot_posterior(posterior_data, figsize=(8, 4), textsize=15, round_to=2)
 ```
 
 

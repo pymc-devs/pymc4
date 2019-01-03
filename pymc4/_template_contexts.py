@@ -13,11 +13,12 @@ import threading
 
 class BaseContext:
     """A context """
+
     def add_variable(self, rv):
-        raise NotImplementedError('Abstract method.')
+        raise NotImplementedError("Abstract method.")
 
     def var_as_backend_tensor(self, rv):
-        raise NotImplementedError('Abstract method.')
+        raise NotImplementedError("Abstract method.")
 
     def __enter__(self):
         _contexts.stack.append(self)
@@ -50,17 +51,15 @@ class ForwardContext(BaseContext):
 class InferenceContext(BaseContext):
     def __init__(self, tensors, expected_vars):
         self.vars = []
-        self._expected_vars = expected_vars
-        self._tensors = tensors
+        self._tensors = {
+            var.name: tensor for var, tensor in zip(expected_vars, tensors)
+        }
 
     def add_variable(self, rv):
         self.vars.append(rv)
 
     def var_as_backend_tensor(self, rv):
-        for i, var in enumerate(self._expected_vars):
-            if var.name == rv.name:
-                return self._tensors[i]
-        raise ValueError('Unknown random variable: %s' % rv.name)
+        return self._tensors[rv.name]
 
 
 _contexts = threading.local()

@@ -4,7 +4,7 @@ from . import _template_contexts as contexts
 import tensorflow as tf
 
 
-__all__ = ['model']
+__all__ = ["model"]
 
 
 def model(func):
@@ -27,19 +27,21 @@ class Model:
         self._forward_context = forward_context
         self._observations = {}
 
-    def make_logp_function(self):
-        def logp(*args):
+    def make_log_prob_function(self):
+        def log_prob(*args):
             context = contexts.InferenceContext(
-                args, expected_vars=self._forward_context.vars)
+                args, expected_vars=self._forward_context.vars
+            )
             with context:
                 self._template._func()
+                return sum(tf.reduce_sum(var.log_prob()) for var in context.vars)
 
-                var_logps = []
-                for var in context.vars:
-                    var_logps.append(var._distribution.log_prob(var))
-                return sum(tf.reduce_sum(val) for val in var_logps)
+        return log_prob
 
-        return logp
+    def forward_sample(self, *args, **kwargs):
+        with self._forward_context as context:
+            samples = [var.as_tensor() for var in context.vars]
+        return samples
 
     def observe(self, **kwargs):
         model = copy.copy(self)

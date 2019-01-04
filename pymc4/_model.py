@@ -47,7 +47,7 @@ class Model:
 
     def forward_sample(self, *args, **kwargs):
         with self._forward_context as context:
-            samples = [var.as_tensor() for var in context.vars]
+            samples = {var.name: var.as_tensor() for var in context.vars}
         return samples
 
     def observe(self, **kwargs):

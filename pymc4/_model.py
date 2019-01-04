@@ -17,15 +17,22 @@ class ModelTemplate:
 
     def configure(self, *args, **kwargs):
         with contexts.ForwardContext() as context:
-            self._func(*args, **kwargs)
-        return Model(self, context, template_args=(args, kwargs))
+            model = Model(self, context, template_args=(args, kwargs))
+            model._evaluate()
+        return model
 
 
 class Model:
     def __init__(self, template, forward_context, template_args):
         self._template = template
+        self._template_args = template_args
         self._forward_context = forward_context
         self._observations = {}
+
+    def _evaluate(self):
+        """Call the template function with the saved arguments."""
+        args, kwargs = self._template_args
+        return self._template._func(*args, **kwargs)
 
     def make_log_prob_function(self):
         def log_prob(*args):
@@ -33,7 +40,7 @@ class Model:
                 args, expected_vars=self._forward_context.vars
             )
             with context:
-                self._template._func()
+                self._evaluate()
                 return sum(tf.reduce_sum(var.log_prob()) for var in context.vars)
 
         return log_prob
@@ -45,5 +52,6 @@ class Model:
 
     def observe(self, **kwargs):
         model = copy.copy(self)
-        model.observations.update(kwargs)
+        model._observations.update(kwargs)
+        return model
 

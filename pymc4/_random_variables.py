@@ -3,7 +3,7 @@ from . import _template_contexts as contexts
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-__all__ = ['Normal', 'HalfNormal']
+__all__ = ["Normal", "HalfNormal", "Multinomial", "Dirichlet"]
 
 
 class WithBackendArithmetic:
@@ -100,11 +100,16 @@ class WithBackendArithmetic:
     def __invert__(self):
         return ~self.as_tensor()
 
+    def __getitem__(self, slice_spec, var=None):
+        return self.as_tensor().__getitem__(slice_spec, var=var)
+
 
 class RandomVariable(WithBackendArithmetic):
+    _base_dist = None
+
     def __init__(self, name, *args, **kwargs):
         self._parents = []
-        self._distribution = None
+        self._distribution = self._base_dist(*args, **kwargs)
         self._sample_shape = ()
         self._dim_names = ()
         self.name = name
@@ -116,33 +121,29 @@ class RandomVariable(WithBackendArithmetic):
     def sample(self):
         return self._distribution.sample()
 
+    def log_prob(self):
+        return self._distribution.log_prob(self)
+
     def as_tensor(self):
         ctx = contexts.get_context()
         if id(ctx) != self._creation_context_id:
-            raise ValueError('Can not convert to tensor '
-                             'under new context.')
+            raise ValueError("Can not convert to tensor under new context.")
         if self._backend_tensor is None:
             self._backend_tensor = ctx.var_as_backend_tensor(self)
         return self._backend_tensor
 
-    def __mul__(self, other):
-        return self.as_tensor() * other
-
-    def __div__(self, other):
-        return self.as_tensor() / other
-
-    def __add__(self, other):
-        return self.as_tensor() + other
-
 
 class Normal(RandomVariable):
-    def __init__(self, name, *args, **kwargs):
-        super().__init__(name, *args, **kwargs)
-        self._distribution = tfp.distributions.Normal(*args, **kwargs)
+    _base_dist = tfp.distributions.Normal
 
 
 class HalfNormal(RandomVariable):
-    def __init__(self, name, *args, **kwargs):
-        super().__init__(name, *args, **kwargs)
-        self._distribution = tfp.distributions.HalfNormal(*args, **kwargs)
+    _base_dist = tfp.distributions.HalfNormal
 
+
+class Multinomial(RandomVariable):
+    _base_dist = tfp.distributions.Multinomial
+
+
+class Dirichlet(RandomVariable):
+    _base_dist = tfp.distributions.Dirichlet

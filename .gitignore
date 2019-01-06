@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Custom
 environment.yml
 
@@ -81,3 +82,7 @@ venv.bak/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+=======
+.ipynb_checkpoints/
+pymc4/__pycache__/
+>>>>>>> dd82e7c... centered 8 model

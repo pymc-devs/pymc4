@@ -32,7 +32,8 @@ class Model:
     def _evaluate(self):
         """Call the template function with the saved arguments."""
         args, kwargs = self._template_args
-        return self._template._func(*args, **kwargs)
+        self._template._func(*args, **kwargs)
+        return
 
     def make_log_prob_function(self):
         def log_prob(*args):

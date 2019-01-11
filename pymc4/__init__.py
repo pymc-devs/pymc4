@@ -1,9 +1,12 @@
+"""PyMC4"""
 from ._model import *
 from ._random_variables import *
 
 import tensorflow as _tf
 from ._template_contexts import get_context as _get_context
 from ._random_variables import RandomVariable as _RandomVariable
+
+__version__ = "0.0.1"
 
 
 def _convert_rv_to_backend(d, dtype=None, name=None, as_ref=False):

@@ -45,5 +45,3 @@ class TransformedParametrization:
 
     def log_prob(self, observed):
         raise NotImplementedError
-
-

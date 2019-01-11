@@ -109,7 +109,7 @@ class RandomVariable(WithBackendArithmetic):
 
     def __init__(self, name, *args, **kwargs):
         self._parents = []
-        self._distribution = self._base_dist(*args, **kwargs)
+        self._distribution = self._base_dist(name=name, *args, **kwargs)
         self._sample_shape = ()
         self._dim_names = ()
         self.name = name
@@ -130,6 +130,7 @@ class RandomVariable(WithBackendArithmetic):
             raise ValueError("Can not convert to tensor under new context.")
         if self._backend_tensor is None:
             self._backend_tensor = ctx.var_as_backend_tensor(self)
+
         return self._backend_tensor
 
 

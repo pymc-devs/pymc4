@@ -10,6 +10,9 @@ install:
 
 script:
   - black pymc4/ --check
+
+  # Add these in for now so we can see what version was available at time CI check
+  - pip install -r requirements.txt
   - python -c "import tensorflow; print(tensorflow.__version__)"
   - python -c "import tensorflow_probability; print(tensorflow_probability.__version__)"
 

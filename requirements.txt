@@ -1,2 +1,2 @@
-tensorflow==1.95
+tf-nightly-2.0-preview
 tensorflow-probability==0.5.0

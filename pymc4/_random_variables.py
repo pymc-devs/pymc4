@@ -166,9 +166,7 @@ class RandomVariable(WithBackendArithmetic):
 
 
 # Programmatically wrap tfp distrubtions into pm random variables
-tfp_distributions = inspect.getmodule(tfp.distributions).__dict__
+tfp_dists = inspect.getmodule(tfp.distributions).__dict__
 
 for dist_name in __all__:
-    globals()[dist_name] = type(
-        dist_name, (RandomVariable,), {"_base_dist": tfp_distributions[dist_name]}
-    )
+    globals()[dist_name] = type(dist_name, (RandomVariable,), {"_base_dist": tfp_dists[dist_name]})

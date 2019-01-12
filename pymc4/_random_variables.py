@@ -1,6 +1,6 @@
-import inspect
 from . import _template_contexts as contexts
 
+import inspect
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -165,10 +165,10 @@ class RandomVariable(WithBackendArithmetic):
         return self._backend_tensor
 
 
-# Programmatically define random variables
-distributions = inspect.getmodule(tfp.distributions).__dict__
+# Programmatically wrap tfp distrubtions into pm random variables
+tfp_distributions = inspect.getmodule(tfp.distributions).__dict__
 
 for dist_name in __all__:
-    type(dist_name,
-         (RandomVariable,),
-         {'_base_dist': distributions[dist_name]})
+    globals()[dist_name] = type(
+        dist_name, (RandomVariable,), {"_base_dist": tfp_distributions[dist_name]}
+    )

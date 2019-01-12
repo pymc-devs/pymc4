@@ -184,7 +184,7 @@ class RandomVariable(WithBackendArithmetic):
         return self._backend_tensor
 
 
-# Programmatically wrap tfp distrubtions into pm random variables
+# Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in __all__:
     setattr(
         sys.modules[__name__],

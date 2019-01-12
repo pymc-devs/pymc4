@@ -35,7 +35,7 @@ class DirectParametrization:
         self._trainable_params = []
 
     def log_prob(self, observed):
-        return dist.log_prob(observed)
+        return self._dist.log_prob(observed)
 
 
 class TransformedParametrization:
@@ -44,6 +44,4 @@ class TransformedParametrization:
         self._dist = dist
 
     def log_prob(self, observed):
-
-
-
+        raise NotImplementedError

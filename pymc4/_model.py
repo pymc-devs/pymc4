@@ -37,9 +37,7 @@ class Model:
 
     def make_log_prob_function(self):
         def log_prob(*args):
-            context = contexts.InferenceContext(
-                args, expected_vars=self._forward_context.vars
-            )
+            context = contexts.InferenceContext(args, expected_vars=self._forward_context.vars)
             with context:
                 self._evaluate()
                 return sum(tf.reduce_sum(var.log_prob()) for var in context.vars)
@@ -55,4 +53,3 @@ class Model:
         model = copy.copy(self)
         model._observations.update(kwargs)
         return model
-

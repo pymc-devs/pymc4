@@ -51,9 +51,7 @@ class ForwardContext(BaseContext):
 class InferenceContext(BaseContext):
     def __init__(self, tensors, expected_vars):
         self.vars = []
-        self._tensors = {
-            var.name: tensor for var, tensor in zip(expected_vars, tensors)
-        }
+        self._tensors = {var.name: tensor for var, tensor in zip(expected_vars, tensors)}
 
     def add_variable(self, rv):
         self.vars.append(rv)
@@ -71,4 +69,3 @@ def get_context():
     if len(_contexts.stack) == 0:
         return _contexts.default
     return _contexts.stack[-1]
-

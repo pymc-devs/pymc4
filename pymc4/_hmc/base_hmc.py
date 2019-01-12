@@ -12,14 +12,10 @@ from pymc3.step_methods import step_sizes
 from pymc3.backends.report import SamplerWarning, WarningType
 
 
-HMCStepData = namedtuple(
-    "HMCStepData",
-    "end, accept_stat, divergence_info, stats")
+HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stats")
 
 
-DivergenceInfo = namedtuple(
-    'DivergenceInfo',
-    'message, exec_info, state')
+DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state")
 
 
 class BaseHMC(arraystep.GradientSharedStep):
@@ -27,12 +23,26 @@ class BaseHMC(arraystep.GradientSharedStep):
 
     default_blocked = True
 
-    def __init__(self, vars=None, scaling=None, step_scale=0.25, is_cov=False,
-                 model=None, blocked=True, potential=None,
-                 integrator="leapfrog", dtype=None, Emax=1000,
-                 target_accept=0.8, gamma=0.05, k=0.75, t0=10,
-                 adapt_step_size=True, step_rand=None,
-                 **theano_kwargs):
+    def __init__(
+        self,
+        vars=None,
+        scaling=None,
+        step_scale=0.25,
+        is_cov=False,
+        model=None,
+        blocked=True,
+        potential=None,
+        integrator="leapfrog",
+        dtype=None,
+        Emax=1000,
+        target_accept=0.8,
+        gamma=0.05,
+        k=0.75,
+        t0=10,
+        adapt_step_size=True,
+        step_rand=None,
+        **theano_kwargs
+    ):
         """Set up Hamiltonian samplers with common structures.
 
         Parameters
@@ -59,8 +69,9 @@ class BaseHMC(arraystep.GradientSharedStep):
             vars = model.cont_vars
         vars = inputvars(vars)
 
-        super(BaseHMC, self).__init__(vars, blocked=blocked, model=model,
-                                      dtype=dtype, **theano_kwargs)
+        super(BaseHMC, self).__init__(
+            vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs
+        )
 
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
@@ -70,7 +81,8 @@ class BaseHMC(arraystep.GradientSharedStep):
         self.step_size = step_scale / (size ** 0.25)
         self.target_accept = target_accept
         self.step_adapt = step_sizes.DualAverageAdaptation(
-            self.step_size, target_accept, gamma, k, t0)
+            self.step_size, target_accept, gamma, k, t0
+        )
 
         self.tune = True
 
@@ -91,8 +103,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         else:
             self.potential = quad_potential(scaling, is_cov)
 
-        self.integrator = integration.CpuLeapfrogIntegrator(
-            self.potential, self._logp_dlogp_func)
+        self.integrator = integration.CpuLeapfrogIntegrator(self.potential, self._logp_dlogp_func)
 
         self._step_rand = step_rand
         self._warnings = []
@@ -113,8 +124,9 @@ class BaseHMC(arraystep.GradientSharedStep):
 
         if not np.isfinite(start.energy):
             self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
-            raise ValueError('Bad initial energy: %s. The model '
-                             'might be misspecified.' % start.energy)
+            raise ValueError(
+                "Bad initial energy: %s. The model " "might be misspecified." % start.energy
+            )
 
         adapt_step = self.tune and self.adapt_step_size
         step_size = self.step_adapt.current(adapt_step)
@@ -141,8 +153,8 @@ class BaseHMC(arraystep.GradientSharedStep):
                 else:
                     point = None
             warning = SamplerWarning(
-                kind, info.message, 'debug', self.iter_count,
-                info.exec_info, point)
+                kind, info.message, "debug", self.iter_count, info.exec_info, point
+            )
 
             self._warnings.append(warning)
 
@@ -150,10 +162,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         if not self.tune:
             self._samples_after_tune += 1
 
-        stats = {
-            'tune': self.tune,
-            'diverging': bool(hmc_step.divergence_info),
-        }
+        stats = {"tune": self.tune, "diverging": bool(hmc_step.divergence_info)}
 
         stats.update(hmc_step.stats)
         stats.update(self.step_adapt.stats())
@@ -169,21 +178,25 @@ class BaseHMC(arraystep.GradientSharedStep):
         warnings = self._warnings[:]
 
         # Generate a global warning for divergences
-        message = ''
+        message = ""
         n_divs = self._num_divs_sample
         if n_divs and self._samples_after_tune == n_divs:
-            message = ('The chain contains only diverging samples. The model '
-                       'is probably misspecified.')
+            message = (
+                "The chain contains only diverging samples. The model " "is probably misspecified."
+            )
         elif n_divs == 1:
-            message = ('There was 1 divergence after tuning. Increase '
-                       '`target_accept` or reparameterize.')
+            message = (
+                "There was 1 divergence after tuning. Increase "
+                "`target_accept` or reparameterize."
+            )
         elif n_divs > 1:
-            message = ('There were %s divergences after tuning. Increase '
-                       '`target_accept` or reparameterize.' % n_divs)
+            message = (
+                "There were %s divergences after tuning. Increase "
+                "`target_accept` or reparameterize." % n_divs
+            )
 
         if message:
-            warning = SamplerWarning(
-                WarningType.DIVERGENCES, message, 'error', None, None, None)
+            warning = SamplerWarning(WarningType.DIVERGENCES, message, "error", None, None, None)
             warnings.append(warning)
 
         warnings.extend(self.step_adapt.warnings())

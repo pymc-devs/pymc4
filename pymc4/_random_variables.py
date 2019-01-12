@@ -1,9 +1,40 @@
+import inspect
 from . import _template_contexts as contexts
 
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-__all__ = ["Normal", "HalfNormal", "Multinomial", "Dirichlet"]
+
+# Must match tfp.distributions names exactly
+__all__ = [
+    "Bernoulli",
+    "Beta",
+    "Binomial",
+    "Categorical",
+    "Cauchy",
+    "Chi2",
+    "Dirichlet",
+    "Exponential",
+    "Gamma",
+    "Geometric",
+    "Gumbel",
+    "HalfCauchy",
+    "HalfNormal",
+    "Kumaraswamy",
+    "LKJ",
+    "Laplace",
+    "LogNormal",
+    "Logistic",
+    "Multinomial",
+    "NegativeBinomial",
+    "Normal",
+    "Pareto",
+    "Poisson",
+    "StudentT",
+    "Uniform",
+    "VonMises",
+    "Wishart",
+]
 
 
 class WithBackendArithmetic:
@@ -134,17 +165,10 @@ class RandomVariable(WithBackendArithmetic):
         return self._backend_tensor
 
 
-class Normal(RandomVariable):
-    _base_dist = tfp.distributions.Normal
+# Programmatically define random variables
+distributions = inspect.getmodule(tfp.distributions).__dict__
 
-
-class HalfNormal(RandomVariable):
-    _base_dist = tfp.distributions.HalfNormal
-
-
-class Multinomial(RandomVariable):
-    _base_dist = tfp.distributions.Multinomial
-
-
-class Dirichlet(RandomVariable):
-    _base_dist = tfp.distributions.Dirichlet
+for dist_name in __all__:
+    type(dist_name,
+         (RandomVariable,),
+         {'_base_dist': distributions[dist_name]})

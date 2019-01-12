@@ -2,11 +2,14 @@ language: python
 
 python:
   - "3.6"
+
 sudo: required
+
+cache: pip
+
 
 install:
   - pip install black
-  -
 
 script:
   - black pymc4/ --check

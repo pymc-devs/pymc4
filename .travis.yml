@@ -6,7 +6,10 @@ sudo: required
 
 install:
   - pip install black
+  -
 
 script:
   - black pymc4/ --check
+  - python -c "import tensorflow; print(tensorflow.__version__)"
+  - python -c "import tensorflow_probability; print(tensorflow_probability.__version__)"
 

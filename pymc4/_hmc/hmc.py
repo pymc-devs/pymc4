@@ -48,7 +48,7 @@ class HamiltonianMC(BaseHMC):
         k=0.75,
         t0=10,
         target_accept=0.8,
-        **kwargs
+        **kwargs,
     ):
         """Set up the Hamiltonian Monte Carlo sampler.
 

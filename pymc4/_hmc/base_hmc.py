@@ -41,7 +41,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         t0=10,
         adapt_step_size=True,
         step_rand=None,
-        **theano_kwargs
+        **theano_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
 

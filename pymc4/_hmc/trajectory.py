@@ -102,7 +102,7 @@ def get_theano_hamiltonian_functions(
     potential,
     use_single_leapfrog=False,
     integrator="leapfrog",
-    **theano_kwargs
+    **theano_kwargs,
 ):
     """Construct theano functions for the Hamiltonian, energy, and leapfrog integrator.
 
@@ -214,8 +214,8 @@ def _theano_single_threestage(H, q, p, q_grad, **theano_kwargs):
     epsilon = tt.scalar("epsilon")
     epsilon.tag.test_value = 1.0
 
-    a = 12127897.0 / 102017882
-    b = 4271554.0 / 14421423
+    a = 12_127_897.0 / 102_017_882
+    b = 4_271_554.0 / 14_421_423
 
     # q_{a\epsilon}
     p_ae = p + floatX(a) * epsilon * q_grad
@@ -297,7 +297,7 @@ def _theano_single_leapfrog(H, q, p, q_grad, **theano_kwargs):
     f = theano.function(
         inputs=[q, p, q_grad, epsilon],
         outputs=[q_new, p_new, v_new, q_new_grad, energy_new],
-        **theano_kwargs
+        **theano_kwargs,
     )
     f.trust_input = True
     return f

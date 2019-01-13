@@ -7,11 +7,28 @@ Implements random variables not supported by tfp as distributions.
 from . import _template_contexts as contexts
 
 import sys
+import numpy as np
+import tensorflow_probability as tfp
 import tensorflow_probability.distributions as tfd
 
 
-# Must match tfp.distributions names exactly.
-__all__ = [
+# Random variables that PyMC4 support, but tfp does not support as
+# distributions. We implement these random variables.
+tfp_unsupported = [
+    "Constant",
+    "DiscreteUniform",
+    "HalfStudentT",
+    "LogitNormal",
+    "Weibull",
+    "ZeroInflatedBinomial",
+    "ZeroInflatedNegativeBinomial",
+    "ZeroInflatedPoisson",
+]
+
+# Random variables that PyMC4 support, that tfp also support as distributions.
+# We wrap these distributions as random variables. Names must match
+# tfp.distributions names exactly.
+tfp_supported = [
     "Bernoulli",
     "Beta",
     "Binomial",
@@ -26,6 +43,7 @@ __all__ = [
     "HalfCauchy",
     "HalfNormal",
     "InverseGamma",
+    "InverseGaussian",
     "Kumaraswamy",
     "LKJ",
     "Laplace",
@@ -43,6 +61,8 @@ __all__ = [
     "VonMises",
     "Wishart",
 ]
+
+__all__ = tfp_supported + tfp_unsupported
 
 
 class WithBackendArithmetic:
@@ -184,8 +204,103 @@ class RandomVariable(WithBackendArithmetic):
         return self._backend_tensor
 
 
+# FIXME all RandomVariable classes need docstrings
+
+
+class Constant(RandomVariable):
+    _base_dist = tfd.Deterministic
+
+
+class DiscreteUniform(RandomVariable):
+    def __dist(low, high, *args, **kwargs):
+        probs = np.ones(high - low) / (high - low)
+        return tfd.TransformedDistribution(
+            distribution=tfd.Categorical(probs=probs),
+            bijector=tfp.bijectors.AffineScalar(shift=low),
+            name="DiscreteUniform",
+        )
+
+    _base_dist = __dist
+
+
+class HalfStudentT(RandomVariable):
+    # A HalfStudentT is the absolute value of a StudentT.
+    def __dist(*args, **kwargs):
+        return tfd.TransformedDistribution(
+            distribution=tfd.StudentT(*args, **kwargs),
+            bijector=tfp.bijectors.AbsoluteValue(),
+            name="HalfStudentT",
+        )
+
+    _base_dist = __dist
+
+
+class LogitNormal(RandomVariable):
+    # A LogitNormal is the standard logistic of a Normal.
+    def __dist(*args, **kwargs):
+        return tfd.TransformedDistribution(
+            distribution=tfd.Normal(*args, **kwargs),
+            bijector=tfp.bijectors.Sigmoid(),
+            name="LogitNormal",
+        )
+
+    _base_dist = __dist
+
+
+class Weibull(RandomVariable):
+    # The inverse of the Weibull bijector applied to a U[0, 1] random variable
+    # gives a Weibull-distributed random variable.
+    def __dist(*args, **kwargs):
+        return tfd.TransformedDistribution(
+            distribution=tfd.Uniform(0.0, 1.0),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Weibull(*args, **kwargs)),
+            name="Weibull",
+        )
+
+    _base_dist = __dist
+
+
+class ZeroInflatedBinomial(RandomVariable):
+    # A ZeroInflatedBinomial is a mixture between a deterministic distribution
+    # and a Binomial distribution.
+    def __dist(mix, *args, **kwargs):
+        return tfd.Mixture(
+            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
+            components=[tfd.Deterministic(0.0), tfd.Binomial(*args, **kwargs)],
+            name="ZeroInflatedBinomial",
+        )
+
+    _base_dist = __dist
+
+
+class ZeroInflatedPoisson(RandomVariable):
+    # A ZeroInflatedPoisson is a mixture between a deterministic distribution
+    # and a Poisson distribution.
+    def __dist(mix, *args, **kwargs):
+        return tfd.Mixture(
+            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
+            components=[tfd.Deterministic(0.0), tfd.Poisson(*args, **kwargs)],
+            name="ZeroInflatedPoisson",
+        )
+
+    _base_dist = __dist
+
+
+class ZeroInflatedNegativeBinomial(RandomVariable):
+    # A ZeroInflatedNegativeBinomial is a mixture between a deterministic
+    # distribution and a NegativeBinomial distribution.
+    def __dist(mix, *args, **kwargs):
+        return tfd.Mixture(
+            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
+            components=[tfd.Deterministic(0.0), tfd.NegativeBinomial(*args, **kwargs)],
+            name="ZeroInflatedNegativeBinomial",
+        )
+
+    _base_dist = __dist
+
+
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
-for dist_name in __all__:
+for dist_name in tfp_supported:
     setattr(
         sys.modules[__name__],
         dist_name,

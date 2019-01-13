@@ -9,7 +9,7 @@ from . import _template_contexts as contexts
 import sys
 import numpy as np
 import tensorflow_probability as tfp
-import tensorflow_probability.distributions as tfd
+from tensorflow_probability import distributions as tfd
 
 
 # Random variables that PyMC4 support, but tfp does not support as
@@ -212,7 +212,7 @@ class Constant(RandomVariable):
 
 
 class DiscreteUniform(RandomVariable):
-    def __dist(low, high, *args, **kwargs):
+    def __dist(*args, **kwargs):
         probs = np.ones(high - low) / (high - low)
         return tfd.TransformedDistribution(
             distribution=tfd.Categorical(probs=probs),

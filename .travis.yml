@@ -8,9 +8,9 @@ sudo: required
 # cache: pip
 
 install:
-  - pip install -r requirements.txt
-  - pip install -r requirements-dev.txt
   - pip install --upgrade pip
+  - pip install  --no-cache-dir -r requirements.txt
+  - pip install --no-cache-dir -r requirements-dev.txt
 
 script:
   - black pymc4/ --check

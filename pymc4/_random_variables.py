@@ -7,7 +7,7 @@ Implements random variables not supported by tfp as distributions.
 from . import _template_contexts as contexts
 
 import sys
-import tensorflow_probability.distributions as tfd
+from tensorflow_probability import distributions as tfd
 
 
 # Must match tfp.distributions names exactly.

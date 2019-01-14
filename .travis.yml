@@ -14,6 +14,10 @@ install:
 script:
   - black pymc4/ --check
   - pylint pymc4/
+  - pytest pymc4/ --cov=pymc4/
   # Add these in for now so we can see what versions were available at time CI check
   - pip freeze
 
+after_success:
+  - pip install coveralls
+  - coveralls

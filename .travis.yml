@@ -5,7 +5,7 @@ python:
 
 sudo: required
 
-cache: pip
+# cache: pip
 
 install:
   - pip install -r requirements.txt

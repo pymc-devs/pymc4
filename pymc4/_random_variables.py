@@ -220,8 +220,8 @@ class DiscreteUniform(RandomVariable):
     def _base_dist(*args, **kwargs):
         """A DiscreteUniform is an equiprobable Categorical over (high-low),
         shifted up by low."""
-        low = kwargs["low"]
-        high = kwargs["high"]
+        low = kwargs.pop("low")
+        high = kwargs.pop("high")
         probs = np.ones(high - low) / (high - low)
         return tfd.TransformedDistribution(
             distribution=tfd.Categorical(probs=probs),
@@ -270,7 +270,7 @@ class ZeroInflatedBinomial(RandomVariable):
     def _base_dist(*args, **kwargs):
         """A ZeroInflatedBinomial is a mixture between a deterministic
         distribution and a Binomial distribution."""
-        mix = kwargs["mix"]
+        mix = kwargs.pop("mix")
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.Binomial(*args, **kwargs)],
@@ -287,7 +287,7 @@ class ZeroInflatedPoisson(RandomVariable):
     def _base_dist(*args, **kwargs):
         """A ZeroInflatedPoisson is a mixture between a deterministic
         distribution and a Poisson distribution."""
-        mix = kwargs["mix"]
+        mix = kwargs.pop("mix")
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.Poisson(*args, **kwargs)],
@@ -304,7 +304,7 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
     def _base_dist(*args, **kwargs):
         """A ZeroInflatedNegativeBinomial is a mixture between a deterministic
         distribution and a NegativeBinomial distribution."""
-        mix = kwargs["mix"]
+        mix = kwargs.pop("mix")
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.NegativeBinomial(*args, **kwargs)],

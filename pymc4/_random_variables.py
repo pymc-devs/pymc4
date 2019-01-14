@@ -12,7 +12,7 @@ import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
 
-# Random variables that PyMC4 support, but tfp does not support as
+# Random variables that PyMC3 support, but tfp does not support as
 # distributions. We implement these random variables.
 tfp_unsupported = [
     "Constant",
@@ -25,7 +25,7 @@ tfp_unsupported = [
     "ZeroInflatedPoisson",
 ]
 
-# Random variables that PyMC4 support, that tfp also support as distributions.
+# Random variables that PyMC3 support, that tfp also support as distributions.
 # We wrap these distributions as random variables. Names must match
 # tfp.distributions names exactly.
 tfp_supported = [

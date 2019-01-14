@@ -13,5 +13,5 @@ def tf_session(request):
         tf.reset_default_graph()
 
     request.addfinalizer(fin)
-    
+
     return sess

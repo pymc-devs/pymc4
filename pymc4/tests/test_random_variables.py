@@ -16,7 +16,7 @@ def test_normal_dist(tf_session):
     log_prob = normal_dist.log_prob()
 
     vals = tf_session.run([log_prob], feed_dict={normal_dist._backend_tensor: 0})
-    assert np.isclose(vals[0], -.9189385)
+    assert np.isclose(vals[0], -0.918_938_5)
 
 
 def test_tf_session_cleared(tf_session):

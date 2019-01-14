@@ -1,0 +1,18 @@
+language: python
+
+python:
+  - "3.6"
+
+sudo: required
+
+cache: pip
+
+install:
+  - pip install black
+  - pip install -r requirements.txt
+
+script:
+  - black pymc4/ --check
+  # Add these in for now so we can see what versions were available at time CI check
+  - pip freeze
+

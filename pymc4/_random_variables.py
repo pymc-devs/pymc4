@@ -4,6 +4,7 @@ Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
 
+# pylint: disable=undefined-all-variable
 from . import _template_contexts as contexts
 
 import sys

@@ -212,7 +212,7 @@ class Constant(RandomVariable):
 
 
 class DiscreteUniform(RandomVariable):
-    def __dist(*args, **kwargs):
+    def _base_dist(*args, **kwargs):
         probs = np.ones(high - low) / (high - low)
         return tfd.TransformedDistribution(
             distribution=tfd.Categorical(probs=probs),
@@ -220,83 +220,69 @@ class DiscreteUniform(RandomVariable):
             name="DiscreteUniform",
         )
 
-    _base_dist = __dist
-
 
 class HalfStudentT(RandomVariable):
     # A HalfStudentT is the absolute value of a StudentT.
-    def __dist(*args, **kwargs):
+    def _base_dist(*args, **kwargs):
         return tfd.TransformedDistribution(
             distribution=tfd.StudentT(*args, **kwargs),
             bijector=tfp.bijectors.AbsoluteValue(),
             name="HalfStudentT",
         )
 
-    _base_dist = __dist
-
 
 class LogitNormal(RandomVariable):
     # A LogitNormal is the standard logistic of a Normal.
-    def __dist(*args, **kwargs):
+    def _base_dist(*args, **kwargs):
         return tfd.TransformedDistribution(
             distribution=tfd.Normal(*args, **kwargs),
             bijector=tfp.bijectors.Sigmoid(),
             name="LogitNormal",
         )
 
-    _base_dist = __dist
-
 
 class Weibull(RandomVariable):
     # The inverse of the Weibull bijector applied to a U[0, 1] random variable
     # gives a Weibull-distributed random variable.
-    def __dist(*args, **kwargs):
+    def _base_dist(*args, **kwargs):
         return tfd.TransformedDistribution(
             distribution=tfd.Uniform(0.0, 1.0),
             bijector=tfp.bijectors.Invert(tfp.bijectors.Weibull(*args, **kwargs)),
             name="Weibull",
         )
 
-    _base_dist = __dist
-
 
 class ZeroInflatedBinomial(RandomVariable):
     # A ZeroInflatedBinomial is a mixture between a deterministic distribution
     # and a Binomial distribution.
-    def __dist(mix, *args, **kwargs):
+    def _base_dist(mix, *args, **kwargs):
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.Binomial(*args, **kwargs)],
             name="ZeroInflatedBinomial",
         )
 
-    _base_dist = __dist
-
 
 class ZeroInflatedPoisson(RandomVariable):
     # A ZeroInflatedPoisson is a mixture between a deterministic distribution
     # and a Poisson distribution.
-    def __dist(mix, *args, **kwargs):
+    def _base_dist(mix, *args, **kwargs):
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.Poisson(*args, **kwargs)],
             name="ZeroInflatedPoisson",
         )
 
-    _base_dist = __dist
-
 
 class ZeroInflatedNegativeBinomial(RandomVariable):
     # A ZeroInflatedNegativeBinomial is a mixture between a deterministic
     # distribution and a NegativeBinomial distribution.
-    def __dist(mix, *args, **kwargs):
+    def _base_dist(mix, *args, **kwargs):
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.NegativeBinomial(*args, **kwargs)],
             name="ZeroInflatedNegativeBinomial",
         )
-
-    _base_dist = __dist
 
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables

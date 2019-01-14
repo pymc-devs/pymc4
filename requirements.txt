@@ -1,2 +1,4 @@
 tf-nightly
 tfp-nightly
+pymc3
+scipy

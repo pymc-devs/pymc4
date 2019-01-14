@@ -10,6 +10,7 @@ sudo: required
 install:
   - pip install -r requirements.txt
   - pip install -r requirements-dev.txt
+  - pip install --upgrade pip
 
 script:
   - black pymc4/ --check

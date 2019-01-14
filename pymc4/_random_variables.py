@@ -212,7 +212,16 @@ class Constant(RandomVariable):
 
 
 class DiscreteUniform(RandomVariable):
+    def __init__(self, name, low, high, *args, **kwargs):
+        """Add `low` and `high` to kwargs."""
+        kwargs.update({"low": low, "high": high})
+        super(DiscreteUniform, self).__init__(name, *args, **kwargs)
+
     def _base_dist(*args, **kwargs):
+        """A DiscreteUniform is an equiprobable Categorical over (high-low),
+        shifted up by low."""
+        low = kwargs["low"]
+        high = kwargs["high"]
         probs = np.ones(high - low) / (high - low)
         return tfd.TransformedDistribution(
             distribution=tfd.Categorical(probs=probs),
@@ -222,8 +231,8 @@ class DiscreteUniform(RandomVariable):
 
 
 class HalfStudentT(RandomVariable):
-    # A HalfStudentT is the absolute value of a StudentT.
     def _base_dist(*args, **kwargs):
+        """A HalfStudentT is the absolute value of a StudentT."""
         return tfd.TransformedDistribution(
             distribution=tfd.StudentT(*args, **kwargs),
             bijector=tfp.bijectors.AbsoluteValue(),
@@ -232,8 +241,8 @@ class HalfStudentT(RandomVariable):
 
 
 class LogitNormal(RandomVariable):
-    # A LogitNormal is the standard logistic of a Normal.
     def _base_dist(*args, **kwargs):
+        """A LogitNormal is the standard logistic of a Normal."""
         return tfd.TransformedDistribution(
             distribution=tfd.Normal(*args, **kwargs),
             bijector=tfp.bijectors.Sigmoid(),
@@ -242,20 +251,26 @@ class LogitNormal(RandomVariable):
 
 
 class Weibull(RandomVariable):
-    # The inverse of the Weibull bijector applied to a U[0, 1] random variable
-    # gives a Weibull-distributed random variable.
     def _base_dist(*args, **kwargs):
+        """The inverse of the Weibull bijector applied to a U[0, 1] random
+        variable gives a Weibull-distributed random variable."""
         return tfd.TransformedDistribution(
-            distribution=tfd.Uniform(0.0, 1.0),
+            distribution=tfd.Uniform(low=0.0, high=1.0),
             bijector=tfp.bijectors.Invert(tfp.bijectors.Weibull(*args, **kwargs)),
             name="Weibull",
         )
 
 
 class ZeroInflatedBinomial(RandomVariable):
-    # A ZeroInflatedBinomial is a mixture between a deterministic distribution
-    # and a Binomial distribution.
-    def _base_dist(mix, *args, **kwargs):
+    def __init__(self, name, mix, *args, **kwargs):
+        """Add `mix` to kwargs."""
+        kwargs.update({"mix": mix})
+        super(ZeroInflatedBinomial, self).__init__(name, *args, **kwargs)
+
+    def _base_dist(*args, **kwargs):
+        """A ZeroInflatedBinomial is a mixture between a deterministic
+        distribution and a Binomial distribution."""
+        mix = kwargs["mix"]
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.Binomial(*args, **kwargs)],
@@ -264,9 +279,15 @@ class ZeroInflatedBinomial(RandomVariable):
 
 
 class ZeroInflatedPoisson(RandomVariable):
-    # A ZeroInflatedPoisson is a mixture between a deterministic distribution
-    # and a Poisson distribution.
-    def _base_dist(mix, *args, **kwargs):
+    def __init__(self, name, mix, *args, **kwargs):
+        """Add `mix` to kwargs."""
+        kwargs.update({"mix": mix})
+        super(ZeroInflatedPoisson, self).__init__(name, *args, **kwargs)
+
+    def _base_dist(*args, **kwargs):
+        """A ZeroInflatedPoisson is a mixture between a deterministic
+        distribution and a Poisson distribution."""
+        mix = kwargs["mix"]
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.Poisson(*args, **kwargs)],
@@ -275,9 +296,15 @@ class ZeroInflatedPoisson(RandomVariable):
 
 
 class ZeroInflatedNegativeBinomial(RandomVariable):
-    # A ZeroInflatedNegativeBinomial is a mixture between a deterministic
-    # distribution and a NegativeBinomial distribution.
-    def _base_dist(mix, *args, **kwargs):
+    def __init__(self, name, mix, *args, **kwargs):
+        """Add `mix` to kwargs."""
+        kwargs.update({"mix": mix})
+        super(ZeroInflatedNegativeBinomial, self).__init__(name, *args, **kwargs)
+
+    def _base_dist(*args, **kwargs):
+        """A ZeroInflatedNegativeBinomial is a mixture between a deterministic
+        distribution and a NegativeBinomial distribution."""
+        mix = kwargs["mix"]
         return tfd.Mixture(
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.NegativeBinomial(*args, **kwargs)],

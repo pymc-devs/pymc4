@@ -1,12 +1,55 @@
+"""
+Implements the RandomVariable base class (and the necessary BackendArithmetic).
+Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
+Implements random variables not supported by tfp as distributions.
+"""
+
 from . import _template_contexts as contexts
 
-import tensorflow as tf
-import tensorflow_probability as tfp
+import sys
+import tensorflow_probability.distributions as tfd
 
-__all__ = ["Normal", "HalfNormal", "Multinomial", "Dirichlet"]
+
+# Must match tfp.distributions names exactly.
+__all__ = [
+    "Bernoulli",
+    "Beta",
+    "Binomial",
+    "Categorical",
+    "Cauchy",
+    "Chi2",
+    "Dirichlet",
+    "Exponential",
+    "Gamma",
+    "Geometric",
+    "Gumbel",
+    "HalfCauchy",
+    "HalfNormal",
+    "InverseGamma",
+    "Kumaraswamy",
+    "LKJ",
+    "Laplace",
+    "LogNormal",
+    "Logistic",
+    "Multinomial",
+    "MultivariateNormalFullCovariance",
+    "NegativeBinomial",
+    "Normal",
+    "Pareto",
+    "Poisson",
+    "StudentT",
+    "Triangular",
+    "Uniform",
+    "VonMises",
+    "Wishart",
+]
 
 
 class WithBackendArithmetic:
+    """
+    Helper class to implement the backend arithmetic necessary for the RandomVariable class.
+    """
+
     def __add__(self, other):
         return self.as_tensor() + other
 
@@ -105,6 +148,13 @@ class WithBackendArithmetic:
 
 
 class RandomVariable(WithBackendArithmetic):
+    """
+    Random variable base class.
+
+    Random variables must support 1) sampling, 2) computation of the log
+    probability, and 3) conversion to tensors.
+    """
+
     _base_dist = None
 
     def __init__(self, name, *args, **kwargs):
@@ -127,24 +177,17 @@ class RandomVariable(WithBackendArithmetic):
     def as_tensor(self):
         ctx = contexts.get_context()
         if id(ctx) != self._creation_context_id:
-            raise ValueError("Can not convert to tensor under new context.")
+            raise ValueError("Cannot convert to tensor under new context.")
         if self._backend_tensor is None:
             self._backend_tensor = ctx.var_as_backend_tensor(self)
 
         return self._backend_tensor
 
 
-class Normal(RandomVariable):
-    _base_dist = tfp.distributions.Normal
-
-
-class HalfNormal(RandomVariable):
-    _base_dist = tfp.distributions.HalfNormal
-
-
-class Multinomial(RandomVariable):
-    _base_dist = tfp.distributions.Multinomial
-
-
-class Dirichlet(RandomVariable):
-    _base_dist = tfp.distributions.Dirichlet
+# Programmatically wrap tfp.distribtions into pm.RandomVariables
+for dist_name in __all__:
+    setattr(
+        sys.modules[__name__],
+        dist_name,
+        type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
+    )

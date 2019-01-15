@@ -217,7 +217,7 @@ class DiscreteUniform(RandomVariable):
         kwargs.update({"low": low, "high": high})
         super(DiscreteUniform, self).__init__(name, *args, **kwargs)
 
-    def _base_dist(*args, **kwargs):
+    def _base_dist(self, *args, **kwargs):
         """A DiscreteUniform is an equiprobable Categorical over (high-low),
         shifted up by low."""
         low = kwargs.pop("low")
@@ -231,7 +231,7 @@ class DiscreteUniform(RandomVariable):
 
 
 class HalfStudentT(RandomVariable):
-    def _base_dist(*args, **kwargs):
+    def _base_dist(self, *args, **kwargs):
         """A HalfStudentT is the absolute value of a StudentT."""
         return tfd.TransformedDistribution(
             distribution=tfd.StudentT(*args, **kwargs),
@@ -241,7 +241,7 @@ class HalfStudentT(RandomVariable):
 
 
 class LogitNormal(RandomVariable):
-    def _base_dist(*args, **kwargs):
+    def _base_dist(self, *args, **kwargs):
         """A LogitNormal is the standard logistic of a Normal."""
         return tfd.TransformedDistribution(
             distribution=tfd.Normal(*args, **kwargs),
@@ -251,7 +251,7 @@ class LogitNormal(RandomVariable):
 
 
 class Weibull(RandomVariable):
-    def _base_dist(*args, **kwargs):
+    def _base_dist(self, *args, **kwargs):
         """The inverse of the Weibull bijector applied to a U[0, 1] random
         variable gives a Weibull-distributed random variable."""
         return tfd.TransformedDistribution(
@@ -267,7 +267,7 @@ class ZeroInflatedBinomial(RandomVariable):
         kwargs.update({"mix": mix})
         super(ZeroInflatedBinomial, self).__init__(name, *args, **kwargs)
 
-    def _base_dist(*args, **kwargs):
+    def _base_dist(self, *args, **kwargs):
         """A ZeroInflatedBinomial is a mixture between a deterministic
         distribution and a Binomial distribution."""
         mix = kwargs.pop("mix")
@@ -284,7 +284,7 @@ class ZeroInflatedPoisson(RandomVariable):
         kwargs.update({"mix": mix})
         super(ZeroInflatedPoisson, self).__init__(name, *args, **kwargs)
 
-    def _base_dist(*args, **kwargs):
+    def _base_dist(self, *args, **kwargs):
         """A ZeroInflatedPoisson is a mixture between a deterministic
         distribution and a Poisson distribution."""
         mix = kwargs.pop("mix")
@@ -301,7 +301,7 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
         kwargs.update({"mix": mix})
         super(ZeroInflatedNegativeBinomial, self).__init__(name, *args, **kwargs)
 
-    def _base_dist(*args, **kwargs):
+    def _base_dist(self, *args, **kwargs):
         """A ZeroInflatedNegativeBinomial is a mixture between a deterministic
         distribution and a NegativeBinomial distribution."""
         mix = kwargs.pop("mix")

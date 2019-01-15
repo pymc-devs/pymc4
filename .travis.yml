@@ -8,11 +8,12 @@ sudo: required
 cache: pip
 
 install:
-  - pip install black
   - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
 
 script:
   - black pymc4/ --check
+  - pylint pymc4/
   # Add these in for now so we can see what versions were available at time CI check
   - pip freeze
 

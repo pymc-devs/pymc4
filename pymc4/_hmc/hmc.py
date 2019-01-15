@@ -1,7 +1,5 @@
 import numpy as np
 
-# Array step doesn't seem to exist
-# from ..arraystep import Competence
 from pymc3.vartypes import discrete_types
 from pymc3.step_methods.hmc.integration import IntegrationError
 from pymc3.step_methods.hmc.base_hmc import BaseHMC, HMCStepData, DivergenceInfo

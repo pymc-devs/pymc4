@@ -5,8 +5,6 @@ from collections import namedtuple
 import numpy as np
 import numpy.random as nr
 
-# Array step doesn't seem to exist
-# from ..arraystep import Competence
 from .base_hmc import BaseHMC, HMCStepData, DivergenceInfo
 from .integration import IntegrationError
 from pymc3.backends.report import SamplerWarning, WarningType

@@ -13,7 +13,6 @@ import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
 
-
 # Random variables tfp does not support as distributions. We implement these
 # random variables.
 tfp_unsupported = [
@@ -26,7 +25,6 @@ tfp_unsupported = [
     "ZeroInflatedNegativeBinomial",
     "ZeroInflatedPoisson",
 ]
-
 
 
 # Random variables that tfp supports as distributions. We wrap these

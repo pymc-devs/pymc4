@@ -2,7 +2,7 @@
 Tests for PyMC4 random variables
 """
 
-from pymc4 import Normal
+from .. import Normal
 import numpy as np
 
 

@@ -12,8 +12,8 @@ import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
 
-# Random variables that PyMC3 supports, but tfp does not support as
-# distributions. We implement these random variables.
+# Random variables tfp does not support as distributions. We implement these
+# random variables.
 tfp_unsupported = [
     "Constant",
     "DiscreteUniform",
@@ -25,9 +25,9 @@ tfp_unsupported = [
     "ZeroInflatedPoisson",
 ]
 
-# Random variables that PyMC3 supports, that tfp also support as distributions.
-# We wrap these distributions as random variables. Names must match
-# tfp.distributions names exactly.
+# Random variables that tfp supports as distributions. We wrap these
+# distributions as random variables. Names must match tfp.distributions names
+# exactly.
 tfp_supported = [
     "Bernoulli",
     "Beta",

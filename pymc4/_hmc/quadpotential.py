@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.random import normal
-import scipy.linalg
 from scipy.sparse import issparse
 import scipy.sparse.linalg as slinalg
 from scipy import linalg, stats

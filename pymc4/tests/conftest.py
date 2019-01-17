@@ -6,12 +6,10 @@ import tensorflow as tf
 
 
 @pytest.fixture(scope="function")
-def tf_session(request):
+def tf_session():
     sess = tf.Session()
+    yield sess
 
-    def fin():
-        tf.reset_default_graph()
+    tf.reset_default_graph()
 
-    request.addfinalizer(fin)
 
-    return sess

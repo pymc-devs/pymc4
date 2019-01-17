@@ -3,7 +3,6 @@ Tests for PyMC4 random variables
 """
 import pytest
 import numpy as np
-import tensorflow as tf
 
 
 from .. import _random_variables

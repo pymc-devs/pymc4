@@ -1,6 +1,7 @@
 import pymc4 as pm
 import tensorflow as tf
 import numpy as np
+import pytest
 from numpy import array, float32
 
 config = tf.ConfigProto()
@@ -44,7 +45,8 @@ def test_linear_regression():
     np.testing.assert_allclose(sess.run(logp, feed_dict=feed_dict), -437.2295)
 
 
-def test_linear_regression_forward_sample():
+@pytest.fixture
+def forward_sample_test():
     forward_sample_test = {
         "intercept": 10.935_236,
         "sigma": 16.7994,
@@ -155,6 +157,10 @@ def test_linear_regression_forward_sample():
             dtype=float32,
         ),
     }
+    return forward_sample_test
+
+
+def test_linear_regression_forward_sample(forward_sample_test):
     np.testing.assert_equal(forward_sample["y"], forward_sample_test["y"])
     np.testing.assert_almost_equal(forward_sample["sigma"], forward_sample_test["sigma"], decimal=2)
     np.testing.assert_almost_equal(

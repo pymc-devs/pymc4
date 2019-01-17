@@ -47,8 +47,8 @@ script:
 after_success:
   - echo $(pwd)
   - ls -la
-  - if [[ $NAME == UNIT ]]; then sed -i 's/\/opt\/pymc4/\/home\/travis\/build\/pymc4-devs\/pymc4/g' .coverage; fi
+  - if [[ $NAME == UNIT ]]; then sed -i 's/\/opt\/pymc4/\/home\/travis\/build\/pymc-devs\/pymc4/g' .coverage; fi
   - if [[ $NAME == UNIT ]]; then coveralls; fi
 
-  - if [[ $NAME == LINT ]]; then sed -i 's/\/opt\/pymc4/\/home\/travis\/build\/pymc4-devs\/pymc4/g' .coverage; fi
+  - if [[ $NAME == LINT ]]; then sed -i 's/\/opt\/pymc4/\/home\/travis\/build\/pymc-devs\/pymc4/g' .coverage; fi
   - if [[ $NAME == LINT ]]; then coveralls; fi

@@ -1,6 +1,6 @@
 FROM conda/miniconda3
 
-LABEL maintainer="Ravin Kumar"
+LABEL maintainer="PyMC Devs https://github.com/pymc-devs/pymc4"
 
 ARG SRC_DIR
 ARG PYTHON_VERSION

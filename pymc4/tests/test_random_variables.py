@@ -76,7 +76,7 @@ def test_rvs_logp_and_forward_sample(tf_session, tf_supported_args, tf_distribut
         assert vals is not None
 
     else:
-
+        # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81
         assert tf_distribution == "Binomial"
         with pytest.raises(NotImplementedError) as err:
             dist.log_prob()

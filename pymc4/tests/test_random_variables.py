@@ -9,7 +9,7 @@ from .. import _random_variables
 
 @pytest.fixture(scope="session")
 def tf_supported_args():
-    """Provide arugments for each supported Tensorflow distribution"""
+    """Provide arguments for each supported Tensorflow distribution"""
     _tfp_supported_args = {
         "Bernoulli": {"probs": 0.5},
         "Beta": {"concentration0": 1, "concentration1": 1},

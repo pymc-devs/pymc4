@@ -42,5 +42,5 @@ pip install --upgrade pip
 
 
 #  Install editable using the setup.py
-pip install  --no-cache-dir -r requirements.txt
+pip install --no-cache-dir -r requirements.txt
 pip install --no-cache-dir -r requirements-dev.txt

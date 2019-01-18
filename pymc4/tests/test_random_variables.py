@@ -60,7 +60,7 @@ def test_tf_session_cleared(tf_session):
 @pytest.mark.parametrize(
     "tf_distribution", _random_variables.tfp_supported, ids=_random_variables.tfp_supported
 )
-def test_tfp_distributions(tf_session, tf_supported_args, tf_distribution):
+def test_rvs_logp_and_forward_sample(tf_session, tf_supported_args, tf_distribution):
     """Test all TFP supported distributions"""
     _dist = getattr(_random_variables, tf_distribution)
 

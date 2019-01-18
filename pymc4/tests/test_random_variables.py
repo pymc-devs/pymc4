@@ -69,7 +69,7 @@ def test_rvs_logp_and_forward_sample(tf_session, tf_supported_args, tf_distribut
 
     dist = _dist("test_dist", **kwargs, validate_args=True)
 
-    if tf_distribution is not "Binomial":
+    if tf_distribution != "Binomial":
         # Assert that values are returned with no exceptions
         log_prob = dist.log_prob()
         vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
@@ -77,7 +77,6 @@ def test_rvs_logp_and_forward_sample(tf_session, tf_supported_args, tf_distribut
 
     else:
 
-        # Bionomial distribution raises exception when calling log_prob
         assert tf_distribution == "Binomial"
         with pytest.raises(NotImplementedError) as err:
             dist.log_prob()

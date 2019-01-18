@@ -10,4 +10,5 @@ def tf_session():
     sess = tf.Session()
     yield sess
 
+    sess.close()
     tf.reset_default_graph()

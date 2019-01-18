@@ -11,5 +11,3 @@ def tf_session():
     yield sess
 
     tf.reset_default_graph()
-
-

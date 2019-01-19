@@ -52,16 +52,14 @@ def tfp_supported_args():
 
 
 def test_tf_session_cleared(tf_session):
-    """Temporary test: Check that fixture is finalizing correctly"""
+    """Check that fixture is finalizing correctly"""
     assert len(tf_session.graph.get_operations()) == 0
 
 
 @pytest.mark.parametrize(**tfp_supported_args())
 def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
-    """Test all TFP supported distributions"""
-
+    """Test all RandomVariables that are implemented with TFP distributions"""
     sample = kwargs.pop("sample", 0.1)
-
     dist = randomvariable("test_dist", **kwargs, validate_args=True)
 
     if randomvariable.__name__ != "Binomial":

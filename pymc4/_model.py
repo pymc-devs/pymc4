@@ -9,7 +9,7 @@ __all__ = ["model"]
 
 def model(func):
     """
-    Decorator function to wrap a model-specification function as a PyMC4 model.
+    Decorate a model-specification function as a PyMC4 model.
 
     Parameters
     ----------
@@ -35,9 +35,7 @@ class ModelTemplate:
         self._func = func
 
     def configure(self, *args, **kwargs):
-        """
-        This class method configures the model by setting it up as a Model object.
-        """
+        """Configure the model by setting it up as a Model object."""
         with contexts.ForwardContext() as context:
             model = Model(self, context, template_args=(args, kwargs))
             model._evaluate()
@@ -45,9 +43,7 @@ class ModelTemplate:
 
 
 class Model:
-    """
-    Base model object.
-    """
+    """Base model object."""
 
     def __init__(self, template, forward_context, template_args):
         self._template = template

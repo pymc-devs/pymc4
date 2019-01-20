@@ -1,6 +1,4 @@
-"""
-PyMC4 test configuration
-"""
+"""PyMC4 test configuration."""
 import pytest
 import tensorflow as tf
 

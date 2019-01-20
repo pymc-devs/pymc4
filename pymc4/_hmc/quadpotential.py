@@ -476,7 +476,7 @@ class QuadPotentialFull(QuadPotential):
 
 
 def add_ADATv(A, v, out, diag=None, beta=0.0, work=None):
-    """Run out = beta * out + A @ np.diag(D) @ A.T @ v"""
+    """Run out = beta * out + A @ np.diag(D) @ A.T @ v."""
     if work is None:
         work = np.empty(A.shape[1])
     linalg.blas.dgemv(1.0, A, v, y=work, trans=1, beta=0.0, overwrite_y=True)

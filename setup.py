@@ -1,14 +1,14 @@
 import codecs
-import os
 import re
+from pathlib import Path
 
 from setuptools import setup, find_packages
 
 
-PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
-REQUIREMENTS_FILE = os.path.join(PROJECT_ROOT, "requirements.txt")
-README_FILE = os.path.join(PROJECT_ROOT, "README.md")
-VERSION_FILE = os.path.join(PROJECT_ROOT, "pymc4", "__init__.py")
+PROJECT_ROOT = Path(__file__).resolve()
+REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
+README_FILE = PROJECT_ROOT / "README.md"
+VERSION_FILE = PROJECT_ROOT / "pymc4" / "__init__.py"
 
 NAME = "PyMC4"
 DESCRIPTION = " A Python probabilistic programming interface to Tensorflow, for Bayesian modelling and machine learning."

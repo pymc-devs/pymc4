@@ -59,6 +59,7 @@ class Model:
 
     def make_log_prob_function(self):
         """Return the log probability of the model."""
+
         def log_prob(*args):
             context = contexts.InferenceContext(args, expected_vars=self._forward_context.vars)
             with context:

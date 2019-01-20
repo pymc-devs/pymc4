@@ -53,13 +53,13 @@ def random_variable_args():
         (_random_variables.Wishart, {"df": 3, "scale_tril": [[1]], "sample": [[1]]}),
         (
             _random_variables.ZeroInflatedBinomial,
-            {"mix": 0.2, "total_count": 10, "probs": np.ones(5) / 5},
+            {"mix": 0.2, "total_count": 10, "probs": np.ones(5) / 5, "sample": 0},
         ),
         (
             _random_variables.ZeroInflatedNegativeBinomial,
-            {"mix": 0.2, "total_count": 10, "probs": np.ones(5) / 5},
+            {"mix": 0.2, "total_count": 10, "probs": np.ones(5) / 5, "sample": 0},
         ),
-        (_random_variables.ZeroInflatedPoisson, {"mix": 0.2, "rate": 2}),
+        (_random_variables.ZeroInflatedPoisson, {"mix": 0.2, "rate": 2, "sample": 0}),
     )
 
     ids = [dist[0].__name__ for dist in _random_variable_args]

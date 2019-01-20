@@ -180,7 +180,6 @@ def leapfrog(H, q, p, epsilon, n_steps):
     momentum : Theano.tensor
         momentum estimate at time :math:`n \cdot e`.
     """
-
     def full_update(p, q):
         p = p + epsilon * H.dlogp(q)
         q += epsilon * H.pot.velocity(p)

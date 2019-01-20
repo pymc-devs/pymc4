@@ -4,8 +4,8 @@ set -ex # fail on first error, print commands
 
 SRC_DIR=${SRC_DIR:-`pwd`}
 
-echo "Checking documentation..."
-python -m pydocstyle --convention=numpy ${SRC_DIR}/pymc4/
+echo "Checking documentation with pydocstyle..."
+python -m pydocstyle ${SRC_DIR}/pymc4/
 echo "Success!"
 
 echo "Checking code style with black..."

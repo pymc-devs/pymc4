@@ -48,6 +48,7 @@ class Model:
     """
     Base model object.
     """
+
     def __init__(self, template, forward_context, template_args):
         self._template = template
         self._template_args = template_args
@@ -62,6 +63,7 @@ class Model:
 
     def make_log_prob_function(self):
         """Return the log probability of the model."""
+
         def log_prob(*args):
             context = contexts.InferenceContext(args, expected_vars=self._forward_context.vars)
             with context:

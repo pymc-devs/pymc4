@@ -1,4 +1,4 @@
-"""PyMC4"""
+"""PyMC4."""
 from ._model import *
 from ._random_variables import *
 

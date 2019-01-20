@@ -1,3 +1,4 @@
+pydocstyle
 pytest
 pytest-cov
 pylint

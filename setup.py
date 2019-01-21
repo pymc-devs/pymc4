@@ -5,7 +5,7 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 
-PROJECT_ROOT = Path(__file__).resolve()
+PROJECT_ROOT = Path(__file__).resolve().parent
 REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
 README_FILE = PROJECT_ROOT / "README.md"
 VERSION_FILE = PROJECT_ROOT / "pymc4" / "__init__.py"

@@ -1,6 +1,7 @@
 """PyMC4."""
 from ._model import *
 from ._random_variables import *
+from .plots import *
 
 import tensorflow as _tf
 from ._template_contexts import get_context as _get_context

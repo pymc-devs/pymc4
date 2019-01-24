@@ -1,3 +1,4 @@
+arviz
 tf-nightly
 tfp-nightly
 pymc3

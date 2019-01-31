@@ -12,7 +12,6 @@ from . import _template_contexts as contexts
 import sys
 import numpy as np
 import tensorflow_probability as tfp
-<<<<<<< HEAD
 from tensorflow_probability import distributions as tfd
 
 
@@ -67,10 +66,6 @@ tfp_supported = [
 ]
 
 __all__ = tfp_supported + tfp_unsupported
-=======
-
-__all__ = ["Normal", "HalfNormal", "Multinomial", "Dirichlet", "HalfCauchy"]
->>>>>>> dd82e7c... centered 8 model
 
 
 class WithBackendArithmetic:
@@ -210,7 +205,6 @@ class RandomVariable(WithBackendArithmetic):
         return self._backend_tensor
 
 
-<<<<<<< HEAD
 # FIXME all RandomVariable classes need docstrings
 
 
@@ -354,11 +348,3 @@ for dist_name in tfp_supported:
         dist_name,
         type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
     )
-=======
-class Dirichlet(RandomVariable):
-    _base_dist = tfp.distributions.Dirichlet
-
-
-class HalfCauchy(RandomVariable):
-    _base_dist = tfp.distributions.HalfCauchy
->>>>>>> dd82e7c... centered 8 model

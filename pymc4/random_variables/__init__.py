@@ -1,6 +1,12 @@
 from .random_variable import RandomVariable
 from .discrete import (
+    Bernoulli,
+    Binomial,
+    Categorical,
     Constant,
+    Geometric,
+    NegativeBinomial,
+    Poisson,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
@@ -33,7 +39,13 @@ from .continuous import (
 from .multivariate import Dirichlet, LKJ, Multinomial, MultivariateNormalFullCovariance, Wishart
 
 __all__ = [
+    "Bernoulli",
+    "Binomial",
+    "Categorical",
     "Constant",
+    "Geometric",
+    "NegativeBinomial",
+    "Poisson",
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
     "ZeroInflatedPoisson",

@@ -19,7 +19,7 @@ from tensorflow_probability import distributions as tfd
 # random variables.
 tfp_unsupported = [
     "Constant",
-    "DiscreteUniform",
+    # "DiscreteUniform",
     "HalfStudentT",
     "LogitNormal",
     "Weibull",
@@ -212,6 +212,7 @@ class Constant(RandomVariable):
     _base_dist = tfd.Deterministic
 
 
+'''
 class DiscreteUniform(RandomVariable):
     def __init__(self, name, low, high, *args, **kwargs):
         """Add `low` and `high` to kwargs."""
@@ -233,6 +234,7 @@ class DiscreteUniform(RandomVariable):
             bijector=tfp.bijectors.AffineScalar(shift=low),
             name="DiscreteUniform",
         )
+'''
 
 
 class HalfStudentT(RandomVariable):

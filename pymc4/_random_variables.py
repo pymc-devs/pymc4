@@ -10,7 +10,6 @@ Implements random variables not supported by tfp as distributions.
 from . import _template_contexts as contexts
 
 import sys
-import numpy as np
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 

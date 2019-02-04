@@ -1,4 +1,5 @@
-"""Contexts for model template evaluation.
+"""
+Contexts for model template evaluation.
 
 When a new random variable is created, it will register
 itself with the current context on the context stack by
@@ -12,7 +13,7 @@ import threading
 
 
 class BaseContext:
-    """A context """
+    """A context."""
 
     def add_variable(self, rv):
         raise NotImplementedError("Abstract method.")

@@ -81,7 +81,7 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
     sample = kwargs.pop("sample", 0.1)
     dist = randomvariable("test_dist", **kwargs, validate_args=True)
 
-    if randomvariable.__name__ != "Binomial":
+    if randomvariable.__name__ not in ["Binomial", "ZeroInflatedBinomial"]:
         # Assert that values are returned with no exceptions
         log_prob = dist.log_prob()
         vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
@@ -89,7 +89,7 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81
-        assert randomvariable.__name__ == "Binomial"
+        assert randomvariable.__name__ in ["Binomial", "ZeroInflatedBinomial]
         with pytest.raises(NotImplementedError) as err:
             dist.log_prob()
             assert "NotImplementedError: sample_n is not implemented: Binomial" == str(err)

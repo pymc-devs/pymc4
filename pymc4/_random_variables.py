@@ -10,7 +10,6 @@ Implements random variables not supported by tfp as distributions.
 from . import _template_contexts as contexts
 
 import sys
-import numpy as np
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
@@ -19,7 +18,8 @@ from tensorflow_probability import distributions as tfd
 # random variables.
 tfp_unsupported = [
     "Constant",
-    "DiscreteUniform",
+    # TODO DiscreteUniform raises a NotImplementedError from tfp.
+    # "DiscreteUniform",
     "HalfStudentT",
     "LogitNormal",
     "Weibull",
@@ -212,6 +212,7 @@ class Constant(RandomVariable):
     _base_dist = tfd.Deterministic
 
 
+''' TODO DiscreteUniform raises a NotImplementedError from tfp.
 class DiscreteUniform(RandomVariable):
     def __init__(self, name, low, high, *args, **kwargs):
         """Add `low` and `high` to kwargs."""
@@ -233,6 +234,7 @@ class DiscreteUniform(RandomVariable):
             bijector=tfp.bijectors.AffineScalar(shift=low),
             name="DiscreteUniform",
         )
+'''
 
 
 class HalfStudentT(RandomVariable):

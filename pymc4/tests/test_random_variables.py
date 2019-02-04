@@ -17,7 +17,7 @@ def random_variable_args():
         (_random_variables.Chi2, {"df": 2}),
         (_random_variables.Constant, {"loc": 3}),
         (_random_variables.Dirichlet, {"concentration": [1, 2], "sample": [0.5, 0.5]}),
-        # (_random_variables.DiscreteUniform, {"low": 2, "high": 10}),
+        # (_random_variables.DiscreteUniform, {"low": 2, "high": 10, "sample": 5}),
         (_random_variables.Exponential, {"rate": 1}),
         (_random_variables.Gamma, {"concentration": 3.0, "rate": 2.0}),
         (_random_variables.Geometric, {"probs": 0.5, "sample": 10}),
@@ -49,17 +49,17 @@ def random_variable_args():
         (_random_variables.Triangular, {"low": 0.0, "high": 1.0, "peak": 0.5}),
         (_random_variables.Uniform, {"low": 0, "high": 1}),
         (_random_variables.VonMises, {"loc": 0, "concentration": 1}),
-        (_random_variables.Weibull, {"scale": 0.1, "concentration": 1}),
+        (_random_variables.Weibull, {"scale": 0.1, "concentration": 1.0}),
         (_random_variables.Wishart, {"df": 3, "scale_tril": [[1]], "sample": [[1]]}),
         (
             _random_variables.ZeroInflatedBinomial,
-            {"mix": 0.2, "total_count": 10, "probs": 0.5},
+            {"mix": 0.2, "total_count": 10, "probs": 0.5, "sample": 0},
         ),
         (
             _random_variables.ZeroInflatedNegativeBinomial,
-            {"mix": 0.2, "total_count": 10, "probs": 0.5},
+            {"mix": 0.2, "total_count": 10, "probs": 0.5, "sample": 0},
         ),
-        (_random_variables.ZeroInflatedPoisson, {"mix": 0.2, "rate": 2}),
+        (_random_variables.ZeroInflatedPoisson, {"mix": 0.2, "rate": 2, "sample": 0}),
     )
 
     ids = [dist[0].__name__ for dist in _random_variable_args]

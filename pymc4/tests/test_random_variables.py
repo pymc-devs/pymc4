@@ -16,6 +16,7 @@ def random_variable_args():
         (_random_variables.Chi2, {"df": 2}),
         (_random_variables.Constant, {"loc": 3}),
         (_random_variables.Dirichlet, {"concentration": [1, 2], "sample": [0.5, 0.5]}),
+        # TODO DiscreteUniform raises a NotImplementedError from tfp.
         # (_random_variables.DiscreteUniform, {"low": 2, "high": 10, "sample": 5}),
         (_random_variables.Exponential, {"rate": 1}),
         (_random_variables.Gamma, {"concentration": 3.0, "rate": 2.0}),

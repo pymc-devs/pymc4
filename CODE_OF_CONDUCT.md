@@ -56,11 +56,14 @@ further defined and clarified by project maintainers.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported by contacting PyMC4 developer Christopher Fonnesbeck via email
-(chris.fonnesbeck@vanderbilt.edu) or phone (615-955-0380). All complaints will
-be reviewed and investigated and will result in a response that is deemed
-necessary and appropriate to the circumstances. The project team is obligated to
-maintain confidentiality with regard to the reporter of an incident. Further
-details of specific enforcement policies may be posted separately.
+(chris.fonnesbeck@vanderbilt.edu) or phone (615-955-0380). Alternatively, you
+may also contact NumFOCUS Executive Director Leah Silen (512-222-5449), as PyMC3
+is a member of NumFOCUS and subscribes to their code of conduct as a
+precondition for continued membership. All complaints will be reviewed and
+investigated and will result in a response that is deemed necessary and
+appropriate to the circumstances. The project team is obligated to maintain
+confidentiality with regard to the reporter of an incident. Further details of
+specific enforcement policies may be posted separately.
 
 Project maintainers who do not follow or enforce the Code of Conduct in good
 faith may face temporary or permanent repercussions as determined by other

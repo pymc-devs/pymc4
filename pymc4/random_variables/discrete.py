@@ -63,27 +63,6 @@ class ZeroInflatedBinomial(RandomVariable):
         )
 
 
-class ZeroInflatedPoisson(RandomVariable):
-    def __init__(self, name, mix, *args, **kwargs):
-        """Add `mix` to kwargs."""
-        kwargs.update({"mix": mix})
-        super(ZeroInflatedPoisson, self).__init__(name, *args, **kwargs)
-
-    def _base_dist(self, *args, **kwargs):
-        """
-        Zero-inflated Poisson base distribution.
-
-        A ZeroInflatedPoisson is a mixture between a deterministic
-        distribution and a Poisson distribution.
-        """
-        mix = kwargs.pop("mix")
-        return tfd.Mixture(
-            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
-            components=[tfd.Deterministic(0.0), tfd.Poisson(*args, **kwargs)],
-            name="ZeroInflatedPoisson",
-        )
-
-
 class ZeroInflatedNegativeBinomial(RandomVariable):
     def __init__(self, name, mix, *args, **kwargs):
         """Add `mix` to kwargs."""
@@ -102,6 +81,27 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
             cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
             components=[tfd.Deterministic(0.0), tfd.NegativeBinomial(*args, **kwargs)],
             name="ZeroInflatedNegativeBinomial",
+        )
+
+
+class ZeroInflatedPoisson(RandomVariable):
+    def __init__(self, name, mix, *args, **kwargs):
+        """Add `mix` to kwargs."""
+        kwargs.update({"mix": mix})
+        super(ZeroInflatedPoisson, self).__init__(name, *args, **kwargs)
+
+    def _base_dist(self, *args, **kwargs):
+        """
+        Zero-inflated Poisson base distribution.
+
+        A ZeroInflatedPoisson is a mixture between a deterministic
+        distribution and a Poisson distribution.
+        """
+        mix = kwargs.pop("mix")
+        return tfd.Mixture(
+            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
+            components=[tfd.Deterministic(0.0), tfd.Poisson(*args, **kwargs)],
+            name="ZeroInflatedPoisson",
         )
 
 

@@ -88,7 +88,7 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81
-        assert randomvariable.__name__ in ["Binomial", "ZeroInflatedBinomial]
+        assert randomvariable.__name__ in ["Binomial", "ZeroInflatedBinomial"]
         with pytest.raises(NotImplementedError) as err:
             dist.log_prob()
             assert "NotImplementedError: sample_n is not implemented: Binomial" == str(err)

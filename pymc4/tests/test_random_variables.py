@@ -2,7 +2,6 @@
 Tests for PyMC4 random variables
 """
 import pytest
-import numpy as np
 from .. import _random_variables
 
 

@@ -52,19 +52,14 @@ class Normal(RandomVariable):
     """
     def _base_dist(self, *args, **kwargs):
         try:
-            mu = kwargs.pop('mu')
+            loc = kwargs.pop('mu')
         except KeyError:
-            mu = None
+            loc = kwargs.pop('loc')
 
         try:
-            sigma = kwargs.pop('sigma')
+            scale = kwargs.pop('sigma')
         except KeyError:
-            sigma = None
-
-        if mu:
-            loc = mu
-        if sigma:
-            scale = sigma
+            scale = kwargs.pop('scale')
 
         return tfd.Normal(loc=loc, scale=scale, **kwargs)
 

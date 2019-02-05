@@ -51,8 +51,15 @@ class Normal(RandomVariable):
     models from PyMC3 to PyMC4.
     """
     def _base_dist(self, *args, **kwargs):
-        mu = kwargs.pop('mu')
-        sigma = kwargs.pop('sigma')
+        try:
+            mu = kwargs.pop('mu')
+        except KeyError:
+            mu = None
+
+        try:
+            sigma = kwargs.pop('sigma')
+        except KeyError:
+            sigma = None
 
         if mu:
             loc = mu

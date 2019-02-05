@@ -50,6 +50,7 @@ class Normal(RandomVariable):
     Here, we intentionally break TFD's style guide to make it easier to port
     models from PyMC3 to PyMC4.
     """
+
     def _base_dist(self, *args, **kwargs):
         try:
             loc = kwargs.pop('mu')

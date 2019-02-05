@@ -42,6 +42,18 @@ class LogitNormal(RandomVariable):
         )
 
 
+class Normal(RandomVariable):
+    """
+    Normal distribution.
+
+    This class is re-implemented so as to provide a familiar API to PyMC3 users.
+    Here, we intentionally break TFD's style guide to make it easier to port
+    models from PyMC3 to PyMC4.
+    """
+    def _base_dist(self, mu, sigma, **kwargs):
+        return tfd.Normal(loc=mu, scale=sigma, **kwargs)
+
+
 class Weibull(RandomVariable):
     def _base_dist(self, *args, **kwargs):
         """
@@ -75,7 +87,7 @@ tfp_supported = [
     "Laplace",
     "LogNormal",
     "Logistic",
-    "Normal",
+    # "Normal",  # commented out to provide alternative parametrization.
     "Pareto",
     "StudentT",
     "Triangular",

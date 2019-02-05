@@ -43,6 +43,7 @@ def random_variable_args():
         ),
         (random_variables.NegativeBinomial, {"total_count": 5, "probs": 0.5, "sample": 5}),
         (random_variables.Normal, {"loc": 0, "scale": 1}),
+        (random_variables.Normal, {"mu": 0, "sigma": 1}),
         (random_variables.Pareto, {"concentration": 1, "scale": 0.1, "sample": 5}),
         (random_variables.Poisson, {"rate": 2}),
         (random_variables.StudentT, {"loc": 0, "scale": 1, "df": 10}),

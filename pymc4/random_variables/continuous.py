@@ -50,8 +50,16 @@ class Normal(RandomVariable):
     Here, we intentionally break TFD's style guide to make it easier to port
     models from PyMC3 to PyMC4.
     """
-    def _base_dist(self, mu, sigma, **kwargs):
-        return tfd.Normal(loc=mu, scale=sigma, **kwargs)
+    def _base_dist(self, *args, **kwargs):
+        mu = kwargs.pop('mu')
+        sigma = kwargs.pop('sigma')
+
+        if mu:
+            loc = mu
+        if sigma:
+            scale = sigma
+
+        return tfd.Normal(loc=loc, scale=scale, **kwargs)
 
 
 class Weibull(RandomVariable):

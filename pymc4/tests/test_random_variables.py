@@ -97,8 +97,8 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
 
 def test_rvs_backend_arithmetic():
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
-    x = pm.Normal("x", 0, 1)
-    y = pm.Normal("y", 1, 2)
+    x = random_variables.Normal("x", 0, 1)
+    y = random_variables.Normal("y", 1, 2)
 
     assert x + y
     assert x - y

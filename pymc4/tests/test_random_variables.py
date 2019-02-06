@@ -93,3 +93,19 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
         with pytest.raises(NotImplementedError) as err:
             dist.log_prob()
             assert "NotImplementedError: sample_n is not implemented: Binomial" == str(err)
+
+
+def test_backend_arithmetic():
+    """Test that random variable backend arithmetic."""
+    x = pm.Normal("x", 0, 1)
+    y = pm.Normal("y", 1, 2)
+
+    # TODO test __matmul__ once random variables support shapes.
+    assert x + y
+    assert x - y
+    assert x * y
+    assert x / y
+    assert x // y
+    assert x % y
+    assert x ** y
+    assert -x

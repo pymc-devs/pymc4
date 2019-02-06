@@ -113,23 +113,70 @@ class Normal(RandomVariable):
         return tfd.Normal(loc=mu, scale=sigma, **kwargs)
 
 
-    This class is re-implemented so as to provide a familiar API to PyMC3 users.
-    Here, we intentionally break TFD's style guide to make it easier to port
-    models from PyMC3 to PyMC4.
+class HalfNormal(RandomVariable):
+    """
+    Half-normal log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \tau) =
+           \sqrt{\frac{2\tau}{\pi}}
+           \exp\left(\frac{-x^2 \tau}{2}\right)
+       f(x \mid \sigma) =\sigma
+           \sqrt{\frac{2}{\pi}}
+           \exp\left(\frac{-x^2}{2\sigma^2}\right)
+
+    .. note::
+
+       The parameters ``sigma``/``tau`` (:math:`\sigma`/:math:`\tau`) refer to
+       the standard deviation/precision of the unfolded normal distribution, for
+       the standard deviation of the half-normal distribution, see below. For
+       the half-normal, they are just two parameterisation :math:`\sigma^2
+       \equiv \frac{1}{\tau}` of a scale parameter
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 5, 200)
+        for sigma in [0.4, 1., 2.]:
+            pdf = st.halfnorm.pdf(x, scale=sigma)
+            plt.plot(x, pdf, label=r'$\sigma$ = {}'.format(sigma))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\sqrt{\dfrac{2}{\tau \pi}}` or :math:`\dfrac{\sigma \sqrt{2}}{\sqrt{\pi}}`
+    Variance  :math:`\dfrac{1}{\tau}\left(1 - \dfrac{2}{\pi}\right)` or :math:`\sigma^2\left(1 - \dfrac{2}{\pi}\right)`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    sigma : float
+        Scale parameter :math:`sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
+
+    Examples
+    --------
+    .. code-block:: python
+        with pm.Model():
+            x = pm.HalfNormal('x', sigma=10)
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - sigma: scale
     """
 
-    def _base_dist(self, *args, **kwargs):
-        try:
-            loc = kwargs.pop("mu")
-        except KeyError:
-            loc = kwargs.pop("loc")
-
-        try:
-            scale = kwargs.pop("sigma")
-        except KeyError:
-            scale = kwargs.pop("scale")
-
-        return tfd.Normal(loc=loc, scale=scale, **kwargs)
+    def _base_dist(self, sigma, *args, **kwargs):
+        return tfd.HalfNormal(scale=sigma, **kwargs)
 
 
 class Weibull(RandomVariable):
@@ -158,7 +205,7 @@ tfp_supported = [
     "Gamma",
     "Gumbel",
     "HalfCauchy",
-    "HalfNormal",
+    # "HalfNormal",
     "InverseGamma",
     "InverseGaussian",
     "Kumaraswamy",

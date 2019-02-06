@@ -100,13 +100,13 @@ def test_rvs_backend_arithmetic():
     x = random_variables.Normal("x", 0, 1)
     y = random_variables.Normal("y", 1, 2)
 
-    assert x + y
-    assert x - y
-    assert x * y
+    assert x + y is not None
+    assert x - y is not None
+    assert x * y is not None
     # TODO test __matmul__ once random variables support shapes.
-    # assert x @ y
-    assert x / y
-    assert x // y
-    assert x % y
-    assert x ** y
-    assert -x
+    # assert x @ y is not None
+    assert x / y is not None
+    assert x // y is not None
+    assert x % y is not None
+    assert x ** y is not None
+    assert -x is not None

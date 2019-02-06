@@ -43,7 +43,7 @@ class LogitNormal(RandomVariable):
 
 
 class Normal(RandomVariable):
-    """
+    r"""
     Univariate normal distribution.
 
     The pdf of this distribution is
@@ -114,7 +114,7 @@ class Normal(RandomVariable):
 
 
 class HalfNormal(RandomVariable):
-    """
+    r"""
     Half-normal log-likelihood.
 
     The pdf of this distribution is

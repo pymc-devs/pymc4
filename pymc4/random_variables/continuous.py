@@ -15,7 +15,7 @@ from .random_variable import RandomVariable
 
 
 class Beta(RandomVariable):
-    R"""
+    r"""
     Beta random variable.
 
     The pdf of this distribution is
@@ -74,7 +74,7 @@ class Beta(RandomVariable):
 
 
 class Cauchy(RandomVariable):
-    R"""
+    r"""
     Cauchy random variable.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
@@ -129,7 +129,7 @@ class Cauchy(RandomVariable):
 
 
 class ChiSquared(RandomVariable):
-    R"""
+    r"""
     :math:`\chi^2` random variable.
 
     The pdf of this distribution is
@@ -180,7 +180,7 @@ class ChiSquared(RandomVariable):
 
 
 class Exponential(RandomVariable):
-    R"""
+    r"""
     Exponential random variable.
 
     The pdf of this distribution is
@@ -227,7 +227,7 @@ class Exponential(RandomVariable):
 
 
 class Gamma(RandomVariable):
-    R"""
+    r"""
     Gamma random variable.
 
     Represents the sum of alpha exponentially distributed random variables,
@@ -284,7 +284,7 @@ class Gamma(RandomVariable):
 
 
 class Gumbel(RandomVariable):
-    R"""
+    r"""
     Univariate Gumbel random variable.
 
     The pdf of this distribution is
@@ -343,7 +343,7 @@ class Gumbel(RandomVariable):
 
 
 class HalfCauchy(RandomVariable):
-    R"""
+    r"""
     Half-Cauchy random variable.
 
     The pdf of this distribution is
@@ -393,7 +393,7 @@ class HalfCauchy(RandomVariable):
 
 
 class HalfNormal(RandomVariable):
-    R"""
+    r"""
     Half-normal random variable.
 
     The pdf of this distribution is
@@ -461,7 +461,7 @@ class HalfNormal(RandomVariable):
 
 
 class HalfStudentT(RandomVariable):
-    R"""
+    r"""
     Half Student's T random variable.
 
     The pdf of this distribution is
@@ -535,7 +535,7 @@ class HalfStudentT(RandomVariable):
 
 
 class InverseGamma(RandomVariable):
-    R"""
+    r"""
     Inverse gamma random variable, the reciprocal of the gamma distribution.
 
     The pdf of this distribution is
@@ -590,7 +590,7 @@ class InverseGamma(RandomVariable):
 
 
 class Kumaraswamy(RandomVariable):
-    R"""
+    r"""
     Kumaraswamy random variable.
 
     The pdf of this distribution is
@@ -644,7 +644,7 @@ class Kumaraswamy(RandomVariable):
 
 
 class Laplace(RandomVariable):
-    R"""
+    r"""
     Laplace random variable.
 
     The pdf of this distribution is
@@ -697,7 +697,7 @@ class Laplace(RandomVariable):
 
 
 class Logistic(RandomVariable):
-    R"""
+    r"""
     Logistic log-likelihood.
 
     The pdf of this distribution is
@@ -758,7 +758,7 @@ class LogitNormal(RandomVariable):
 
 
 class LogNormal(RandomVariable):
-    R"""
+    r"""
     Log-normal random variable.
 
     Distribution of any random variable whose logarithm is normally
@@ -824,7 +824,7 @@ class LogNormal(RandomVariable):
 
 
 class Normal(RandomVariable):
-    R"""
+    r"""
     Univariate normal random variable.
 
     The pdf of this distribution is
@@ -893,7 +893,7 @@ class Normal(RandomVariable):
 
 
 class Pareto(RandomVariable):
-    R"""
+    r"""
     Pareto random variable.
 
     Often used to characterize wealth distribution, or other examples of the
@@ -949,7 +949,7 @@ class Pareto(RandomVariable):
 
 
 class StudentT(RandomVariable):
-    R"""
+    r"""
     Student's T random variable.
 
     Describes a normal variable whose precision is gamma distributed.
@@ -1019,7 +1019,7 @@ class StudentT(RandomVariable):
 
 
 class Triangular(RandomVariable):
-    R"""
+    r"""
     Continuous Triangular random variable
 
     The pdf of this distribution is
@@ -1085,7 +1085,7 @@ class Triangular(RandomVariable):
 
 
 class Uniform(RandomVariable):
-    R"""
+    r"""
     Continuous uniform log-likelihood.
 
     The pdf of this distribution is
@@ -1138,7 +1138,7 @@ class Uniform(RandomVariable):
 
 
 class VonMises(RandomVariable):
-    R"""
+    r"""
     Univariate VonMises random variable.
 
     The pdf of this distribution is
@@ -1193,7 +1193,7 @@ class VonMises(RandomVariable):
 
 
 class Weibull(RandomVariable):
-    R"""
+    r"""
     Weibull random variable.
 
     The pdf of this distribution is

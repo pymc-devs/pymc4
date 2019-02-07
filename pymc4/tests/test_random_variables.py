@@ -48,7 +48,7 @@ def random_variable_args():
         (random_variables.Normal, {"mu": 0, "sigma": 1}),
         (random_variables.Pareto, {"concentration": 1, "scale": 0.1, "sample": 5}),
         (random_variables.Poisson, {"rate": 2}),
-        (random_variables.StudentT, {"loc": 0, "scale": 1, "df": 10}),
+        (random_variables.StudentT, {"mu": 0, "sigma": 1, "nu": 10}),
         (random_variables.Triangular, {"low": 0.0, "high": 1.0, "peak": 0.5}),
         (random_variables.Uniform, {"low": 0, "high": 1}),
         (random_variables.VonMises, {"loc": 0, "concentration": 1}),

@@ -246,7 +246,7 @@ class HalfNormal(RandomVariable):
 
 class HalfStudentT(RandomVariable):
     r"""
-    Half Student's T log-likelihood
+    Half Student's T distribution.
 
     The pdf of this distribution is
 
@@ -464,9 +464,77 @@ class Normal(RandomVariable):
         return tfd.Normal(loc=mu, scale=sigma, **kwargs)
 
 
+class StudentT(RandomVariable):
+    R"""
+    Student's T distribution.
+
+    Describes a normal variable whose precision is gamma distributed.
+    If only nu parameter is passed, this specifies a standard (central)
+    Student's T.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x|\mu,\lambda,\nu) =
+           \frac{\Gamma(\frac{\nu + 1}{2})}{\Gamma(\frac{\nu}{2})}
+           \left(\frac{\lambda}{\pi\nu}\right)^{\frac{1}{2}}
+           \left[1+\frac{\lambda(x-\mu)^2}{\nu}\right]^{-\frac{\nu+1}{2}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-8, 8, 200)
+        mus = [0., 0., -2., -2.]
+        sigmas = [1., 1., 1., 2.]
+        dfs = [1., 5., 5., 5.]
+        for mu, sigma, df in zip(mus, sigmas, dfs):
+            pdf = st.t.pdf(x, df, loc=mu, scale=sigma)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, sigma, df))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    ========  ========================
+
+    Parameters
+    ----------
+    nu : float
+        Degrees of freedom, also known as normality parameter (nu > 0).
+    mu : float
+        Location parameter.
+    sigma : float
+        Scale parameter (sigma > 0). Converges to the standard deviation as nu
+        increases. (only required if lam is not specified)
+
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.StudentT('x', nu=15, mu=0, sigma=10)
+
+    Developer Notes:
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - sigma: scale
+    - nu: df
+    """
+    def _base_dist(self, mu, sigma, nu, *args, **kwargs):
+        return tfd.StudentT(df=nu, loc=mu, scale=sigma)
+
+
 class Weibull(RandomVariable):
     r"""
-    Weibull log-likelihood.
+    Weibull distribution.
 
     The pdf of this distribution is
 
@@ -551,7 +619,7 @@ tfp_supported = [
     "Logistic",
     # "Normal",  # commented out to provide alternative parametrization.
     "Pareto",
-    "StudentT",
+    # "StudentT",  # commented out to provide alternative parametrization.
     "Triangular",
     "Uniform",
     "VonMises",

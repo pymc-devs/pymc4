@@ -117,7 +117,7 @@ class Cauchy(RandomVariable):
     beta : float
         Scale parameter > 0
 
-    Developer Notes:
+    Developer Notes
     ----------------
     Parameter mappings to TensorFlow Probability are as follows:
     - alpha: loc
@@ -165,7 +165,7 @@ class ChiSquared(RandomVariable):
     nu : int
         Degrees of freedom (nu > 0).
 
-    Developer Notes:
+    Developer Notes
     ----------------
     Parameter mappings to TensorFlow Probability are as follows:
 
@@ -215,7 +215,7 @@ class Exponential(RandomVariable):
     lam : float
         Rate or inverse scale (lam > 0)
 
-    Developer Notes:
+    Developer Notes
     ----------------
     Parameter mappings to TensorFlow Probability are as follows:
 
@@ -379,7 +379,7 @@ class HalfCauchy(RandomVariable):
     beta : float
         Scale parameter (beta > 0).
 
-    Developer Notes:
+    Developer Notes
     ----------------
     Parameter mappings to TensorFlow Probability are as follows:
 
@@ -587,6 +587,26 @@ class InverseGamma(RandomVariable):
 
     def _base_dist(self, alpha, beta, *args, **kwargs):
         return tfd.InverseGamma(concentration=alpha, rate=beta, *args, **kwargs)
+
+
+class InverseGaussian(RandomVariable):
+    R"""
+    InverseGaussian random variable.
+
+    Parameters
+    ----------
+    mu : float
+    lam : float
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - lam: concentration
+    """
+    def _base_dist(self, mu, lam, *args, **kwargs):
+        return tfd.InverseGaussian(loc=mu, concentration=lam, *args, **kwargs)
 
 
 class Kumaraswamy(RandomVariable):
@@ -936,7 +956,7 @@ class Pareto(RandomVariable):
     m : float
         Scale parameter (m > 0).
 
-    Developer Notes:
+    Developer Notes
     ----------------
     Parameter mappings to TensorFlow Probability are as follows:
 
@@ -1005,8 +1025,8 @@ class StudentT(RandomVariable):
         def model():
             x = pm.StudentT('x', nu=15, mu=0, sigma=10)
 
-    Developer Notes:
-    ----------------
+    Developer Notes
+    ---------------
     Parameter mappings to TensorFlow Probability are as follows:
 
     - mu: loc
@@ -1071,7 +1091,7 @@ class Triangular(RandomVariable):
     upper : float
         Upper limit.
 
-    Developer Notes:
+    Developer Notes
     ----------------
     Parameter mappings to TensorFlow Probability are as follows:
 
@@ -1125,7 +1145,7 @@ class Uniform(RandomVariable):
     upper : float
         Upper limit.
 
-    Developer Notes:
+    Developer Notes
     ----------------
     Parameter mappings to TensorFlow Probability are as follows:
 
@@ -1262,12 +1282,12 @@ class Weibull(RandomVariable):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["InverseGaussian"]  # not present in PyMC3. We can choose how to parameterize
+# tfp_supported = ["InverseGaussian"]  # not present in PyMC3. We can choose how to parameterize
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
-for dist_name in tfp_supported:
-    setattr(
-        sys.modules[__name__],
-        dist_name,
-        type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
-    )
+# for dist_name in tfp_supported:
+#     setattr(
+#         sys.modules[__name__],
+#         dist_name,
+#         type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
+#     )

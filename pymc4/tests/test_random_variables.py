@@ -22,7 +22,7 @@ def random_variable_args():
         (random_variables.Exponential, {"lam": 1}),
         (random_variables.Gamma, {"alpha": 3.0, "beta": 2.0}),
         (random_variables.Geometric, {"probs": 0.5, "sample": 10}),
-        (random_variables.Gumbel, {"loc": 0, "scale": 1}),
+        (random_variables.Gumbel, {"mu": 0, "beta": 1}),
         (random_variables.HalfCauchy, {"beta": 1}),
         # (random_variables.HalfNormal, {"scale": 3.0}),
         (random_variables.HalfNormal, {"sigma": 3.0}),

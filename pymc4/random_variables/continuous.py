@@ -282,6 +282,64 @@ class Gamma(RandomVariable):
         return tfd.Gamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 
+class Gumbel(RandomVariable):
+    R"""
+    Univariate Gumbel random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \beta) = \frac{1}{\beta}e^{-(z + e^{-z})}
+
+    where
+
+    .. math::
+
+        z = \frac{x - \mu}{\beta}.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 20, 200)
+        mus = [0., 4., -1.]
+        betas = [2., 2., 4.]
+        for mu, beta in zip(mus, betas):
+            pdf = st.gumbel_r.pdf(x, loc=mu, scale=beta)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\beta$ = {}'.format(mu, beta))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+    Variance  :math:`\frac{\pi^2}{6} \beta^2`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    beta : float
+        Scale parameter (beta > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - beta: scale
+    """
+    def _base_dist(self, mu, beta, *args, **kwargs):
+        return tfd.Gumbel(loc=mu, scale=beta, *args, **kwargs)
+
+
 class HalfCauchy(RandomVariable):
     R"""
     Half-Cauchy random variable.
@@ -763,7 +821,7 @@ tfp_supported = [
     # "Chi2",
     # "Exponential",
     # "Gamma",
-    "Gumbel",
+    # "Gumbel",
     # "HalfCauchy",  # commented out to provide alternative parametrization.
     # "HalfNormal",  # commented out to provide alternative parametrization.
     "InverseGamma",

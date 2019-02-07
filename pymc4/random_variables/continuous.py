@@ -14,105 +14,6 @@ from tensorflow_probability import distributions as tfd
 from .random_variable import RandomVariable
 
 
-class HalfStudentT(RandomVariable):
-    def _base_dist(self, *args, **kwargs):
-        """
-        Half student-T base distribution.
-
-        A HalfStudentT is the absolute value of a StudentT.
-        """
-        return tfd.TransformedDistribution(
-            distribution=tfd.StudentT(*args, **kwargs),
-            bijector=tfp.bijectors.AbsoluteValue(),
-            name="HalfStudentT",
-        )
-
-
-class LogitNormal(RandomVariable):
-    def _base_dist(self, *args, **kwargs):
-        """
-        Logit normal base distribution.
-
-        A LogitNormal is the standard logistic (i.e. sigmoid) of a Normal.
-        """
-        return tfd.TransformedDistribution(
-            distribution=tfd.Normal(*args, **kwargs),
-            bijector=tfp.bijectors.Sigmoid(),
-            name="LogitNormal",
-        )
-
-
-class Normal(RandomVariable):
-    r"""
-    Univariate normal distribution.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \mu, \tau) =
-           \sqrt{\frac{\tau}{2\pi}}
-           \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
-
-    Normal distribution can be parameterized either in terms of precision
-    or standard deviation. The link between the two parametrizations is
-    given by
-
-    .. math::
-
-       \tau = \dfrac{1}{\sigma^2}
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(-5, 5, 1000)
-        mus = [0., 0., 0., -2.]
-        sigmas = [0.4, 1., 2., 0.4]
-        for mu, sigma in zip(mus, sigmas):
-            pdf = st.norm.pdf(x, mu, sigma)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
-
-    ========  ==========================================
-    Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu`
-    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
-    ========  ==========================================
-
-    Parameters
-    ----------
-    mu : float
-        Mean.
-    sigma : float
-        Standard deviation (sigma > 0) (only required if tau is not specified).
-
-    Examples
-    --------
-    .. code-block:: python
-        with pm.Model():
-            x = pm.Normal('x', mu=0, sigma=10)
-        with pm.Model():
-            x = pm.Normal('x', mu=0, tau=1/23)
-
-    Developer Notes
-    ---------------
-
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - sigma: scale
-    """
-
-    def _base_dist(self, mu, sigma, *args, **kwargs):
-        return tfd.Normal(loc=mu, scale=sigma, **kwargs)
-
-
 class HalfNormal(RandomVariable):
     r"""
     Half-normal log-likelihood.
@@ -179,6 +80,169 @@ class HalfNormal(RandomVariable):
         return tfd.HalfNormal(scale=sigma, **kwargs)
 
 
+class HalfStudentT(RandomVariable):
+    def _base_dist(self, *args, **kwargs):
+        """
+        Half student-T base distribution.
+
+        A HalfStudentT is the absolute value of a StudentT.
+        """
+        return tfd.TransformedDistribution(
+            distribution=tfd.StudentT(*args, **kwargs),
+            bijector=tfp.bijectors.AbsoluteValue(),
+            name="HalfStudentT",
+        )
+
+
+class LogitNormal(RandomVariable):
+    def _base_dist(self, *args, **kwargs):
+        """
+        Logit normal base distribution.
+
+        A LogitNormal is the standard logistic (i.e. sigmoid) of a Normal.
+        """
+        return tfd.TransformedDistribution(
+            distribution=tfd.Normal(*args, **kwargs),
+            bijector=tfp.bijectors.Sigmoid(),
+            name="LogitNormal",
+        )
+
+
+class LogNormal(RandomVariable):
+    R"""
+    Log-normal distribution.
+
+    Distribution of any random variable whose logarithm is normally
+    distributed. A variable might be modeled as log-normal if it can
+    be thought of as the multiplicative product of many small
+    independent factors.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \tau) =
+           \frac{1}{x} \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (\ln(x)-\mu)^2 \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 100)
+        mus = [0., 0., 0.]
+        sigmas = [.25, .5, 1.]
+        for mu, sigma in zip(mus, sigmas):
+            pdf = st.lognorm.pdf(x, sigma, scale=np.exp(mu))
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =========================================================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\exp\{\mu + \frac{1}{2\tau}\}`
+    Variance  :math:`(\exp\{\frac{1}{\tau}\} - 1) \times \exp\{2\mu + \frac{1}{\tau}\}`
+    ========  =========================================================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    sigma : float
+        Standard deviation. (sigma > 0).
+
+    Example
+    -------
+    .. code-block:: python
+        with pm.Model():
+            x = pm.Lognormal('x', mu=2, sigma=30)
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - sigma: scale
+    """
+
+    def _base_dist(self, mu, sigma, *args, **kwargs):
+        return tfd.LogNormal(loc=mu, scale=sigma, **kwargs)
+
+
+class Normal(RandomVariable):
+    r"""
+    Univariate normal distribution.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \tau) =
+           \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
+
+    Normal distribution can be parameterized either in terms of precision
+    or standard deviation. The link between the two parametrizations is
+    given by
+
+    .. math::
+
+       \tau = \dfrac{1}{\sigma^2}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-5, 5, 1000)
+        mus = [0., 0., 0., -2.]
+        sigmas = [0.4, 1., 2., 0.4]
+        for mu, sigma in zip(mus, sigmas):
+            pdf = st.norm.pdf(x, mu, sigma)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    sigma : float
+        Standard deviation (sigma > 0).
+
+    Examples
+    --------
+    .. code-block:: python
+        with pm.Model():
+            x = pm.Normal('x', mu=0, sigma=10)
+        with pm.Model():
+            x = pm.Normal('x', mu=0, tau=1/23)
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - sigma: scale
+    """
+
+    def _base_dist(self, mu, sigma, *args, **kwargs):
+        return tfd.Normal(loc=mu, scale=sigma, **kwargs)
+
+
 class Weibull(RandomVariable):
     def _base_dist(self, *args, **kwargs):
         """
@@ -205,12 +269,12 @@ tfp_supported = [
     "Gamma",
     "Gumbel",
     "HalfCauchy",
-    # "HalfNormal",
+    # "HalfNormal",  # commented out to provide alternative parametrization.
     "InverseGamma",
     "InverseGaussian",
     "Kumaraswamy",
     "Laplace",
-    "LogNormal",
+    # "LogNormal",  # commented out to provide alternative parametrization.
     "Logistic",
     # "Normal",  # commented out to provide alternative parametrization.
     "Pareto",

@@ -31,7 +31,8 @@ def random_variable_args():
         (random_variables.Kumaraswamy, {"concentration0": 0.5, "concentration1": 0.5}),
         (random_variables.LKJ, {"dimension": 1, "concentration": 1.5, "sample": [[1]]}),
         (random_variables.Laplace, {"loc": 0, "scale": 1}),
-        (random_variables.LogNormal, {"loc": 0, "scale": 1}),
+        # (random_variables.LogNormal, {"loc": 0, "scale": 1}),
+        (random_variables.LogNormal, {"mu": 0, "sigma": 1}),
         (random_variables.Logistic, {"loc": 0, "scale": 3}),
         (
             random_variables.Multinomial,

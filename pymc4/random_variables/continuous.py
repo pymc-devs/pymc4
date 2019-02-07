@@ -228,8 +228,6 @@ class Normal(RandomVariable):
     .. code-block:: python
         with pm.Model():
             x = pm.Normal('x', mu=0, sigma=10)
-        with pm.Model():
-            x = pm.Normal('x', mu=0, tau=1/23)
 
     Developer Notes
     ---------------
@@ -244,7 +242,57 @@ class Normal(RandomVariable):
 
 
 class Weibull(RandomVariable):
-    def _base_dist(self, *args, **kwargs):
+    R"""
+    Weibull log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{\alpha x^{\alpha - 1}
+           \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 200)
+        alphas = [.5, 1., 1.5, 5., 5.]
+        betas = [1., 1., 1., 1.,  2]
+        for a, b in zip(alphas, betas):
+            pdf = st.weibull_min.pdf(x, a, scale=b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 2.5)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ====================================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
+    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
+    ========  ====================================================
+
+    Parameters
+    ----------
+    alpha : float
+        Shape parameter (alpha > 0).
+    beta : float
+        Scale parameter (beta > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration
+    - beta: scale
+    """
+
+    def _base_dist(self, alpha, beta, *args, **kwargs):
         """
         Weibull base distribution.
 
@@ -253,7 +301,7 @@ class Weibull(RandomVariable):
         """
         return tfd.TransformedDistribution(
             distribution=tfd.Uniform(low=0.0, high=1.0),
-            bijector=tfp.bijectors.Invert(tfp.bijectors.Weibull(*args, **kwargs)),
+            bijector=tfp.bijectors.Invert(tfp.bijectors.Weibull(scale=beta, concentration=alpha, *args, **kwargs)),
             name="Weibull",
         )
 

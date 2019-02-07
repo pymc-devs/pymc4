@@ -52,7 +52,8 @@ def random_variable_args():
         (random_variables.Triangular, {"low": 0.0, "high": 1.0, "peak": 0.5}),
         (random_variables.Uniform, {"low": 0, "high": 1}),
         (random_variables.VonMises, {"loc": 0, "concentration": 1}),
-        (random_variables.Weibull, {"scale": 0.1, "concentration": 1.0}),
+        # (random_variables.Weibull, {"scale": 0.1, "concentration": 1.0}),
+        (random_variables.Weibull, {"beta": 0.1, "alpha": 1.0}),
         (random_variables.Wishart, {"df": 3, "scale_tril": [[1]], "sample": [[1]]}),
         (
             random_variables.ZeroInflatedBinomial,

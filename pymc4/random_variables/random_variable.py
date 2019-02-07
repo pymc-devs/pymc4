@@ -52,29 +52,11 @@ class WithBackendArithmetic:
     def __rmod__(self, other):
         return other % self.as_tensor()
 
-    def __divmod__(self, other):
-        return divmod(self.as_tensor(), other)
-
-    def __rdivmod__(self, other):
-        return divmod(other, self.as_tensor())
-
     def __pow__(self, other):
         return self.as_tensor() ** other
 
     def __rpow__(self, other):
         return other ** self.as_tensor()
-
-    def __lshift__(self, other):
-        return self.as_tensor() << other
-
-    def __rlshift__(self, other):
-        return other << self.as_tensor()
-
-    def __rshift__(self, other):
-        return self.as_tensor >> other
-
-    def __rrshift__(self, other):
-        return other >> self.as_tensor()
 
     def __and__(self, other):
         return self.as_tensor() & other

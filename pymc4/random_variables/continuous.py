@@ -623,7 +623,17 @@ class Kumaraswamy(RandomVariable):
         a > 0.
     b : float
         b > 0.
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - a: concentration0
+    - b: concentration1
+
     """
+    def _base_dist(self, a, b, *args, **kwargs):
+        return tfd.Kumaraswamy(concentration0=a, concentration1=b, *args, **kwargs)
 
 
 class LogitNormal(RandomVariable):
@@ -968,7 +978,6 @@ class Weibull(RandomVariable):
 # exactly.
 tfp_supported = [
     "InverseGaussian",  # not present in PyMC3. We can choose how to parameterize
-    "Kumaraswamy",
     "Laplace",
     "Logistic",
     "Pareto",

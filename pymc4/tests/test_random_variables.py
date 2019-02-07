@@ -27,7 +27,7 @@ def random_variable_args():
         (random_variables.HalfStudentT, {"sigma": 1, "nu": 10}),
         (random_variables.InverseGamma, {"alpha": 3, "beta": 2}),
         (random_variables.InverseGaussian, {"loc": 1, "concentration": 1}),
-        (random_variables.Kumaraswamy, {"concentration0": 0.5, "concentration1": 0.5}),
+        (random_variables.Kumaraswamy, {"a": 0.5, "b": 0.5}),
         (random_variables.LKJ, {"dimension": 1, "concentration": 1.5, "sample": [[1]]}),
         (random_variables.Laplace, {"loc": 0, "scale": 1}),
         (random_variables.LogNormal, {"mu": 0, "sigma": 1}),

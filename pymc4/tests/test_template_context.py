@@ -14,7 +14,7 @@ def raise_exception(message):
 
 
 def test_free_forward_context(monkeypatch):
-    """Test that free random variable initializes with correct contexts"""
+    """Test that random variable initializes with in Free Forward context"""
 
     monkeypatch.setattr(
         _template_contexts.FreeForwardContext,
@@ -29,7 +29,7 @@ def test_free_forward_context(monkeypatch):
 
 
 def test_forward_context(monkeypatch, tf_session):
-    """Test that free random variable initializes with correct contexts"""
+    """Test that random variable initializes in Forward Context"""
 
     @model
     def test_model():
@@ -53,4 +53,5 @@ def test_forward_context(monkeypatch, tf_session):
 
 @pytest.mark.skip("Unsure how to use InferenceContext")
 def test_inference_context():
+    """Test that random variable initializes in Inference Context"""
     raise NotImplementedError

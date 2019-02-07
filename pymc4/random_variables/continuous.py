@@ -15,7 +15,7 @@ from .random_variable import RandomVariable
 
 
 class Beta(RandomVariable):
-    R"""
+    r"""
     Beta random variable.
 
     The pdf of this distribution is
@@ -74,7 +74,7 @@ class Beta(RandomVariable):
 
 
 class Cauchy(RandomVariable):
-    R"""
+    r"""
     Cauchy random variable.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
@@ -129,7 +129,7 @@ class Cauchy(RandomVariable):
 
 
 class ChiSquared(RandomVariable):
-    R"""
+    r"""
     :math:`\chi^2` random variable.
 
     The pdf of this distribution is
@@ -180,7 +180,7 @@ class ChiSquared(RandomVariable):
 
 
 class Exponential(RandomVariable):
-    R"""
+    r"""
     Exponential random variable.
 
     The pdf of this distribution is
@@ -227,7 +227,7 @@ class Exponential(RandomVariable):
 
 
 class Gamma(RandomVariable):
-    R"""
+    r"""
     Gamma random variable.
 
     Represents the sum of alpha exponentially distributed random variables,
@@ -278,12 +278,13 @@ class Gamma(RandomVariable):
     - beta: rate
 
     """
+
     def _base_dist(self, alpha, beta, *args, **kwargs):
         return tfd.Gamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 
 class Gumbel(RandomVariable):
-    R"""
+    r"""
     Univariate Gumbel random variable.
 
     The pdf of this distribution is
@@ -336,12 +337,13 @@ class Gumbel(RandomVariable):
     - mu: loc
     - beta: scale
     """
+
     def _base_dist(self, mu, beta, *args, **kwargs):
         return tfd.Gumbel(loc=mu, scale=beta, *args, **kwargs)
 
 
 class HalfCauchy(RandomVariable):
-    R"""
+    r"""
     Half-Cauchy random variable.
 
     The pdf of this distribution is
@@ -391,7 +393,7 @@ class HalfCauchy(RandomVariable):
 
 
 class HalfNormal(RandomVariable):
-    R"""
+    r"""
     Half-normal random variable.
 
     The pdf of this distribution is
@@ -457,7 +459,7 @@ class HalfNormal(RandomVariable):
 
 
 class HalfStudentT(RandomVariable):
-    R"""
+    r"""
     Half Student's T random variable.
 
     The pdf of this distribution is
@@ -530,7 +532,7 @@ class HalfStudentT(RandomVariable):
 
 
 class InverseGamma(RandomVariable):
-    R"""
+    r"""
     Inverse gamma random variable, the reciprocal of the gamma distribution.
 
     The pdf of this distribution is
@@ -579,12 +581,13 @@ class InverseGamma(RandomVariable):
     - alpha: concentration
     - beta: rate
     """
+
     def _base_dist(self, alpha, beta, *args, **kwargs):
         return tfd.InverseGamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 
 class Kumaraswamy(RandomVariable):
-    R"""
+    r"""
     Kumaraswamy random variable.
 
     The pdf of this distribution is
@@ -632,12 +635,13 @@ class Kumaraswamy(RandomVariable):
     - b: concentration1
 
     """
+
     def _base_dist(self, a, b, *args, **kwargs):
         return tfd.Kumaraswamy(concentration0=a, concentration1=b, *args, **kwargs)
 
 
 class Laplace(RandomVariable):
-    R"""
+    r"""
     Laplace random variable.
 
     The pdf of this distribution is
@@ -684,12 +688,13 @@ class Laplace(RandomVariable):
     - mu: loc
     - b: scale
     """
+
     def _base_dist(self, mu, b, *args, **kwargs):
         return tfd.Laplace(loc=mu, scale=b)
 
 
 class Logistic(RandomVariable):
-    R"""
+    r"""
     Logistic log-likelihood.
 
     The pdf of this distribution is
@@ -730,6 +735,7 @@ class Logistic(RandomVariable):
     s : float
         Scale (s > 0).
     """
+
     def _base_dist(self, mu, s, *args, **kwargs):
         return tfd.Logistic(loc=mu, scale=s, *args, **kwargs)
 
@@ -749,7 +755,7 @@ class LogitNormal(RandomVariable):
 
 
 class LogNormal(RandomVariable):
-    R"""
+    r"""
     Log-normal random variable.
 
     Distribution of any random variable whose logarithm is normally
@@ -814,7 +820,7 @@ class LogNormal(RandomVariable):
 
 
 class Normal(RandomVariable):
-    R"""
+    r"""
     Univariate normal random variable.
 
     The pdf of this distribution is
@@ -881,8 +887,64 @@ class Normal(RandomVariable):
         return tfd.Normal(loc=mu, scale=sigma, **kwargs)
 
 
+class Pareto(RandomVariable):
+    r"""
+    Pareto random variable.
+
+    Often used to characterize wealth distribution, or other examples of the
+    80/20 rule.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, m) = \frac{\alpha m^{\alpha}}{x^{\alpha+1}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 4, 1000)
+        alphas = [1., 2., 5., 5.]
+        ms = [1., 1., 1., 2.]
+        for alpha, m in zip(alphas, ms):
+            pdf = st.pareto.pdf(x, alpha, scale=m)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, m = {}'.format(alpha, m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================================================
+    Support   :math:`x \in [m, \infty)`
+    Mean      :math:`\dfrac{\alpha m}{\alpha - 1}` for :math:`\alpha \ge 1`
+    Variance  :math:`\dfrac{m \alpha}{(\alpha - 1)^2 (\alpha - 2)}`
+              for :math:`\alpha > 2`
+    ========  =============================================================
+
+    Parameters
+    ----------
+    alpha : float
+        Shape parameter (alpha > 0).
+    m : float
+        Scale parameter (m > 0).
+
+    Developer Notes:
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration
+    - m: scale
+    """
+
+    def _base_dist(self, alpha, m, *args, **kwargs):
+        return tfd.Pareto(concentration=alpha, scale=m)
+
+
 class StudentT(RandomVariable):
-    R"""
+    r"""
     Student's T random variable.
 
     Describes a normal variable whose precision is gamma distributed.
@@ -950,8 +1012,127 @@ class StudentT(RandomVariable):
         return tfd.StudentT(df=nu, loc=mu, scale=sigma)
 
 
+class Triangular(RandomVariable):
+    r"""
+    Continuous Triangular random variable
+
+    The pdf of this distribution is
+
+    .. math::
+
+       \begin{cases}
+         0 & \text{for } x < a, \\
+         \frac{2(x-a)}{(b-a)(c-a)} & \text{for } a \le x < c, \\[4pt]
+         \frac{2}{b-a}             & \text{for } x = c, \\[4pt]
+         \frac{2(b-x)}{(b-a)(b-c)} & \text{for } c < x \le b, \\[4pt]
+         0 & \text{for } b < x.
+        \end{cases}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-2, 10, 500)
+        lowers = [0., -1, 2]
+        cs = [2., 0., 6.5]
+        uppers = [4., 1, 8]
+        for lower, c, upper in zip(lowers, cs, uppers):
+            scale = upper - lower
+            c_ = (c - lower) / scale
+            pdf = st.triang.pdf(x, loc=lower, c=c_, scale=scale)
+            plt.plot(x, pdf, label='lower = {}, c = {}, upper = {}'.format(lower,
+                                                                           c,
+                                                                           upper))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ============================================================================
+    Support   :math:`x \in [lower, upper]`
+    Mean      :math:`\dfrac{lower + upper + c}{3}`
+    Variance  :math:`\dfrac{upper^2 + lower^2 +c^2 - lower*upper - lower*c - upper*c}{18}`
+    ========  ============================================================================
+
+    Parameters
+    ----------
+    lower : float
+        Lower limit.
+    c: float
+        mode
+    upper : float
+        Upper limit.
+
+    Developer Notes:
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - lower: low
+    - c: peak
+    - upper: high
+    """
+
+    def _base_dist(self, lower, c, upper, *args, **kwargs):
+        return tfd.Triangular(low=lower, high=upper, peak=c, *args, **kwargs)
+
+
+class Uniform(RandomVariable):
+    r"""
+    Continuous uniform log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-3, 3, 500)
+        ls = [0., -2]
+        us = [2., 1]
+        for l, u in zip(ls, us):
+            y = np.zeros(500)
+            y[(x<u) & (x>l)] = 1.0/(u-l)
+            plt.plot(x, y, label='lower = {}, upper = {}'.format(l, u))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 1)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =====================================
+    Support   :math:`x \in [lower, upper]`
+    Mean      :math:`\dfrac{lower + upper}{2}`
+    Variance  :math:`\dfrac{(upper - lower)^2}{12}`
+    ========  =====================================
+
+    Parameters
+    ----------
+    lower : float
+        Lower limit.
+    upper : float
+        Upper limit.
+
+    Developer Notes:
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - lower: low
+    - upper: high
+    """
+
+    def _base_dist(self, lower, upper, *args, **kwargs):
+        return tfd.Uniform(low=lower, high=upper, *args, **kwargs)
+
+
 class VonMises(RandomVariable):
-    R"""
+    r"""
     Univariate VonMises random variable.
 
     The pdf of this distribution is
@@ -1000,12 +1181,13 @@ class VonMises(RandomVariable):
     - mu: loc
     - kappa: concentration
     """
+
     def _base_dist(self, mu, kappa, *args, **kwargs):
         return tfd.VonMises(loc=mu, concentration=kappa, *args, **kwargs)
 
 
 class Weibull(RandomVariable):
-    R"""
+    r"""
     Weibull random variable.
 
     The pdf of this distribution is
@@ -1074,12 +1256,7 @@ class Weibull(RandomVariable):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = [
-    "InverseGaussian",  # not present in PyMC3. We can choose how to parameterize
-    "Pareto",
-    "Triangular",
-    "Uniform",
-]
+tfp_supported = ["InverseGaussian"]  # not present in PyMC3. We can choose how to parameterize
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in tfp_supported:

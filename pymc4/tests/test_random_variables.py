@@ -9,7 +9,7 @@ def random_variable_args():
     """Provide arguments for each random variable."""
     _random_variable_args = (
         (random_variables.Bernoulli, {"probs": 0.5}),
-        (random_variables.Beta, {"concentration0": 1, "concentration1": 1}),
+        (random_variables.Beta, {"alpha": 1, "beta": 1}),
         (random_variables.Binomial, {"total_count": 5.0, "probs": 0.5, "sample": 1}),
         (random_variables.Categorical, {"probs": [0.1, 0.5, 0.4]}),
         (random_variables.Cauchy, {"loc": 0, "scale": 1}),

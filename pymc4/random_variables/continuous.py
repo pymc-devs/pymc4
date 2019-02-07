@@ -14,6 +14,65 @@ from tensorflow_probability import distributions as tfd
 from .random_variable import RandomVariable
 
 
+class Beta(RandomVariable):
+    r"""
+    Beta log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 1, 200)
+        alphas = [.5, 5., 1., 2., 2.]
+        betas = [.5, 1., 3., 2., 5.]
+        for a, b in zip(alphas, betas):
+            pdf = st.beta.pdf(x, a, b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 4.5)
+        plt.legend(loc=9)
+        plt.show()
+
+    ========  ==============================================================
+    Support   :math:`x \in (0, 1)`
+    Mean      :math:`\dfrac{\alpha}{\alpha + \beta}`
+    Variance  :math:`\dfrac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+    ========  ==============================================================
+
+    Parameters
+    ----------
+    alpha : float
+        alpha > 0.
+    beta : float
+        beta > 0.
+
+    Notes
+    -----
+    Beta distribution is a conjugate prior for the parameter :math:`p` of
+    the binomial distribution.
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration0
+    - beta: concentration1
+    """
+
+    def _base_dist(self, alpha, beta, *args, **kwargs):
+        return tfd.Beta(concentration0=alpha, concentration1=beta, *args, **kwargs)
+
+
 class HalfNormal(RandomVariable):
     r"""
     Half-normal log-likelihood.
@@ -312,7 +371,7 @@ class Weibull(RandomVariable):
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
 tfp_supported = [
-    "Beta",
+    # "Beta",  # commented out to provide alternative parametrization.
     "Cauchy",
     "Chi2",
     "Exponential",

@@ -16,7 +16,7 @@ from .random_variable import RandomVariable
 
 class Beta(RandomVariable):
     r"""
-    Beta log-likelihood.
+    Beta distribution.
 
     The pdf of this distribution is
 
@@ -73,9 +73,66 @@ class Beta(RandomVariable):
         return tfd.Beta(concentration0=alpha, concentration1=beta, *args, **kwargs)
 
 
+class Cauchy(RandomVariable):
+    R"""
+    Cauchy distribution.
+
+    Also known as the Lorentz or the Breit-Wigner distribution.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-5, 5, 500)
+        alphas = [0., 0., 0., -2.]
+        betas = [.5, 1., 2., 1.]
+        for a, b in zip(alphas, betas):
+            pdf = st.cauchy.pdf(x, loc=a, scale=b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mode      :math:`\alpha`
+    Mean      undefined
+    Variance  undefined
+    ========  ========================
+
+    Parameters
+    ----------
+    alpha : float
+        Location parameter
+    beta : float
+        Scale parameter > 0
+
+    Developer Notes:
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+    - alpha: loc
+    - beta: scale
+    """
+
+    def _base_dist(self, alpha, beta, *args, **kwargs):
+        return tfd.Cauchy(loc=alpha, scale=beta, **kwargs)
+
+
+
+
 class HalfNormal(RandomVariable):
     r"""
-    Half-normal log-likelihood.
+    Half-normal distribution.
 
     The pdf of this distribution is
 
@@ -372,7 +429,7 @@ class Weibull(RandomVariable):
 # exactly.
 tfp_supported = [
     # "Beta",  # commented out to provide alternative parametrization.
-    "Cauchy",
+    # "Cauchy",
     "Chi2",
     "Exponential",
     "Gamma",

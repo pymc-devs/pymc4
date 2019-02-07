@@ -12,7 +12,7 @@ def random_variable_args():
         (random_variables.Beta, {"alpha": 1, "beta": 1}),
         (random_variables.Binomial, {"total_count": 5.0, "probs": 0.5, "sample": 1}),
         (random_variables.Categorical, {"probs": [0.1, 0.5, 0.4]}),
-        (random_variables.Cauchy, {"loc": 0, "scale": 1}),
+        (random_variables.Cauchy, {"alpha": 0, "beta": 1}),
         (random_variables.Chi2, {"df": 2}),
         (random_variables.Constant, {"loc": 3}),
         (random_variables.Dirichlet, {"concentration": [1, 2], "sample": [0.5, 0.5]}),

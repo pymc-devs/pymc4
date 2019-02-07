@@ -1,5 +1,7 @@
 # Custom
 environment.yml
+testing-report.html
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

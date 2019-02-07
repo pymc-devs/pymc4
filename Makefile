@@ -1,13 +1,13 @@
 docstyle:
 	@echo "Checking documentation with pydocstyle..."
 	pydocstyle pymc4/
-	@echo "Pydocstyle passes! \n"
+	@echo "Pydocstyle passes!\n"
 
 
 format:
 	@echo "Checking code style with black..."
 	black --check pymc4/
-	@echo "Black passes! \n"
+	@echo "Black passes!\n"
 
 style:
 	@echo "Checking code style with pylint..."

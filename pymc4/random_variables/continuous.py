@@ -590,7 +590,7 @@ class InverseGamma(RandomVariable):
 
 
 class InverseGaussian(RandomVariable):
-    R"""
+    r"""
     InverseGaussian random variable.
 
     Parameters
@@ -605,6 +605,7 @@ class InverseGaussian(RandomVariable):
     - mu: loc
     - lam: concentration
     """
+
     def _base_dist(self, mu, lam, *args, **kwargs):
         return tfd.InverseGaussian(loc=mu, concentration=lam, *args, **kwargs)
 

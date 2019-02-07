@@ -109,7 +109,7 @@ class LogitNormal(RandomVariable):
 
 
 class LogNormal(RandomVariable):
-    R"""
+    r"""
     Log-normal distribution.
 
     Distribution of any random variable whose logarithm is normally
@@ -242,7 +242,7 @@ class Normal(RandomVariable):
 
 
 class Weibull(RandomVariable):
-    R"""
+    r"""
     Weibull log-likelihood.
 
     The pdf of this distribution is
@@ -301,7 +301,9 @@ class Weibull(RandomVariable):
         """
         return tfd.TransformedDistribution(
             distribution=tfd.Uniform(low=0.0, high=1.0),
-            bijector=tfp.bijectors.Invert(tfp.bijectors.Weibull(scale=beta, concentration=alpha, *args, **kwargs)),
+            bijector=tfp.bijectors.Invert(
+                tfp.bijectors.Weibull(scale=beta, concentration=alpha, *args, **kwargs)
+            ),
             name="Weibull",
         )
 

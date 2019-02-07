@@ -245,14 +245,73 @@ class HalfNormal(RandomVariable):
 
 
 class HalfStudentT(RandomVariable):
-    def _base_dist(self, *args, **kwargs):
+    r"""
+    Half Student's T log-likelihood
+
+    The pdf of this distribution is
+
+    .. math::
+
+        f(x \mid \sigma,\nu) =
+            \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
+            {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\sigma^2}}
+            \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 5, 200)
+        sigmas = [1., 1., 2., 1.]
+        nus = [.5, 1., 1., 30.]
+        for sigma, nu in zip(sigmas, nus):
+            pdf = st.t.pdf(x, df=nu, loc=0, scale=sigma)
+            plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(sigma, nu))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in [0, \infty)`
+    ========  ========================
+
+    Parameters
+    ----------
+    nu : float
+        Degrees of freedom, also known as normality parameter (nu > 0).
+    sigma : float
+        Scale parameter (sigma > 0). Converges to the standard deviation as nu
+        increases. (only required if lam is not specified)
+
+    Examples
+    --------
+    .. code-block:: python
+
+        # Only pass in one of lam or sigma, but not both.
+        with pm.Model():
+            x = pm.HalfStudentT('x', sigma=10, nu=10)
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - nu: df
+    - sigma: scale
+
+    In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
+    """
+
+    def _base_dist(self, nu, sigma, *args, **kwargs):
         """
         Half student-T base distribution.
 
         A HalfStudentT is the absolute value of a StudentT.
         """
         return tfd.TransformedDistribution(
-            distribution=tfd.StudentT(*args, **kwargs),
+            distribution=tfd.StudentT(df=nu, scale=sigma, loc=0, *args, **kwargs),
             bijector=tfp.bijectors.AbsoluteValue(),
             name="HalfStudentT",
         )

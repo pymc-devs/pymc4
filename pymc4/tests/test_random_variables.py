@@ -25,7 +25,7 @@ def random_variable_args():
         (random_variables.HalfCauchy, {"beta": 1}),
         # (random_variables.HalfNormal, {"scale": 3.0}),
         (random_variables.HalfNormal, {"sigma": 3.0}),
-        (random_variables.HalfStudentT, {"loc": 0, "scale": 1, "df": 10}),
+        (random_variables.HalfStudentT, {"sigma": 1, "nu": 10}),
         (random_variables.InverseGamma, {"concentration": 3, "rate": 2}),
         (random_variables.InverseGaussian, {"loc": 1, "concentration": 1}),
         (random_variables.Kumaraswamy, {"concentration0": 0.5, "concentration1": 0.5}),

@@ -226,6 +226,62 @@ class Exponential(RandomVariable):
         return tfd.Exponential(rate=lam)
 
 
+class Gamma(RandomVariable):
+    R"""
+    Gamma distribution.
+
+    Represents the sum of alpha exponentially distributed random variables,
+    each of which has mean beta.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 20, 200)
+        alphas = [1., 2., 3., 7.5]
+        betas = [.5, .5, 1., 1.]
+        for a, b in zip(alphas, betas):
+            pdf = st.gamma.pdf(x, a, scale=1.0/b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ===============================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`\dfrac{\alpha}{\beta}`
+    Variance  :math:`\dfrac{\alpha}{\beta^2}`
+    ========  ===============================
+
+    Parameters
+    ----------
+    alpha : float
+        Shape parameter (alpha > 0).
+    beta : float
+        Rate parameter (beta > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration
+    - beta: rate
+
+    """
+    def _base_dist(self, alpha, beta, *args, **kwargs):
+        return tfd.Gamma(concentration=alpha, rate=beta, *args, **kwargs)
+
+
 class HalfCauchy(RandomVariable):
     r"""
     Half-Cauchy distribution.
@@ -706,7 +762,7 @@ tfp_supported = [
     # "Cauchy",  # commented out to provide alternative parametrization.
     # "Chi2",
     # "Exponential",
-    "Gamma",
+    # "Gamma",
     "Gumbel",
     # "HalfCauchy",  # commented out to provide alternative parametrization.
     # "HalfNormal",  # commented out to provide alternative parametrization.

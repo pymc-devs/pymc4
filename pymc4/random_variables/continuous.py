@@ -15,8 +15,8 @@ from .random_variable import RandomVariable
 
 
 class Beta(RandomVariable):
-    r"""
-    Beta distribution.
+    R"""
+    Beta random variable.
 
     The pdf of this distribution is
 
@@ -74,8 +74,8 @@ class Beta(RandomVariable):
 
 
 class Cauchy(RandomVariable):
-    r"""
-    Cauchy distribution.
+    R"""
+    Cauchy random variable.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
 
@@ -129,8 +129,8 @@ class Cauchy(RandomVariable):
 
 
 class ChiSquared(RandomVariable):
-    r"""
-    :math:`\chi^2` log-likelihood.
+    R"""
+    :math:`\chi^2` random variable.
 
     The pdf of this distribution is
 
@@ -181,7 +181,7 @@ class ChiSquared(RandomVariable):
 
 class Exponential(RandomVariable):
     R"""
-    Exponential distribution.
+    Exponential random variable.
 
     The pdf of this distribution is
 
@@ -228,7 +228,7 @@ class Exponential(RandomVariable):
 
 class Gamma(RandomVariable):
     R"""
-    Gamma distribution.
+    Gamma random variable.
 
     Represents the sum of alpha exponentially distributed random variables,
     each of which has mean beta.
@@ -283,8 +283,8 @@ class Gamma(RandomVariable):
 
 
 class HalfCauchy(RandomVariable):
-    r"""
-    Half-Cauchy distribution.
+    R"""
+    Half-Cauchy random variable.
 
     The pdf of this distribution is
 
@@ -333,8 +333,8 @@ class HalfCauchy(RandomVariable):
 
 
 class HalfNormal(RandomVariable):
-    r"""
-    Half-normal distribution.
+    R"""
+    Half-normal random variable.
 
     The pdf of this distribution is
 
@@ -399,8 +399,8 @@ class HalfNormal(RandomVariable):
 
 
 class HalfStudentT(RandomVariable):
-    r"""
-    Half Student's T distribution.
+    R"""
+    Half Student's T random variable.
 
     The pdf of this distribution is
 
@@ -486,8 +486,8 @@ class LogitNormal(RandomVariable):
 
 
 class LogNormal(RandomVariable):
-    r"""
-    Log-normal distribution.
+    R"""
+    Log-normal random variable.
 
     Distribution of any random variable whose logarithm is normally
     distributed. A variable might be modeled as log-normal if it can
@@ -551,8 +551,8 @@ class LogNormal(RandomVariable):
 
 
 class Normal(RandomVariable):
-    r"""
-    Univariate normal distribution.
+    R"""
+    Univariate normal random variable.
 
     The pdf of this distribution is
 
@@ -619,8 +619,8 @@ class Normal(RandomVariable):
 
 
 class StudentT(RandomVariable):
-    r"""
-    Student's T distribution.
+    R"""
+    Student's T random variable.
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
@@ -688,8 +688,8 @@ class StudentT(RandomVariable):
 
 
 class Weibull(RandomVariable):
-    r"""
-    Weibull distribution.
+    R"""
+    Weibull random variable.
 
     The pdf of this distribution is
 

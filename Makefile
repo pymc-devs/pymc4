@@ -17,7 +17,7 @@ style:
 
 
 test:
-	pytest -v pymc4/tests/ --cov=pymc4/
+	pytest -v pymc4/tests/ --cov=pymc4/ --html=testing-report.html --self-contained-html
 
 lint: docstyle format style
 

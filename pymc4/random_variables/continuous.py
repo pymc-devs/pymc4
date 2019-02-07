@@ -636,6 +636,104 @@ class Kumaraswamy(RandomVariable):
         return tfd.Kumaraswamy(concentration0=a, concentration1=b, *args, **kwargs)
 
 
+class Laplace(RandomVariable):
+    R"""
+    Laplace random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, b) =
+           \frac{1}{2b} \exp \left\{ - \frac{|x - \mu|}{b} \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 10, 1000)
+        mus = [0., 0., 0., -5.]
+        bs = [1., 2., 4., 4.]
+        for mu, b in zip(mus, bs):
+            pdf = st.laplace.pdf(x, loc=mu, scale=b)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $b$ = {}'.format(mu, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`2 b^2`
+    ========  ========================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    b : float
+        Scale parameter (b > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - b: scale
+    """
+    def _base_dist(self, mu, b, *args, **kwargs):
+        return tfd.Laplace(loc=mu, scale=b)
+
+
+class Logistic(RandomVariable):
+    R"""
+    Logistic log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, s) =
+           \frac{\exp\left(-\frac{x - \mu}{s}\right)}{s \left(1 + \exp\left(-\frac{x - \mu}{s}\right)\right)^2}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-5, 5, 200)
+        mus = [0., 0., 0., -2.]
+        ss = [.4, 1., 2., .4]
+        for mu, s in zip(mus, ss):
+            pdf = st.logistic.pdf(x, loc=mu, scale=s)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $s$ = {}'.format(mu, s))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\frac{s^2 \pi^2}{3}`
+    ========  ==========================================
+
+
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    s : float
+        Scale (s > 0).
+    """
+    def _base_dist(self, mu, s, *args, **kwargs):
+        return tfd.Logistic(loc=mu, scale=s, *args, **kwargs)
+
+
 class LogitNormal(RandomVariable):
     def _base_dist(self, *args, **kwargs):
         """
@@ -978,8 +1076,6 @@ class Weibull(RandomVariable):
 # exactly.
 tfp_supported = [
     "InverseGaussian",  # not present in PyMC3. We can choose how to parameterize
-    "Laplace",
-    "Logistic",
     "Pareto",
     "Triangular",
     "Uniform",

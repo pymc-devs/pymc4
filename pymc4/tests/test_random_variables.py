@@ -29,9 +29,9 @@ def random_variable_args():
         (random_variables.InverseGaussian, {"loc": 1, "concentration": 1}),
         (random_variables.Kumaraswamy, {"a": 0.5, "b": 0.5}),
         (random_variables.LKJ, {"dimension": 1, "concentration": 1.5, "sample": [[1]]}),
-        (random_variables.Laplace, {"loc": 0, "scale": 1}),
+        (random_variables.Laplace, {"mu": 0, "b": 1}),
         (random_variables.LogNormal, {"mu": 0, "sigma": 1}),
-        (random_variables.Logistic, {"loc": 0, "scale": 3}),
+        (random_variables.Logistic, {"mu": 0, "s": 3}),
         (
             random_variables.Multinomial,
             {"total_count": 4, "probs": [0.2, 0.3, 0.5], "sample": [1, 1, 2]},

@@ -22,7 +22,7 @@ def random_variable_args():
         (random_variables.Gamma, {"concentration": 3.0, "rate": 2.0}),
         (random_variables.Geometric, {"probs": 0.5, "sample": 10}),
         (random_variables.Gumbel, {"loc": 0, "scale": 1}),
-        (random_variables.HalfCauchy, {"loc": 0, "scale": 1}),
+        (random_variables.HalfCauchy, {"beta": 1}),
         # (random_variables.HalfNormal, {"scale": 3.0}),
         (random_variables.HalfNormal, {"sigma": 3.0}),
         (random_variables.HalfStudentT, {"loc": 0, "scale": 1, "df": 10}),

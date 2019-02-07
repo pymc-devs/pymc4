@@ -128,7 +128,51 @@ class Cauchy(RandomVariable):
         return tfd.Cauchy(loc=alpha, scale=beta, **kwargs)
 
 
+class HalfCauchy(RandomVariable):
+    R"""
+    Half-Cauchy distribution.
 
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 5, 200)
+        for b in [0.5, 1.0, 2.0]:
+            pdf = st.cauchy.pdf(x, scale=b)
+            plt.plot(x, pdf, label=r'$\beta$ = {}'.format(b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in [0, \infty)`
+    Mode      0
+    Mean      undefined
+    Variance  undefined
+    ========  ========================
+
+    Parameters
+    ----------
+    beta : float
+        Scale parameter (beta > 0).
+
+    Developer Notes:
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - beta: scale
+    """
+    def _base_dist(self, beta, *args, **kwargs):
+        return tfd.HalfCauchy(loc=0, scale=beta)
 
 class HalfNormal(RandomVariable):
     r"""
@@ -429,12 +473,12 @@ class Weibull(RandomVariable):
 # exactly.
 tfp_supported = [
     # "Beta",  # commented out to provide alternative parametrization.
-    # "Cauchy",
+    # "Cauchy",  # commented out to provide alternative parametrization.
     "Chi2",
     "Exponential",
     "Gamma",
     "Gumbel",
-    "HalfCauchy",
+    # "HalfCauchy",  # commented out to provide alternative parametrization.
     # "HalfNormal",  # commented out to provide alternative parametrization.
     "InverseGamma",
     "InverseGaussian",

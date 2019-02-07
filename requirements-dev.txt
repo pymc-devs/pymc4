@@ -1,5 +1,6 @@
 pydocstyle
 pytest
 pytest-cov
+pytest-html
 pylint
 black

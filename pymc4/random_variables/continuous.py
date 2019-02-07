@@ -128,6 +128,57 @@ class Cauchy(RandomVariable):
         return tfd.Cauchy(loc=alpha, scale=beta, **kwargs)
 
 
+class ChiSquared(RandomVariable):
+    r"""
+    :math:`\chi^2` log-likelihood.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 15, 200)
+        for df in [1, 2, 3, 6, 9]:
+            pdf = st.chi2.pdf(x, df)
+            plt.plot(x, pdf, label=r'$\nu$ = {}'.format(df))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 0.6)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ===============================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\nu`
+    Variance  :math:`2 \nu`
+    ========  ===============================
+
+    Parameters
+    ----------
+    nu : int
+        Degrees of freedom (nu > 0).
+
+    Developer Notes:
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - nu: df
+
+    The ChiSquared distribution name is copied over from PyMC3 for continuity. We map it to the
+    Chi2 distribution in TensorFlow Probability.
+    """
+
+    def _base_dist(self, nu, *args, **kwargs):
+        return tfd.Chi2(df=nu, *args, **kwargs)
+
+
 class HalfCauchy(RandomVariable):
     r"""
     Half-Cauchy distribution.
@@ -465,7 +516,7 @@ class Normal(RandomVariable):
 
 
 class StudentT(RandomVariable):
-    R"""
+    r"""
     Student's T distribution.
 
     Describes a normal variable whose precision is gamma distributed.
@@ -528,6 +579,7 @@ class StudentT(RandomVariable):
     - sigma: scale
     - nu: df
     """
+
     def _base_dist(self, mu, sigma, nu, *args, **kwargs):
         return tfd.StudentT(df=nu, loc=mu, scale=sigma)
 
@@ -605,7 +657,7 @@ class Weibull(RandomVariable):
 tfp_supported = [
     # "Beta",  # commented out to provide alternative parametrization.
     # "Cauchy",  # commented out to provide alternative parametrization.
-    "Chi2",
+    # "Chi2",
     "Exponential",
     "Gamma",
     "Gumbel",

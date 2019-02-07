@@ -14,7 +14,8 @@ from .discrete import (
 from .continuous import (
     Beta,
     Cauchy,
-    Chi2,
+    # Chi2,
+    ChiSquared,
     Exponential,
     Gamma,
     Gumbel,
@@ -51,7 +52,7 @@ __all__ = [
     "ZeroInflatedPoisson",
     "Beta",
     "Cauchy",
-    "Chi2",
+    "ChiSquared",
     "Exponential",
     "Gamma",
     "Gumbel",

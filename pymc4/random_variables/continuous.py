@@ -529,6 +529,60 @@ class HalfStudentT(RandomVariable):
         )
 
 
+class InverseGamma(RandomVariable):
+    R"""
+    Inverse gamma random variable, the reciprocal of the gamma distribution.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{-\alpha - 1}
+           \exp\left(\frac{-\beta}{x}\right)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 500)
+        alphas = [1., 2., 3., 3.]
+        betas = [1., 1., 1., .5]
+        for a, b in zip(alphas, betas):
+            pdf = st.invgamma.pdf(x, a, scale=b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ======================================================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`\dfrac{\beta}{\alpha-1}` for :math:`\alpha > 1`
+    Variance  :math:`\dfrac{\beta^2}{(\alpha-1)^2(\alpha - 2)}`
+              for :math:`\alpha > 2`
+    ========  ======================================================
+
+    Parameters
+    ----------
+    alpha : float
+        Shape parameter (alpha > 0).
+    beta : float
+        Scale parameter (beta > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration
+    - beta: rate
+    """
+    def _base_dist(self, alpha, beta, *args, **kwargs):
+        return tfd.InverseGamma(concentration=alpha, rate=beta, *args, **kwargs)
+
+
 class LogitNormal(RandomVariable):
     def _base_dist(self, *args, **kwargs):
         """
@@ -745,6 +799,53 @@ class StudentT(RandomVariable):
         return tfd.StudentT(df=nu, loc=mu, scale=sigma)
 
 
+class VonMises(RandomVariable):
+    R"""
+    Univariate VonMises random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+        f(x \mid \mu, \kappa) =
+            \frac{e^{\kappa\cos(x-\mu)}}{2\pi I_0(\kappa)}
+
+    where :math:`I_0` is the modified Bessel function of order 0.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-np.pi, np.pi, 200)
+        mus = [0., 0., 0.,  -2.5]
+        kappas = [.01, 0.5,  4., 2.]
+        for mu, kappa in zip(mus, kappas):
+            pdf = st.vonmises.pdf(x, kappa, loc=mu)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\kappa$ = {}'.format(mu, kappa))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in [-\pi, \pi]`
+    Mean      :math:`\mu`
+    Variance  :math:`1-\frac{I_1(\kappa)}{I_0(\kappa)}`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Mean.
+    kappa : float
+        Concentration (\frac{1}{kappa} is analogous to \sigma^2).
+    """
+    def _base_dist(self, mu, kappa, *args, **kwargs):
+        return tfd.VonMises(loc=mu, concentration=kappa, *args, **kwargs)
+
+
 class Weibull(RandomVariable):
     R"""
     Weibull random variable.
@@ -816,26 +917,13 @@ class Weibull(RandomVariable):
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
 tfp_supported = [
-    # "Beta",  # commented out to provide alternative parametrization.
-    # "Cauchy",  # commented out to provide alternative parametrization.
-    # "Chi2",
-    # "Exponential",
-    # "Gamma",
-    # "Gumbel",
-    # "HalfCauchy",  # commented out to provide alternative parametrization.
-    # "HalfNormal",  # commented out to provide alternative parametrization.
-    "InverseGamma",
-    "InverseGaussian",
+    "InverseGaussian",  # not present in PyMC3. We can choose how to parameterize
     "Kumaraswamy",
     "Laplace",
-    # "LogNormal",  # commented out to provide alternative parametrization.
     "Logistic",
-    # "Normal",  # commented out to provide alternative parametrization.
     "Pareto",
-    # "StudentT",  # commented out to provide alternative parametrization.
     "Triangular",
     "Uniform",
-    "VonMises",
 ]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables

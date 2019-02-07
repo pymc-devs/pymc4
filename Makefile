@@ -15,6 +15,8 @@ style:
 	python -m pylint pymc4/
 	echo "Success!"
 
+black:
+	black -l 100 .
 
 test:
 	pytest -v pymc4/tests/ --cov=pymc4/ --html=testing-report.html --self-contained-html
@@ -22,4 +24,4 @@ test:
 lint: docstyle format style
 
 
-check: lint test
+check: lint black test

@@ -41,7 +41,7 @@ script:
                                               "pytest -v pymc4/tests/ --cov=pymc4/";
     fi
 
-  - if [[ $NAME == LINT ]]; then docker run pymc4:latest bash -c "./scripts/lint.sh";
+  - if [[ $NAME == LINT ]]; then docker run pymc4:latest bash -c "make lint";
     fi
 
 after_success:

@@ -15,7 +15,7 @@ from .random_variable import RandomVariable
 
 
 class Beta(RandomVariable):
-    r"""
+    R"""
     Beta random variable.
 
     The pdf of this distribution is
@@ -74,7 +74,7 @@ class Beta(RandomVariable):
 
 
 class Cauchy(RandomVariable):
-    r"""
+    R"""
     Cauchy random variable.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
@@ -129,7 +129,7 @@ class Cauchy(RandomVariable):
 
 
 class ChiSquared(RandomVariable):
-    r"""
+    R"""
     :math:`\chi^2` random variable.
 
     The pdf of this distribution is
@@ -180,7 +180,7 @@ class ChiSquared(RandomVariable):
 
 
 class Exponential(RandomVariable):
-    r"""
+    R"""
     Exponential random variable.
 
     The pdf of this distribution is
@@ -227,7 +227,7 @@ class Exponential(RandomVariable):
 
 
 class Gamma(RandomVariable):
-    r"""
+    R"""
     Gamma random variable.
 
     Represents the sum of alpha exponentially distributed random variables,
@@ -284,7 +284,7 @@ class Gamma(RandomVariable):
 
 
 class Gumbel(RandomVariable):
-    r"""
+    R"""
     Univariate Gumbel random variable.
 
     The pdf of this distribution is
@@ -343,7 +343,7 @@ class Gumbel(RandomVariable):
 
 
 class HalfCauchy(RandomVariable):
-    r"""
+    R"""
     Half-Cauchy random variable.
 
     The pdf of this distribution is
@@ -393,7 +393,7 @@ class HalfCauchy(RandomVariable):
 
 
 class HalfNormal(RandomVariable):
-    r"""
+    R"""
     Half-normal random variable.
 
     The pdf of this distribution is
@@ -444,7 +444,9 @@ class HalfNormal(RandomVariable):
     Examples
     --------
     .. code-block:: python
-        with pm.Model():
+
+        @pm.model
+        def model():
             x = pm.HalfNormal('x', sigma=10)
 
     Developer Notes
@@ -459,7 +461,7 @@ class HalfNormal(RandomVariable):
 
 
 class HalfStudentT(RandomVariable):
-    r"""
+    R"""
     Half Student's T random variable.
 
     The pdf of this distribution is
@@ -505,7 +507,8 @@ class HalfStudentT(RandomVariable):
     .. code-block:: python
 
         # Only pass in one of lam or sigma, but not both.
-        with pm.Model():
+        @pm.model
+        def model():
             x = pm.HalfStudentT('x', sigma=10, nu=10)
 
     Developer Notes
@@ -532,7 +535,7 @@ class HalfStudentT(RandomVariable):
 
 
 class InverseGamma(RandomVariable):
-    r"""
+    R"""
     Inverse gamma random variable, the reciprocal of the gamma distribution.
 
     The pdf of this distribution is
@@ -587,7 +590,7 @@ class InverseGamma(RandomVariable):
 
 
 class Kumaraswamy(RandomVariable):
-    r"""
+    R"""
     Kumaraswamy random variable.
 
     The pdf of this distribution is
@@ -641,7 +644,7 @@ class Kumaraswamy(RandomVariable):
 
 
 class Laplace(RandomVariable):
-    r"""
+    R"""
     Laplace random variable.
 
     The pdf of this distribution is
@@ -694,7 +697,7 @@ class Laplace(RandomVariable):
 
 
 class Logistic(RandomVariable):
-    r"""
+    R"""
     Logistic log-likelihood.
 
     The pdf of this distribution is
@@ -755,7 +758,7 @@ class LogitNormal(RandomVariable):
 
 
 class LogNormal(RandomVariable):
-    r"""
+    R"""
     Log-normal random variable.
 
     Distribution of any random variable whose logarithm is normally
@@ -804,7 +807,8 @@ class LogNormal(RandomVariable):
     Example
     -------
     .. code-block:: python
-        with pm.Model():
+        @pm.model
+        def model():
             x = pm.Lognormal('x', mu=2, sigma=30)
 
     Developer Notes
@@ -820,7 +824,7 @@ class LogNormal(RandomVariable):
 
 
 class Normal(RandomVariable):
-    r"""
+    R"""
     Univariate normal random variable.
 
     The pdf of this distribution is
@@ -872,7 +876,8 @@ class Normal(RandomVariable):
     Examples
     --------
     .. code-block:: python
-        with pm.Model():
+        @pm.model
+        def model():
             x = pm.Normal('x', mu=0, sigma=10)
 
     Developer Notes
@@ -888,7 +893,7 @@ class Normal(RandomVariable):
 
 
 class Pareto(RandomVariable):
-    r"""
+    R"""
     Pareto random variable.
 
     Often used to characterize wealth distribution, or other examples of the
@@ -944,7 +949,7 @@ class Pareto(RandomVariable):
 
 
 class StudentT(RandomVariable):
-    r"""
+    R"""
     Student's T random variable.
 
     Describes a normal variable whose precision is gamma distributed.
@@ -996,7 +1001,8 @@ class StudentT(RandomVariable):
     --------
     .. code-block:: python
 
-        with pm.Model():
+        @pm.model
+        def model():
             x = pm.StudentT('x', nu=15, mu=0, sigma=10)
 
     Developer Notes:
@@ -1013,7 +1019,7 @@ class StudentT(RandomVariable):
 
 
 class Triangular(RandomVariable):
-    r"""
+    R"""
     Continuous Triangular random variable
 
     The pdf of this distribution is
@@ -1079,7 +1085,7 @@ class Triangular(RandomVariable):
 
 
 class Uniform(RandomVariable):
-    r"""
+    R"""
     Continuous uniform log-likelihood.
 
     The pdf of this distribution is
@@ -1132,7 +1138,7 @@ class Uniform(RandomVariable):
 
 
 class VonMises(RandomVariable):
-    r"""
+    R"""
     Univariate VonMises random variable.
 
     The pdf of this distribution is
@@ -1187,7 +1193,7 @@ class VonMises(RandomVariable):
 
 
 class Weibull(RandomVariable):
-    r"""
+    R"""
     Weibull random variable.
 
     The pdf of this distribution is

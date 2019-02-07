@@ -74,7 +74,7 @@ class Beta(RandomVariable):
 
 
 class Cauchy(RandomVariable):
-    R"""
+    r"""
     Cauchy distribution.
 
     Also known as the Lorentz or the Breit-Wigner distribution.
@@ -129,7 +129,7 @@ class Cauchy(RandomVariable):
 
 
 class HalfCauchy(RandomVariable):
-    R"""
+    r"""
     Half-Cauchy distribution.
 
     The pdf of this distribution is
@@ -170,9 +170,13 @@ class HalfCauchy(RandomVariable):
     Parameter mappings to TensorFlow Probability are as follows:
 
     - beta: scale
+
+    In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
+
     def _base_dist(self, beta, *args, **kwargs):
         return tfd.HalfCauchy(loc=0, scale=beta)
+
 
 class HalfNormal(RandomVariable):
     r"""

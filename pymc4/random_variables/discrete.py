@@ -187,8 +187,56 @@ class Categorical(RandomVariable):
         return tfd.Categorical(probs=p, *args, **kwargs)
 
 
+class Geometric(RandomVariable):
+    r"""
+    Geometric random variable.
+
+    The probability that the first success in a sequence of Bernoulli
+    trials occurs on the x'th trial.
+
+    The pmf of this distribution is
+
+    .. math:: f(x \mid p) = p(1-p)^{x-1}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(1, 11)
+        for p in [0.1, 0.25, 0.75]:
+            pmf = st.geom.pmf(x, p)
+            plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  =============================
+    Support   :math:`x \in \mathbb{N}_{>0}`
+    Mean      :math:`\dfrac{1}{p}`
+    Variance  :math:`\dfrac{1 - p}{p^2}`
+    ========  =============================
+
+    Parameters
+    ----------
+    p : float
+        Probability of success on an individual trial (0 < p <= 1).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - p: probs
+    """
+
+    def _base_dist(self, p, *args, **kwargs):
+        return tfd.Geometric(probs=p, *args, **kwargs)
+
+
 class Poisson(RandomVariable):
-    R"""
+    r"""
     Poisson random variable.
 
     Often used to model the number of events occurring in a fixed period
@@ -236,6 +284,7 @@ class Poisson(RandomVariable):
 
     - mu: rate
     """
+
     def _base_dist(self, mu, *args, **kwargs):
         return tfd.Poisson(rate=mu, *args, **kwargs)
 
@@ -283,7 +332,7 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
 
 
 class ZeroInflatedPoisson(RandomVariable):
-    R"""
+    r"""
     Zero-inflated Poisson log-likelihood.
 
     Often used to model the number of events occurring in a fixed period
@@ -332,13 +381,14 @@ class ZeroInflatedPoisson(RandomVariable):
         Expected number of occurrences during the given interval
         (theta >= 0).
     """
+
     def _base_dist(self, psi, theta, *args, **kwargs):
         return tfd.Mixture(
             cat=Categorical(name="Categorical", p=[psi, 1.0 - psi])._distribution,
             components=[
                 Constant(name="Constant", value=0)._distribution,
-                Poisson(name="Poisson", mu=theta)._distribution
-                ],
+                Poisson(name="Poisson", mu=theta)._distribution,
+            ],
             name="ZeroInflatedPoisson",
         )
 
@@ -346,7 +396,7 @@ class ZeroInflatedPoisson(RandomVariable):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["Geometric", "NegativeBinomial"]
+tfp_supported = ["NegativeBinomial"]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in tfp_supported:

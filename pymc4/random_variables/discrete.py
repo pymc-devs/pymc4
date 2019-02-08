@@ -235,6 +235,74 @@ class Geometric(RandomVariable):
         return tfd.Geometric(probs=p, *args, **kwargs)
 
 
+class NegativeBinomial(RandomVariable):
+    R"""
+    Negative binomial random variable.
+
+    The negative binomial distribution describes a Poisson random variable
+    whose rate parameter is gamma distributed.
+
+    It is commonly used to model the number of Bernoulli trials needed until a
+    fixed number of failures is reached.
+
+    The pmf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \alpha) =
+           \binom{x + \alpha - 1}{x}
+           (\alpha/(\mu+\alpha))^\alpha (\mu/(\mu+\alpha))^x
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy import special
+        plt.style.use('seaborn-darkgrid')
+
+        def NegBinom(a, m, x):
+            pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
+            return pmf
+
+        x = np.arange(0, 22)
+        alphas = [0.9, 2, 4]
+        mus = [1, 2, 8]
+        for a, m in zip(alphas, mus):
+            pmf = NegBinom(a, m, x)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}'.format(a, m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\mu`
+    ========  ==========================
+
+    Parameters
+    ----------
+    mu : float
+        Poission distribution parameter (mu > 0). Also corresponds to the number of expected
+        successes before the number of desired failures (alpha) is reached.
+    alpha : float
+        Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
+        desired.
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu + alpha: total_count
+    - mu / (mu + alpha): probs
+    """
+    def _base_dist(self, mu, alpha, *args, **kwargs):
+        total_count = mu + alpha
+        probs = mu / (mu + alpha)
+        return tfd.NegativeBinomial(total_count=total_count, probs=probs, *args, **kwargs)
+
+
 class Poisson(RandomVariable):
     r"""
     Poisson random variable.
@@ -396,12 +464,12 @@ class ZeroInflatedPoisson(RandomVariable):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["NegativeBinomial"]
+# tfp_supported = [""]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
-for dist_name in tfp_supported:
-    setattr(
-        sys.modules[__name__],
-        dist_name,
-        type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
-    )
+# for dist_name in tfp_supported:
+#     setattr(
+#         sys.modules[__name__],
+#         dist_name,
+#         type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
+#     )

@@ -236,7 +236,7 @@ class Geometric(RandomVariable):
 
 
 class NegativeBinomial(RandomVariable):
-    R"""
+    r"""
     Negative binomial random variable.
 
     The negative binomial distribution describes a Poisson random variable
@@ -297,6 +297,7 @@ class NegativeBinomial(RandomVariable):
     - mu + alpha: total_count
     - mu / (mu + alpha): probs
     """
+
     def _base_dist(self, mu, alpha, *args, **kwargs):
         total_count = mu + alpha
         probs = mu / (mu + alpha)

@@ -5,7 +5,7 @@ import pymc4 as pm
 
 class Mixture(RandomVariable):
     r"""
-    Mixture log-likelihood
+    Mixture random variable.
 
     Often used to model subpopulation heterogeneity
 

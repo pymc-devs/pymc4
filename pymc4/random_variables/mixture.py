@@ -31,8 +31,17 @@ class Mixture(RandomVariable):
     we must explicitly return the self._distribution object when implementing
     a new mixture distribution. This ensures that log_prob() calculations work correctly.
 
-    For an example, see the last line of _base_dist in the ZeroInflatedPoisson distribution
-    implementation (in discrete.py).
+    For an example, see below an example taken from the last line of _base_dist in the
+    ZeroInflatedPoisson distribution implementation (in discrete.py).
+
+    .. code::
+
+        def _base_dist(self, psi, theta, *args, **kwargs):
+            return pm.Mixture(
+                p=[psi, 1.0 - psi],
+                distributions=[pm.Constant(name="Zero", value=0), pm.Poisson(name="Poisson", mu=theta)],
+                name="ZeroInflatedPoisson",
+            )._distribution  # <---- this is key!
 
     Compared to PyMC3's API, the Mixture API is slightly changed to make things
     smoother for end-users.
@@ -46,7 +55,8 @@ class Mixture(RandomVariable):
     and think about distributions. Our average user probably doesn't distinguish
     very clearly between an RV and a distribution object, though we know to do so.
     Otherwise, we would not have had questions that Junpeng had to answer on discourse
-    regarding how to create mixture distributions.
+    regarding how to create mixture distributions in which end-users simply forgot to
+    add ``.distribution`` at the end of their distribution calls.
 
     Secondly, we use the "p" and "distributions", rather than the old "w" and "comp_dists"
     kwargs. During the PyMC4 API development, this is probably the only place where I

@@ -14,7 +14,7 @@ def random_variable_args():
         (random_variables.Categorical, {"p": [0.1, 0.5, 0.4]}),
         (random_variables.Cauchy, {"alpha": 0, "beta": 1}),
         (random_variables.ChiSquared, {"nu": 2}),
-        (random_variables.Constant, {"loc": 3}),
+        (random_variables.Constant, {"value": 3}),
         (random_variables.Dirichlet, {"concentration": [1, 2], "sample": [0.5, 0.5]}),
         # TODO DiscreteUniform raises a NotImplementedError from tfp.
         # (random_variables.DiscreteUniform, {"lower": 2, "upper": 10, "sample": 5}),
@@ -44,7 +44,7 @@ def random_variable_args():
         (random_variables.NegativeBinomial, {"total_count": 5, "probs": 0.5, "sample": 5}),
         (random_variables.Normal, {"mu": 0, "sigma": 1}),
         (random_variables.Pareto, {"alpha": 1, "m": 0.1, "sample": 5}),
-        (random_variables.Poisson, {"rate": 2}),
+        (random_variables.Poisson, {"mu": 2}),
         (random_variables.StudentT, {"mu": 0, "sigma": 1, "nu": 10}),
         (random_variables.Triangular, {"lower": 0.0, "upper": 1.0, "c": 0.5}),
         (random_variables.Uniform, {"lower": 0, "upper": 1}),
@@ -59,7 +59,7 @@ def random_variable_args():
             random_variables.ZeroInflatedNegativeBinomial,
             {"mix": 0.2, "total_count": 10, "probs": 0.5, "sample": 0},
         ),
-        (random_variables.ZeroInflatedPoisson, {"mix": 0.2, "rate": 2, "sample": 0}),
+        (random_variables.ZeroInflatedPoisson, {"psi": 0.2, "theta": 2, "sample": 0}),
     )
 
     ids = [dist[0].__name__ for dist in _random_variable_args]

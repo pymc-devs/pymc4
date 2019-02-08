@@ -14,9 +14,8 @@ from .random_variable import RandomVariable
 import numpy as np
 
 
-
 class Bernoulli(RandomVariable):
-    R"""Bernoulli random variable.
+    r"""Bernoulli random variable.
 
     The Bernoulli distribution describes the probability of successes
     (x=1) and failures (x=0).
@@ -58,12 +57,13 @@ class Bernoulli(RandomVariable):
 
     - p: probs
     """
+
     def _base_dist(self, p, *args, **kwargs):
         return tfd.Bernoulli(probs=p, *args, **kwargs)
 
 
 class Binomial(RandomVariable):
-    R"""
+    r"""
     Binomial random variable.
 
     The discrete probability distribution of the number of successes
@@ -111,12 +111,14 @@ class Binomial(RandomVariable):
     - n: total_count
     - p: probs
     """
+
     def _base_dist(self, n, p, *args, **kwargs):
         return tfd.Binomial(total_count=n, probs=p, *args, **kwargs)
 
 
 class Constant(RandomVariable):
-    _base_dist = tfd.Deterministic
+    def _base_dist(self, value, *args, **kwargs):
+        return tfd.Deterministic(loc=value, *args, **kwargs)
 
 
 # class DiscreteUniform(RandomVariable):
@@ -139,9 +141,10 @@ class Constant(RandomVariable):
 #             name="DiscreteUniform",
 #         )
 
+
 class Categorical(RandomVariable):
-    R"""
-    Categorical log-likelihood.
+    r"""
+    Categorical random variable.
 
     The most general discrete distribution. The pmf of this distribution is
 
@@ -179,8 +182,62 @@ class Categorical(RandomVariable):
 
     - p: probs
     """
+
     def _base_dist(self, p, *args, **kwargs):
         return tfd.Categorical(probs=p, *args, **kwargs)
+
+
+class Poisson(RandomVariable):
+    R"""
+    Poisson random variable.
+
+    Often used to model the number of events occurring in a fixed period
+    of time when the times at which events occur are independent.
+    The pmf of this distribution is
+
+    .. math:: f(x \mid \mu) = \frac{e^{-\mu}\mu^x}{x!}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 15)
+        for m in [0.5, 3, 8]:
+            pmf = st.poisson.pmf(x, m)
+            plt.plot(x, pmf, '-o', label='$\mu$ = {}'.format(m))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\mu`
+    Variance  :math:`\mu`
+    ========  ==========================
+
+    Parameters
+    ----------
+    mu : float
+        Expected number of occurrences during the given interval
+        (mu >= 0).
+
+    Notes
+    -----
+    The Poisson distribution can be derived as a limiting case of the
+    binomial distribution.
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: rate
+    """
+    def _base_dist(self, mu, *args, **kwargs):
+        return tfd.Poisson(rate=mu, *args, **kwargs)
 
 
 class ZeroInflatedBinomial(RandomVariable):
@@ -226,22 +283,62 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
 
 
 class ZeroInflatedPoisson(RandomVariable):
-    def __init__(self, name, mix, *args, **kwargs):
-        """Add `mix` to kwargs."""
-        kwargs.update({"mix": mix})
-        super(ZeroInflatedPoisson, self).__init__(name, *args, **kwargs)
+    R"""
+    Zero-inflated Poisson log-likelihood.
 
-    def _base_dist(self, *args, **kwargs):
-        """
-        Zero-inflated Poisson base distribution.
+    Often used to model the number of events occurring in a fixed period
+    of time when the times at which events occur are independent.
 
-        A ZeroInflatedPoisson is a mixture between a deterministic
-        distribution and a Poisson distribution.
-        """
-        mix = kwargs.pop("mix")
+    The pmf of this distribution is
+
+    .. math::
+
+        f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+            \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
+            \end{array} \right.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 22)
+        psis = [0.7, 0.4]
+        thetas = [8, 4]
+        for psi, theta in zip(psis, thetas):
+            pmf = st.poisson.pmf(x, theta)
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\theta`
+    Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
+    ========  ==========================
+
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of Poisson variates (0 < psi < 1)
+    theta : float
+        Expected number of occurrences during the given interval
+        (theta >= 0).
+    """
+    def _base_dist(self, psi, theta, *args, **kwargs):
         return tfd.Mixture(
-            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
-            components=[tfd.Deterministic(0.0), tfd.Poisson(*args, **kwargs)],
+            cat=Categorical(name="categorical", p=[psi, 1.0 - psi])._distribution,
+            components=[
+                Constant(name="constant", value=0)._distribution,
+                Poisson(mu=theta, *args, **kwargs)._distribution
+                ],
             name="ZeroInflatedPoisson",
         )
 
@@ -249,7 +346,7 @@ class ZeroInflatedPoisson(RandomVariable):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["Geometric", "NegativeBinomial", "Poisson"]
+tfp_supported = ["Geometric", "NegativeBinomial"]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in tfp_supported:

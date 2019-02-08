@@ -361,24 +361,67 @@ class Poisson(RandomVariable):
 
 
 class ZeroInflatedBinomial(RandomVariable):
-    def __init__(self, name, mix, *args, **kwargs):
-        """Add `mix` to kwargs."""
-        kwargs.update({"mix": mix})
-        super(ZeroInflatedBinomial, self).__init__(name, *args, **kwargs)
+    r"""
+    Zero-inflated Binomial log-likelihood.
 
-    def _base_dist(self, *args, **kwargs):
+    The pmf of this distribution is
+
+    .. math::
+
+        f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
+            \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
+            \end{array} \right.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 25)
+        ns = [10, 20]
+        ps = [0.5, 0.7]
+        psis = [0.7, 0.4]
+        for n, p, psi in zip(ns, ps, psis):
+            pmf = st.binom.pmf(x, n, p)
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            plt.plot(x, pmf, '-o', label='n = {}, p = {}, $\\psi$ = {}'.format(n, p, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`(1 - \psi) n p`
+    Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
+    ========  ==========================
+
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of Binomial variates (0 < psi < 1)
+    n : int
+        Number of Bernoulli trials (n >= 0).
+    p : float
+        Probability of success in each trial (0 < p < 1).
+    """
+
+    def _base_dist(self, psi, n, p, *args, **kwargs):
         """
         Zero-inflated binomial base distribution.
 
         A ZeroInflatedBinomial is a mixture between a deterministic
         distribution and a Binomial distribution.
         """
-        mix = kwargs.pop("mix")
-        return tfd.Mixture(
-            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
-            components=[tfd.Deterministic(0.0), tfd.Binomial(*args, **kwargs)],
+        return pm.Mixture(
+            p=[psi, 1.0 - psi],
+            distributions=[pm.Constant("Zero", 0), pm.Binomial("Binomial", n, p)],
             name="ZeroInflatedBinomial",
-        )
+        )._distribution
 
 
 class ZeroInflatedNegativeBinomial(RandomVariable):
@@ -461,7 +504,7 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
 
 class ZeroInflatedPoisson(RandomVariable):
     r"""
-    Zero-inflated Poisson log-likelihood.
+    Zero-inflated Poisson random variable.
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.

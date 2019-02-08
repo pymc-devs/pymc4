@@ -51,10 +51,7 @@ def random_variable_args():
         (random_variables.VonMises, {"mu": 0, "kappa": 1}),
         (random_variables.Weibull, {"beta": 0.1, "alpha": 1.0}),
         (random_variables.Wishart, {"df": 3, "scale_tril": [[1]], "sample": [[1]]}),
-        (
-            random_variables.ZeroInflatedBinomial,
-            {"mix": 0.2, "total_count": 10, "probs": 0.5, "sample": 0},
-        ),
+        (random_variables.ZeroInflatedBinomial, {"psi": 0.2, "n": 10, "p": 0.5, "sample": 0}),
         (
             random_variables.ZeroInflatedNegativeBinomial,
             {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},

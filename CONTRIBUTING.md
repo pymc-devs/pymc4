@@ -19,8 +19,8 @@ difficulty or scope):
    relevant to you!
 
 The first three types of contributions involve [opening a pull
-request](##Opening a Pull Request), whereas the fourth involves [creating an
-issue](##Creating an Issue).
+request](#opening-a-pull-request), whereas the fourth involves [creating an
+issue](#creating-an-issue).
 
 Finally, it also helps us if you spread the word: reference the project from
 your blog and articles, link to it from your website, or simply star it in

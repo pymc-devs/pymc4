@@ -1,5 +1,10 @@
 """
 Tests for PyMC4 context managers
+
+Tests function by replacing method with another that will raise
+a custom exception, then checking that the correct exception has been raised.
+
+In this manner we are able to verify code execution paths inside of PyMC4
 """
 
 import pytest
@@ -28,7 +33,7 @@ def test_free_forward_context_add_variable(monkeypatch):
 
 
 def test_free_forward_context_var_as_backend_tensor(monkeypatch):
-    """Test that random variable initialize in Free Forward context"""
+    """Test that random variable initializes in Free Forward context"""
 
     err_string = "Free Forward Context var_as_backend_tensor"
 

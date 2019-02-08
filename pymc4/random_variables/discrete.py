@@ -337,7 +337,7 @@ class ZeroInflatedPoisson(RandomVariable):
             cat=Categorical(name="Categorical", p=[psi, 1.0 - psi])._distribution,
             components=[
                 Constant(name="Constant", value=0)._distribution,
-                Poisson(mu=theta, *args, **kwargs)._distribution
+                Poisson(name="Poisson", mu=theta)._distribution
                 ],
             name="ZeroInflatedPoisson",
         )

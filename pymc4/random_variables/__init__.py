@@ -14,7 +14,6 @@ from .discrete import (
 from .continuous import (
     Beta,
     Cauchy,
-    # Chi2,
     ChiSquared,
     Exponential,
     Gamma,

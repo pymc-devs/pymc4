@@ -334,9 +334,9 @@ class ZeroInflatedPoisson(RandomVariable):
     """
     def _base_dist(self, psi, theta, *args, **kwargs):
         return tfd.Mixture(
-            cat=Categorical(name="categorical", p=[psi, 1.0 - psi])._distribution,
+            cat=Categorical(name="Categorical", p=[psi, 1.0 - psi])._distribution,
             components=[
-                Constant(name="constant", value=0)._distribution,
+                Constant(name="Constant", value=0)._distribution,
                 Poisson(mu=theta, *args, **kwargs)._distribution
                 ],
             name="ZeroInflatedPoisson",

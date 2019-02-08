@@ -36,6 +36,7 @@ from .continuous import (
     VonMises,
     Weibull,
 )
+from .mixture import Mixture
 from .multivariate import Dirichlet, LKJ, Multinomial, MultivariateNormalFullCovariance, Wishart
 
 __all__ = [
@@ -65,6 +66,7 @@ __all__ = [
     "LogNormal",
     "Logistic",
     "LogitNormal",
+    "Mixture",
     "Normal",
     "Pareto",
     "StudentT",

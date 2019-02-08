@@ -12,6 +12,8 @@ from tensorflow_probability import distributions as tfd
 import tensorflow_probability as tfp
 from .random_variable import RandomVariable
 import numpy as np
+import pymc4 as pm
+from pymc4.random_variables.mixture import Mixture
 
 
 class Bernoulli(RandomVariable):
@@ -452,15 +454,14 @@ class ZeroInflatedPoisson(RandomVariable):
     """
 
     def _base_dist(self, psi, theta, *args, **kwargs):
-        return tfd.Mixture(
-            cat=Categorical(name="Categorical", p=[psi, 1.0 - psi])._distribution,
-            components=[
-                Constant(name="Constant", value=0)._distribution,
-                Poisson(name="Poisson", mu=theta)._distribution,
+        return pm.Mixture(
+            p=[psi, 1.0 - psi],
+            distributions=[
+                pm.Constant(name="Zero", value=0),
+                pm.Poisson(name="Poisson", mu=theta),
             ],
             name="ZeroInflatedPoisson",
-        )
-
+        )._distribution
 
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names

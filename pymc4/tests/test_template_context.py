@@ -17,6 +17,7 @@ def test_free_forward_context_add_variable(monkeypatch):
     """Test that add_variable is called in Free Forward context"""
 
     err_string = "Free Forward Context add_variable"
+
     monkeypatch.setattr(
         _template_contexts.FreeForwardContext, "add_variable", raise_exception(err_string)
     )
@@ -27,7 +28,7 @@ def test_free_forward_context_add_variable(monkeypatch):
 
 
 def test_free_forward_context_var_as_backend_tensor(monkeypatch):
-    """Test that random variable initializes with in Free Forward context"""
+    """Test that random variable initialize in Free Forward context"""
 
     err_string = "Free Forward Context var_as_backend_tensor"
 
@@ -42,7 +43,7 @@ def test_free_forward_context_var_as_backend_tensor(monkeypatch):
 
 
 def test_forward_context_add_variable(monkeypatch, tf_session):
-    """Test that add_variable is called in Forward Context"""
+    """Test that add_variable is called in Forward context"""
 
     err_string = "Forward Context add_variable"
 
@@ -61,7 +62,7 @@ def test_forward_context_add_variable(monkeypatch, tf_session):
 
 
 def test_forward_context_var_as_backend_tensor(monkeypatch, tf_session):
-    """Test that var_as_backend_tensor is called in Forward Context"""
+    """Test that var_as_backend_tensor is called in Forward context"""
 
     err_string = "Forward Context var_as_backend_tensor"
 

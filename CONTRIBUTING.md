@@ -77,8 +77,9 @@ machine, and develop on a feature branch.
 
 4. PyMC4's dependencies are listed in `requirements.txt`, and dependencies for
    development are listed in `requirements-dev.txt`. To get yourself set up, you
-   can (probably in a [virtual
-   environment](http://python-guide-pt-br.readthedocs.io/en/latest/dev/virtualenvs/))
+   can (probably in a [Python virtual
+   environment](https://docs.python.org/3/library/venv.html) or [conda
+   environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html))
    run:
 
    ```bash

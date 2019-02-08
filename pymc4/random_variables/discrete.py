@@ -7,13 +7,9 @@ Implements random variables not supported by tfp as distributions.
 
 # FIXME all RandomVariable classes need docstrings
 # pylint: disable=undefined-all-variable
-import sys
 from tensorflow_probability import distributions as tfd
-import tensorflow_probability as tfp
 from .random_variable import RandomVariable
-import numpy as np
 import pymc4 as pm
-from pymc4.random_variables.mixture import Mixture
 
 
 class Bernoulli(RandomVariable):

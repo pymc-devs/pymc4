@@ -39,7 +39,10 @@ class Mixture(RandomVariable):
         def _base_dist(self, psi, theta, *args, **kwargs):
             return pm.Mixture(
                 p=[psi, 1.0 - psi],
-                distributions=[pm.Constant(name="Zero", value=0), pm.Poisson(name="Poisson", mu=theta)],
+                distributions=[
+                    pm.Constant(name="Zero", value=0),
+                    pm.Poisson(name="Poisson", mu=theta)
+                ],
                 name="ZeroInflatedPoisson",
             )._distribution  # <---- this is key!
 

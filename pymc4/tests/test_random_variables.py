@@ -10,7 +10,7 @@ def random_variable_args():
     _random_variable_args = (
         (random_variables.Bernoulli, {"p": 0.5}),
         (random_variables.Beta, {"alpha": 1, "beta": 1}),
-        (random_variables.Binomial, {"total_count": 5.0, "probs": 0.5, "sample": 1}),
+        (random_variables.Binomial, {"n": 5.0, "p": 0.5, "sample": 1}),
         (random_variables.Categorical, {"p": [0.1, 0.5, 0.4]}),
         (random_variables.Cauchy, {"alpha": 0, "beta": 1}),
         (random_variables.ChiSquared, {"nu": 2}),

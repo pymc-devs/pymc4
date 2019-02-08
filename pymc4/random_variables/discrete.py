@@ -62,6 +62,59 @@ class Bernoulli(RandomVariable):
         return tfd.Bernoulli(probs=p, *args, **kwargs)
 
 
+class Binomial(RandomVariable):
+    R"""
+    Binomial random variable.
+
+    The discrete probability distribution of the number of successes
+    in a sequence of n independent yes/no experiments, each of which
+    yields success with probability p.
+
+    The pmf of this distribution is
+
+    .. math:: f(x \mid n, p) = \binom{n}{x} p^x (1-p)^{n-x}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(0, 22)
+        ns = [10, 17]
+        ps = [0.5, 0.7]
+        for n, p in zip(ns, ps):
+            pmf = st.binom.pmf(x, n, p)
+            plt.plot(x, pmf, '-o', label='n = {}, p = {}'.format(n, p))
+        plt.xlabel('x', fontsize=14)
+        plt.ylabel('f(x)', fontsize=14)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \{0, 1, \ldots, n\}`
+    Mean      :math:`n p`
+    Variance  :math:`n p (1 - p)`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    n : int
+        Number of Bernoulli trials (n >= 0).
+    p : float
+        Probability of success in each trial (0 < p < 1).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - n: total_count
+    - p: probs
+    """
+    def _base_dist(self, n, p, *args, **kwargs):
+        return tfd.Binomial(total_count=n, probs=p, *args, **kwargs)
+
+
 class Constant(RandomVariable):
     _base_dist = tfd.Deterministic
 
@@ -196,7 +249,7 @@ class ZeroInflatedPoisson(RandomVariable):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["Binomial", "Geometric", "NegativeBinomial", "Poisson"]
+tfp_supported = ["Geometric", "NegativeBinomial", "Poisson"]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in tfp_supported:

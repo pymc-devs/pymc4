@@ -15,6 +15,53 @@ import numpy as np
 
 
 
+class Bernoulli(RandomVariable):
+    R"""Bernoulli random variable.
+
+    The Bernoulli distribution describes the probability of successes
+    (x=1) and failures (x=0).
+
+    The pmf of this distribution is
+
+    .. math:: f(x \mid p) = p^{x} (1-p)^{1-x}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = [0, 1]
+        for p in [0, 0.5, 0.8]:
+            pmf = st.bernoulli.pmf(x, p)
+            plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=9)
+        plt.show()
+
+    ========  ======================
+    Support   :math:`x \in \{0, 1\}`
+    Mean      :math:`p`
+    Variance  :math:`p (1 - p)`
+    ========  ======================
+
+    Parameters
+    ----------
+    p : float
+        Probability of success (0 < p < 1).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - p: probs
+    """
+    def _base_dist(self, p, *args, **kwargs):
+        return tfd.Bernoulli(probs=p, *args, **kwargs)
+
+
 class Constant(RandomVariable):
     _base_dist = tfd.Deterministic
 
@@ -149,7 +196,7 @@ class ZeroInflatedPoisson(RandomVariable):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["Bernoulli", "Binomial", "Geometric", "NegativeBinomial", "Poisson"]
+tfp_supported = ["Binomial", "Geometric", "NegativeBinomial", "Poisson"]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in tfp_supported:

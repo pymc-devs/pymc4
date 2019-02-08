@@ -382,24 +382,81 @@ class ZeroInflatedBinomial(RandomVariable):
 
 
 class ZeroInflatedNegativeBinomial(RandomVariable):
-    def __init__(self, name, mix, *args, **kwargs):
-        """Add `mix` to kwargs."""
-        kwargs.update({"mix": mix})
-        super(ZeroInflatedNegativeBinomial, self).__init__(name, *args, **kwargs)
+    r"""
+    Zero-Inflated Negative binomial random variable.
 
-    def _base_dist(self, *args, **kwargs):
-        """
-        Zero-inflated negative binomial base distribution.
+    The Zero-inflated version of the Negative Binomial (NB).
+    The NB distribution describes a Poisson random variable
+    whose rate parameter is gamma distributed.
 
-        A ZeroInflatedNegativeBinomial is a mixture between a deterministic
-        distribution and a NegativeBinomial distribution.
-        """
-        mix = kwargs.pop("mix")
-        return tfd.Mixture(
-            cat=tfd.Categorical(probs=[mix, 1.0 - mix]),
-            components=[tfd.Deterministic(0.0), tfd.NegativeBinomial(*args, **kwargs)],
+    The pmf of this distribution is
+
+    .. math::
+       f(x \mid \psi, \mu, \alpha) = \left\{
+         \begin{array}{l}
+           (1-\psi) + \psi \left (
+             \frac{\alpha}{\alpha+\mu}
+           \right) ^\alpha, \text{if } x = 0 \\
+           \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (
+             \frac{\alpha}{\mu+\alpha}
+           \right)^\alpha \left(
+             \frac{\mu}{\mu+\alpha}
+           \right)^x, \text{if } x=1,2,3,\ldots
+         \end{array}
+       \right.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy import special
+        plt.style.use('seaborn-darkgrid')
+        def ZeroInfNegBinom(a, m, psi, x):
+            pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            return pmf
+        x = np.arange(0, 25)
+        alphas = [2, 4]
+        mus = [2, 8]
+        psis = [0.7, 0.7]
+        for a, m, psi in zip(alphas, mus, psis):
+            pmf = ZeroInfNegBinom(a, m, psi, x)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}, $\psi$ = {}'.format(a, m, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\mu`
+    Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
+    ========  ==========================
+
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of NegativeBinomial variates (0 < psi < 1)
+    mu : float
+        Poission distribution parameter (mu > 0). Also corresponds to the number of expected
+        successes before the number of desired failures (alpha) is reached.
+    alpha : float
+        Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
+        desired.
+    """
+
+    def _base_dist(self, psi, mu, alpha, *args, **kwargs):
+        return pm.Mixture(
+            p=[psi, 1.0 - psi],
+            distributions=[
+                pm.Constant(name="Zero", value=0),
+                pm.NegativeBinomial(name="NegativeBinomial", mu=mu, alpha=alpha),
+            ],
             name="ZeroInflatedNegativeBinomial",
-        )
+        )._distribution
 
 
 class ZeroInflatedPoisson(RandomVariable):
@@ -456,12 +513,10 @@ class ZeroInflatedPoisson(RandomVariable):
     def _base_dist(self, psi, theta, *args, **kwargs):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
-            distributions=[
-                pm.Constant(name="Zero", value=0),
-                pm.Poisson(name="Poisson", mu=theta),
-            ],
+            distributions=[pm.Constant(name="Zero", value=0), pm.Poisson(name="Poisson", mu=theta)],
             name="ZeroInflatedPoisson",
         )._distribution
+
 
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names

@@ -57,7 +57,7 @@ def random_variable_args():
         ),
         (
             random_variables.ZeroInflatedNegativeBinomial,
-            {"mix": 0.2, "total_count": 10, "probs": 0.5, "sample": 0},
+            {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
         ),
         (random_variables.ZeroInflatedPoisson, {"psi": 0.2, "theta": 2, "sample": 0}),
     )

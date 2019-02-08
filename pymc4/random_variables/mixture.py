@@ -2,8 +2,9 @@ from .random_variable import RandomVariable
 from tensorflow_probability import distributions as tfd
 import pymc4 as pm
 
+
 class Mixture(RandomVariable):
-    R"""
+    r"""
     Mixture log-likelihood
 
     Often used to model subpopulation heterogeneity
@@ -49,11 +50,13 @@ class Mixture(RandomVariable):
 
     Secondly, we use the "p" and "distributions", rather than the old "w" and "comp_dists"
     kwargs. During the PyMC4 API development, this is probably the only place where I
-    (Eric Ma) have chosen to deviate from the old API, hopefully as an improvement.
+    (Eric Ma) have chosen to deviate from the old API, hopefully as an improvement for
+    newcomers' mental model of the API.
     """
+
     def _base_dist(self, p, distributions, *args, **kwargs):
         return tfd.Mixture(
             cat=pm.Categorical(p=p, name="MixtureCategories")._distribution,
             components=[d._distribution for d in distributions],
-            name=kwargs.get("name")
+            name=kwargs.get("name"),
         )

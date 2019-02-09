@@ -39,20 +39,19 @@ docker:  # Set up a Docker image for development.
 	@printf "\n\nDocker image created! \033[1;34mRun \`source venv/bin/activate\` to activate it.\033[0m\n\n\n"
 
 docstyle:
-	@echo "Checking documentation with pydocstyle..."
+	@printf "Checking documentation with pydocstyle...\n"
 	pydocstyle pymc4/
-	@echo "Pydocstyle passes!\n"
-
+	@printf "Pydocstyle passes!\n\n"
 
 format:
-	@echo "Checking code style with black..."
+	@printf "Checking code style with black...\n"
 	black --check pymc4/
-	@echo "Black passes!\n"
+	@printf "Black passes!\n\n"
 
 style:
-	@echo "Checking code style with pylint..."
+	@printf "Checking code style with pylint...\n"
 	pylint pymc4/
-	@echo "Pylint passes!\n"
+	@printf "Pylint passes!\n\n"
 
 black:
 	black pymc4/

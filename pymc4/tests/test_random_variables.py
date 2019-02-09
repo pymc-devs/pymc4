@@ -15,7 +15,7 @@ def random_variable_args():
         (random_variables.Cauchy, {"alpha": 0, "beta": 1}),
         (random_variables.ChiSquared, {"nu": 2}),
         (random_variables.Constant, {"value": 3}),
-        (random_variables.Dirichlet, {"concentration": [1, 2], "sample": [0.5, 0.5]}),
+        (random_variables.Dirichlet, {"a": [1, 2], "sample": [0.5, 0.5]}),
         # TODO DiscreteUniform raises a NotImplementedError from tfp.
         # (random_variables.DiscreteUniform, {"lower": 2, "upper": 10, "sample": 5}),
         (random_variables.Exponential, {"lam": 1}),
@@ -34,7 +34,7 @@ def random_variable_args():
         (random_variables.Logistic, {"mu": 0, "s": 3}),
         (
             random_variables.Multinomial,
-            {"total_count": 4, "probs": [0.2, 0.3, 0.5], "sample": [1, 1, 2]},
+            {"n": 4, "p": [0.2, 0.3, 0.5], "sample": [1, 1, 2]},
         ),
         (random_variables.LogitNormal, {"loc": 0, "scale": 1}),
         (

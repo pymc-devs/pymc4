@@ -12,11 +12,12 @@ help:
 
 conda:  # Set up a conda environment for development.
 	@printf "Creating conda environment...\n"
-	${CONDA} create --yes --name env
+	${CONDA} create --yes --name env python=3.6
 	( \
 	source activate env; \
-	${CONDA} install --yes --file requirements.txt; \
-	${CONDA} install --yes --file requirements-dev.txt; \
+	${PIP} install -U pip; \
+	${PIP} install -r requirements.txt; \
+	${PIP} install -r requirements-dev.txt; \
 	conda deactivate; \
 	)
 	@printf "\n\nConda environment created! \033[1;34mRun \`source activate env\` to activate it.\033[0m\n\n\n"

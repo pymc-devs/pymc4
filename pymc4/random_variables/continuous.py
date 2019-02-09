@@ -718,7 +718,7 @@ class Laplace(RandomVariable):
 
 class Logistic(RandomVariable):
     r"""
-    Logistic log-likelihood.
+    Logistic random variable.
 
     The pdf of this distribution is
 
@@ -1106,7 +1106,7 @@ class Triangular(RandomVariable):
 
 class Uniform(RandomVariable):
     r"""
-    Continuous uniform log-likelihood.
+    Continuous uniform random variable.
 
     The pdf of this distribution is
 

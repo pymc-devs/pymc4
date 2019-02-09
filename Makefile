@@ -23,6 +23,7 @@ conda:  # Set up a conda environment for development.
 
 venv:  # Set up a Python virtual environment for development.
 	@printf "Creating Python virtual environment...\n"
+	rm -rf venv
 	${PYTHON} -m venv venv
 	( \
 	source venv/bin/activate; \

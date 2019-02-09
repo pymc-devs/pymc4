@@ -36,7 +36,7 @@ venv:  # Set up a Python virtual environment for development.
 docker:  # Set up a Docker image for development.
 	@printf "Creating Docker image...\n"
 	${SHELL} ./scripts/container.sh --build
-	@printf "\n\nDocker image created! \033[1;34mRun \`source venv/bin/activate\` to activate it.\033[0m\n\n\n"
+	@printf "\n\nDocker image created! \033[1;34mRefer to pymc4/scripts/README.md for instructions on how to use it.\033[0m\n\n\n"
 
 docstyle:
 	@printf "Checking documentation with pydocstyle...\n"

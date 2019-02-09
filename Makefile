@@ -41,17 +41,17 @@ docker:  # Set up a Docker image for development.
 docstyle:
 	@printf "Checking documentation with pydocstyle...\n"
 	pydocstyle pymc4/
-	@printf "Pydocstyle passes!\n\n"
+	@printf "\033[1;34mPydocstyle passes!\033[0m\n\n"
 
 format:
 	@printf "Checking code style with black...\n"
 	black --check pymc4/
-	@printf "Black passes!\n\n"
+	@printf "\033[1;34mBlack passes!\033[0m\n\n"
 
 style:
 	@printf "Checking code style with pylint...\n"
 	pylint pymc4/
-	@printf "Pylint passes!\n\n"
+	@printf "\033[1;34mPylint passes!\033[0m\n"
 
 black:  # Format code in-place using black.
 	black pymc4/

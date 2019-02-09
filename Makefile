@@ -62,4 +62,4 @@ test:  # Test code using pytest.
 
 lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
 
-check: lint test  # Lint and test code.
+check: lint test  # Both lint and test code. Runs `make lint` followed by `make test`.

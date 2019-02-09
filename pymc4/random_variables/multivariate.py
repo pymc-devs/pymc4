@@ -23,13 +23,13 @@ class Dirichlet(RandomVariable):
     probability distribution of the probability parameter of a Bernoulli or
     Binomial distribution.
 
-    The Dirichlet distribution has only one parameter, a, which is a
-    concentration parameter. It should be an array-like object of length
-    K, where K is the number of multinomial classes. If values are lower than
-    1 you push probability mass to the edges and if larger than 1 you push to
-    the center. If it is equal to 1, we get a uniform distribution. Hence, the
-    concentration parameter controls how flat or wide credibility is assigned
-    within each of the multinomial classes.
+    The Dirichlet distribution is parameterized by ``a``, which is an
+    array-like concentration parameter. It should be an array-like object of
+    length K, where K is the number of multinomial classes. If values are
+    lower than 1 you push probability mass to the edges and if larger than 1
+    you push probability mass to the center. If it is equal to 1, we get a
+    uniform distribution. Hence, the concentration parameter controls how flat
+    or wide credibility is assigned within each of the multinomial classes.
 
     .. math::
 
@@ -129,37 +129,11 @@ class MvNormal(RandomVariable):
         mu = np.zeros(2)
         vals = pm.MvNormal('vals', mu=mu, cov=cov, shape=(5, 2))
 
-    Most of the time it is preferable to specify the cholesky
-    factor of the covariance instead. For example, we could
-    fit a multivariate outcome like this (see the docstring
-    of `LKJCholeskyCov` for more information about this)::
-
-        mu = np.zeros(3)
-        true_cov = np.array([[1.0, 0.5, 0.1],
-                             [0.5, 2.0, 0.2],
-                             [0.1, 0.2, 1.0]])
-        data = np.random.multivariate_normal(mu, true_cov, 10)
-        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-        chol_packed = pm.LKJCholeskyCov('chol_packed',
-            n=3, eta=2, sd_dist=sd_dist)
-        chol = pm.expand_packed_triangular(3, chol_packed)
-        vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
-
-    For unobserved values it can be better to use a non-centered
-    parametrization::
-
-        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
-        chol_packed = pm.LKJCholeskyCov('chol_packed',
-            n=3, eta=2, sd_dist=sd_dist)
-        chol = pm.expand_packed_triangular(3, chol_packed)
-        vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
-        vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
-
     Developer Notes
     ---------------
-    MvNormal is based on TensorFlow Probability's
-    MutivariateNormalFullCovariance, in which the full covariance matrix must
-    be specified.
+    ``MvNormal`` is based on TensorFlow Probability's
+    ``MutivariateNormalFullCovariance``, in which the full covariance matrix
+    must be specified.
 
     Parameter mappings to TensorFlow Probability are as follows:
 
@@ -171,10 +145,53 @@ class MvNormal(RandomVariable):
         return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov, *args, **kwargs)
 
 
+class Wishart(RandomVariable):
+    r"""
+    Wishart random variable.
+
+    The Wishart distribution is the probability distribution of the
+    maximum-likelihood estimator (MLE) of the precision matrix of a
+    multivariate normal distribution.  If V=1, the distribution is
+    identical to the chi-square distribution with nu degrees of
+    freedom.
+
+    .. math::
+
+       f(X \mid nu, T) =
+           \frac{{\mid T \mid}^{nu/2}{\mid X \mid}^{(nu-k-1)/2}}{2^{nu k/2}
+           \Gamma_p(nu/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
+
+    where :math:`k` is the rank of :math:`X`.
+
+    ========  =========================================
+    Support   :math:`X(p x p)` positive definite matrix
+    Mean      :math:`nu V`
+    Variance  :math:`nu (v_{ij}^2 + v_{ii} v_{jj})`
+    ========  =========================================
+
+    Parameters
+    ----------
+    nu : int
+        Degrees of freedom, > 0.
+    V : array
+        p x p positive definite matrix.
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - nu: df
+    - V: scale
+    """
+
+    def _base_dist(self, nu, V, *args, **kwargs):
+        return tfd.Wishart(df=nu, scale=V, *args, **kwargs)
+
+
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["LKJ", "Wishart"]
+tfp_supported = ["LKJ"]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in tfp_supported:

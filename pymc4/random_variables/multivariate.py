@@ -14,7 +14,7 @@ from .random_variable import RandomVariable
 
 
 class Dirichlet(RandomVariable):
-    R"""
+    r"""
     Dirichlet random variable.
 
     The Dirichlet distribution is used to model the probability distribution
@@ -56,7 +56,7 @@ class Dirichlet(RandomVariable):
 
 
 class Multinomial(RandomVariable):
-    R"""
+    r"""
     Multinomial random variable.
 
     Generalizes binomial distribution, but instead of each trial resulting

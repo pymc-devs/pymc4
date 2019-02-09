@@ -35,8 +35,8 @@ def random_variable_args():
         (random_variables.Multinomial, {"n": 4, "p": [0.2, 0.3, 0.5], "sample": [1, 1, 2]}),
         (random_variables.LogitNormal, {"loc": 0, "scale": 1}),
         (
-            random_variables.MultivariateNormalFullCovariance,
-            {"loc": [1, 2], "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]], "sample": [1, 2]},
+            random_variables.MvNormal,
+            {"mu": [1, 2], "cov": [[0.36, 0.12], [0.12, 0.36]], "sample": [1, 2]},
         ),
         (random_variables.NegativeBinomial, {"mu": 3, "alpha": 6, "sample": 5}),
         (random_variables.Normal, {"mu": 0, "sigma": 1}),

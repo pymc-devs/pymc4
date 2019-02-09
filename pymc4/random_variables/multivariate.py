@@ -98,10 +98,83 @@ class Multinomial(RandomVariable):
         return tfd.Multinomial(total_count=n, probs=p, *args, **kwargs)
 
 
+class MvNormal(RandomVariable):
+    r"""
+    Multivariate normal random variable.
+
+    .. math::
+       f(x \mid \pi, T) =
+           \frac{|T|^{1/2}}{(2\pi)^{k/2}}
+           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T (x-\mu) \right\}
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`\mu`
+    Variance  :math:`T^{-1}`
+    ========  ==========================
+
+    Parameters
+    ----------
+    mu : array
+        Vector of means.
+    cov : array
+        Covariance matrix.
+
+    Examples
+    --------
+    Define a multivariate normal variable for a given covariance
+    matrix::
+
+        cov = np.array([[1., 0.5], [0.5, 2]])
+        mu = np.zeros(2)
+        vals = pm.MvNormal('vals', mu=mu, cov=cov, shape=(5, 2))
+
+    Most of the time it is preferable to specify the cholesky
+    factor of the covariance instead. For example, we could
+    fit a multivariate outcome like this (see the docstring
+    of `LKJCholeskyCov` for more information about this)::
+
+        mu = np.zeros(3)
+        true_cov = np.array([[1.0, 0.5, 0.1],
+                             [0.5, 2.0, 0.2],
+                             [0.1, 0.2, 1.0]])
+        data = np.random.multivariate_normal(mu, true_cov, 10)
+        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+        chol_packed = pm.LKJCholeskyCov('chol_packed',
+            n=3, eta=2, sd_dist=sd_dist)
+        chol = pm.expand_packed_triangular(3, chol_packed)
+        vals = pm.MvNormal('vals', mu=mu, chol=chol, observed=data)
+
+    For unobserved values it can be better to use a non-centered
+    parametrization::
+
+        sd_dist = pm.HalfCauchy.dist(beta=2.5, shape=3)
+        chol_packed = pm.LKJCholeskyCov('chol_packed',
+            n=3, eta=2, sd_dist=sd_dist)
+        chol = pm.expand_packed_triangular(3, chol_packed)
+        vals_raw = pm.Normal('vals_raw', mu=0, sigma=1, shape=(5, 3))
+        vals = pm.Deterministic('vals', tt.dot(chol, vals_raw.T).T)
+
+    Developer Notes
+    ---------------
+    MvNormal is based on TensorFlow Probability's
+    MutivariateNormalFullCovariance, in which the full covariance matrix must
+    be specified.
+
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - cov: covariance_matrix
+    """
+
+    def _base_dist(self, mu, cov, *args, **kwargs):
+        return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov, *args, **kwargs)
+
+
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
-tfp_supported = ["LKJ", "MultivariateNormalFullCovariance", "Wishart"]
+tfp_supported = ["LKJ", "Wishart"]
 
 # Programmatically wrap tfp.distribtions into pm.RandomVariables
 for dist_name in tfp_supported:

@@ -37,7 +37,7 @@ from .continuous import (
     Weibull,
 )
 from .mixture import Mixture
-from .multivariate import Dirichlet, LKJ, Multinomial, MultivariateNormalFullCovariance, Wishart
+from .multivariate import Dirichlet, LKJ, Multinomial, MvNormal, Wishart
 
 __all__ = [
     "Bernoulli",
@@ -77,6 +77,6 @@ __all__ = [
     "Dirichlet",
     "LKJ",
     "Multinomial",
-    "MultivariateNormalFullCovariance",
+    "MvNormal",
     "Wishart",
 ]

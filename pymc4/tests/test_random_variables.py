@@ -28,7 +28,7 @@ def random_variable_args():
         (random_variables.InverseGamma, {"alpha": 3, "beta": 2}),
         (random_variables.InverseGaussian, {"mu": 1, "lam": 1}),
         (random_variables.Kumaraswamy, {"a": 0.5, "b": 0.5}),
-        (random_variables.LKJ, {"dimension": 1, "concentration": 1.5, "sample": [[1]]}),
+        (random_variables.LKJ, {"n": 1, "eta": 1.5, "sample": [[1]]}),
         (random_variables.Laplace, {"mu": 0, "b": 1}),
         (random_variables.LogNormal, {"mu": 0, "sigma": 1}),
         (random_variables.Logistic, {"mu": 0, "s": 3}),

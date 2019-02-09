@@ -61,6 +61,48 @@ class Dirichlet(RandomVariable):
         return tfd.Dirichlet(concentration=a, *args, **kwargs)
 
 
+class LKJ(RandomVariable):
+    r"""
+    The LKJ (Lewandowski, Kurowicka and Joe) random variable.
+
+    The LKJ distribution is a prior distribution for correlation matrices.
+    If eta = 1 this corresponds to the uniform distribution over correlation
+    matrices. For eta -> oo the LKJ prior approaches the identity matrix.
+
+    ========  ==============================================
+    Support   Upper triangular matrix with values in [-1, 1]
+    ========  ==============================================
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the covariance matrix (n > 1).
+    eta : float
+        The shape parameter (eta > 0) of the LKJ distribution. eta = 1
+        implies a uniform distribution of the correlation matrices;
+        larger values put more weight on matrices with few correlations.
+
+    References
+    ----------
+    .. [LKJ2009] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+        "Generating random correlation matrices based on vines and
+        extended onion method." Journal of multivariate analysis,
+        100(9), pp.1989-2001.
+
+    Developer Notes
+    ---------------
+    Unlike PyMC3's implementation, the LKJ distribution in PyMC4 returns fully
+    populated covariance matrices, rather than upper triangle matrices.
+
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - n: dimension
+    - eta: concentration
+    """
+    def _base_dist(self, n, eta, *args, **kwargs):
+        return tfd.LKJ(dimension=n, concentration=eta, *args, **kwargs)
+
+
 class Multinomial(RandomVariable):
     r"""
     Multinomial random variable.
@@ -192,17 +234,3 @@ class Wishart(RandomVariable):
 
     def _base_dist(self, nu, V, *args, **kwargs):
         return tfd.Wishart(df=nu, scale=V, *args, **kwargs)
-
-
-# Random variables that tfp supports as distributions. We wrap these
-# distributions as random variables. Names must match tfp.distributions names
-# exactly.
-tfp_supported = ["LKJ"]
-
-# Programmatically wrap tfp.distribtions into pm.RandomVariables
-for dist_name in tfp_supported:
-    setattr(
-        sys.modules[__name__],
-        dist_name,
-        type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
-    )

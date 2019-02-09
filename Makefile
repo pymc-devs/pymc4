@@ -53,7 +53,7 @@ format:
 style:
 	@printf "Checking code style with pylint...\n"
 	pylint pymc4/
-	@printf "\033[1;34mPylint passes!\033[0m\n"
+	@printf "\033[1;34mPylint passes!\033[0m\n\n"
 
 black:  # Format code in-place using black.
 	black pymc4/

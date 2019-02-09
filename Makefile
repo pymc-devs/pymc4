@@ -1,8 +1,8 @@
 .PHONY: help venv conda docker docstyle format style black test lint check
 .DEFAULT_GOAL = help
 
-PYTHON = python
-PIP = pip
+PYTHON = python3
+PIP = pip3
 CONDA = conda
 SHELL = bash
 

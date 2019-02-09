@@ -75,10 +75,9 @@ machine, and develop on a feature branch.
    Always create a new `feature` branch. It's best practice to never work on the
    `master` branch of any repository.
 
-4. To set up a development environment for myself, you can use the `make`
-   command line utility. Depending on whether you want to develop using a
-   [Python virtual environment](https://docs.python.org/3/library/venv.html),
-   [conda
+4. To set up your development environment, you can use the `make` command line
+   utility. Depending on whether you want to develop using a [Python virtual
+   environment](https://docs.python.org/3/library/venv.html), [conda
    environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)
    or [Docker
    image](https://docs.docker.com/develop/develop-images/image_management/), you

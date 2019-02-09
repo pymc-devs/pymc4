@@ -12,14 +12,14 @@ help:
 
 conda:  # Set up a conda environment for development.
 	@printf "Creating conda environment...\n"
-	${CONDA} create --name env
+	${CONDA} create --yes --name env
 	( \
-	source env/bin/activate; \
-	${CONDA} install -r requirements.txt; \
-	${CONDA} install -r requirements-dev.txt; \
-	deactivate; \
+	source activate env; \
+	${CONDA} install --yes --file requirements.txt; \
+	${CONDA} install --yes --file requirements-dev.txt; \
+	conda deactivate; \
 	)
-	@printf "\n\nConda environment created! \033[1;34mRun \`source env/bin/activate\` to activate it.\033[0m\n\n\n"
+	@printf "\n\nConda environment created! \033[1;34mRun \`source activate env\` to activate it.\033[0m\n\n\n"
 
 venv:  # Set up a Python virtual environment for development.
 	@printf "Creating Python virtual environment...\n"

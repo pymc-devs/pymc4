@@ -764,14 +764,36 @@ class Logistic(RandomVariable):
 
 
 class LogitNormal(RandomVariable):
-    def _base_dist(self, *args, **kwargs):
-        """
-        Logit normal base distribution.
+    r"""
+    LogitNormal random variable.
 
-        A LogitNormal is the standard logistic (i.e. sigmoid) of a Normal.
-        """
+    Distribution of any random variable whose logit is normally distributed.
+    If Y is normally distributed, and f(Y) is the standard logistic function,
+    then X = f(Y) is logit-normally distributed.
+
+    The logit-normal distribution can be used to model a proportion that is
+    bound between 0 and 1, and where values of 0 and 1 never occur.
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    sigma : float
+        Standard deviation. (sigma > 0).
+
+    Developer Notes
+    ---------------
+    The logit-normal is implemented as Normal distribution transformed by the
+    Sigmoid bijector.
+
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc of tfd.Normal
+    - sigma: scale of tfd.Normal
+    """
+    def _base_dist(self, mu, sigma, *args, **kwargs):
         return tfd.TransformedDistribution(
-            distribution=tfd.Normal(*args, **kwargs),
+            distribution=tfd.Normal(loc=mu, scale=sigma, *args, **kwargs),
             bijector=tfp.bijectors.Sigmoid(),
             name="LogitNormal",
         )

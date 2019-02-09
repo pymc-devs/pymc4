@@ -7,8 +7,8 @@ CONDA = conda
 SHELL = bash
 
 help:
-	@printf "Usage:\n\n"
-	@grep -E '^[a-zA-Z_-]+:.*?# .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?# "}; {printf "\033[1;34mmake %-10s\033[0m %s\n", $$1, $$2}'
+	@printf "Usage:\n"
+	@grep -E '^[a-zA-Z_-]+:.*?# .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?# "}; {printf "\033[1;34mmake %-10s\033[0m%s\n", $$1, $$2}'
 
 conda:  # Set up a conda environment for development.
 	@printf "Creating conda environment...\n"

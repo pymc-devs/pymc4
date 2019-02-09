@@ -49,6 +49,12 @@ class Dirichlet(RandomVariable):
     ----------
     a : array
         Concentration parameters (a > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - a: concentration
     """
 
     def _base_dist(self, a, *args, **kwargs):

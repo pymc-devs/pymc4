@@ -53,13 +53,12 @@ style:
 	pylint pymc4/
 	@printf "Pylint passes!\n\n"
 
-black:
+black:  # Format code in-place using black.
 	black pymc4/
 
-test:
+test:  # Test code using pytest.
 	pytest -v pymc4/tests/ --cov=pymc4/ --html=testing-report.html --self-contained-html
 
+lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
 
-lint: docstyle format style
-
-check: lint black test
+check: lint test  # Lint and test code.

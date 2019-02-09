@@ -99,6 +99,7 @@ class LKJ(RandomVariable):
     - n: dimension
     - eta: concentration
     """
+
     def _base_dist(self, n, eta, *args, **kwargs):
         return tfd.LKJ(dimension=n, concentration=eta, *args, **kwargs)
 

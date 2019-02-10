@@ -5,7 +5,6 @@ Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
 
-# FIXME all RandomVariable classes need docstrings
 # pylint: disable=undefined-all-variable
 from tensorflow_probability import distributions as tfd
 from .random_variable import RandomVariable

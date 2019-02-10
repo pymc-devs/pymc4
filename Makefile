@@ -12,28 +12,28 @@ help:
 
 conda:  # Set up a conda environment for development.
 	@printf "Creating conda environment...\n"
-	${CONDA} create --yes --name env python=3.6
+	${CONDA} create --yes --name pymc4-env python=3.6
 	( \
-	${CONDA} activate env; \
+	${CONDA} activate pymc4-env; \
 	${PIP} install -U pip; \
 	${PIP} install -r requirements.txt; \
 	${PIP} install -r requirements-dev.txt; \
 	${CONDA} deactivate; \
 	)
-	@printf "\n\nConda environment created! \033[1;34mRun \`conda activate env\` to activate it.\033[0m\n\n\n"
+	@printf "\n\nConda environment created! \033[1;34mRun \`conda activate pymc4-env\` to activate it.\033[0m\n\n\n"
 
 venv:  # Set up a Python virtual environment for development.
 	@printf "Creating Python virtual environment...\n"
-	rm -rf venv
-	${PYTHON} -m venv venv
+	rm -rf pymc4-venv
+	${PYTHON} -m venv pymc4-venv
 	( \
-	source venv/bin/activate; \
+	source pymc4-venv/bin/activate; \
 	${PIP} install -U pip; \
 	${PIP} install -r requirements.txt; \
 	${PIP} install -r requirements-dev.txt; \
 	deactivate; \
 	)
-	@printf "\n\nVirtual environment created! \033[1;34mRun \`source venv/bin/activate\` to activate it.\033[0m\n\n\n"
+	@printf "\n\nVirtual environment created! \033[1;34mRun \`source pymc4-venv/bin/activate\` to activate it.\033[0m\n\n\n"
 
 docker:  # Set up a Docker image for development.
 	@printf "Creating Docker image...\n"

@@ -790,6 +790,7 @@ class LogitNormal(RandomVariable):
     - mu: loc of tfd.Normal
     - sigma: scale of tfd.Normal
     """
+
     def _base_dist(self, mu, sigma, *args, **kwargs):
         return tfd.TransformedDistribution(
             distribution=tfd.Normal(loc=mu, scale=sigma, *args, **kwargs),

@@ -33,7 +33,7 @@ def random_variable_args():
         (random_variables.LogNormal, {"mu": 0, "sigma": 1}),
         (random_variables.Logistic, {"mu": 0, "s": 3}),
         (random_variables.Multinomial, {"n": 4, "p": [0.2, 0.3, 0.5], "sample": [1, 1, 2]}),
-        (random_variables.LogitNormal, {"loc": 0, "scale": 1}),
+        (random_variables.LogitNormal, {"mu": 0, "sigma": 1}),
         (
             random_variables.MvNormal,
             {"mu": [1, 2], "cov": [[0.36, 0.12], [0.12, 0.36]], "sample": [1, 2]},

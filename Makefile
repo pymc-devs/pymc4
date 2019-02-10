@@ -14,13 +14,13 @@ conda:  # Set up a conda environment for development.
 	@printf "Creating conda environment...\n"
 	${CONDA} create --yes --name env python=3.6
 	( \
-	source activate env; \
+	${CONDA} activate env; \
 	${PIP} install -U pip; \
 	${PIP} install -r requirements.txt; \
 	${PIP} install -r requirements-dev.txt; \
-	conda deactivate; \
+	${CONDA} deactivate; \
 	)
-	@printf "\n\nConda environment created! \033[1;34mRun \`source activate env\` to activate it.\033[0m\n\n\n"
+	@printf "\n\nConda environment created! \033[1;34mRun \`conda activate env\` to activate it.\033[0m\n\n\n"
 
 venv:  # Set up a Python virtual environment for development.
 	@printf "Creating Python virtual environment...\n"

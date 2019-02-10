@@ -28,7 +28,7 @@ def test_free_forward_context_add_variable(monkeypatch):
     )
 
     with pytest.raises(Exception) as err:
-        random_variables.Normal("test_normal", loc=0, scale=1)
+        random_variables.Normal("test_normal", mu=0, sigma=1)
         assert err_string in str(err)
 
 
@@ -41,7 +41,7 @@ def test_free_forward_context_var_as_backend_tensor(monkeypatch):
         _template_contexts.FreeForwardContext, "var_as_backend_tensor", raise_exception(err_string)
     )
 
-    var = random_variables.Normal("test_normal", loc=0, scale=1)
+    var = random_variables.Normal("test_normal", mu=0, sigma=1)
     with pytest.raises(Exception) as err:
         var.as_tensor()
         assert err_string in str(err)
@@ -54,7 +54,7 @@ def test_forward_context_add_variable(monkeypatch, tf_session):
 
     @model
     def test_model():
-        random_variables.Normal("test_normal", loc=0, scale=1)
+        random_variables.Normal("test_normal", mu=0, sigma=1)
 
     # Check that correct context is utilized
     monkeypatch.setattr(
@@ -73,7 +73,7 @@ def test_forward_context_var_as_backend_tensor(monkeypatch, tf_session):
 
     @model
     def test_model():
-        random_variables.Normal("test_normal", loc=0, scale=1)
+        random_variables.Normal("test_normal", mu=0, sigma=1)
 
     _model = test_model.configure()
 

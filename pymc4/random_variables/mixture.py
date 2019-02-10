@@ -52,7 +52,7 @@ class Mixture(RandomVariable):
     Firstly, end-users may find it to be extra work to specify that they want the
     distribution objects for each RV. Hence, the Mixture RV will automatically
     grab out the ._distribution object for each RV object passed in. Hence, users
-    need only specify the RV object, though underneath the hood.
+    need only specify the PyMC4 RV object.
 
     This first point also makes things hopefully maps better to how end-users abstract
     and think about distributions. Our average user probably doesn't distinguish

@@ -75,20 +75,25 @@ machine, and develop on a feature branch.
    Always create a new `feature` branch. It's best practice to never work on the
    `master` branch of any repository.
 
-4. PyMC4's dependencies are listed in `requirements.txt`, and dependencies for
-   development are listed in `requirements-dev.txt`. To get yourself set up, you
-   can (probably in a [Python virtual
-   environment](https://docs.python.org/3/library/venv.html) or [conda
-   environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html))
-   run:
+4. To set up your development environment, you can use the `make` command line
+   utility. Depending on whether you want to develop using a [Python virtual
+   environment](https://docs.python.org/3/library/venv.html), [conda
+   environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)
+   or [Docker
+   image](https://docs.docker.com/develop/develop-images/image_management/), you
+   can run one of `make venv`, `make conda` or `make docker`, respectively, and
+   follow the resulting instructions (in blue) after the setup is finished.
 
-   ```bash
-   $ pip install -r requirements.txt
-   $ pip install -r requirements-dev.txt
-   ```
+5. Develop the feature on your feature branch. This is the fun part!
 
-5. Develop the feature on your feature branch. Add changed files using `git
-   add` and then `git commit`:
+6. Once you are done developing, run `make black` and `make check` from the root
+   `pymc4/` directory to blackify, lint and test the codebase. If you like, you
+   can run `make lint` and `make test` to lint and test separately. Work through
+   and fix any lint errors or failing tests. Don't hesitate to reach out to us
+   through the [GitHub issue tracker](https://github.com/pymc-devs/pymc4/issues)
+   if you run into problems!
+
+7. Add changed files using `git add` and then `git commit`:
 
    ```bash
    $ git add you_modified_file.py
@@ -103,7 +108,7 @@ machine, and develop on a feature branch.
    $ git push -u origin my-feature
    ```
 
-6. Go to the GitHub web page of your fork of the PyMC4 repo. Click the `Pull
+8. Go to the GitHub web page of your fork of the PyMC4 repo. Click the `Pull
    request` button to send your changes to the project's maintainers for review.
    This will notify the PyMC4 developers.
 

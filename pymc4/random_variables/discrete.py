@@ -7,8 +7,11 @@ Implements random variables not supported by tfp as distributions.
 
 # pylint: disable=undefined-all-variable
 from tensorflow_probability import distributions as tfd
+import tensorflow as tf
+import tensorflow_probability as tfp
 from .random_variable import RandomVariable
 import pymc4 as pm
+import numpy as np
 
 
 class Bernoulli(RandomVariable):
@@ -118,25 +121,59 @@ class Constant(RandomVariable):
         return tfd.Deterministic(loc=value, *args, **kwargs)
 
 
-# class DiscreteUniform(RandomVariable):
-#     # def __init__(self, name, lower, upper, *args, **kwargs):
-#     #     """Add `low` and `high` to kwargs."""
-#     #     kwargs.update({"low": low, "high": high})
-#     #     super(DiscreteUniform, self).__init__(name, *args, **kwargs)
+class DiscreteUniform(RandomVariable):
+    r"""
+    Discrete uniform random variable.
 
-#     def _base_dist(self, lower, upper, *args, **kwargs):
-#         """
-#         Discrete uniform base distribution.
+    The pmf of this distribution is
 
-#         A DiscreteUniform is an equiprobable Categorical over (upper - lower),
-#         shifted up by low.
-#         """
-#         probs = np.ones(upper - lower).astype(int) / (upper - lower)
-#         return tfd.TransformedDistribution(
-#             distribution=tfd.Categorical(probs=probs),
-#             bijector=tfp.bijectors.AffineScalar(shift=lower),
-#             name="DiscreteUniform",
-#         )
+    .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        ls = [1, -2]
+        us = [6, 2]
+        for l, u in zip(ls, us):
+            x = np.arange(l, u+1)
+            pmf = [1 / (u - l)] * len(x)
+            plt.plot(x, pmf, '-o', label='lower = {}, upper = {}'.format(l, u))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 0.4)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ===============================================
+    Support   :math:`x \in {lower, lower + 1, \ldots, upper}`
+    Mean      :math:`\dfrac{lower + upper}{2}`
+    Variance  :math:`\dfrac{(upper - lower)^2}{12}`
+    ========  ===============================================
+
+    Parameters
+    ----------
+    lower : int
+        Lower limit.
+    upper : int
+        Upper limit (upper > lower).
+    """
+
+    def _base_dist(self, lower, upper, *args, **kwargs):
+        """
+        Discrete uniform base distribution.
+
+        A DiscreteUniform is an equiprobable Categorical over (upper - lower),
+        shifted up by low.
+        """
+        probs = np.ones(int(upper - lower)) / (upper - lower)
+        return tfd.TransformedDistribution(
+            distribution=tfd.Categorical(probs=probs, dtype=tf.float32),
+            bijector=tfp.bijectors.AffineScalar(shift=float(lower)),
+            name="DiscreteUniform",
+        )
 
 
 class Categorical(RandomVariable):

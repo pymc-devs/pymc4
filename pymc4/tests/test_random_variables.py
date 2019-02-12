@@ -17,7 +17,7 @@ def random_variable_args():
         (random_variables.Constant, {"value": 3}),
         (random_variables.Dirichlet, {"a": [1, 2], "sample": [0.5, 0.5]}),
         # TODO DiscreteUniform raises a NotImplementedError from tfp.
-        # (random_variables.DiscreteUniform, {"lower": 2, "upper": 10, "sample": 5}),
+        (random_variables.DiscreteUniform, {"lower": 2.0, "upper": 10.0, "sample": 5}),
         (random_variables.Exponential, {"lam": 1}),
         (random_variables.Gamma, {"alpha": 3.0, "beta": 2.0}),
         (random_variables.Geometric, {"p": 0.5, "sample": 10}),

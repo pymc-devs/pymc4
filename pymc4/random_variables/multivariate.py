@@ -6,7 +6,6 @@ Implements random variables not supported by tfp as distributions.
 """
 
 # pylint: disable=undefined-all-variable
-import sys
 from tensorflow_probability import distributions as tfd
 
 from .random_variable import RandomVariable

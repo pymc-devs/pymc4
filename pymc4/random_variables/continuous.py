@@ -1299,17 +1299,3 @@ class Weibull(RandomVariable):
             ),
             name="Weibull",
         )
-
-
-# Random variables that tfp supports as distributions. We wrap these
-# distributions as random variables. Names must match tfp.distributions names
-# exactly.
-# tfp_supported = ["InverseGaussian"]  # not present in PyMC3. We can choose how to parameterize
-
-# Programmatically wrap tfp.distribtions into pm.RandomVariables
-# for dist_name in tfp_supported:
-#     setattr(
-#         sys.modules[__name__],
-#         dist_name,
-#         type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
-#     )

@@ -1062,7 +1062,7 @@ class StudentT(RandomVariable):
 
 class Triangular(RandomVariable):
     r"""
-    Continuous Triangular random variable
+    Continuous Triangular random variable.
 
     The pdf of this distribution is
 

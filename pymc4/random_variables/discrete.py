@@ -7,11 +7,12 @@ Implements random variables not supported by tfp as distributions.
 
 # pylint: disable=undefined-all-variable
 from tensorflow_probability import distributions as tfd
-import tensorflow as tf
 import tensorflow_probability as tfp
+import tensorflow as tf
+import numpy as np
+
 from .random_variable import RandomVariable
 import pymc4 as pm
-import numpy as np
 
 
 class Bernoulli(RandomVariable):

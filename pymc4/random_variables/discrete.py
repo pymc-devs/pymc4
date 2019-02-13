@@ -20,7 +20,6 @@ class Constant(RandomVariable):
     _base_dist = tfd.Deterministic
 
 
-# TODO DiscreteUniform raises a NotImplementedError from tfp.
 class DiscreteUniform(RandomVariable):
     def __init__(self, name, low, high, *args, **kwargs):
         """Add `low` and `high` to kwargs."""

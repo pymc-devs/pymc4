@@ -9,6 +9,9 @@ Implements random variables not supported by tfp as distributions.
 # pylint: disable=undefined-all-variable
 import sys
 from tensorflow_probability import distributions as tfd
+import tensorflow_probability as tfp
+import tensorflow as tf
+import numpy as np
 
 from .random_variable import RandomVariable
 
@@ -17,7 +20,7 @@ class Constant(RandomVariable):
     _base_dist = tfd.Deterministic
 
 
-''' TODO DiscreteUniform raises a NotImplementedError from tfp.
+# TODO DiscreteUniform raises a NotImplementedError from tfp.
 class DiscreteUniform(RandomVariable):
     def __init__(self, name, low, high, *args, **kwargs):
         """Add `low` and `high` to kwargs."""
@@ -33,13 +36,12 @@ class DiscreteUniform(RandomVariable):
         """
         low = kwargs.pop("low")
         high = kwargs.pop("high")
-        probs = np.ones(high - low) / (high - low)
+        probs = np.ones(high - low, dtype=np.float32) / (high - low)
         return tfd.TransformedDistribution(
-            distribution=tfd.Categorical(probs=probs),
-            bijector=tfp.bijectors.AffineScalar(shift=low),
+            distribution=tfd.Categorical(probs=probs, dtype=tf.float32),
+            bijector=tfp.bijectors.AffineScalar(shift=float(low)),
             name="DiscreteUniform",
         )
-'''
 
 
 class ZeroInflatedBinomial(RandomVariable):

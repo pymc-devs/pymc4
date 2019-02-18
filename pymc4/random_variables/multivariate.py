@@ -10,6 +10,8 @@ from tensorflow_probability import distributions as tfd
 
 from .random_variable import RandomVariable
 
+import numpy as np
+
 
 class Dirichlet(RandomVariable):
     r"""

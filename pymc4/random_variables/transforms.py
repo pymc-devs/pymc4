@@ -1,5 +1,6 @@
 from tensorflow_probability import bijectors
 
+
 class Transform:
     """
     A transformation of a random variable from one space into another.
@@ -8,13 +9,14 @@ class Transform:
     ----------
     name : str
     """
+
     def __init__(self, name="", bijector=None):
         self.name = name
         self.bijector = bijector
 
     def forward(self, x):
         """
-        Applies transformation forward to input variable `x`.
+        Apply transformation forward to input variable `x`.
 
         When transform is used on some distribution `p`, it will transform the random variable `x` after sampling
         from `p`.
@@ -25,7 +27,7 @@ class Transform:
             Input tensor to be transformed.
 
         Returns
-        --------
+        -------
         tensor
             Transformed tensor.
         """
@@ -33,7 +35,7 @@ class Transform:
 
     def backward(self, x):
         """
-        Applies inverse of transformation to input variable `z`.
+        Apply inverse of transformation to input variable `z`.
 
         When transform is used on some distribution `p`, which has observed values `z`, it is used to
         transform the values of `z` correctly to the support of `p`.
@@ -52,7 +54,7 @@ class Transform:
 
     def logjacdet(self, x):
         """
-        Calculates logarithm of the absolute value of the Jacobian determinant for input `x`.
+        Calculate logarithm of the absolute value of the Jacobian determinant for input `x`.
 
         Parameters
         ----------

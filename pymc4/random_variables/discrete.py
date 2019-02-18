@@ -59,7 +59,7 @@ class Bernoulli(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, p, *args, **kwargs):
+    def _base_dist(self, p: float, *args, **kwargs):
         return tfd.Bernoulli(probs=p, *args, **kwargs)
 
 
@@ -113,12 +113,12 @@ class Binomial(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, n, p, *args, **kwargs):
+    def _base_dist(self, n: float, p: float, *args, **kwargs):
         return tfd.Binomial(total_count=n, probs=p, *args, **kwargs)
 
 
 class Constant(RandomVariable):
-    def _base_dist(self, value, *args, **kwargs):
+    def _base_dist(self, value: float, *args, **kwargs):
         return tfd.Deterministic(loc=value, *args, **kwargs)
 
 
@@ -162,7 +162,7 @@ class DiscreteUniform(RandomVariable):
         Upper limit (upper > lower).
     """
 
-    def _base_dist(self, lower, upper, *args, **kwargs):
+    def _base_dist(self, lower: float, upper: float, *args, **kwargs):
         """
         Discrete uniform base distribution.
 
@@ -218,7 +218,7 @@ class Categorical(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, p, *args, **kwargs):
+    def _base_dist(self, p: float, *args, **kwargs):
         return tfd.Categorical(probs=p, *args, **kwargs)
 
 
@@ -266,7 +266,7 @@ class Geometric(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, p, *args, **kwargs):
+    def _base_dist(self, p: float, *args, **kwargs):
         return tfd.Geometric(probs=p, *args, **kwargs)
 
 
@@ -333,7 +333,7 @@ class NegativeBinomial(RandomVariable):
     - mu / (mu + alpha): probs
     """
 
-    def _base_dist(self, mu, alpha, *args, **kwargs):
+    def _base_dist(self, mu: float, alpha: float, *args, **kwargs):
         total_count = mu + alpha
         probs = mu / (mu + alpha)
         return tfd.NegativeBinomial(total_count=total_count, probs=probs, *args, **kwargs)
@@ -389,7 +389,7 @@ class Poisson(RandomVariable):
     - mu: rate
     """
 
-    def _base_dist(self, mu, *args, **kwargs):
+    def _base_dist(self, mu: float, *args, **kwargs):
         return tfd.Poisson(rate=mu, *args, **kwargs)
 
 
@@ -443,7 +443,7 @@ class ZeroInflatedBinomial(RandomVariable):
         Probability of success in each trial (0 < p < 1).
     """
 
-    def _base_dist(self, psi, n, p, *args, **kwargs):
+    def _base_dist(self, psi: float, n: float, p: float, *args, **kwargs):
         """
         Zero-inflated binomial base distribution.
 
@@ -524,7 +524,7 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
         desired.
     """
 
-    def _base_dist(self, psi, mu, alpha, *args, **kwargs):
+    def _base_dist(self, psi: float, mu: float, alpha: float, *args, **kwargs):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
             distributions=[
@@ -586,7 +586,7 @@ class ZeroInflatedPoisson(RandomVariable):
         (theta >= 0).
     """
 
-    def _base_dist(self, psi, theta, *args, **kwargs):
+    def _base_dist(self, psi: float, theta: float, *args, **kwargs):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
             distributions=[pm.Constant(name="Zero", value=0), pm.Poisson(name="Poisson", mu=theta)],

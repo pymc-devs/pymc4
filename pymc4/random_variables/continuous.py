@@ -67,7 +67,7 @@ class Beta(RandomVariable):
     - beta: concentration1
     """
 
-    def _base_dist(self, alpha, beta, *args, **kwargs):
+    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
         return tfd.Beta(concentration0=alpha, concentration1=beta, *args, **kwargs)
 
 
@@ -122,7 +122,7 @@ class Cauchy(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, alpha, beta, *args, **kwargs):
+    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
         return tfd.Cauchy(loc=alpha, scale=beta, **kwargs)
 
 
@@ -173,7 +173,7 @@ class ChiSquared(RandomVariable):
     Chi2 distribution in TensorFlow Probability.
     """
 
-    def _base_dist(self, nu, *args, **kwargs):
+    def _base_dist(self, nu: int, *args, **kwargs):
         return tfd.Chi2(df=nu, *args, **kwargs)
 
 
@@ -220,7 +220,7 @@ class Exponential(RandomVariable):
     - lam: rate
     """
 
-    def _base_dist(self, lam, *args, **kwargs):
+    def _base_dist(self, lam: float, *args, **kwargs):
         return tfd.Exponential(rate=lam)
 
 
@@ -277,7 +277,7 @@ class Gamma(RandomVariable):
 
     """
 
-    def _base_dist(self, alpha, beta, *args, **kwargs):
+    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
         return tfd.Gamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 
@@ -336,7 +336,7 @@ class Gumbel(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, mu, beta, *args, **kwargs):
+    def _base_dist(self, mu: float, beta: float, *args, **kwargs):
         return tfd.Gumbel(loc=mu, scale=beta, *args, **kwargs)
 
 
@@ -386,7 +386,7 @@ class HalfCauchy(RandomVariable):
     In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def _base_dist(self, beta, *args, **kwargs):
+    def _base_dist(self, beta: float, *args, **kwargs):
         return tfd.HalfCauchy(loc=0, scale=beta)
 
 
@@ -454,7 +454,7 @@ class HalfNormal(RandomVariable):
     - sigma: scale
     """
 
-    def _base_dist(self, sigma, *args, **kwargs):
+    def _base_dist(self, sigma: float, *args, **kwargs):
         return tfd.HalfNormal(scale=sigma, **kwargs)
 
 
@@ -519,7 +519,7 @@ class HalfStudentT(RandomVariable):
     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def _base_dist(self, nu, sigma, *args, **kwargs):
+    def _base_dist(self, nu: int, sigma: float, *args, **kwargs):
         """
         Half student-T base distribution.
 
@@ -711,7 +711,7 @@ class Laplace(RandomVariable):
     - b: scale
     """
 
-    def _base_dist(self, mu, b, *args, **kwargs):
+    def _base_dist(self, mu: float, b: float, *args, **kwargs):
         return tfd.Laplace(loc=mu, scale=b)
 
 
@@ -758,7 +758,7 @@ class Logistic(RandomVariable):
         Scale (s > 0).
     """
 
-    def _base_dist(self, mu, s, *args, **kwargs):
+    def _base_dist(self, mu: float, s: float, *args, **kwargs):
         return tfd.Logistic(loc=mu, scale=s, *args, **kwargs)
 
 
@@ -791,7 +791,7 @@ class LogitNormal(RandomVariable):
     - sigma: scale of tfd.Normal
     """
 
-    def _base_dist(self, mu, sigma, *args, **kwargs):
+    def _base_dist(self, mu: float, sigma: float, *args, **kwargs):
         return tfd.TransformedDistribution(
             distribution=tfd.Normal(loc=mu, scale=sigma, *args, **kwargs),
             bijector=tfp.bijectors.Sigmoid(),
@@ -861,7 +861,7 @@ class LogNormal(RandomVariable):
     - sigma: scale
     """
 
-    def _base_dist(self, mu, sigma, *args, **kwargs):
+    def _base_dist(self, mu: float, sigma: float, *args, **kwargs):
         return tfd.LogNormal(loc=mu, scale=sigma, **kwargs)
 
 
@@ -930,7 +930,7 @@ class Normal(RandomVariable):
     - sigma: scale
     """
 
-    def _base_dist(self, mu, sigma, *args, **kwargs):
+    def _base_dist(self, mu: float, sigma: float, *args, **kwargs):
         return tfd.Normal(loc=mu, scale=sigma, **kwargs)
 
 
@@ -986,7 +986,7 @@ class Pareto(RandomVariable):
     - m: scale
     """
 
-    def _base_dist(self, alpha, m, *args, **kwargs):
+    def _base_dist(self, alpha: float, m: float, *args, **kwargs):
         return tfd.Pareto(concentration=alpha, scale=m)
 
 
@@ -1056,7 +1056,7 @@ class StudentT(RandomVariable):
     - nu: df
     """
 
-    def _base_dist(self, mu, sigma, nu, *args, **kwargs):
+    def _base_dist(self, mu: float, sigma: float, nu: int, *args, **kwargs):
         return tfd.StudentT(df=nu, loc=mu, scale=sigma)
 
 
@@ -1122,7 +1122,7 @@ class Triangular(RandomVariable):
     - upper: high
     """
 
-    def _base_dist(self, lower, c, upper, *args, **kwargs):
+    def _base_dist(self, lower: float, c: float, upper: float, *args, **kwargs):
         return tfd.Triangular(low=lower, high=upper, peak=c, *args, **kwargs)
 
 
@@ -1175,7 +1175,7 @@ class Uniform(RandomVariable):
     - upper: high
     """
 
-    def _base_dist(self, lower, upper, *args, **kwargs):
+    def _base_dist(self, lower: float, upper: float, *args, **kwargs):
         return tfd.Uniform(low=lower, high=upper, *args, **kwargs)
 
 
@@ -1230,7 +1230,7 @@ class VonMises(RandomVariable):
     - kappa: concentration
     """
 
-    def _base_dist(self, mu, kappa, *args, **kwargs):
+    def _base_dist(self, mu: float, kappa: float, *args, **kwargs):
         return tfd.VonMises(loc=mu, concentration=kappa, *args, **kwargs)
 
 
@@ -1285,7 +1285,7 @@ class Weibull(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, alpha, beta, *args, **kwargs):
+    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
         """
         Weibull base distribution.
 

@@ -99,7 +99,7 @@ class RandomVariable(WithBackendArithmetic):
 
     _base_dist = None
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name: str, *args, **kwargs):
         self._parents = []
         self._distribution = self._base_dist(name=name, *args, **kwargs)
         self._sample_shape = ()

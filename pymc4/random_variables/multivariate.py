@@ -55,7 +55,7 @@ class Dirichlet(RandomVariable):
     - a: concentration
     """
 
-    def _base_dist(self, a, *args, **kwargs):
+    def _base_dist(self, a: float, *args, **kwargs):
         return tfd.Dirichlet(concentration=a, *args, **kwargs)
 
 
@@ -98,7 +98,7 @@ class LKJ(RandomVariable):
     - eta: concentration
     """
 
-    def _base_dist(self, n, eta, *args, **kwargs):
+    def _base_dist(self, n: int, eta: float, *args, **kwargs):
         return tfd.LKJ(dimension=n, concentration=eta, *args, **kwargs)
 
 
@@ -141,7 +141,7 @@ class Multinomial(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, n, p, *args, **kwargs):
+    def _base_dist(self, n: int, p: float, *args, **kwargs):
         return tfd.Multinomial(total_count=n, probs=p, *args, **kwargs)
 
 
@@ -188,7 +188,7 @@ class MvNormal(RandomVariable):
     - cov: covariance_matrix
     """
 
-    def _base_dist(self, mu, cov, *args, **kwargs):
+    def _base_dist(self, mu: np.ndarray, cov: np.ndarray, *args, **kwargs):
         return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov, *args, **kwargs)
 
 
@@ -231,5 +231,5 @@ class Wishart(RandomVariable):
     - V: scale
     """
 
-    def _base_dist(self, nu, V, *args, **kwargs):
+    def _base_dist(self, nu: int, V: float, *args, **kwargs):
         return tfd.Wishart(df=nu, scale=V, *args, **kwargs)

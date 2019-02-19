@@ -124,6 +124,12 @@ class RandomVariable(WithBackendArithmetic):
         """
         return self._distribution.sample()
 
+    def log_prob(self):
+        """
+        Log probability computation. Must be implemented in child classes.
+        """
+        return NotImplementedError
+
     def as_tensor(self):
         ctx = contexts.get_context()
         if id(ctx) != self._creation_context_id:

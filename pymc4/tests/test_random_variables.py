@@ -78,7 +78,7 @@ def test_tf_session_cleared(tf_session):
 def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
     """Test forward sampling and evaluating the logp for all random variables."""
     sample = kwargs.pop("sample", 0.1)
-    dist = randomvariable("test_dist", **kwargs, validate_args=True)
+    dist = randomvariable(name="test_dist", **kwargs, validate_args=True)
 
     if randomvariable.__name__ not in ["Binomial", "ZeroInflatedBinomial"]:
         # Assert that values are returned with no exceptions
@@ -96,8 +96,8 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
 
 def test_rvs_backend_arithmetic():
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
-    x = random_variables.Normal("x", 0, 1)
-    y = random_variables.Normal("y", 1, 2)
+    x = random_variables.Normal("x", loc=0, scale=1)
+    y = random_variables.Normal("y", loc=1, scale=2)
 
     assert x + y is not None
     assert x - y is not None

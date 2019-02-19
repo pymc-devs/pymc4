@@ -11,7 +11,7 @@ import sys
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable, PositiveContinuousRV
+from .random_variable import RandomVariable, PositiveContinuousRV, ContinuousRV
 
 
 class HalfStudentT(PositiveContinuousRV):
@@ -28,7 +28,7 @@ class HalfStudentT(PositiveContinuousRV):
         )
 
 
-class LogitNormal(RandomVariable):
+class LogitNormal(ContinuousRV):
     def _base_dist(self, *args, **kwargs):
         """
         Logit normal base distribution.
@@ -42,7 +42,7 @@ class LogitNormal(RandomVariable):
         )
 
 
-class Weibull(RandomVariable):
+class Weibull(ContinuousRV):
     def _base_dist(self, *args, **kwargs):
         """
         Weibull base distribution.
@@ -88,5 +88,5 @@ for dist_name in tfp_supported:
     setattr(
         sys.modules[__name__],
         dist_name,
-        type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
+        type(dist_name, (ContinuousRV,), {"_base_dist": getattr(tfd, dist_name)}),
     )

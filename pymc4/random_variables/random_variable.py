@@ -110,11 +110,6 @@ class RandomVariable(WithBackendArithmetic):
     def __init__(self, name, *args, **kwargs):
         self._parents = []
         self._distribution = self._base_dist(name=name, *args, **kwargs)
-        # Automatically apply transformation.
-        self._transformed_distribution = tfd.TransformedDistribution(
-            distribution=self._distribution,
-            bijector=bijectors.Identity()
-        )
         self._sample_shape = ()
         self._dim_names = ()
         self.name = name
@@ -129,13 +124,6 @@ class RandomVariable(WithBackendArithmetic):
         """
         return self._distribution.sample()
 
-    def log_prob(self):
-        """
-        Log probability computation. Done based on the transformed
-        distribution, not the base distribution.
-        """
-        return self._transformed_distribution.log_prob(self)
-
     def as_tensor(self):
         ctx = contexts.get_context()
         if id(ctx) != self._creation_context_id:
@@ -146,7 +134,36 @@ class RandomVariable(WithBackendArithmetic):
         return self._backend_tensor
 
 
-class PositiveContinuousRV(RandomVariable):
+class ContinuousRV(RandomVariable):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._transformed_distribution = tfd.TransformedDistribution(
+            distribution=self._distribution,
+            bijector=bijectors.Identity()
+        )
+
+    def log_prob(self):
+        """
+        Log probability computation. Done based on the transformed
+        distribution, not the base distribution.
+        """
+        return self._transformed_distribution.log_prob(self)
+
+
+class DiscereteRV(RandomVariable):
+    def log_prob(self):
+        """
+        Log probability computation.
+
+        Developer Note
+        --------------
+        Discrete Random Variables are not transformed, unlike continuous
+        Random Variables.
+        """
+        return self._distribution.log_prob(self)
+
+
+class PositiveContinuousRV(ContinuousRV):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._transformed_distribution = tfd.TransformedDistribution(
@@ -155,6 +172,6 @@ class PositiveContinuousRV(RandomVariable):
         )
 
 
-class UnitContinuousRV(RandomVariable):
+class UnitContinuousRV(ContinuousRV):
     def __init__(self, *args, **kwargs):
         super(self, UnitContinuousRV).__init__(transform=transform, *args, **kwargs)

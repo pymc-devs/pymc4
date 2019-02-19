@@ -5,7 +5,9 @@ Implements the RandomVariable base class and the necessary BackendArithmetic.
 """
 
 from .. import _template_contexts as contexts
-
+from .transforms import log, identity, logodds
+from tensorflow_probability import distributions as tfd
+from tensorflow_probability import bijectors # import Bijector
 
 class WithBackendArithmetic:
     """Helper class to implement the backend arithmetic necessary for the RandomVariable class."""
@@ -95,6 +97,12 @@ class RandomVariable(WithBackendArithmetic):
 
     Random variables must support 1) sampling, 2) computation of the log
     probability, and 3) conversion to tensors.
+
+    The base distribution is transformed automatically by a default "identity"
+    bijector transform. For other classes of distributions, we can pass in
+    alternate transforms. The transformed distribution is used only when
+    calculating the log_prob, while the base distribution is used for sampling
+    purposes.
     """
 
     _base_dist = None
@@ -102,6 +110,11 @@ class RandomVariable(WithBackendArithmetic):
     def __init__(self, name, *args, **kwargs):
         self._parents = []
         self._distribution = self._base_dist(name=name, *args, **kwargs)
+        # Automatically apply transformation.
+        self._transformed_distribution = tfd.TransformedDistribution(
+            distribution=self._distribution,
+            bijector=bijectors.Identity()
+        )
         self._sample_shape = ()
         self._dim_names = ()
         self.name = name
@@ -111,10 +124,17 @@ class RandomVariable(WithBackendArithmetic):
         ctx.add_variable(self)
 
     def sample(self):
+        """
+        Forward sampling from the base distribution, unconditioned on data.
+        """
         return self._distribution.sample()
 
     def log_prob(self):
-        return self._distribution.log_prob(self)
+        """
+        Log probability computation. Done based on the transformed
+        distribution, not the base distribution.
+        """
+        return self._transformed_distribution.log_prob(self)
 
     def as_tensor(self):
         ctx = contexts.get_context()
@@ -124,3 +144,17 @@ class RandomVariable(WithBackendArithmetic):
             self._backend_tensor = ctx.var_as_backend_tensor(self)
 
         return self._backend_tensor
+
+
+class PositiveContinuousRV(RandomVariable):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._transformed_distribution = tfd.TransformedDistribution(
+            distribution=self._distribution,
+            bijector=bijectors.Invert(bijectors.Exp())
+        )
+
+
+class UnitContinuousRV(RandomVariable):
+    def __init__(self, *args, **kwargs):
+        super(self, UnitContinuousRV).__init__(transform=transform, *args, **kwargs)

@@ -4,6 +4,7 @@ from .discrete import (
     Binomial,
     Categorical,
     Constant,
+    DiscreteUniform,
     Geometric,
     NegativeBinomial,
     Poisson,

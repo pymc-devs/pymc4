@@ -11,10 +11,10 @@ import sys
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable
+from .random_variable import RandomVariable, PositiveContinuousRV
 
 
-class HalfStudentT(RandomVariable):
+class HalfStudentT(PositiveContinuousRV):
     def _base_dist(self, *args, **kwargs):
         """
         Half student-T base distribution.

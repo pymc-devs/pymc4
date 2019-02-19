@@ -11,7 +11,7 @@ import sys
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable, PositiveContinuousRV, ContinuousRV
+from .random_variable import RandomVariable, PositiveContinuousRV, ContinuousRV, UnitContinuousRV
 
 
 class HalfStudentT(PositiveContinuousRV):
@@ -28,7 +28,7 @@ class HalfStudentT(PositiveContinuousRV):
         )
 
 
-class LogitNormal(ContinuousRV):
+class LogitNormal(UnitContinuousRV):
     def _base_dist(self, *args, **kwargs):
         """
         Logit normal base distribution.
@@ -60,6 +60,8 @@ class Weibull(ContinuousRV):
 # Random variables that tfp supports as distributions. We wrap these
 # distributions as random variables. Names must match tfp.distributions names
 # exactly.
+
+
 tfp_supported = [
     "Beta",
     "Cauchy",

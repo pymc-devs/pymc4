@@ -174,10 +174,14 @@ class PositiveContinuousRV(ContinuousRV):
         super().__init__(*args, **kwargs)
         self._transformed_distribution = tfd.TransformedDistribution(
             distribution=self._distribution,
-            bijector=bijectors.Invert(bijectors.Exp())
+            bijector=log
         )
 
 
 class UnitContinuousRV(ContinuousRV):
     def __init__(self, *args, **kwargs):
-        super(self, UnitContinuousRV).__init__(transform=transform, *args, **kwargs)
+        super().__init__(*args, **kwargs)
+        self._transformed_distribution = tfd.TransformedDistribution(
+            distribution=self._distribution,
+            bijector=logodds
+        )

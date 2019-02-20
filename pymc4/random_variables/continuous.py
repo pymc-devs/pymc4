@@ -8,8 +8,13 @@ Implements random variables not supported by tfp as distributions.
 # FIXME all RandomVariable classes need docstrings
 # pylint: disable=undefined-all-variable
 import sys
+
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
+from tensorflow import matmul, reshape, concat, transpose, zeros, sign
+from math import pi
+from tensorflow.python.ops import array_ops
+from tensorflow.python.ops.distributions import distribution
 
 from .random_variable import RandomVariable
 
@@ -42,6 +47,131 @@ class LogitNormal(RandomVariable):
         )
 
 
+class StdSkewNormal(tfp.distributions.Distribution):
+    # STATISTICAL APPLICATIONS
+    # OF THE MULTIVARIATE SKEW-NORMAL DISTRIBUTION
+    # A. Azzalini
+    # https://arxiv.org/pdf/0911.2093.pdf
+    # paramed by alpha and omega
+    def __init__(self,
+               corr,  # correlation (sq.) m x m matrix (Omega in Azzalini)
+               skew,  # skew/shape vector as m x 1 matrix (alpha in Azzalini)
+               validate_args=False,
+               allow_nan_stats=True,
+               name="StdSkewNormal"):
+        """
+        Construct Skew Normal distributions.
+        The parameters `loc` and `scale` must be shaped in a way that supports
+        broadcasting (e.g. `loc + scale` is a valid operation).
+        Args:
+          loc: Floating point tensor; the means of the distribution(s).
+          scale: Floating point tensor; the stddevs of the distribution(s).
+            Must contain only positive values.
+          validate_args: Python `bool`, default `False`. When `True` distribution
+            parameters are checked for validity despite possibly degrading runtime
+            performance. When `False` invalid inputs may silently render incorrect
+            outputs.
+          allow_nan_stats: Python `bool`, default `True`. When `True`,
+            statistics (e.g., mean, mode, variance) use the value "`NaN`" to
+            indicate the result is undefined. When `False`, an exception is raised
+            if one or more of the statistic's batch members are undefined.
+          name: Python `str` name prefixed to Ops created by this class.
+        Raises:
+          TypeError: if `loc` and `scale` have different `dtype`.
+        """
+        # TODO: if skew=None, make a 0 skew.
+        # is corr foreced to equal 1 when univariate?
+        parameters = dict(locals())
+        #with ops.name_scope(name, values=[loc, scale]) as name:
+        #  with ops.control_dependencies([check_ops.assert_positive(scale)] if
+        #                                validate_args else []):
+        #   self._corr = array_ops.identity(corr, name="correlation")
+        #    self._skew = array_ops.identity(skew, name="skew")
+        #    check_ops.assert_same_float_dtype([self._loc, self._scale])
+        self._corr = array_ops.identity(corr, name="correlation")
+        self._skew = array_ops.identity(skew, name="skew")
+        
+        #if self._skew.ndim <=1: # does this work without eager?
+         #    self._skew = tf.reshape(self._skew, [-1, 1])
+                
+        super(StdSkewNormal, self).__init__(
+            dtype=self._corr.dtype,
+            reparameterization_type=distribution.FULLY_REPARAMETERIZED, # ?
+            validate_args=validate_args,
+            allow_nan_stats=allow_nan_stats,
+            parameters=parameters,
+            graph_parents=[self._corr, self._skew],
+            name=name)
+    
+    @property
+    def corr(self):
+        """correlation matrix"""
+        return self._corr
+    
+    @property
+    def Omega(self):
+        return self.corr
+    
+    # why doesn't TFP Distribution do this?
+    @property
+    def skew(self):
+        """skew vector"""
+        return self._skew
+    
+    @property
+    def alpha(self):
+        return self.skew
+    
+    def _mean(self):
+        return (2./pi)**(.5) * self.get_delta()
+    
+    def _variance(self):
+        mu = self.mean()
+        return self.Omega - matmul(mu, mu, transpose_b=True)
+        
+    
+    #@property # is property a good idea here, since there are computations involved?
+    #def delta(self):
+     #   return get_delta if not calculated
+    
+    def get_delta(self):
+        Omegaalpha = self.Omega @ self.alpha
+        return Omegaalpha @ (1 + matmul(self.alpha, Omegaalpha, transpose_a=True))**(-.5)
+    
+    #@property
+    def get_Omega_star(self):
+        """correlation matrix of underlying normal distribution"""
+        delta = self.get_delta()
+        Omega = self.Omega
+        col0 = concat([[[1]], delta], 0)
+        col1 = concat([transpose(delta), Omega], 0)
+        return concat( [col0, col1], 1)
+        
+    # not used
+    def ___batch_shape_tensor(self): #?
+        return array_ops.broadcast_dynamic_shape(
+            array_ops.shape(self._corr),
+            array_ops.shape(self._skew))  # Tensor
+
+    # not used
+    def ___batch_shape(self): #?
+        return array_ops.broadcast_static_shape(
+            self._corr.get_shape(),
+            self._skew.get_shape())  # TensorShape
+    
+    def _sample_n(self, n, seed=None):
+        nd = array_ops.shape(self.skew)[0] + 1
+        N = tfd.MultivariateNormalFullCovariance(loc=zeros(nd), covariance_matrix=self.get_Omega_star())
+        # sig .sample(self, sample_shape=(), seed=None, name="sample")
+        X0X = N.sample(sample_shape=n, seed=seed)
+        X0 = X0X[:,0]
+        X =  X0X[:, 1:]
+        signX0 = sign(X0)
+        return transpose([signX0]) * X
+        
+    #def _log_prob(self, value):
+
+    
 class Weibull(RandomVariable):
     def _base_dist(self, *args, **kwargs):
         """

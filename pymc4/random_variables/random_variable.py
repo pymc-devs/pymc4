@@ -92,8 +92,7 @@ class WithBackendArithmetic:
 
 
 class RandomVariable(WithBackendArithmetic):
-    """
-    Random variable base class.
+    """Random variable base class.
 
     Random variables must support 1) sampling, 2) computation of the log
     probability, and 3) conversion to tensors.
@@ -123,8 +122,7 @@ class RandomVariable(WithBackendArithmetic):
         return self._distribution.sample()
 
     def log_prob(self):
-        """
-        Log probability computation.
+        """Log probability computation.
 
         Must be implemented in child classes.
         """

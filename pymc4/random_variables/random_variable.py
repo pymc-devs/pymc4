@@ -5,7 +5,6 @@ Implements the RandomVariable base class and the necessary BackendArithmetic.
 """
 
 from .. import _template_contexts as contexts
-from .transforms import log, logodds
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import bijectors  # import Bijector
 
@@ -164,23 +163,35 @@ class DiscereteRV(RandomVariable):
 
         Developer Note
         --------------
-        Discrete Random Variables are not transformed, unlike continuous
-        Random Variables.
+            Discrete Random Variables are not transformed, unlike continuous
+            Random Variables.
         """
         return self._distribution.log_prob(self)
 
 
 class PositiveContinuousRV(ContinuousRV):
     def __init__(self, *args, **kwargs):
+        """Initialize PositiveContinuousRV.
+
+        Developer Note
+        --------------
+            The inverse of the exponential bijector is the log bijector.
+        """
         super().__init__(*args, **kwargs)
         self._transformed_distribution = tfd.TransformedDistribution(
-            distribution=self._distribution, bijector=log
+            distribution=self._distribution, bijector=bijectors.Invert(bijectors.Exp())
         )
 
 
 class UnitContinuousRV(ContinuousRV):
     def __init__(self, *args, **kwargs):
+        """Initialize UnitContinuousRV.
+
+        Developer Note
+        --------------
+            The inverse of the sigmoid bijector is the logodds bijector.
+        """
         super().__init__(*args, **kwargs)
         self._transformed_distribution = tfd.TransformedDistribution(
-            distribution=self._distribution, bijector=logodds
+            distribution=self._distribution, bijector=bijectors.Invert(bijectors.Sigmoid())
         )

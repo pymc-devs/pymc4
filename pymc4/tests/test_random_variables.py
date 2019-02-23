@@ -71,7 +71,8 @@ def random_variable_args():
 
 def test_tf_session_cleared(tf_session):
     """Check that fixture is finalizing correctly"""
-    assert len(tf_session.graph.get_operations()) == 0
+    ops = tf_session.graph.get_operations()
+    assert len(ops) == 0
 
 
 @pytest.mark.parametrize(**random_variable_args())

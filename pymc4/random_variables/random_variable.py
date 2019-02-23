@@ -148,8 +148,7 @@ class ContinuousRV(RandomVariable):
         )
 
     def log_prob(self):
-        """
-        Log probability computation.
+        """Log probability computation.
 
         Done based on the transformed distribution, not the base distribution.
         """
@@ -158,8 +157,7 @@ class ContinuousRV(RandomVariable):
 
 class DiscereteRV(RandomVariable):
     def log_prob(self):
-        """
-        Log probability computation.
+        """Log probability computation.
 
         Developer Note
         --------------

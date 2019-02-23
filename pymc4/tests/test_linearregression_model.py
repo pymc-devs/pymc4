@@ -161,7 +161,7 @@ def forward_sample_test():
 
 
 def test_linear_regression_forward_sample(forward_sample_test, tf_session):
-    np.testing.assert_equal(forward_sample["y"], forward_sample_test["y"])
+    np.testing.assert_almost_equal(forward_sample["y"], forward_sample_test["y"])
     np.testing.assert_almost_equal(forward_sample["sigma"], forward_sample_test["sigma"], decimal=2)
     np.testing.assert_almost_equal(
         forward_sample["intercept"], forward_sample_test["intercept"], decimal=1

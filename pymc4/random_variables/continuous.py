@@ -11,7 +11,7 @@ import sys
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable, PositiveContinuousRV, ContinuousRV, UnitContinuousRV
+from .random_variable import PositiveContinuousRV, ContinuousRV, UnitContinuousRV
 
 
 class HalfStudentT(PositiveContinuousRV):

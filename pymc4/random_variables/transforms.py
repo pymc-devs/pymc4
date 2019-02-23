@@ -1,6 +1,4 @@
-"""
-Convenience variable names for tfp Bijectors.
-"""
+"""Convenience variable names for tfp Bijectors."""
 from tensorflow_probability import bijectors
 
 

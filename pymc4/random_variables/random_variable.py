@@ -5,9 +5,10 @@ Implements the RandomVariable base class and the necessary BackendArithmetic.
 """
 
 from .. import _template_contexts as contexts
-from .transforms import log, identity, logodds
+from .transforms import log, logodds
 from tensorflow_probability import distributions as tfd
-from tensorflow_probability import bijectors # import Bijector
+from tensorflow_probability import bijectors  # import Bijector
+
 
 class WithBackendArithmetic:
     """Helper class to implement the backend arithmetic necessary for the RandomVariable class."""
@@ -119,14 +120,14 @@ class RandomVariable(WithBackendArithmetic):
         ctx.add_variable(self)
 
     def sample(self):
-        """
-        Forward sampling from the base distribution, unconditioned on data.
-        """
+        """Forward sampling from the base distribution, unconditioned on data."""
         return self._distribution.sample()
 
     def log_prob(self):
         """
-        Log probability computation. Must be implemented in child classes.
+        Log probability computation.
+
+        Must be implemented in child classes.
         """
         return NotImplementedError
 
@@ -144,14 +145,14 @@ class ContinuousRV(RandomVariable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._transformed_distribution = tfd.TransformedDistribution(
-            distribution=self._distribution,
-            bijector=bijectors.Identity()
+            distribution=self._distribution, bijector=bijectors.Identity()
         )
 
     def log_prob(self):
         """
-        Log probability computation. Done based on the transformed
-        distribution, not the base distribution.
+        Log probability computation.
+
+        Done based on the transformed distribution, not the base distribution.
         """
         return self._transformed_distribution.log_prob(self)
 
@@ -173,8 +174,7 @@ class PositiveContinuousRV(ContinuousRV):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._transformed_distribution = tfd.TransformedDistribution(
-            distribution=self._distribution,
-            bijector=log
+            distribution=self._distribution, bijector=log
         )
 
 
@@ -182,6 +182,5 @@ class UnitContinuousRV(ContinuousRV):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._transformed_distribution = tfd.TransformedDistribution(
-            distribution=self._distribution,
-            bijector=logodds
+            distribution=self._distribution, bijector=logodds
         )

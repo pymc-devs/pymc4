@@ -10,7 +10,7 @@ Implements random variables not supported by tfp as distributions.
 import sys
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable, ContinuousRV
+from .random_variable import ContinuousRV
 
 
 # Random variables that tfp supports as distributions. We wrap these

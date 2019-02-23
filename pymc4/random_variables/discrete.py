@@ -13,7 +13,7 @@ import tensorflow_probability as tfp
 import tensorflow as tf
 import numpy as np
 
-from .random_variable import RandomVariable, DiscereteRV
+from .random_variable import DiscereteRV
 
 
 class Constant(DiscereteRV):

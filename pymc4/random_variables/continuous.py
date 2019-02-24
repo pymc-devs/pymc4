@@ -11,7 +11,7 @@ import sys
 
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
-from tensorflow import matmul, reshape, concat, transpose, zeros, sign
+from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones
 from math import pi
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops.distributions import distribution
@@ -47,6 +47,7 @@ class LogitNormal(RandomVariable):
         )
 
 
+    # what is the right name?
 class StdSkewNormal(tfp.distributions.Distribution):
     # STATISTICAL APPLICATIONS
     # OF THE MULTIVARIATE SKEW-NORMAL DISTRIBUTION
@@ -159,8 +160,15 @@ class StdSkewNormal(tfp.distributions.Distribution):
             self._corr.get_shape(),
             self._skew.get_shape())  # TensorShape
     
+      def _event_shape_tensor(self):
+    return constant_op.constant([], dtype=dtypes.int32)
+
+     def __event_shape(self):
+         return tensor_shape.scalar()
+    
+    
     def _sample_n(self, n, seed=None):
-        nd = array_ops.shape(self.skew)[0] + 1
+        nd = array_ops.shape(self.skew)[0] + 1 # (k+1)
         N = tfd.MultivariateNormalFullCovariance(loc=zeros(nd), covariance_matrix=self.get_Omega_star())
         # sig .sample(self, sample_shape=(), seed=None, name="sample")
         X0X = N.sample(sample_shape=n, seed=seed)
@@ -168,6 +176,12 @@ class StdSkewNormal(tfp.distributions.Distribution):
         X =  X0X[:, 1:]
         signX0 = sign(X0)
         return transpose([signX0]) * X
+        
+    def _prob(self, x):
+        k = array_ops.shape(self.skew)[0]
+        N0O = tfd.MultivariateNormalFullCovariance(loc=zeros(k), covariance_matrix=self.Omega)
+        N01 = tfd.Normal(loc=0, scale=1)
+        return 2*N0O.prob(x[0])*N01.cdf( (transpose(self.alpha)@x)[0][0] ) #do i have to spec event shape?
         
     #def _log_prob(self, value):
 

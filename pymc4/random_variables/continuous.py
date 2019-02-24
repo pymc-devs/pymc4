@@ -11,7 +11,7 @@ import sys
 
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
-from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones
+from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log
 from math import pi
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops.distributions import distribution
@@ -160,12 +160,11 @@ class StdSkewNormal(tfp.distributions.Distribution):
             self._corr.get_shape(),
             self._skew.get_shape())  # TensorShape
     
-      def _event_shape_tensor(self):
-    return constant_op.constant([], dtype=dtypes.int32)
+    def __event_shape_tensor(self):
+        return constant_op.constant([], dtype=dtypes.int32)
 
-     def __event_shape(self):
-         return tensor_shape.scalar()
-    
+    def __event_shape(self):
+        return tensor_shape.scalar()
     
     def _sample_n(self, n, seed=None):
         nd = array_ops.shape(self.skew)[0] + 1 # (k+1)
@@ -182,8 +181,12 @@ class StdSkewNormal(tfp.distributions.Distribution):
         N0O = tfd.MultivariateNormalFullCovariance(loc=zeros(k), covariance_matrix=self.Omega)
         N01 = tfd.Normal(loc=0, scale=1)
         return 2*N0O.prob(x[0])*N01.cdf( (transpose(self.alpha)@x)[0][0] ) #do i have to spec event shape?
-        
-    #def _log_prob(self, value):
+    
+    def _log_prob(self, x):
+        k = array_ops.shape(self.skew)[0]
+        N0O = tfd.MultivariateNormalFullCovariance(loc=zeros(k), covariance_matrix=self.Omega)
+        N01 = tfd.Normal(loc=0, scale=1)
+        return log(2.) + N0O.log_prob(x[0]) + N01.log_cdf( (transpose(self.alpha)@x)[0][0] ) #do i have to spec event shape?
 
     
 class Weibull(RandomVariable):

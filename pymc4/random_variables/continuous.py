@@ -7,10 +7,16 @@ Implements random variables not supported by tfp as distributions.
 
 # pylint: disable=undefined-all-variable
 import tensorflow_probability as tfp
+import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
 from .random_variable import RandomVariable
+from typing import NewType, Union, Sequence
+import numpy as np
 
+
+TensorLike = NewType("TensorLike", Union[Sequence[int], Sequence[float], int, float])
+IntTensorLike = NewType("IntTensorLike", Union[int, Sequence[int]])
 
 class Beta(RandomVariable):
     r"""
@@ -67,7 +73,7 @@ class Beta(RandomVariable):
     - beta: concentration1
     """
 
-    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
+    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
         return tfd.Beta(concentration0=alpha, concentration1=beta, *args, **kwargs)
 
 
@@ -122,7 +128,7 @@ class Cauchy(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
+    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
         return tfd.Cauchy(loc=alpha, scale=beta, **kwargs)
 
 
@@ -173,7 +179,7 @@ class ChiSquared(RandomVariable):
     Chi2 distribution in TensorFlow Probability.
     """
 
-    def _base_dist(self, nu: int, *args, **kwargs):
+    def _base_dist(self, nu: IntTensorLike, *args, **kwargs):
         return tfd.Chi2(df=nu, *args, **kwargs)
 
 
@@ -220,7 +226,7 @@ class Exponential(RandomVariable):
     - lam: rate
     """
 
-    def _base_dist(self, lam: float, *args, **kwargs):
+    def _base_dist(self, lam: TensorLike, *args, **kwargs):
         return tfd.Exponential(rate=lam)
 
 
@@ -277,7 +283,7 @@ class Gamma(RandomVariable):
 
     """
 
-    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
+    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
         return tfd.Gamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 
@@ -336,7 +342,7 @@ class Gumbel(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, mu: float, beta: float, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, beta: TensorLike, *args, **kwargs):
         return tfd.Gumbel(loc=mu, scale=beta, *args, **kwargs)
 
 
@@ -386,7 +392,7 @@ class HalfCauchy(RandomVariable):
     In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def _base_dist(self, beta: float, *args, **kwargs):
+    def _base_dist(self, beta: TensorLike, *args, **kwargs):
         return tfd.HalfCauchy(loc=0, scale=beta)
 
 
@@ -454,7 +460,7 @@ class HalfNormal(RandomVariable):
     - sigma: scale
     """
 
-    def _base_dist(self, sigma: float, *args, **kwargs):
+    def _base_dist(self, sigma: TensorLike, *args, **kwargs):
         return tfd.HalfNormal(scale=sigma, **kwargs)
 
 
@@ -519,7 +525,7 @@ class HalfStudentT(RandomVariable):
     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def _base_dist(self, nu: int, sigma: float, *args, **kwargs):
+    def _base_dist(self, nu: IntTensorLike, sigma: TensorLike, *args, **kwargs):
         """
         Half student-T base distribution.
 
@@ -583,7 +589,7 @@ class InverseGamma(RandomVariable):
     - beta: rate
     """
 
-    def _base_dist(self, alpha, beta, *args, **kwargs):
+    def _base_dist(self, alpha:TensorLike, beta:TensorLike, *args, **kwargs):
         return tfd.InverseGamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 
@@ -604,7 +610,7 @@ class InverseGaussian(RandomVariable):
     - lam: concentration
     """
 
-    def _base_dist(self, mu, lam, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, lam: TensorLike, *args, **kwargs):
         return tfd.InverseGaussian(loc=mu, concentration=lam, *args, **kwargs)
 
 
@@ -658,7 +664,7 @@ class Kumaraswamy(RandomVariable):
 
     """
 
-    def _base_dist(self, a, b, *args, **kwargs):
+    def _base_dist(self, a: TensorLike, b: TensorLike, *args, **kwargs):
         return tfd.Kumaraswamy(concentration0=a, concentration1=b, *args, **kwargs)
 
 
@@ -711,7 +717,7 @@ class Laplace(RandomVariable):
     - b: scale
     """
 
-    def _base_dist(self, mu: float, b: float, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, b: TensorLike, *args, **kwargs):
         return tfd.Laplace(loc=mu, scale=b)
 
 
@@ -758,7 +764,7 @@ class Logistic(RandomVariable):
         Scale (s > 0).
     """
 
-    def _base_dist(self, mu: float, s: float, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, s: TensorLike, *args, **kwargs):
         return tfd.Logistic(loc=mu, scale=s, *args, **kwargs)
 
 
@@ -791,7 +797,7 @@ class LogitNormal(RandomVariable):
     - sigma: scale of tfd.Normal
     """
 
-    def _base_dist(self, mu: float, sigma: float, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, sigma: TensorLike, *args, **kwargs):
         return tfd.TransformedDistribution(
             distribution=tfd.Normal(loc=mu, scale=sigma, *args, **kwargs),
             bijector=tfp.bijectors.Sigmoid(),
@@ -861,7 +867,7 @@ class LogNormal(RandomVariable):
     - sigma: scale
     """
 
-    def _base_dist(self, mu: float, sigma: float, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, sigma: TensorLike, *args, **kwargs):
         return tfd.LogNormal(loc=mu, scale=sigma, **kwargs)
 
 
@@ -930,7 +936,7 @@ class Normal(RandomVariable):
     - sigma: scale
     """
 
-    def _base_dist(self, mu: float, sigma: float, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, sigma: TensorLike, *args, **kwargs):
         return tfd.Normal(loc=mu, scale=sigma, **kwargs)
 
 
@@ -986,7 +992,7 @@ class Pareto(RandomVariable):
     - m: scale
     """
 
-    def _base_dist(self, alpha: float, m: float, *args, **kwargs):
+    def _base_dist(self, alpha: TensorLike, m: TensorLike, *args, **kwargs):
         return tfd.Pareto(concentration=alpha, scale=m)
 
 
@@ -1056,7 +1062,7 @@ class StudentT(RandomVariable):
     - nu: df
     """
 
-    def _base_dist(self, mu: float, sigma: float, nu: int, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, sigma: TensorLike, nu: IntTensorLike, *args, **kwargs):
         return tfd.StudentT(df=nu, loc=mu, scale=sigma)
 
 
@@ -1122,7 +1128,7 @@ class Triangular(RandomVariable):
     - upper: high
     """
 
-    def _base_dist(self, lower: float, c: float, upper: float, *args, **kwargs):
+    def _base_dist(self, lower: TensorLike, c: TensorLike, upper: TensorLike, *args, **kwargs):
         return tfd.Triangular(low=lower, high=upper, peak=c, *args, **kwargs)
 
 
@@ -1175,7 +1181,7 @@ class Uniform(RandomVariable):
     - upper: high
     """
 
-    def _base_dist(self, lower: float, upper: float, *args, **kwargs):
+    def _base_dist(self, lower: TensorLike, upper: TensorLike, *args, **kwargs):
         return tfd.Uniform(low=lower, high=upper, *args, **kwargs)
 
 
@@ -1230,7 +1236,7 @@ class VonMises(RandomVariable):
     - kappa: concentration
     """
 
-    def _base_dist(self, mu: float, kappa: float, *args, **kwargs):
+    def _base_dist(self, mu: TensorLike, kappa: TensorLike, *args, **kwargs):
         return tfd.VonMises(loc=mu, concentration=kappa, *args, **kwargs)
 
 
@@ -1285,7 +1291,7 @@ class Weibull(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, alpha: float, beta: float, *args, **kwargs):
+    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
         """
         Weibull base distribution.
 

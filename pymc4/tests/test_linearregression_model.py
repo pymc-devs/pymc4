@@ -4,51 +4,49 @@ import numpy as np
 import pytest
 from numpy import array, float32
 
-config = tf.ConfigProto()
-tf.random.set_random_seed(37208)  # random.org
-config.intra_op_parallelism_threads = 1
-sess = tf.Session(config=config)
+
+@pytest.fixture(scope="function")
+def linear_regression(tf_session):
+    """"""
+    # Logp calculation for linear regression
+    @pm.model
+    def linreg(n_points=100):
+        # Define priors
+        sigma = pm.HalfNormal("sigma", scale=10)
+        intercept = pm.Normal("intercept", 0, scale=10)
+        x_coeff = pm.Normal("weight", 0, scale=5)
+        x = np.linspace(-5, 5, n_points)
+
+        # Define likelihood
+        y = pm.Normal("y", loc=intercept + x_coeff * x, scale=sigma)
+
+    model = linreg.configure()
+    forward_sample = tf_session.run(model.forward_sample())
+
+    return model, forward_sample, tf_session
 
 
-# Logp calculation for linear regression
-@pm.model
-def linreg(n_points=100):
-    # Define priors
-    sigma = pm.HalfNormal("sigma", scale=10)
-    intercept = pm.Normal("intercept", 0, scale=10)
-    x_coeff = pm.Normal("weight", 0, scale=5)
-    x = np.linspace(-5, 5, n_points)
+def test_linear_regression(linear_regression):
+    model, forward_sample, tf_session = linear_regression
+    sigma = tf.placeholder(tf.float32)
+    intercept = tf.placeholder(tf.float32)
+    x_coeff = tf.placeholder(tf.float32)
+    y = tf.placeholder(tf.float32, shape=(100,))
+    func = model.make_log_prob_function()
 
-    # Define likelihood
-    y = pm.Normal("y", loc=intercept + x_coeff * x, scale=sigma)
-
-
-model = linreg.configure()
-
-forward_sample = sess.run(model.forward_sample())
-
-
-func = model.make_log_prob_function()
-sigma = tf.placeholder(tf.float32)
-intercept = tf.placeholder(tf.float32)
-x_coeff = tf.placeholder(tf.float32)
-y = tf.placeholder(tf.float32, shape=(100,))
-logp = func(sigma, intercept, x_coeff, y)
-
-
-def test_linear_regression():
+    logp = func(sigma, intercept, x_coeff, y)
     feed_dict = {
         sigma: forward_sample["sigma"],
         intercept: forward_sample["intercept"],
         x_coeff: forward_sample["weight"],
         y: forward_sample["y"],
     }
-    np.testing.assert_allclose(sess.run(logp, feed_dict=feed_dict), -437.2295)
+    np.testing.assert_allclose(tf_session.run(logp, feed_dict=feed_dict), -437.2295)
 
 
 @pytest.fixture
-def forward_sample_test():
-    forward_sample_test = {
+def fixed_forward_samples():
+    fixed_forward_samples = {
         "intercept": 10.935_236,
         "sigma": 16.7994,
         "weight": 8.037_117,
@@ -158,15 +156,18 @@ def forward_sample_test():
             dtype=float32,
         ),
     }
-    return forward_sample_test
+    return fixed_forward_samples
 
 
-def test_linear_regression_forward_sample(forward_sample_test, tf_session):
-    np.testing.assert_almost_equal(forward_sample["y"], forward_sample_test["y"], decimal=2)
-    np.testing.assert_almost_equal(forward_sample["sigma"], forward_sample_test["sigma"], decimal=2)
+def test_linear_regression_forward_sample(linear_regression, fixed_forward_samples):
+    model, forward_sample, tf_session = linear_regression
+    np.testing.assert_almost_equal(forward_sample["y"], fixed_forward_samples["y"], decimal=2)
     np.testing.assert_almost_equal(
-        forward_sample["intercept"], forward_sample_test["intercept"], decimal=1
+        forward_sample["sigma"], fixed_forward_samples["sigma"], decimal=2
     )
     np.testing.assert_almost_equal(
-        forward_sample["weight"], forward_sample_test["weight"], decimal=2
+        forward_sample["intercept"], fixed_forward_samples["intercept"], decimal=1
+    )
+    np.testing.assert_almost_equal(
+        forward_sample["weight"], fixed_forward_samples["weight"], decimal=2
     )

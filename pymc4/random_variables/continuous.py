@@ -11,9 +11,10 @@ import sys
 
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
-from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log
+from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log, dtypes
 from math import pi
 from tensorflow.python.ops import array_ops
+from tensorflow.python.framework import tensor_shape, constant_op
 from tensorflow.python.ops.distributions import distribution
 
 from .random_variable import RandomVariable
@@ -148,23 +149,21 @@ class StdSkewNormal(tfp.distributions.Distribution):
         col1 = concat([transpose(delta), Omega], 0)
         return concat( [col0, col1], 1)
         
-    # not used
-    def ___batch_shape_tensor(self): #?
+    def _batch_shape_tensor(self): 
         return array_ops.broadcast_dynamic_shape(
-            array_ops.shape(self._corr),
-            array_ops.shape(self._skew))  # Tensor
+            array_ops.shape(self._corr)[2:],  #make it like a single thing shp[2:]
+            array_ops.shape(self._skew)[2:]  )  # Tensor
 
-    # not used
-    def ___batch_shape(self): #?
+    def _batch_shape(self):
         return array_ops.broadcast_static_shape(
-            self._corr.get_shape(),
-            self._skew.get_shape())  # TensorShape
+            self._corr.get_shape()[2:],
+            self._skew.get_shape()[2:])  # TensorShape
     
-    def __event_shape_tensor(self):
-        return constant_op.constant([], dtype=dtypes.int32)
+    def _event_shape_tensor(self):
+        return constant_op.constant(reshape(array_ops.shape(self.skew)[0], [1]), dtype=dtypes.int32)
 
-    def __event_shape(self):
-        return tensor_shape.scalar()
+    def _event_shape(self):
+        return tensor_shape.TensorShape([self.skew.get_shape()[0].value])
     
     def _sample_n(self, n, seed=None):
         nd = array_ops.shape(self.skew)[0] + 1 # (k+1)

@@ -83,7 +83,6 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
 
     if randomvariable.__name__ not in ["Binomial", "ZeroInflatedBinomial"]:
         # Assert that values are returned with no exceptions
-        # import pdb; pdb.set_trace()
         log_prob = dist.log_prob()
         vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
         assert vals is not None

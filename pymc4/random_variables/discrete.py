@@ -13,14 +13,14 @@ import tensorflow_probability as tfp
 import tensorflow as tf
 import numpy as np
 
-from .random_variable import DiscereteRV
+from .random_variable import DiscreteRV
 
 
-class Constant(DiscereteRV):
+class Constant(DiscreteRV):
     _base_dist = tfd.Deterministic
 
 
-class DiscreteUniform(DiscereteRV):
+class DiscreteUniform(DiscreteRV):
     def __init__(self, name, low, high, *args, **kwargs):
         """Add `low` and `high` to kwargs."""
         kwargs.update({"low": low, "high": high})
@@ -43,7 +43,7 @@ class DiscreteUniform(DiscereteRV):
         )
 
 
-class ZeroInflatedBinomial(DiscereteRV):
+class ZeroInflatedBinomial(DiscreteRV):
     def __init__(self, name, mix, *args, **kwargs):
         """Add `mix` to kwargs."""
         kwargs.update({"mix": mix})
@@ -64,7 +64,7 @@ class ZeroInflatedBinomial(DiscereteRV):
         )
 
 
-class ZeroInflatedNegativeBinomial(DiscereteRV):
+class ZeroInflatedNegativeBinomial(DiscreteRV):
     def __init__(self, name, mix, *args, **kwargs):
         """Add `mix` to kwargs."""
         kwargs.update({"mix": mix})
@@ -85,7 +85,7 @@ class ZeroInflatedNegativeBinomial(DiscereteRV):
         )
 
 
-class ZeroInflatedPoisson(DiscereteRV):
+class ZeroInflatedPoisson(DiscreteRV):
     def __init__(self, name, mix, *args, **kwargs):
         """Add `mix` to kwargs."""
         kwargs.update({"mix": mix})
@@ -116,5 +116,5 @@ for dist_name in tfp_supported:
     setattr(
         sys.modules[__name__],
         dist_name,
-        type(dist_name, (DiscereteRV,), {"_base_dist": getattr(tfd, dist_name)}),
+        type(dist_name, (DiscreteRV,), {"_base_dist": getattr(tfd, dist_name)}),
     )

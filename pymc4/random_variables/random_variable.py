@@ -153,7 +153,7 @@ class ContinuousRV(RandomVariable):
         return self._transformed_distribution.log_prob(self)
 
 
-class DiscereteRV(RandomVariable):
+class DiscreteRV(RandomVariable):
     def log_prob(self):
         """Log probability computation.
 

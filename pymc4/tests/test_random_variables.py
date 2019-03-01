@@ -44,7 +44,7 @@ def random_variable_args():
             {"loc": [1, 2], "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]], "sample": [1, 2]},
         ),
         (random_variables.NegativeBinomial, {"total_count": 5, "probs": 0.5, "sample": 5}),
-        (random_variables.Normal, {"loc": 0, "scale": 1, "sample": 0, "expected": [-.918]}),
+        (random_variables.Normal, {"loc": 0, "scale": 1, "sample": 0, "expected": [-0.918]}),
         (random_variables.Pareto, {"concentration": 1, "scale": 0.1, "sample": 5}),
         (random_variables.Poisson, {"rate": 2}),
         (random_variables.StudentT, {"loc": 0, "scale": 1, "df": 10}),
@@ -92,7 +92,7 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
 
         assert vals is not None
         if expected_value:
-            np.testing.assert_allclose(expected_value, vals, atol=.01, rtol=0)
+            np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81

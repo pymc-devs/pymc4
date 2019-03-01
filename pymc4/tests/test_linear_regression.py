@@ -12,13 +12,13 @@ def linear_regression(tf_session):
     @pm.model
     def linreg(n_points=100):
         # Define priors
-        sigma = pm.HalfNormal("sigma", scale=10)
-        intercept = pm.Normal("intercept", 0, scale=10)
-        x_coeff = pm.Normal("weight", 0, scale=5)
+        sigma = pm.HalfNormal("sigma", sigma=10)
+        intercept = pm.Normal("intercept", mu=0, sigma=10)
+        x_coeff = pm.Normal("weight", mu=0, sigma=5)
         x = np.linspace(-5, 5, n_points)
 
         # Define likelihood
-        y = pm.Normal("y", loc=intercept + x_coeff * x, scale=sigma)
+        y = pm.Normal("y", mu=intercept + x_coeff * x, sigma=sigma)
 
     model = linreg.configure()
     forward_sample = tf_session.run(model.forward_sample())

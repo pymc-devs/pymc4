@@ -1,7 +1,7 @@
 # Custom
 environment.yml
 testing-report.html
-
+pip-wheel-metadata/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

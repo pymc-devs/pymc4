@@ -1,8 +1,8 @@
 from .random_variable import RandomVariable
 from tensorflow_probability import distributions as tfd
 import pymc4 as pm
+from .types import TensorLike
 from typing import List
-
 
 class Mixture(RandomVariable):
     r"""
@@ -68,7 +68,7 @@ class Mixture(RandomVariable):
     newcomers' mental model of the API.
     """
 
-    def _base_dist(self, p: float, distributions: List[RandomVariable], *args, **kwargs):
+    def _base_dist(self, p: TensorLike, distributions: List[RandomVariable], *args, **kwargs):
         return tfd.Mixture(
             cat=pm.Categorical(p=p, name="MixtureCategories")._distribution,
             components=[d._distribution for d in distributions],

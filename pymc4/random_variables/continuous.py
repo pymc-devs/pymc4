@@ -7,16 +7,11 @@ Implements random variables not supported by tfp as distributions.
 
 # pylint: disable=undefined-all-variable
 import tensorflow_probability as tfp
-import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
 from .random_variable import RandomVariable
-from typing import NewType, Union, Sequence
-import numpy as np
+from .types import TensorLike, IntTensorLike
 
-
-TensorLike = NewType("TensorLike", Union[Sequence[int], Sequence[float], int, float])
-IntTensorLike = NewType("IntTensorLike", Union[int, Sequence[int]])
 
 class Beta(RandomVariable):
     r"""

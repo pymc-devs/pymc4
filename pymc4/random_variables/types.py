@@ -1,3 +1,10 @@
+"""
+This module stores the type-hint Types.
+
+TensorLike is for float-like tensors (scalars, vectors, matrices, tensors)
+IntTensorLike like TensorLike, just for ints.
+"""
+
 from typing import NewType, Union, Sequence
 
 

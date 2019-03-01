@@ -2,9 +2,14 @@
 PyMC4 base random variable class.
 
 Implements the RandomVariable base class and the necessary BackendArithmetic.
+
+Also stores the type hints used in child classes.
+- TensorLike is for float-like tensors (scalars, vectors, matrices, tensors)
+- IntTensorLike like TensorLike, just for ints.
 """
 
 from .. import _template_contexts as contexts
+from typing import NewType, Union, Sequence
 
 
 class WithBackendArithmetic:
@@ -99,7 +104,7 @@ class RandomVariable(WithBackendArithmetic):
 
     _base_dist = None
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name: str, *args, **kwargs):
         self._parents = []
         self._distribution = self._base_dist(name=name, *args, **kwargs)
         self._sample_shape = ()
@@ -124,3 +129,7 @@ class RandomVariable(WithBackendArithmetic):
             self._backend_tensor = ctx.var_as_backend_tensor(self)
 
         return self._backend_tensor
+
+
+TensorLike = NewType("TensorLike", Union[Sequence[int], Sequence[float], int, float])
+IntTensorLike = NewType("IntTensorLike", Union[int, Sequence[int]])

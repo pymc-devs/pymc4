@@ -15,7 +15,7 @@ from .discrete import (
 from .continuous import (
     Beta,
     Cauchy,
-    Chi2,
+    ChiSquared,
     Exponential,
     Gamma,
     Gumbel,
@@ -37,13 +37,15 @@ from .continuous import (
     VonMises,
     Weibull,
 )
-from .multivariate import Dirichlet, LKJ, Multinomial, MultivariateNormalFullCovariance, Wishart
+from .mixture import Mixture
+from .multivariate import Dirichlet, LKJ, Multinomial, MvNormal, Wishart
 
 __all__ = [
     "Bernoulli",
     "Binomial",
     "Categorical",
     "Constant",
+    "DiscreteUniform",
     "Geometric",
     "NegativeBinomial",
     "Poisson",
@@ -52,7 +54,7 @@ __all__ = [
     "ZeroInflatedPoisson",
     "Beta",
     "Cauchy",
-    "Chi2",
+    "ChiSquared",
     "Exponential",
     "Gamma",
     "Gumbel",
@@ -66,6 +68,7 @@ __all__ = [
     "LogNormal",
     "Logistic",
     "LogitNormal",
+    "Mixture",
     "Normal",
     "Pareto",
     "StudentT",
@@ -76,6 +79,6 @@ __all__ = [
     "Dirichlet",
     "LKJ",
     "Multinomial",
-    "MultivariateNormalFullCovariance",
+    "MvNormal",
     "Wishart",
 ]

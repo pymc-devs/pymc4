@@ -2,6 +2,9 @@
 Tests for PyMC4 random variables
 """
 import pytest
+import numpy as np
+
+
 from .. import random_variables
 
 
@@ -41,7 +44,7 @@ def random_variable_args():
             {"loc": [1, 2], "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]], "sample": [1, 2]},
         ),
         (random_variables.NegativeBinomial, {"total_count": 5, "probs": 0.5, "sample": 5}),
-        (random_variables.Normal, {"loc": 0, "scale": 1}),
+        (random_variables.Normal, {"loc": 0, "scale": 1, "sample": 0, "expected": [-0.918]}),
         (random_variables.Pareto, {"concentration": 1, "scale": 0.1, "sample": 5}),
         (random_variables.Poisson, {"rate": 2}),
         (random_variables.StudentT, {"loc": 0, "scale": 1, "df": 10}),
@@ -79,6 +82,7 @@ def test_tf_session_cleared(tf_session):
 def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
     """Test forward sampling and evaluating the logp for all random variables."""
     sample = kwargs.pop("sample", 0.1)
+    expected_value = kwargs.pop("expected", None)
     dist = randomvariable(name="test_dist", **kwargs, validate_args=True)
 
     if randomvariable.__name__ not in ["Binomial", "ZeroInflatedBinomial"]:
@@ -86,7 +90,10 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
         # import pdb; pdb.set_trace()
         log_prob = dist.log_prob()
         vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
+
         assert vals is not None
+        if expected_value:
+            np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81

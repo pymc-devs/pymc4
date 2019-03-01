@@ -9,8 +9,7 @@ Implements random variables not supported by tfp as distributions.
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable
-from .types import TensorLike, IntTensorLike
+from .random_variable import RandomVariable, TensorLike, IntTensorLike
 
 
 class Beta(RandomVariable):

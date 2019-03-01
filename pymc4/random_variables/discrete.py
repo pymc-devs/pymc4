@@ -11,10 +11,8 @@ import tensorflow_probability as tfp
 import tensorflow as tf
 import numpy as np
 
-from .random_variable import RandomVariable
+from .random_variable import RandomVariable, TensorLike
 import pymc4 as pm
-
-from .types import TensorLike
 
 
 class Bernoulli(RandomVariable):

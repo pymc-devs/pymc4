@@ -1,7 +1,6 @@
-from .random_variable import RandomVariable
+from .random_variable import RandomVariable, TensorLike
 from tensorflow_probability import distributions as tfd
 import pymc4 as pm
-from .types import TensorLike
 from typing import List
 
 

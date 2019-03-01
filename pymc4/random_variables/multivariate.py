@@ -8,8 +8,7 @@ Implements random variables not supported by tfp as distributions.
 # pylint: disable=undefined-all-variable
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable
-from .types import TensorLike, IntTensorLike
+from .random_variable import RandomVariable, TensorLike, IntTensorLike
 
 
 class Dirichlet(RandomVariable):

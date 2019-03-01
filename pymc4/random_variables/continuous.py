@@ -584,7 +584,7 @@ class InverseGamma(RandomVariable):
     - beta: rate
     """
 
-    def _base_dist(self, alpha:TensorLike, beta:TensorLike, *args, **kwargs):
+    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
         return tfd.InverseGamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 

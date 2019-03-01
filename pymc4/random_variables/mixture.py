@@ -4,6 +4,7 @@ import pymc4 as pm
 from .types import TensorLike
 from typing import List
 
+
 class Mixture(RandomVariable):
     r"""
     Mixture random variable.

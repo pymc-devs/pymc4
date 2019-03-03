@@ -196,5 +196,7 @@ class UnitContinuousRV(ContinuousRV):
         self._transformed_distribution = tfd.TransformedDistribution(
             distribution=self._distribution, bijector=bijectors.Invert(bijectors.Sigmoid())
         )
+
+
 TensorLike = NewType("TensorLike", Union[Sequence[int], Sequence[float], int, float])
 IntTensorLike = NewType("IntTensorLike", Union[int, Sequence[int]])

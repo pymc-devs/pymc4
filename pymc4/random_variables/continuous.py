@@ -11,7 +11,8 @@ import sys
 
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
-from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log, dtypes
+from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log, dtypes, expand_dims, broadcast_to, ones, scatter_update , Variable, rank
+from tensorflow import range as tf_range
 from math import pi
 from tensorflow.python.ops import array_ops
 from tensorflow.python.framework import tensor_shape, constant_op
@@ -90,11 +91,17 @@ class StdSkewNormal(tfp.distributions.Distribution):
         #   self._corr = array_ops.identity(corr, name="correlation")
         #    self._skew = array_ops.identity(skew, name="skew")
         #    check_ops.assert_same_float_dtype([self._loc, self._scale])
+        
+        
         self._corr = array_ops.identity(corr, name="correlation")
         self._skew = array_ops.identity(skew, name="skew")
+        # assume matrix
+        if self._corr.ndim == 2:
+            self._corr = expand_dims(self._corr, 0)
+        # assume vec 
+        if self._skew.ndim == 1:
+            self._skew = expand_dims(self._skew, 0)
         
-        #if self._skew.ndim <=1: # does this work without eager?
-         #    self._skew = tf.reshape(self._skew, [-1, 1])
                 
         super(StdSkewNormal, self).__init__(
             dtype=self._corr.dtype,
@@ -112,7 +119,8 @@ class StdSkewNormal(tfp.distributions.Distribution):
     
     @property
     def Omega(self):
-        return self.corr
+        shape = concat([self.batch_shape_tensor(), array_ops.shape(self.corr)[-2:]], 0)
+        return broadcast_to(self.corr, shape)
     
     # why doesn't TFP Distribution do this?
     @property
@@ -122,7 +130,9 @@ class StdSkewNormal(tfp.distributions.Distribution):
     
     @property
     def alpha(self):
-        return self.skew
+        alpha = expand_dims(self.skew, -1) # makes a (col., n x 1) vector 
+        shape = concat([self.batch_shape_tensor(), array_ops.shape(alpha)[-2:]], 0)
+        return broadcast_to(alpha, shape)
     
     def _mean(self):
         return (2./pi)**(.5) * self.get_delta()
@@ -130,7 +140,6 @@ class StdSkewNormal(tfp.distributions.Distribution):
     def _variance(self):
         mu = self.mean()
         return self.Omega - matmul(mu, mu, transpose_b=True)
-        
     
     #@property # is property a good idea here, since there are computations involved?
     #def delta(self):
@@ -145,35 +154,46 @@ class StdSkewNormal(tfp.distributions.Distribution):
         """correlation matrix of underlying normal distribution"""
         delta = self.get_delta()
         Omega = self.Omega
-        col0 = concat([[[1]], delta], 0)
-        col1 = concat([transpose(delta), Omega], 0)
-        return concat( [col0, col1], 1)
+        one_shp = array_ops.shape(delta)
+        # one_shp[-2] = 1 doesn't work
+        # https://github.com/tensorflow/tensorflow/issues/14132
+        # so instead, ...
+        one_shp = concat([one_shp[:-2] , [1,1] ], 0)
+        one = ones(one_shp)
+        col0 = concat([one, delta], -2)
+        
+        delta_dim = tf_range(rank(delta))
+        delta_dim = concat([delta_dim[:-2], [delta_dim[-1]], [delta_dim[-2]]], 0)
+        col1 = concat([transpose(delta, perm=delta_dim ), Omega], -2)
+        return concat( [col0, col1], -1)
         
     def _batch_shape_tensor(self): 
+        # In other words, take the last 1 or 2 dims ( take as col. vector or matrix)
+        # and 'broadcast' the leading dims
         return array_ops.broadcast_dynamic_shape(
-            array_ops.shape(self._corr)[2:],  #make it like a single thing shp[2:]
-            array_ops.shape(self._skew)[2:]  )  # Tensor
+            array_ops.shape(self._corr)[:-2],
+            array_ops.shape(self._skew)[:-1]) # Tensor
 
     def _batch_shape(self):
         return array_ops.broadcast_static_shape(
-            self._corr.get_shape()[2:],
-            self._skew.get_shape()[2:])  # TensorShape
+            self._corr.get_shape()[:-2],
+            self._skew.get_shape()[:-1])  # TensorShape
     
     def _event_shape_tensor(self):
-        return constant_op.constant(reshape(array_ops.shape(self.skew)[0], [1]), dtype=dtypes.int32)
+        return constant_op.constant([array_ops.shape(self.skew)[-1]], dtype=dtypes.int32)
 
     def _event_shape(self):
-        return tensor_shape.TensorShape([self.skew.get_shape()[0].value])
+        return tensor_shape.TensorShape([self.skew.get_shape()[-1].value])
     
     def _sample_n(self, n, seed=None):
-        nd = array_ops.shape(self.skew)[0] + 1 # (k+1)
+        nd = self.event_shape[0] + 1
         N = tfd.MultivariateNormalFullCovariance(loc=zeros(nd), covariance_matrix=self.get_Omega_star())
         # sig .sample(self, sample_shape=(), seed=None, name="sample")
         X0X = N.sample(sample_shape=n, seed=seed)
-        X0 = X0X[:,0]
-        X =  X0X[:, 1:]
+        X0 = X0X[..., :1]
+        X =  X0X[..., 1:]
         signX0 = sign(X0)
-        return transpose([signX0]) * X
+        return signX0 * X
         
     def _prob(self, x):
         k = array_ops.shape(self.skew)[0]

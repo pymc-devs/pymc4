@@ -31,6 +31,8 @@ class BaseContext:
 
 
 class FreeForwardContext(BaseContext):
+    """As a standalone distribution."""
+
     def add_variable(self, rv):
         pass
 
@@ -39,6 +41,8 @@ class FreeForwardContext(BaseContext):
 
 
 class ForwardContext(BaseContext):
+    """Distributions in a Directed Acylical Graph."""
+
     def __init__(self):
         self.vars = []
 
@@ -50,6 +54,8 @@ class ForwardContext(BaseContext):
 
 
 class InferenceContext(BaseContext):
+    """When conditioning on data and performing inference."""
+
     def __init__(self, tensors, expected_vars):
         self.vars = []
         self._tensors = {var.name: tensor for var, tensor in zip(expected_vars, tensors)}

@@ -11,11 +11,11 @@ import tensorflow_probability as tfp
 import tensorflow as tf
 import numpy as np
 
-from .random_variable import RandomVariable, TensorLike
+from .random_variable import DiscreteRV, TensorLike
 import pymc4 as pm
 
 
-class Bernoulli(RandomVariable):
+class Bernoulli(DiscreteRV):
     r"""Bernoulli random variable.
 
     The Bernoulli distribution describes the probability of successes
@@ -63,7 +63,7 @@ class Bernoulli(RandomVariable):
         return tfd.Bernoulli(probs=p, *args, **kwargs)
 
 
-class Binomial(RandomVariable):
+class Binomial(DiscreteRV):
     r"""
     Binomial random variable.
 
@@ -117,12 +117,12 @@ class Binomial(RandomVariable):
         return tfd.Binomial(total_count=n, probs=p, *args, **kwargs)
 
 
-class Constant(RandomVariable):
+class Constant(DiscreteRV):
     def _base_dist(self, value: TensorLike, *args, **kwargs):
         return tfd.Deterministic(loc=value, *args, **kwargs)
 
 
-class DiscreteUniform(RandomVariable):
+class DiscreteUniform(DiscreteRV):
     r"""
     Discrete uniform random variable.
 
@@ -177,7 +177,7 @@ class DiscreteUniform(RandomVariable):
         )
 
 
-class Categorical(RandomVariable):
+class Categorical(DiscreteRV):
     r"""
     Categorical random variable.
 
@@ -222,7 +222,7 @@ class Categorical(RandomVariable):
         return tfd.Categorical(probs=p, *args, **kwargs)
 
 
-class Geometric(RandomVariable):
+class Geometric(DiscreteRV):
     r"""
     Geometric random variable.
 
@@ -270,7 +270,7 @@ class Geometric(RandomVariable):
         return tfd.Geometric(probs=p, *args, **kwargs)
 
 
-class NegativeBinomial(RandomVariable):
+class NegativeBinomial(DiscreteRV):
     r"""
     Negative binomial random variable.
 
@@ -339,7 +339,7 @@ class NegativeBinomial(RandomVariable):
         return tfd.NegativeBinomial(total_count=total_count, probs=probs, *args, **kwargs)
 
 
-class Poisson(RandomVariable):
+class Poisson(DiscreteRV):
     r"""
     Poisson random variable.
 
@@ -393,7 +393,7 @@ class Poisson(RandomVariable):
         return tfd.Poisson(rate=mu, *args, **kwargs)
 
 
-class ZeroInflatedBinomial(RandomVariable):
+class ZeroInflatedBinomial(DiscreteRV):
     r"""
     Zero-inflated Binomial log-likelihood.
 
@@ -457,7 +457,7 @@ class ZeroInflatedBinomial(RandomVariable):
         )._distribution
 
 
-class ZeroInflatedNegativeBinomial(RandomVariable):
+class ZeroInflatedNegativeBinomial(DiscreteRV):
     r"""
     Zero-Inflated Negative binomial random variable.
 
@@ -535,7 +535,7 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
         )._distribution
 
 
-class ZeroInflatedPoisson(RandomVariable):
+class ZeroInflatedPoisson(DiscreteRV):
     r"""
     Zero-inflated Poisson random variable.
 

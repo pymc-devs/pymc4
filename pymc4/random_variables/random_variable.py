@@ -9,6 +9,8 @@ Also stores the type hints used in child classes.
 """
 
 from .. import _template_contexts as contexts
+from tensorflow_probability import distributions as tfd
+from tensorflow_probability import bijectors  # import Bijector
 from typing import NewType, Union, Sequence
 
 
@@ -95,11 +97,16 @@ class WithBackendArithmetic:
 
 
 class RandomVariable(WithBackendArithmetic):
-    """
-    Random variable base class.
+    """Random variable base class.
 
     Random variables must support 1) sampling, 2) computation of the log
     probability, and 3) conversion to tensors.
+
+    The base distribution is transformed automatically by a default "identity"
+    bijector transform. For other classes of distributions, we can pass in
+    alternate transforms. The transformed distribution is used only when
+    calculating the log_prob, while the base distribution is used for sampling
+    purposes.
     """
 
     _base_dist = None
@@ -116,10 +123,15 @@ class RandomVariable(WithBackendArithmetic):
         ctx.add_variable(self)
 
     def sample(self):
+        """Forward sampling from the base distribution, unconditioned on data."""
         return self._distribution.sample()
 
     def log_prob(self):
-        return self._distribution.log_prob(self)
+        """Log probability computation.
+
+        Must be implemented in child classes.
+        """
+        return NotImplementedError
 
     def as_tensor(self):
         ctx = contexts.get_context()
@@ -129,6 +141,61 @@ class RandomVariable(WithBackendArithmetic):
             self._backend_tensor = ctx.var_as_backend_tensor(self)
 
         return self._backend_tensor
+
+
+class ContinuousRV(RandomVariable):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._transformed_distribution = tfd.TransformedDistribution(
+            distribution=self._distribution, bijector=bijectors.Identity()
+        )
+
+    def log_prob(self):
+        """Log probability computation.
+
+        Done based on the transformed distribution, not the base distribution.
+        """
+        return self._transformed_distribution.log_prob(self)
+
+
+class DiscreteRV(RandomVariable):
+    def log_prob(self):
+        """Log probability computation.
+
+        Developer Note
+        --------------
+            Discrete Random Variables are not transformed, unlike continuous
+            Random Variables.
+        """
+        return self._distribution.log_prob(self)
+
+
+class PositiveContinuousRV(ContinuousRV):
+    def __init__(self, *args, **kwargs):
+        """Initialize PositiveContinuousRV.
+
+        Developer Note
+        --------------
+            The inverse of the exponential bijector is the log bijector.
+        """
+        super().__init__(*args, **kwargs)
+        self._transformed_distribution = tfd.TransformedDistribution(
+            distribution=self._distribution, bijector=bijectors.Invert(bijectors.Exp())
+        )
+
+
+class UnitContinuousRV(ContinuousRV):
+    def __init__(self, *args, **kwargs):
+        """Initialize UnitContinuousRV.
+
+        Developer Note
+        --------------
+            The inverse of the sigmoid bijector is the logodds bijector.
+        """
+        super().__init__(*args, **kwargs)
+        self._transformed_distribution = tfd.TransformedDistribution(
+            distribution=self._distribution, bijector=bijectors.Invert(bijectors.Sigmoid())
+        )
 
 
 TensorLike = NewType("TensorLike", Union[Sequence[int], Sequence[float], int, float])

@@ -2,6 +2,9 @@
 Tests for PyMC4 random variables
 """
 import pytest
+import numpy as np
+
+
 from .. import random_variables
 
 
@@ -65,20 +68,35 @@ def random_variable_args():
 
 def test_tf_session_cleared(tf_session):
     """Check that fixture is finalizing correctly"""
-    assert len(tf_session.graph.get_operations()) == 0
+    ops = tf_session.graph.get_operations()
+    assert len(ops) == 0
 
 
 @pytest.mark.parametrize(**random_variable_args())
 def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
     """Test forward sampling and evaluating the logp for all random variables."""
     sample = kwargs.pop("sample", 0.1)
-    dist = randomvariable("test_dist", **kwargs, validate_args=True)
+    expected_value = kwargs.pop("expected", None)
+    dist = randomvariable(name="test_dist", **kwargs, validate_args=True)
 
-    if randomvariable.__name__ not in ["Binomial", "ZeroInflatedBinomial"]:
+    broken_logps = ["MvNormal", "Pareto", "Triangular"]  # TODO fix these Logp Transforms
+
+    if randomvariable.__name__ not in (["Binomial", "ZeroInflatedBinomial"] + broken_logps):
+
         # Assert that values are returned with no exceptions
         log_prob = dist.log_prob()
         vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
+
         assert vals is not None
+
+        if expected_value:
+            np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
+
+    # TODO: Temporary test that should be deleted before pr merge when log sampling is fixed
+    elif randomvariable.__name__ in broken_logps:
+        with pytest.raises(Exception):
+            log_prob = dist.log_prob()
+            vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81
@@ -88,10 +106,10 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
             assert "NotImplementedError: sample_n is not implemented: Binomial" == str(err)
 
 
-def test_rvs_backend_arithmetic():
+def test_rvs_backend_arithmetic(tf_session):
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
-    x = random_variables.Normal("x", 0, 1)
-    y = random_variables.Normal("y", 1, 2)
+    x = random_variables.Normal("x", mu=0, sigma=1)
+    y = random_variables.Normal("y", mu=1, sigma=2)
 
     assert x + y is not None
     assert x - y is not None

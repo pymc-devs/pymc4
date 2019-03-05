@@ -11,7 +11,7 @@ import sys
 
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
-from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log, dtypes, expand_dims, broadcast_to, ones, scatter_update , Variable, rank
+from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log, dtypes, expand_dims, broadcast_to, ones, scatter_update , Variable, rank, size
 from tensorflow import range as tf_range
 from math import pi
 from tensorflow.python.ops import array_ops
@@ -51,8 +51,7 @@ class LogitNormal(RandomVariable):
 
     # what is the right name?
 class StdSkewNormal(tfp.distributions.Distribution):
-    # STATISTICAL APPLICATIONS
-    # OF THE MULTIVARIATE SKEW-NORMAL DISTRIBUTION
+    # STATISTICAL APPLICATIONS OF THE MULTIVARIATE SKEW-NORMAL DISTRIBUTION
     # A. Azzalini
     # https://arxiv.org/pdf/0911.2093.pdf
     # paramed by alpha and omega
@@ -146,6 +145,7 @@ class StdSkewNormal(tfp.distributions.Distribution):
      #   return get_delta if not calculated
     
     def get_delta(self):
+        # TODO: check correct when broadcasted
         Omegaalpha = self.Omega @ self.alpha
         return Omegaalpha @ (1 + matmul(self.alpha, Omegaalpha, transpose_a=True))**(-.5)
     
@@ -186,26 +186,35 @@ class StdSkewNormal(tfp.distributions.Distribution):
         return tensor_shape.TensorShape([self.skew.get_shape()[-1].value])
     
     def _sample_n(self, n, seed=None):
-        nd = self.event_shape[0] + 1
-        N = tfd.MultivariateNormalFullCovariance(loc=zeros(nd), covariance_matrix=self.get_Omega_star())
-        # sig .sample(self, sample_shape=(), seed=None, name="sample")
+        kplus1 = self.event_shape[0] + 1
+        N = tfd.MultivariateNormalFullCovariance(loc=zeros(kplus1), covariance_matrix=self.get_Omega_star())
         X0X = N.sample(sample_shape=n, seed=seed)
         X0 = X0X[..., :1]
         X =  X0X[..., 1:]
         signX0 = sign(X0)
         return signX0 * X
         
-    def _prob(self, x):
-        k = array_ops.shape(self.skew)[0]
+    def get_prob_args(self, x):
+        k = self.event_shape[0]
         N0O = tfd.MultivariateNormalFullCovariance(loc=zeros(k), covariance_matrix=self.Omega)
         N01 = tfd.Normal(loc=0, scale=1)
-        return 2*N0O.prob(x[0])*N01.cdf( (transpose(self.alpha)@x)[0][0] ) #do i have to spec event shape?
+        
+        not_sample_rank = size(self.batch_shape) + size(self.event_shape)
+        sample_shp = array_ops.shape(x)[:-not_sample_rank]
+        alpha_shp = concat([sample_shp, array_ops.shape(self.alpha)], 0)
+        #assert(alpha_dims[-1] == 1) how would this work in tf??
+        alpha = broadcast_to(self.alpha, alpha_shp)
+        return alpha, N0O, N01
+
+    def _prob(self, x):
+        alpha, N0O, N01 = self.get_prob_args(x)
+        N01cdf = N01.cdf(matmul(alpha, x[..., None], transpose_a=True))[..., 0, 0]
+        return 2. * N0O.prob(x) * N01cdf
     
     def _log_prob(self, x):
-        k = array_ops.shape(self.skew)[0]
-        N0O = tfd.MultivariateNormalFullCovariance(loc=zeros(k), covariance_matrix=self.Omega)
-        N01 = tfd.Normal(loc=0, scale=1)
-        return log(2.) + N0O.log_prob(x[0]) + N01.log_cdf( (transpose(self.alpha)@x)[0][0] ) #do i have to spec event shape?
+        alpha, N0O, N01 = self.get_prob_args(x)
+        N01cdf = N01.log_cdf(matmul(alpha, x[..., None], transpose_a=True))[..., 0, 0]
+        return log(2.) + N0O.log_prob(x) + N01cdf
 
     
 class Weibull(RandomVariable):

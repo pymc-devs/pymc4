@@ -10,7 +10,7 @@ import tensorflow as tf
 __all__ = ["model"]
 
 
-def model(auto_name=False):
+def model(_func=None, *, auto_name=False):
     """
     Decorate a model-specification function as a PyMC4 model.
 
@@ -23,6 +23,7 @@ def model(auto_name=False):
     -------
     The function wrapped in a ModelTemplate object.
     """
+
     def wrap(func):
         if auto_name:
             # uncompile function
@@ -39,7 +40,10 @@ def model(auto_name=False):
 
         return ModelTemplate(func)
 
-    return wrap
+    if _func is None:
+        return wrap
+    else:
+        return wrap(_func)
 
 
 class ModelTemplate:

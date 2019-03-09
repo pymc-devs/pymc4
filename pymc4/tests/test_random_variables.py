@@ -108,8 +108,8 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
 
 def test_rvs_backend_arithmetic(tf_session):
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
-    x = random_variables.Normal("x", mu=0, sigma=1)
-    y = random_variables.Normal("y", mu=1, sigma=2)
+    x = random_variables.Normal(mu=0, sigma=1)
+    y = random_variables.Normal(mu=1, sigma=2)
 
     assert x + y is not None
     assert x - y is not None

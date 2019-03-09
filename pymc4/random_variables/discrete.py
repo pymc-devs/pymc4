@@ -452,7 +452,7 @@ class ZeroInflatedBinomial(DiscreteRV):
         """
         return pm.Mixture(
             p=[psi, 1.0 - psi],
-            distributions=[pm.Constant("Zero", 0), pm.Binomial("Binomial", n, p)],
+            distributions=[pm.Constant(0), pm.Binomial(n, p)],
             name="ZeroInflatedBinomial",
         )._distribution
 
@@ -528,8 +528,8 @@ class ZeroInflatedNegativeBinomial(DiscreteRV):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
             distributions=[
-                pm.Constant(name="Zero", value=0),
-                pm.NegativeBinomial(name="NegativeBinomial", mu=mu, alpha=alpha),
+                pm.Constant(value=0),
+                pm.NegativeBinomial(mu=mu, alpha=alpha),
             ],
             name="ZeroInflatedNegativeBinomial",
         )._distribution
@@ -589,6 +589,6 @@ class ZeroInflatedPoisson(DiscreteRV):
     def _base_dist(self, psi: TensorLike, theta: TensorLike, *args, **kwargs):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
-            distributions=[pm.Constant(name="Zero", value=0), pm.Poisson(name="Poisson", mu=theta)],
+            distributions=[pm.Constant(value=0), pm.Poisson(mu=theta)],
             name="ZeroInflatedPoisson",
         )._distribution

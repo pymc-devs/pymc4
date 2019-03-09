@@ -25,7 +25,7 @@ class NoSource(Error):
 
 
 def uncompile(c):
-    """ uncompile(codeobj) -> [source, filename, mode, flags, firstlineno, privateprefix] """
+    """uncompile(codeobj) -> [source, filename, mode, flags, firstlineno, privateprefix]."""
     if c.co_flags & inspect.CO_NESTED or c.co_freevars:
         raise Unsupported("nested functions not supported")
     if c.co_name == "<lambda>":
@@ -52,7 +52,7 @@ def uncompile(c):
 
 
 def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None):
-    """ recompile output of uncompile back to a code object. source may also be preparsed AST """
+    """Recompile output of uncompile back to a code object. source may also be preparsed AST."""
     if isinstance(source, ast.AST):
         a = source
     else:
@@ -99,7 +99,7 @@ def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None
 
 
 def parse_snippet(source, filename, mode, flags, firstlineno, privateprefix_ignored=None):
-    """ Like ast.parse, but accepts indented code snippet with a line number offset. """
+    """Like ast.parse, but accepts indented code snippet with a line number offset."""
     args = filename, mode, flags | ast.PyCF_ONLY_AST, True
     prefix = "\n"
     try:

@@ -1,7 +1,7 @@
 # Taken from http://code.activestate.com/recipes/578353-code-to-source-and-back/
 
 import ast, inspect, re
-from types import CodeType as code, FunctionType as function
+from types import CodeType as code
 
 import __future__
 
@@ -80,20 +80,20 @@ def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None
             return tuple(privateprefix + name if isprivate(name) else name for name in names)
 
         c = code(
-            c.co_argcount,
-            c.co_nlocals,
-            c.co_stacksize,
-            c.co_flags,
-            c.co_code,
-            c.co_consts,
-            fixnames(c.co_names),
-            fixnames(c.co_varnames),
-            c.co_filename,
-            c.co_name,
-            c.co_firstlineno,
-            c.co_lnotab,
-            c.co_freevars,
-            c.co_cellvars,
+            c.co_argcount, # pylint: disable=undefined-loop-variable
+            c.co_nlocals, # pylint: disable=undefined-loop-variable
+            c.co_stacksize, # pylint: disable=undefined-loop-variable
+            c.co_flags, # pylint: disable=undefined-loop-variable
+            c.co_code, # pylint: disable=undefined-loop-variable
+            c.co_consts, # pylint: disable=undefined-loop-variable
+            fixnames(c.co_names), # pylint: disable=undefined-loop-variable
+            fixnames(c.co_varnames), # pylint: disable=undefined-loop-variable
+            c.co_filename, # pylint: disable=undefined-loop-variable
+            c.co_name, # pylint: disable=undefined-loop-variable
+            c.co_firstlineno, # pylint: disable=undefined-loop-variable
+            c.co_lnotab, # pylint: disable=undefined-loop-variable
+            c.co_freevars, # pylint: disable=undefined-loop-variable
+            c.co_cellvars, # pylint: disable=undefined-loop-variable
         )
     return c
 

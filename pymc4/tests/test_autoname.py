@@ -2,12 +2,10 @@
 Tests for PyMC4 auto naming.
 """
 
-import pytest
-from .. import random_variables, _template_contexts, model
+from .. import model
 
 import pymc4 as pm
 from pymc4 import Normal
-
 
 def create_rvs(**kwargs):
     return pm.Normal(0, 1, name="test")

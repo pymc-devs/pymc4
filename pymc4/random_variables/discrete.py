@@ -527,10 +527,7 @@ class ZeroInflatedNegativeBinomial(DiscreteRV):
     def _base_dist(self, psi: TensorLike, mu: TensorLike, alpha: TensorLike, *args, **kwargs):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
-            distributions=[
-                pm.Constant(value=0),
-                pm.NegativeBinomial(mu=mu, alpha=alpha),
-            ],
+            distributions=[pm.Constant(value=0), pm.NegativeBinomial(mu=mu, alpha=alpha)],
             name="ZeroInflatedNegativeBinomial",
         )._distribution
 

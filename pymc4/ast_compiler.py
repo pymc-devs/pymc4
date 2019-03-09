@@ -6,6 +6,9 @@ from types import CodeType as code, FunctionType as function
 import __future__
 PyCF_MASK = sum(v for k, v in vars(__future__).items() if k.startswith('CO_FUTURE'))
 
+from . import random_variables
+ALL_RVs = [rv for rv in dir(random_variables) if rv[0].isupper()]
+
 class Error(Exception):
     pass
 
@@ -92,6 +95,16 @@ def parse_snippet(source, filename, mode, flags, firstlineno, privateprefix_igno
 class AutoNameTransformer(ast.NodeTransformer):
     def visit_Assign(self, tree_node):
         rv_name = tree_node.targets[0].id
+        # Test if creation of known RV
+        func = tree_node.value.func
+        if hasattr(func, 'attr'):
+            call = func.attr
+        else:
+            call = func.id
+
+        if call not in ALL_RVs:
+            return tree_node
+
         # Test if name keyword is already set
         if any(kwarg.arg == 'name' for kwarg in tree_node.value.keywords):
             return tree_node

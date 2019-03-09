@@ -2,8 +2,6 @@
 Tests for PyMC4 auto naming.
 """
 
-from .. import model
-
 import pymc4 as pm
 from pymc4 import Normal
 

@@ -7,6 +7,7 @@ from .. import model
 import pymc4 as pm
 from pymc4 import Normal
 
+
 def create_rvs(**kwargs):
     return pm.Normal(0, 1, name="test")
 

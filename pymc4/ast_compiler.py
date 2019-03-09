@@ -80,20 +80,20 @@ def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None
             return tuple(privateprefix + name if isprivate(name) else name for name in names)
 
         c = code(
-            c.co_argcount, # pylint: disable=undefined-loop-variable
-            c.co_nlocals, # pylint: disable=undefined-loop-variable
-            c.co_stacksize, # pylint: disable=undefined-loop-variable
-            c.co_flags, # pylint: disable=undefined-loop-variable
-            c.co_code, # pylint: disable=undefined-loop-variable
-            c.co_consts, # pylint: disable=undefined-loop-variable
-            fixnames(c.co_names), # pylint: disable=undefined-loop-variable
-            fixnames(c.co_varnames), # pylint: disable=undefined-loop-variable
-            c.co_filename, # pylint: disable=undefined-loop-variable
-            c.co_name, # pylint: disable=undefined-loop-variable
-            c.co_firstlineno, # pylint: disable=undefined-loop-variable
-            c.co_lnotab, # pylint: disable=undefined-loop-variable
-            c.co_freevars, # pylint: disable=undefined-loop-variable
-            c.co_cellvars, # pylint: disable=undefined-loop-variable
+            c.co_argcount,  # pylint: disable=undefined-loop-variable
+            c.co_nlocals,  # pylint: disable=undefined-loop-variable
+            c.co_stacksize,  # pylint: disable=undefined-loop-variable
+            c.co_flags,  # pylint: disable=undefined-loop-variable
+            c.co_code,  # pylint: disable=undefined-loop-variable
+            c.co_consts,  # pylint: disable=undefined-loop-variable
+            fixnames(c.co_names),  # pylint: disable=undefined-loop-variable
+            fixnames(c.co_varnames),  # pylint: disable=undefined-loop-variable
+            c.co_filename,  # pylint: disable=undefined-loop-variable
+            c.co_name,  # pylint: disable=undefined-loop-variable
+            c.co_firstlineno,  # pylint: disable=undefined-loop-variable
+            c.co_lnotab,  # pylint: disable=undefined-loop-variable
+            c.co_freevars,  # pylint: disable=undefined-loop-variable
+            c.co_cellvars,  # pylint: disable=undefined-loop-variable
         )
     return c
 

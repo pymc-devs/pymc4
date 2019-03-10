@@ -118,7 +118,7 @@ class RandomVariable(WithBackendArithmetic):
         self._dim_names = ()
         ctx = contexts.get_context()
         self.name = kwargs.get("name", None)
-        if isinstance(ctx, contexts.InferenceContext) and self.name is None:
+        if not isinstance(ctx, contexts.FreeForwardContext) and self.name is None:
             # We only require names for book keeping during inference
             raise ValueError("No name was set in InferenceContext. Supply one via the name kwarg.")
 

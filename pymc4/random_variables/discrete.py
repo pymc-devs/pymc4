@@ -11,11 +11,11 @@ import tensorflow_probability as tfp
 import tensorflow as tf
 import numpy as np
 
-from .random_variable import DiscreteRV, TensorLike
+from .random_variable import RandomVariable, TensorLike
 import pymc4 as pm
 
 
-class Bernoulli(DiscreteRV):
+class Bernoulli(RandomVariable):
     r"""Bernoulli random variable.
 
     The Bernoulli distribution describes the probability of successes
@@ -63,7 +63,7 @@ class Bernoulli(DiscreteRV):
         return tfd.Bernoulli(probs=p, *args, **kwargs)
 
 
-class Binomial(DiscreteRV):
+class Binomial(RandomVariable):
     r"""
     Binomial random variable.
 
@@ -117,12 +117,12 @@ class Binomial(DiscreteRV):
         return tfd.Binomial(total_count=n, probs=p, *args, **kwargs)
 
 
-class Constant(DiscreteRV):
+class Constant(RandomVariable):
     def _base_dist(self, value: TensorLike, *args, **kwargs):
         return tfd.Deterministic(loc=value, *args, **kwargs)
 
 
-class DiscreteUniform(DiscreteRV):
+class DiscreteUniform(RandomVariable):
     r"""
     Discrete uniform random variable.
 
@@ -177,7 +177,7 @@ class DiscreteUniform(DiscreteRV):
         )
 
 
-class Categorical(DiscreteRV):
+class Categorical(RandomVariable):
     r"""
     Categorical random variable.
 
@@ -222,7 +222,7 @@ class Categorical(DiscreteRV):
         return tfd.Categorical(probs=p, *args, **kwargs)
 
 
-class Geometric(DiscreteRV):
+class Geometric(RandomVariable):
     r"""
     Geometric random variable.
 
@@ -270,7 +270,7 @@ class Geometric(DiscreteRV):
         return tfd.Geometric(probs=p, *args, **kwargs)
 
 
-class NegativeBinomial(DiscreteRV):
+class NegativeBinomial(RandomVariable):
     r"""
     Negative binomial random variable.
 
@@ -339,7 +339,7 @@ class NegativeBinomial(DiscreteRV):
         return tfd.NegativeBinomial(total_count=total_count, probs=probs, *args, **kwargs)
 
 
-class Poisson(DiscreteRV):
+class Poisson(RandomVariable):
     r"""
     Poisson random variable.
 
@@ -393,7 +393,7 @@ class Poisson(DiscreteRV):
         return tfd.Poisson(rate=mu, *args, **kwargs)
 
 
-class ZeroInflatedBinomial(DiscreteRV):
+class ZeroInflatedBinomial(RandomVariable):
     r"""
     Zero-inflated Binomial log-likelihood.
 
@@ -457,7 +457,7 @@ class ZeroInflatedBinomial(DiscreteRV):
         )._distribution
 
 
-class ZeroInflatedNegativeBinomial(DiscreteRV):
+class ZeroInflatedNegativeBinomial(RandomVariable):
     r"""
     Zero-Inflated Negative binomial random variable.
 
@@ -535,7 +535,7 @@ class ZeroInflatedNegativeBinomial(DiscreteRV):
         )._distribution
 
 
-class ZeroInflatedPoisson(DiscreteRV):
+class ZeroInflatedPoisson(RandomVariable):
     r"""
     Zero-inflated Poisson random variable.
 

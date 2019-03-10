@@ -111,13 +111,17 @@ class RandomVariable(WithBackendArithmetic):
 
     _base_dist = None
 
-    def __init__(self, name: str, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self._parents = []
-        self._distribution = self._base_dist(name=name, *args, **kwargs)
+        self._distribution = self._base_dist(*args, **kwargs)
         self._sample_shape = ()
         self._dim_names = ()
-        self.name = name
         ctx = contexts.get_context()
+        self.name = kwargs.get("name", None)
+        if not isinstance(ctx, contexts.FreeForwardContext) and self.name is None:
+            # We only require names for book keeping during inference
+            raise ValueError("No name was set in InferenceContext. Supply one via the name kwarg.")
+
         self._creation_context_id = id(ctx)
         self._backend_tensor = None
         ctx.add_variable(self)

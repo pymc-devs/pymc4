@@ -1,5 +1,8 @@
 import copy
+import ast
+
 from . import _template_contexts as contexts
+from .ast_compiler import uncompile, parse_snippet, recompile, AutoNameTransformer
 
 import tensorflow as tf
 
@@ -7,20 +10,40 @@ import tensorflow as tf
 __all__ = ["model"]
 
 
-def model(func):
+def model(_func=None, *, auto_name=False):
     """
     Decorate a model-specification function as a PyMC4 model.
 
     Parameters
     ----------
-    func : a function
-        The function that specifies the PyMC4 model
+    auto_name : bool
+        Whether to automatically infer names of RVs.
 
     Returns
     -------
     The function wrapped in a ModelTemplate object.
     """
-    return ModelTemplate(func)
+
+    def wrap(func):
+        if auto_name:
+            # uncompile function
+            unc = uncompile(func.__code__)
+
+            # convert to ast and apply visitor
+            tree = parse_snippet(*unc)
+            AutoNameTransformer().visit(tree)
+            ast.fix_missing_locations(tree)
+            unc[0] = tree
+
+            # recompile and patch function's code
+            func.__code__ = recompile(*unc)
+
+        return ModelTemplate(func)
+
+    if _func is None:
+        return wrap
+    else:
+        return wrap(_func)
 
 
 class ModelTemplate:
@@ -71,7 +94,7 @@ class Model:
     def forward_sample(self, *args, **kwargs):
         """Simulate data from the model via forward sampling."""
         with self._forward_context as context:
-            samples = {var.name: var.as_tensor() for var in context.vars}
+            samples = {var.name: var.sample() for var in context.vars}
         return samples
 
     def observe(self, **kwargs):

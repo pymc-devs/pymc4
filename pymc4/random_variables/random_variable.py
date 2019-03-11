@@ -119,9 +119,16 @@ class RandomVariable(WithBackendArithmetic):
         self._dim_names = ()
         ctx = contexts.get_context()
         self.name = kwargs.get("name", None)
+        if isinstance(ctx, contexts.InferenceContext) and self.name is None:
+            # Unfortunately autograph does not allow changing the AST,
+            # thus we instead retrieve the name from when it was set
+            # ForwardContext where AST parsing is possible.
+            order_id = len(ctx.vars) # where am I in the order of RV creation?
+            self.name = ctx._names[order_id]
+
         if not isinstance(ctx, contexts.FreeForwardContext) and self.name is None:
             # We only require names for book keeping during inference
-            raise ValueError("No name was set in InferenceContext. Supply one via the name kwarg.")
+            raise ValueError("No name was set. Supply one via the name kwarg.")
 
         self._creation_context_id = id(ctx)
         self._backend_tensor = None

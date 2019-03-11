@@ -1,4 +1,4 @@
- """
+"""
 PyMC4 base random variable class.
 
 Implements the RandomVariable base class and the necessary BackendArithmetic.
@@ -10,7 +10,7 @@ Also stores the type hints used in child classes.
 
 from .. import _template_contexts as contexts
 from tensorflow_probability import distributions as tfd
-from tensorflow_probability import bijectors  # import Bijector
+from tensorflow_probability import bijectors
 from typing import NewType, Union, Sequence
 
 
@@ -114,7 +114,7 @@ class RandomVariable(WithBackendArithmetic):
 
     def __init__(self, *args, **kwargs):
         self._parents = []
-        self._untransformed_distribution = self._base_dist(name=name, *args, **kwargs)
+        self._untransformed_distribution = self._base_dist(*args, **kwargs)
         self._sample_shape = ()
         self._dim_names = ()
         ctx = contexts.get_context()
@@ -154,11 +154,11 @@ class RandomVariable(WithBackendArithmetic):
         return self._bijector.forward(self._backend_tensor)
 
 
-class PositiveContinuousRV(ContinuousRV):
+class PositiveContinuousRV(RandomVariable):
     _bijector = bijectors.Exp()
 
 
-class UnitContinuousRV(ContinuousRV):
+class UnitContinuousRV(RandomVariable):
     _bijector = bijectors.Sigmoid()
 
 

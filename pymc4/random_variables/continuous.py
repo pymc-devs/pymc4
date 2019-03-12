@@ -11,7 +11,7 @@ import sys
 
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
-from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log, dtypes, expand_dims, broadcast_to, ones, scatter_update , Variable, rank, size
+from tensorflow import matmul, reshape, concat, transpose, zeros, sign, diag, ones, log, dtypes, expand_dims, broadcast_to, ones, scatter_update , Variable, rank, size, shape, reshape
 from tensorflow import range as tf_range
 from math import pi
 from tensorflow.python.ops import array_ops
@@ -193,26 +193,51 @@ class StdSkewNormal(tfp.distributions.Distribution):
         X =  X0X[..., 1:]
         signX0 = sign(X0)
         return signX0 * X
-        
+    
+    # should this be in tfp??
+    def get_x_shape(self, x):
+        """utiilty to infer the 3 parts of x shape for broadcasting"""
+        # if the rank is big, assume first dims are sample shape
+        # followed by batch and event shape
+        #                 >= 0                        =1
+        if rank(x) > (size(self.batch_shape) + size(self.event_shape)):
+            not_sample_rank = size(self.batch_shape) + size(self.event_shape)
+            sample_shp = array_ops.shape(x)[:-not_sample_rank]
+            batch_shp  = self.batch_shape
+            event_shp = self.event_shape
+        # else, just take the dims as sample dims
+        else:
+            not_sample_rank = size(self.event_shape)
+            sample_shp = array_ops.shape(x)[:-not_sample_rank]
+            batch_shp = []
+            event_shp = self.event_shape
+
+        return sample_shp, batch_shp, event_shp
+    
+
     def get_prob_args(self, x):
         k = self.event_shape[0]
         N0O = tfd.MultivariateNormalFullCovariance(loc=zeros(k), covariance_matrix=self.Omega)
         N01 = tfd.Normal(loc=0, scale=1)
         
-        not_sample_rank = size(self.batch_shape) + size(self.event_shape)
-        sample_shp = array_ops.shape(x)[:-not_sample_rank]
+        sample_shp, batch_shp, event_shp = self.get_x_shape(x)
+        # do i need concat if i can  [sample_shp, batch_sh_, whatever]?
         alpha_shp = concat([sample_shp, array_ops.shape(self.alpha)], 0)
         #assert(alpha_dims[-1] == 1) how would this work in tf??
         alpha = broadcast_to(self.alpha, alpha_shp)
-        return alpha, N0O, N01
+        if batch_shp == []:
+            x = reshape(x, concat([sample_shp, ones(size(self.batch_shape), dtype=dtypes.int32), self.event_shape], 0))
+        x = broadcast_to(x, concat([sample_shp, self.batch_shape, self.event_shape], 0))
+        return alpha, N0O, N01, x
+        
 
     def _prob(self, x):
-        alpha, N0O, N01 = self.get_prob_args(x)
+        alpha, N0O, N01, x = self.get_prob_args(x)
         N01cdf = N01.cdf(matmul(alpha, x[..., None], transpose_a=True))[..., 0, 0]
         return 2. * N0O.prob(x) * N01cdf
     
     def _log_prob(self, x):
-        alpha, N0O, N01 = self.get_prob_args(x)
+        alpha, N0O, N01, x = self.get_prob_args(x)
         N01cdf = N01.log_cdf(matmul(alpha, x[..., None], transpose_a=True))[..., 0, 0]
         return log(2.) + N0O.log_prob(x) + N01cdf
 

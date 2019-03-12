@@ -3,9 +3,6 @@ from numpy.random import normal
 from scipy.sparse import issparse
 import scipy.sparse.linalg as slinalg
 from scipy import linalg, stats
-import theano
-
-from pymc3.theanof import floatX
 
 
 __all__ = [
@@ -154,7 +151,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
             )
 
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = 'float32'
 
         if initial_diag is None:
             initial_diag = np.ones(n, dtype=dtype)
@@ -163,9 +160,9 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self.dtype = dtype
         self._n = n
         self._var = np.array(initial_diag, dtype=self.dtype, copy=True)
-        self._var_theano = theano.shared(self._var)
+        #self._var_theano = theano.shared(self._var)
         self._stds = np.sqrt(initial_diag)
-        self._inv_stds = floatX(1.0) / self._stds
+        self._inv_stds = 1.0 / self._stds
         self._foreground_var = _WeightedVariance(
             self._n, initial_mean, initial_diag, initial_weight, self.dtype
         )
@@ -197,7 +194,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         weightvar.current_variance(out=self._var)
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
-        self._var_theano.set_value(self._var)
+        #self._var_theano.set_value(self._var)
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
@@ -280,7 +277,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         self._var[:] = var
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
-        self._var_theano.set_value(self._var)
+        #self._var_theano.set_value(self._var)
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
@@ -363,7 +360,7 @@ class QuadPotentialDiag(QuadPotential):
            Diagonal of covariance matrix for the potential vector
         """
         if dtype is None:
-            dtype = theano.config.floatX
+            dtype = 'float32'
         self.dtype = dtype
         v = v.astype(self.dtype)
         s = v ** 0.5
@@ -381,7 +378,7 @@ class QuadPotentialDiag(QuadPotential):
 
     def random(self):
         """Draw random value from QuadPotential."""
-        return floatX(normal(size=self.s.shape)) * self.inv_s
+        return normal(size=self.s.shape) * self.inv_s
 
     def energy(self, x, velocity=None):
         """Compute kinetic energy at a position in parameter space."""
@@ -393,86 +390,6 @@ class QuadPotentialDiag(QuadPotential):
         """Compute velocity and return kinetic energy at a position in parameter space."""
         np.multiply(x, self.v, out=v_out)
         return 0.5 * np.dot(x, v_out)
-
-
-class QuadPotentialFullInv(QuadPotential):
-    """QuadPotential object for Hamiltonian calculations using inverse of covariance matrix."""
-
-    def __init__(self, A, dtype=None):
-        """Compute the lower cholesky decomposition of the potential.
-
-        Parameters
-        ----------
-        A : matrix, ndim = 2
-           Inverse of covariance matrix for the potential vector
-        """
-        if dtype is None:
-            dtype = theano.config.floatX
-        self.dtype = dtype
-        self.L = floatX(scipy.linalg.cholesky(A, lower=True))
-
-    def velocity(self, x, out=None):
-        """Compute the current velocity at a position in parameter space."""
-        vel = scipy.linalg.cho_solve((self.L, True), x)
-        if out is None:
-            return vel
-        out[:] = vel
-
-    def random(self):
-        """Draw random value from QuadPotential."""
-        n = floatX(normal(size=self.L.shape[0]))
-        return np.dot(self.L, n)
-
-    def energy(self, x, velocity=None):
-        """Compute kinetic energy at a position in parameter space."""
-        if velocity is None:
-            velocity = self.velocity(x)
-        return 0.5 * x.dot(velocity)
-
-    def velocity_energy(self, x, v_out):
-        """Compute velocity and return kinetic energy at a position in parameter space."""
-        self.velocity(x, out=v_out)
-        return 0.5 * np.dot(x, v_out)
-
-
-class QuadPotentialFull(QuadPotential):
-    """Basic QuadPotential object for Hamiltonian calculations."""
-
-    def __init__(self, A, dtype=None):
-        """Compute the lower cholesky decomposition of the potential.
-
-        Parameters
-        ----------
-        A : matrix, ndim = 2
-            scaling matrix for the potential vector
-        """
-        if dtype is None:
-            dtype = theano.config.floatX
-        self.dtype = dtype
-        self.A = A.astype(self.dtype)
-        self.L = scipy.linalg.cholesky(A, lower=True)
-
-    def velocity(self, x, out=None):
-        """Compute the current velocity at a position in parameter space."""
-        return np.dot(self.A, x, out=out)
-
-    def random(self):
-        """Draw random value from QuadPotential."""
-        n = floatX(normal(size=self.L.shape[0]))
-        return scipy.linalg.solve_triangular(self.L.T, n)
-
-    def energy(self, x, velocity=None):
-        """Compute kinetic energy at a position in parameter space."""
-        if velocity is None:
-            velocity = self.velocity(x)
-        return 0.5 * x.dot(velocity)
-
-    def velocity_energy(self, x, v_out):
-        """Compute velocity and return kinetic energy at a position in parameter space."""
-        self.velocity(x, out=v_out)
-        return 0.5 * np.dot(x, v_out)
-
-    __call__ = random
 
 
 def add_ADATv(A, v, out, diag=None, beta=0.0, work=None):
@@ -681,47 +598,3 @@ class QuadPotentialLowRank(object):
             self._old_covs.append(self._cov)
         n_svd = min(self._ndim - 5, n_samples - 5)
         self._cov = Covariance(self._ndim, n_svd, n_approx, samples, grads, diag=self._diag)
-
-
-try:
-    import sksparse.cholmod as cholmod
-
-    chol_available = True
-except ImportError:
-    chol_available = False
-
-if chol_available:
-    __all__ += ["QuadPotentialSparse"]
-
-    import theano.sparse
-
-    class QuadPotentialSparse(QuadPotential):
-        def __init__(self, A):
-            """Compute a sparse cholesky decomposition of the potential.
-
-            Parameters
-            ----------
-            A : matrix, ndim = 2
-                scaling matrix for the potential vector
-            """
-            self.A = A
-            self.size = A.shape[0]
-            self.factor = factor = cholmod.cholesky(A)
-            self.d_sqrt = np.sqrt(factor.D())
-
-        def velocity(self, x):
-            """Compute the current velocity at a position in parameter space."""
-            A = theano.sparse.as_sparse(self.A)
-            return theano.sparse.dot(A, x)
-
-        def random(self):
-            """Draw random value from QuadPotential."""
-            n = floatX(normal(size=self.size))
-            n /= self.d_sqrt
-            n = self.factor.solve_Lt(n)
-            n = self.factor.apply_Pt(n)
-            return n
-
-        def energy(self, x):
-            """Compute kinetic energy at a position in parameter space."""
-            return 0.5 * x.T.dot(self.velocity(x))

@@ -1,8 +1,7 @@
 import numpy as np
 
-from pymc3.vartypes import discrete_types
-from pymc3.step_methods.hmc.integration import IntegrationError
-from pymc3.step_methods.hmc.base_hmc import BaseHMC, HMCStepData, DivergenceInfo
+from .integration import IntegrationError
+from .base_hmc import BaseHMC, HMCStepData, DivergenceInfo
 
 
 __all__ = ["HamiltonianMC"]
@@ -40,7 +39,6 @@ class HamiltonianMC(BaseHMC):
 
     def __init__(
         self,
-        vars=None,
         path_length=2.0,
         adapt_step_size=True,
         gamma=0.05,
@@ -94,7 +92,7 @@ class HamiltonianMC(BaseHMC):
             The model
         **kwargs : passed to BaseHMC
         """
-        super(HamiltonianMC, self).__init__(vars, **kwargs)
+        super(HamiltonianMC, self).__init__(**kwargs)
         self.path_length = path_length
 
     def _hamiltonian_step(self, start, p0, step_size):
@@ -137,10 +135,3 @@ class HamiltonianMC(BaseHMC):
             "model_logp": state.model_logp,
         }
         return HMCStepData(end, accept_stat, div_info, stats)
-
-    @staticmethod
-    def competence(var, has_grad):
-        """Check how appropriate this class is for sampling a random variable."""
-        if var.dtype in discrete_types or not has_grad:
-            return Competence.INCOMPATIBLE
-        return Competence.COMPATIBLE

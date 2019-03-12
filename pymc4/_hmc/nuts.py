@@ -7,9 +7,7 @@ import numpy.random as nr
 
 from .base_hmc import BaseHMC, HMCStepData, DivergenceInfo
 from .integration import IntegrationError
-from pymc3.backends.report import SamplerWarning, WarningType
-from pymc3.theanof import floatX
-from pymc3.vartypes import continuous_types
+from .report import SamplerWarning, WarningType
 
 __all__ = ["NUTS"]
 
@@ -179,13 +177,6 @@ class NUTS(BaseHMC):
         accept_stat = stats["mean_tree_accept"]
         return HMCStepData(tree.proposal, accept_stat, divergence_info, stats)
 
-    @staticmethod
-    def competence(var, has_grad):
-        """Check how appropriate this class is for sampling a random variable."""
-        if var.dtype in continuous_types and has_grad:
-            return Competence.IDEAL
-        return Competence.INCOMPATIBLE
-
     def warnings(self):
         warnings = super(NUTS, self).warnings()
         n_samples = self._samples_after_tune
@@ -254,12 +245,12 @@ class _Tree(object):
         """
         if direction > 0:
             tree, diverging, turning = self._build_subtree(
-                self.right, self.depth, floatX(np.asarray(self.step_size))
+                self.right, self.depth, np.asarray(self.step_size)
             )
             self.right = tree.right
         else:
             tree, diverging, turning = self._build_subtree(
-                self.left, self.depth, floatX(np.asarray(-self.step_size))
+                self.left, self.depth, np.asarray(-self.step_size)
             )
             self.left = tree.right
 

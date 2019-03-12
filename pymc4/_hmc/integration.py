@@ -1,10 +1,11 @@
 from collections import namedtuple
-
+import tensorflow as tf
+from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 from scipy import linalg
 
 
-State = namedtuple("State", "q, p, v, q_grad, energy, model_logp")
+State = namedtuple("State", 'q, p, v, q_grad, energy, model_logp')
 
 
 class IntegrationError(RuntimeError):
@@ -16,17 +17,9 @@ class CpuLeapfrogIntegrator(object):
         """Leapfrog integrator using CPU."""
         self._potential = potential
         self._logp_dlogp_func = logp_dlogp_func
-        self._dtype = self._logp_dlogp_func.dtype
-        if self._potential.dtype != self._dtype:
-            raise ValueError(
-                "dtypes of potential (%s) and logp function (%s)"
-                "don't match." % (self._potential.dtype, self._dtype)
-            )
 
     def compute_state(self, q, p):
         """Compute Hamiltonian functions using a position and momentum."""
-        if q.dtype != self._dtype or p.dtype != self._dtype:
-            raise ValueError("Invalid dtype. Must be %s" % self._dtype)
         logp, dlogp = self._logp_dlogp_func(q)
         v = self._potential.velocity(p)
         kinetic = self._potential.energy(p, velocity=v)
@@ -67,7 +60,7 @@ class CpuLeapfrogIntegrator(object):
 
     def _step(self, epsilon, state, out=None):
         pot = self._potential
-        axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
+        axpy = linalg.blas.get_blas_funcs('axpy', dtype=np.float32)
 
         q, p, v, q_grad, energy, logp = state
         if out is None:
@@ -91,7 +84,7 @@ class CpuLeapfrogIntegrator(object):
         # q_new = q + epsilon * v_new
         axpy(v_new, q_new, a=epsilon)
 
-        logp = self._logp_dlogp_func(q_new, q_new_grad)
+        logp, q_new_grad = self._logp_dlogp_func(q_new)
 
         # p_new = p_new + dt * q_new_grad
         axpy(q_new_grad, p_new, a=dt)

@@ -1,16 +1,12 @@
 from collections import namedtuple
+#import tensorflow as tf
 
 import numpy as np
 
-from pymc3.model import modelcontext, Point
-from pymc3.step_methods import arraystep
-from pymc3.step_methods.hmc import integration
-from pymc3.theanof import inputvars, floatX
-from pymc3.tuning import guess_scaling
+from . import integration
 from .quadpotential import quad_potential, QuadPotentialDiagAdapt
-from pymc3.step_methods import step_sizes
-from pymc3.backends.report import SamplerWarning, WarningType
-
+from . import step_sizes
+from .report import SamplerWarning, WarningType
 
 HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stats")
 
@@ -18,7 +14,31 @@ HMCStepData = namedtuple("HMCStepData", "end, accept_stat, divergence_info, stat
 DivergenceInfo = namedtuple("DivergenceInfo", "message, exec_info, state")
 
 
-class BaseHMC(arraystep.GradientSharedStep):
+def metrop_select(mr, q, q0):
+    """Perform rejection/acceptance step for Metropolis class samplers.
+
+    Returns the new sample q if a uniform random number is less than the
+    metropolis acceptance rate (`mr`), and the old sample otherwise, along
+    with a boolean indicating whether the sample was accepted.
+
+    Parameters
+    ----------
+    mr : float, Metropolis acceptance rate
+    q : proposed sample
+    q0 : current sample
+
+    Returns
+    -------
+    q or q0
+    """
+    # Compare acceptance ratio to uniform random number
+    if np.isfinite(mr) and np.log(uniform()) < mr:
+        return q, True
+    else:
+        return q0, False
+
+
+class BaseHMC:
     """Superclass to implement Hamiltonian/hybrid monte carlo."""
 
     default_blocked = True
@@ -29,8 +49,8 @@ class BaseHMC(arraystep.GradientSharedStep):
         scaling=None,
         step_scale=0.25,
         is_cov=False,
-        model=None,
-        blocked=True,
+        logp_dlogp_func=None,
+            size=None,
         potential=None,
         integrator="leapfrog",
         dtype=None,
@@ -41,7 +61,6 @@ class BaseHMC(arraystep.GradientSharedStep):
         t0=10,
         adapt_step_size=True,
         step_rand=None,
-        **theano_kwargs,
     ):
         """Set up Hamiltonian samplers with common structures.
 
@@ -61,22 +80,13 @@ class BaseHMC(arraystep.GradientSharedStep):
         potential : Potential, optional
             An object that represents the Hamiltonian with methods `velocity`,
             `energy`, and `random` methods.
-        **theano_kwargs: passed to theano functions
         """
-        model = modelcontext(model)
-
-        if vars is None:
-            vars = model.cont_vars
-        vars = inputvars(vars)
-
-        super(BaseHMC, self).__init__(
-            vars, blocked=blocked, model=model, dtype=dtype, **theano_kwargs
-        )
-
+        self._logp_dlogp_func = logp_dlogp_func
         self.adapt_step_size = adapt_step_size
         self.Emax = Emax
         self.iter_count = 0
-        size = self._logp_dlogp_func.size
+        self.size = size
+        #size = self._logp_dlogp_func.size
 
         self.step_size = step_scale / (size ** 0.25)
         self.target_accept = target_accept
@@ -87,13 +97,13 @@ class BaseHMC(arraystep.GradientSharedStep):
         self.tune = True
 
         if scaling is None and potential is None:
-            mean = floatX(np.zeros(size))
-            var = floatX(np.ones(size))
+            mean = np.zeros(size)
+            var = np.ones(size)
             potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
-        if isinstance(scaling, dict):
-            point = Point(scaling, model=model)
-            scaling = guess_scaling(point, model=model, vars=vars)
+        #if isinstance(scaling, dict):
+        #    point = Point(scaling, model=model)
+        #    scaling = guess_scaling(point, model=model, vars=vars)
 
         if scaling is not None and potential is not None:
             raise ValueError("Can not specify both potential and scaling.")
@@ -110,6 +120,20 @@ class BaseHMC(arraystep.GradientSharedStep):
         self._samples_after_tune = 0
         self._num_divs_sample = 0
 
+    def step(self, array):
+        if self.generates_stats:
+            apoint, stats = self.astep(array)
+            #point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            return apoint, stats
+        else:
+            apoint = self.astep(array)
+            #point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            return apoint
+
+    def stop_tuning(self):
+        if hasattr(self, 'tune'):
+            self.tune = False
+
     def _hamiltonian_step(self, start, p0, step_size):
         """Compute one hamiltonian trajectory and return the next state.
 
@@ -123,7 +147,7 @@ class BaseHMC(arraystep.GradientSharedStep):
         start = self.integrator.compute_state(q0, p0)
 
         if not np.isfinite(start.energy):
-            self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
+            #self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
             raise ValueError(
                 "Bad initial energy: %s. The model " "might be misspecified." % start.energy
             )

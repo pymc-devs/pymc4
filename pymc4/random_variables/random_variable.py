@@ -163,7 +163,7 @@ class ContinuousRV(RandomVariable):
 
 
 class DiscreteRV(RandomVariable):
-    def log_prob(self):
+    def log_prob(self, value):
         """Log probability computation.
 
         Developer Note
@@ -171,7 +171,7 @@ class DiscreteRV(RandomVariable):
             Discrete Random Variables are not transformed, unlike continuous
             Random Variables.
         """
-        return self._distribution.log_prob(self)
+        return self._distribution.log_prob(value)
 
 
 class PositiveContinuousRV(ContinuousRV):

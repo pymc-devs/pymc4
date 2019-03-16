@@ -85,7 +85,7 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
     if randomvariable.__name__ not in (["Binomial", "ZeroInflatedBinomial"] + broken_logps):
 
         # Assert that values are returned with no exceptions
-        log_prob = dist.log_prob(sample)
+        log_prob = dist.log_prob()
         np_vals = log_prob.numpy()
 
         assert np_vals is not None

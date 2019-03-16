@@ -16,5 +16,3 @@ def tf_session():
     # with graph.as_default():
     # yield graph
     pass
-
-

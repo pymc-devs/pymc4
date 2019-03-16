@@ -6,9 +6,15 @@ import tensorflow as tf
 @pytest.fixture(scope="function")
 def tf_session():
 
-    tf.random.set_random_seed(37208)  # random.org
-    sess = tf.Session()
-    yield sess
+    # TODO: Figure out how to set random seed in tf2
+    # tf.random.set_random_seed(37208)  # random.org
 
-    sess.close()
-    tf.reset_default_graph()
+    # TODO: Yield default eager execution graph for now
+    # TODO: Figure out how to clear or namespace graph at later point
+
+    # graph = tf.Graph()
+    # with graph.as_default():
+    # yield graph
+    pass
+
+

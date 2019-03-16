@@ -66,13 +66,6 @@ def random_variable_args():
     }
 
 
-@pytest.mark.skip(reason="May not be needed in Tensorflow 2")
-def test_tf_session_cleared(tf_session):
-    """Check that fixture is finalizing correctly"""
-    ops = tf_session.graph.get_operations()
-    assert len(ops) == 0
-
-
 @pytest.mark.parametrize(**random_variable_args())
 def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
     """Test forward sampling and evaluating the logp for all random variables."""

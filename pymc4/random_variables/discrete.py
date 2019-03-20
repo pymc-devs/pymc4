@@ -592,3 +592,49 @@ class ZeroInflatedPoisson(DiscreteRV):
             distributions=[pm.Constant(value=0, name="Zero"), pm.Poisson(mu=theta, name="Poisson")],
             name="ZeroInflatedPoisson",
         )._distribution
+
+
+class Zipf(DiscreteRV):
+    r"""
+    Zipf random variable.
+
+    The pmf of this distribution is
+
+    .. math:: f(x \mid \alpha) = \frac{(x^(-\alpha))}{zeta(\alpha)}
+
+    where zeta is the Riemann zeta function.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.arange(1, 8)
+        for alpha in [1.1, 2., 5.]:
+            pmf = st.zipf.pmf(x, alpha)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}'.format(alpha))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0)
+        plt.legend(loc=9)
+        plt.show()
+
+    ========  ===============================
+    Support   :math:`x \in \{1,2,\ldots ,N\}`
+    ========  ===============================
+
+    Parameters
+    ----------
+    alpha : float
+        Exponent parameter (alpha > 1).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: power
+    """
+
+    def _base_dist(self, alpha: TensorLike, *args, **kwargs):
+        return tfd.Zipf(power=alpha, *args, **kwargs)

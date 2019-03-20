@@ -11,6 +11,7 @@ from .discrete import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
+    Zipf,
 )
 from .continuous import (
     Beta,
@@ -38,7 +39,7 @@ from .continuous import (
     Weibull,
 )
 from .mixture import Mixture
-from .multivariate import Dirichlet, LKJ, Multinomial, MvNormal, Wishart
+from .multivariate import Dirichlet, LKJ, Multinomial, MvNormal, VonMisesFisher, Wishart
 
 __all__ = [
     "Bernoulli",
@@ -52,6 +53,7 @@ __all__ = [
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
     "ZeroInflatedPoisson",
+    "Zipf",
     "Beta",
     "Cauchy",
     "ChiSquared",
@@ -80,5 +82,6 @@ __all__ = [
     "LKJ",
     "Multinomial",
     "MvNormal",
+    "VonMisesFisher",
     "Wishart",
 ]

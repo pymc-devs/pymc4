@@ -48,6 +48,7 @@ def random_variable_args():
         (random_variables.Triangular, {"lower": 0.0, "upper": 1.0, "c": 0.5}),
         (random_variables.Uniform, {"lower": 0, "upper": 1}),
         (random_variables.VonMises, {"mu": 0, "kappa": 1}),
+        (random_variables.VonMisesFisher, {"mu": [0, 1], "kappa": 1, "sample": [0, 1]}),
         (random_variables.Weibull, {"beta": 0.1, "alpha": 1.0}),
         (random_variables.Wishart, {"nu": 3, "V": [[1]], "sample": [[1]]}),
         (random_variables.ZeroInflatedBinomial, {"psi": 0.2, "n": 10, "p": 0.5, "sample": 0}),
@@ -56,6 +57,7 @@ def random_variable_args():
             {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
         ),
         (random_variables.ZeroInflatedPoisson, {"psi": 0.2, "theta": 2, "sample": 0}),
+        (random_variables.Zipf, {"alpha": 2}),
     )
 
     ids = [dist[0].__name__ for dist in _random_variable_args]

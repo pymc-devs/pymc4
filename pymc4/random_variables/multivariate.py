@@ -192,6 +192,46 @@ class MvNormal(RandomVariable):
         return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov, *args, **kwargs)
 
 
+class VonMisesFisher(ContinuousRV):
+    r"""
+    Von Mises-Fisher random variable.
+
+    Generalizes Von Mises distribution to more than one dimension.
+
+    .. math::
+       f(x \mid \mu, \kappa) = \frac{(2 \pi)^{-n/2} \kappa^{n/2-1}}{I_{n/2-1}(\kappa)} exp(\kappa * mu^T x)
+
+    where :math:`I_v(z)` is the modified Bessel function of the first kind of order v
+
+    ========  =========================
+    Support   :math:`x \in [-\pi, \pi]`
+    Mean      :math:`\mu`
+    ========  =========================
+
+    Parameters
+    ----------
+    mu : array
+        Mean.
+    kappa : float
+        Concentration (\frac{1}{kappa} is analogous to \sigma^2).
+
+    Note
+    ----
+    Currently only n in {2, 3, 4, 5} are supported. For n=5 some numerical instability can
+    occur for low concentrations (<.01).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: mean_direction
+    - kappa: concentration
+    """
+
+    def _base_dist(self, mu: TensorLike, kappa: TensorLike, *args, **kwargs):
+        return tfd.VonMisesFisher(mean_direction=mu, concentration=kappa, *args, **kwargs)
+
+
 class Wishart(ContinuousRV):
     r"""
     Wishart random variable.

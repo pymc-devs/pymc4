@@ -25,3 +25,23 @@ for dist_name in tfp_supported:
         dist_name,
         type(dist_name, (RandomVariable,), {"_base_dist": getattr(tfd, dist_name)}),
     )
+
+
+# custom distributions
+from ._multivariate.skew_normal import StdSkewNormal
+from tensorflow_probability import bijectors as tfb
+
+
+class SkewNormal(RandomVariable):
+    """
+    Skew Normal Distribution
+    """
+    def _base_dist(self, *args, **kwargs):
+        name = kwargs['name']
+        skew_kwargs = kwargs.setdefault('skew_kwargs', {})
+        affine_kwargs = kwargs.setdefault('affine_kwargs', {})
+        return tfd.TransformedDistribution(
+            distribution=StdSkewNormal(corr=args[0], skew=args[1], **kwargs['skew_kwargs']),
+            bijector=tfb.Affine(**affine_kwargs),
+            name="SkewNormal",
+        )

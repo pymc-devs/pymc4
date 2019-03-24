@@ -21,7 +21,7 @@ class StdSkewNormal(tfp.distributions.Distribution):
                allow_nan_stats=True,
                name="StdSkewNormal"):
         """
-        Construct Skew Normal distributions.
+        Construct "standard" Skew Normal distributions.
         The parameters `loc` and `scale` must be shaped in a way that supports
         broadcasting (e.g. `loc + scale` is a valid operation).
         Args:

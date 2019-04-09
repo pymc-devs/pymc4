@@ -123,7 +123,7 @@ class RandomVariable(WithBackendArithmetic):
             # Unfortunately autograph does not allow changing the AST,
             # thus we instead retrieve the name from when it was set
             # ForwardContext where AST parsing is possible.
-            order_id = len(ctx.vars) # where am I in the order of RV creation?
+            order_id = len(ctx.vars)  # where am I in the order of RV creation?
             self.name = ctx._names[order_id]
 
         if not isinstance(ctx, contexts.FreeForwardContext) and self.name is None:

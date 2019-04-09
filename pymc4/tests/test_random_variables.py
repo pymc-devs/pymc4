@@ -6,6 +6,7 @@ import numpy as np
 
 
 from .. import random_variables
+from .._model import model
 
 
 def random_variable_args():
@@ -68,26 +69,26 @@ def random_variable_args():
     }
 
 
-def test_tf_session_cleared(tf_session):
-    """Check that fixture is finalizing correctly"""
-    ops = tf_session.graph.get_operations()
-    assert len(ops) == 0
-
-
 @pytest.mark.parametrize(**random_variable_args())
-def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
+def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
     """Test forward sampling and evaluating the logp for all random variables."""
     sample = kwargs.pop("sample", 0.1)
     expected_value = kwargs.pop("expected", None)
-    dist = randomvariable(name="test_dist", **kwargs, validate_args=True)
+
+    # Logps can only be evaluated in a model
+    @model
+    def test_model():
+        dist = randomvariable(name="test_dist", **kwargs, validate_args=True)
+
+    test_model = test_model.configure()
 
     broken_logps = ["MvNormal", "Pareto", "Triangular"]  # TODO fix these Logp Transforms
 
     if randomvariable.__name__ not in (["Binomial", "ZeroInflatedBinomial"] + broken_logps):
 
         # Assert that values are returned with no exceptions
-        log_prob = dist.log_prob()
-        vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
+        log_prob = test_model.make_log_prob_function()
+        vals = log_prob(sample)
 
         assert vals is not None
 
@@ -97,8 +98,8 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
     # TODO: Temporary test that should be deleted before pr merge when log sampling is fixed
     elif randomvariable.__name__ in broken_logps:
         with pytest.raises(Exception):
-            log_prob = dist.log_prob()
-            vals = tf_session.run([log_prob], feed_dict={dist._backend_tensor: sample})
+            log_prob = test_model.make_log_prob_function()
+            vals = log_prob(sample)
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81
@@ -108,7 +109,7 @@ def test_rvs_logp_and_forward_sample(tf_session, randomvariable, kwargs):
             assert "NotImplementedError: sample_n is not implemented: Binomial" == str(err)
 
 
-def test_rvs_backend_arithmetic(tf_session):
+def test_rvs_backend_arithmetic(tf_seed):
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
     x = random_variables.Normal(mu=0, sigma=1)
     y = random_variables.Normal(mu=1, sigma=2)

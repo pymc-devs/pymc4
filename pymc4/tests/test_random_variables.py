@@ -39,11 +39,11 @@ def random_variable_args():
         (random_variables.LogitNormal, {"mu": 0, "sigma": 1}),
         (
             random_variables.MvNormal,
-            {"mu": [1, 2], "cov": [[0.36, 0.12], [0.12, 0.36]], "sample": [1, 2]},
+            {"mu": [1, 2], "cov": [[0.36, 0.12], [0.12, 0.36]], "sample": [1.0, 2.0]},
         ),
         (random_variables.NegativeBinomial, {"mu": 3, "alpha": 6, "sample": 5.0}),
         (random_variables.Normal, {"mu": 0, "sigma": 1}),
-        (random_variables.Pareto, {"alpha": 1, "m": 0.1, "sample": 5}),
+        (random_variables.Pareto, {"alpha": 1, "m": 0.1, "sample": 5.0}),
         (random_variables.Poisson, {"mu": 2}),
         (random_variables.StudentT, {"mu": 0, "sigma": 1, "nu": 10}),
         (random_variables.Triangular, {"lower": 0.0, "upper": 1.0, "c": 0.5}),
@@ -75,8 +75,6 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
     sample = kwargs.pop("sample", 0.1)
     expected_value = kwargs.pop("expected", None)
 
-    broken_logps = ["MvNormal", "Pareto", "Triangular"]  # TODO fix these Logp Transforms
-
     # Logps can only be evaluated in a model
     @model
     def test_model():
@@ -85,7 +83,7 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
     test_model = test_model.configure()
     log_prob = test_model.make_log_prob_function()
 
-    if randomvariable.__name__ not in (["ZeroInflatedBinomial"] + broken_logps):
+    if randomvariable.__name__ not in (["ZeroInflatedBinomial"]):
 
         # Assert that values are returned with no exceptions
         vals = log_prob(sample)
@@ -94,11 +92,6 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
 
         if expected_value:
             np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
-
-    # TODO: Temporary test that should be deleted before pr merge when log sampling is fixed
-    elif randomvariable.__name__ in broken_logps:
-        with pytest.raises(Exception):
-            _ = log_prob(sample)
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81

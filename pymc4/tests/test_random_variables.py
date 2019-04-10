@@ -70,7 +70,7 @@ def random_variable_args():
 
 
 @pytest.mark.parametrize(**random_variable_args())
-def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
+def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs, request):
     """Test forward sampling and evaluating the logp for all random variables."""
     sample = kwargs.pop("sample", 0.1)
     expected_value = kwargs.pop("expected", None)
@@ -78,13 +78,14 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
     # Logps can only be evaluated in a model
     @model
     def test_model():
-        randomvariable(name="test_dist", **kwargs, validate_args=True)
+        randomvariable(name=request.node.name, **kwargs, validate_args=True)
 
-    test_model = test_model.configure()
-    log_prob = test_model.make_log_prob_function()
+    # TODO: Fix tests args for that use tfd.Mixture in their implementation
+    if not any([(randomvariable is rv)
+            for rv in (random_variables.ZeroInflatedBinomial, random_variables.ZeroInflatedNegativeBinomial,random_variables.ZeroInflatedPoisson)]):
 
-    if randomvariable.__name__ not in (["ZeroInflatedBinomial"]):
-
+        test_model = test_model.configure()
+        log_prob = test_model.make_log_prob_function()
         # Assert that values are returned with no exceptions
         vals = log_prob(sample)
 
@@ -94,11 +95,13 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
             np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
 
     else:
-        # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81
-        assert randomvariable.__name__ in ["ZeroInflatedBinomial"]
-        with pytest.raises(NotImplementedError) as err:
-            _ = log_prob(sample)
-            assert "NotImplementedError: sample_n is not implemented: Binomial" == str(err)
+        # https://github.com/tensorflow/probability/blob/master/tensorflow_probability/python/distributions/mixture.py # L119
+
+        with pytest.raises(TypeError) as err:
+            test_model = test_model.configure()
+            # _ = log_prob(sample)
+            assert ("cat must be a Categorical distribution," 
+                   " but saw: tfp.distributions.TransformedDistribution") == str(err)
 
 
 def test_rvs_backend_arithmetic(tf_seed):

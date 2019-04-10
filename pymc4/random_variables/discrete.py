@@ -594,7 +594,7 @@ class ZeroInflatedPoisson(RandomVariable):
         )._distribution
 
 
-class Zipf(DiscreteRV):
+class Zipf(RandomVariable):
     r"""
     Zipf random variable.
 

@@ -12,10 +12,10 @@ from .._model import model
 def random_variable_args():
     """Provide arguments for each random variable."""
     _random_variable_args = (
-        (random_variables.Bernoulli, {"p": 0.5, "sample":1.0}),
+        (random_variables.Bernoulli, {"p": 0.5, "sample": 1.0}),
         (random_variables.Beta, {"alpha": 1, "beta": 1}),
         (random_variables.Binomial, {"n": 5.0, "p": 0.5, "sample": 1.0}),
-        (random_variables.Categorical, {"p": [0.1, 0.5, 0.4], "sample":2.0}),
+        (random_variables.Categorical, {"p": [0.1, 0.5, 0.4], "sample": 2.0}),
         (random_variables.Cauchy, {"alpha": 0, "beta": 1}),
         (random_variables.ChiSquared, {"nu": 2}),
         (random_variables.Constant, {"value": 3}),
@@ -81,8 +81,16 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs, request):
         randomvariable(name=request.node.name, **kwargs, validate_args=True)
 
     # TODO: Fix tests args for that use tfd.Mixture in their implementation
-    if not any([(randomvariable is rv)
-            for rv in (random_variables.ZeroInflatedBinomial, random_variables.ZeroInflatedNegativeBinomial,random_variables.ZeroInflatedPoisson)]):
+    if not any(
+        [
+            (randomvariable is rv)
+            for rv in (
+                random_variables.ZeroInflatedBinomial,
+                random_variables.ZeroInflatedNegativeBinomial,
+                random_variables.ZeroInflatedPoisson,
+            )
+        ]
+    ):
 
         test_model = test_model.configure()
         log_prob = test_model.make_log_prob_function()
@@ -100,8 +108,10 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs, request):
         with pytest.raises(TypeError) as err:
             test_model = test_model.configure()
             # _ = log_prob(sample)
-            assert ("cat must be a Categorical distribution," 
-                   " but saw: tfp.distributions.TransformedDistribution") == str(err)
+            assert (
+                "cat must be a Categorical distribution,"
+                " but saw: tfp.distributions.TransformedDistribution"
+            ) == str(err)
 
 
 def test_rvs_backend_arithmetic(tf_seed):

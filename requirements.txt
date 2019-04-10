@@ -1,4 +1,4 @@
-tf-nightly
+tf-nightly-2.0-preview
 tfp-nightly
 pymc3
 scipy

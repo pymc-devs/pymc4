@@ -14,7 +14,7 @@ def random_variable_args():
     _random_variable_args = (
         (random_variables.Bernoulli, {"p": 0.5, "sample":1.0}),
         (random_variables.Beta, {"alpha": 1, "beta": 1}),
-        (random_variables.Binomial, {"n": 5.0, "p": 0.5, "sample": 1}),
+        (random_variables.Binomial, {"n": 5.0, "p": 0.5, "sample": 1.0}),
         (random_variables.Categorical, {"p": [0.1, 0.5, 0.4]}),
         (random_variables.Cauchy, {"alpha": 0, "beta": 1}),
         (random_variables.ChiSquared, {"nu": 2}),
@@ -75,19 +75,19 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
     sample = kwargs.pop("sample", 0.1)
     expected_value = kwargs.pop("expected", None)
 
+    broken_logps = ["MvNormal", "Pareto", "Triangular"]  # TODO fix these Logp Transforms
+
     # Logps can only be evaluated in a model
     @model
     def test_model():
-        dist = randomvariable(name="test_dist", **kwargs, validate_args=True)
+        randomvariable(name="test_dist", **kwargs, validate_args=True)
 
     test_model = test_model.configure()
+    log_prob = test_model.make_log_prob_function()
 
-    broken_logps = ["MvNormal", "Pareto", "Triangular"]  # TODO fix these Logp Transforms
-
-    if randomvariable.__name__ not in (["Binomial", "ZeroInflatedBinomial"] + broken_logps):
+    if randomvariable.__name__ not in (["ZeroInflatedBinomial"] + broken_logps):
 
         # Assert that values are returned with no exceptions
-        log_prob = test_model.make_log_prob_function()
         vals = log_prob(sample)
 
         assert vals is not None
@@ -98,14 +98,13 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs):
     # TODO: Temporary test that should be deleted before pr merge when log sampling is fixed
     elif randomvariable.__name__ in broken_logps:
         with pytest.raises(Exception):
-            log_prob = test_model.make_log_prob_function()
-            vals = log_prob(sample)
+            _ = log_prob(sample)
 
     else:
         # TFP issue ticket for Binom.sample_n https://github.com/tensorflow/probability/issues/81
-        assert randomvariable.__name__ in ["Binomial", "ZeroInflatedBinomial"]
+        assert randomvariable.__name__ in ["ZeroInflatedBinomial"]
         with pytest.raises(NotImplementedError) as err:
-            dist.log_prob()
+            _ = log_prob(sample)
             assert "NotImplementedError: sample_n is not implemented: Binomial" == str(err)
 
 

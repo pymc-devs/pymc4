@@ -47,7 +47,7 @@ def test_free_forward_context_var_as_backend_tensor(monkeypatch):
         assert err_string in str(err)
 
 
-def test_forward_context_add_variable(monkeypatch, tf_session):
+def test_forward_context_add_variable(monkeypatch):
     """Test that add_variable is called in Forward context"""
 
     err_string = "Forward Context add_variable"
@@ -66,7 +66,7 @@ def test_forward_context_add_variable(monkeypatch, tf_session):
         assert err_string in str(err)
 
 
-def test_forward_context_var_as_backend_tensor(monkeypatch, tf_session):
+def test_forward_context_var_as_backend_tensor(monkeypatch):
     """Test that var_as_backend_tensor is called in Forward context"""
 
     err_string = "Forward Context var_as_backend_tensor"

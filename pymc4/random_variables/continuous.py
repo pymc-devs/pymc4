@@ -9,10 +9,8 @@ Implements random variables not supported by tfp as distributions.
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import PositiveContinuousRV, ContinuousRV, UnitContinuousRV
-
-
-from .random_variable import RandomVariable, TensorLike, IntTensorLike
+from .random_variable import PositiveContinuousRV, RandomVariable, UnitContinuousRV
+from .random_variable import TensorLike, IntTensorLike
 
 
 class Beta(UnitContinuousRV):
@@ -74,7 +72,7 @@ class Beta(UnitContinuousRV):
         return tfd.Beta(concentration0=alpha, concentration1=beta, *args, **kwargs)
 
 
-class Cauchy(ContinuousRV):
+class Cauchy(RandomVariable):
     r"""
     Cauchy random variable.
 
@@ -284,7 +282,7 @@ class Gamma(PositiveContinuousRV):
         return tfd.Gamma(concentration=alpha, rate=beta, *args, **kwargs)
 
 
-class Gumbel(ContinuousRV):
+class Gumbel(RandomVariable):
     r"""
     Univariate Gumbel random variable.
 
@@ -665,7 +663,7 @@ class Kumaraswamy(UnitContinuousRV):
         return tfd.Kumaraswamy(concentration0=a, concentration1=b, *args, **kwargs)
 
 
-class Laplace(ContinuousRV):
+class Laplace(RandomVariable):
     r"""
     Laplace random variable.
 
@@ -718,7 +716,7 @@ class Laplace(ContinuousRV):
         return tfd.Laplace(loc=mu, scale=b)
 
 
-class Logistic(ContinuousRV):
+class Logistic(RandomVariable):
     r"""
     Logistic random variable.
 
@@ -868,7 +866,7 @@ class LogNormal(PositiveContinuousRV):
         return tfd.LogNormal(loc=mu, scale=sigma, **kwargs)
 
 
-class Normal(ContinuousRV):
+class Normal(RandomVariable):
     r"""
     Univariate normal random variable.
 
@@ -993,7 +991,7 @@ class Pareto(RandomVariable):
         return tfd.Pareto(concentration=alpha, scale=m)
 
 
-class StudentT(ContinuousRV):
+class StudentT(RandomVariable):
     r"""
     Student's T random variable.
 
@@ -1182,7 +1180,7 @@ class Uniform(UnitContinuousRV):
         return tfd.Uniform(low=lower, high=upper, *args, **kwargs)
 
 
-class VonMises(ContinuousRV):
+class VonMises(RandomVariable):
     r"""
     Univariate VonMises random variable.
 

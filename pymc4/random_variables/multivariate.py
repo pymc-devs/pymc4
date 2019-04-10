@@ -8,10 +8,10 @@ Implements random variables not supported by tfp as distributions.
 # pylint: disable=undefined-all-variable
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable, TensorLike, IntTensorLike, ContinuousRV, DiscreteRV
+from .random_variable import RandomVariable, TensorLike, IntTensorLike
 
 
-class Dirichlet(ContinuousRV):
+class Dirichlet(RandomVariable):
     r"""
     Dirichlet random variable.
 
@@ -59,7 +59,7 @@ class Dirichlet(ContinuousRV):
         return tfd.Dirichlet(concentration=a, *args, **kwargs)
 
 
-class LKJ(ContinuousRV):
+class LKJ(RandomVariable):
     r"""
     The LKJ (Lewandowski, Kurowicka and Joe) random variable.
 
@@ -102,7 +102,7 @@ class LKJ(ContinuousRV):
         return tfd.LKJ(dimension=n, concentration=eta, *args, **kwargs)
 
 
-class Multinomial(DiscreteRV):
+class Multinomial(RandomVariable):
     r"""
     Multinomial random variable.
 
@@ -192,7 +192,7 @@ class MvNormal(RandomVariable):
         return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov, *args, **kwargs)
 
 
-class VonMisesFisher(ContinuousRV):
+class VonMisesFisher(RandomVariable):
     r"""
     Von Mises-Fisher random variable.
 
@@ -232,7 +232,7 @@ class VonMisesFisher(ContinuousRV):
         return tfd.VonMisesFisher(mean_direction=mu, concentration=kappa, *args, **kwargs)
 
 
-class Wishart(ContinuousRV):
+class Wishart(RandomVariable):
     r"""
     Wishart random variable.
 

@@ -45,9 +45,11 @@ class ForwardContext(BaseContext):
 
     def __init__(self):
         self.vars = []
+        return
 
     def add_variable(self, rv):
         self.vars.append(rv)
+        return
 
     def var_as_backend_tensor(self, rv):
         return rv.sample()
@@ -58,10 +60,13 @@ class InferenceContext(BaseContext):
 
     def __init__(self, tensors, expected_vars):
         self.vars = []
+        self._names = [var.name for var in expected_vars]
         self._tensors = {var.name: tensor for var, tensor in zip(expected_vars, tensors)}
+        return
 
     def add_variable(self, rv):
         self.vars.append(rv)
+        return
 
     def var_as_backend_tensor(self, rv):
         return self._tensors[rv.name]

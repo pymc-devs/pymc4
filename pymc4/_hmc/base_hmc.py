@@ -1,5 +1,6 @@
 from collections import namedtuple
-#import tensorflow as tf
+
+# import tensorflow as tf
 
 import numpy as np
 
@@ -50,7 +51,7 @@ class BaseHMC:
         step_scale=0.25,
         is_cov=False,
         logp_dlogp_func=None,
-            size=None,
+        size=None,
         potential=None,
         integrator="leapfrog",
         dtype=None,
@@ -86,7 +87,7 @@ class BaseHMC:
         self.Emax = Emax
         self.iter_count = 0
         self.size = size
-        #size = self._logp_dlogp_func.size
+        # size = self._logp_dlogp_func.size
 
         self.step_size = step_scale / (size ** 0.25)
         self.target_accept = target_accept
@@ -101,7 +102,7 @@ class BaseHMC:
             var = np.ones(size)
             potential = QuadPotentialDiagAdapt(size, mean, var, 10)
 
-        #if isinstance(scaling, dict):
+        # if isinstance(scaling, dict):
         #    point = Point(scaling, model=model)
         #    scaling = guess_scaling(point, model=model, vars=vars)
 
@@ -123,15 +124,15 @@ class BaseHMC:
     def step(self, array):
         if self.generates_stats:
             apoint, stats = self.astep(array)
-            #point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            # point = self._logp_dlogp_func.array_to_full_dict(apoint)
             return apoint, stats
         else:
             apoint = self.astep(array)
-            #point = self._logp_dlogp_func.array_to_full_dict(apoint)
+            # point = self._logp_dlogp_func.array_to_full_dict(apoint)
             return apoint
 
     def stop_tuning(self):
-        if hasattr(self, 'tune'):
+        if hasattr(self, "tune"):
             self.tune = False
 
     def _hamiltonian_step(self, start, p0, step_size):
@@ -147,7 +148,7 @@ class BaseHMC:
         start = self.integrator.compute_state(q0, p0)
 
         if not np.isfinite(start.energy):
-            #self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
+            # self.potential.raise_ok(self._logp_dlogp_func._ordering.vmap)
             raise ValueError(
                 "Bad initial energy: %s. The model " "might be misspecified." % start.energy
             )

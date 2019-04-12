@@ -2,9 +2,8 @@ from collections import namedtuple
 import logging
 import enum
 
-SamplerWarning = namedtuple(
-    'SamplerWarning',
-    "kind, message, level, step, exec_info, extra")
+SamplerWarning = namedtuple("SamplerWarning", "kind, message, level, step, exec_info, extra")
+
 
 @enum.unique
 class WarningType(enum.Enum):

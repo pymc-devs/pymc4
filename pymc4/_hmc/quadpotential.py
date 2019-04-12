@@ -151,7 +151,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
             )
 
         if dtype is None:
-            dtype = 'float32'
+            dtype = "float32"
 
         if initial_diag is None:
             initial_diag = np.ones(n, dtype=dtype)
@@ -160,7 +160,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         self.dtype = dtype
         self._n = n
         self._var = np.array(initial_diag, dtype=self.dtype, copy=True)
-        #self._var_theano = theano.shared(self._var)
+        # self._var_theano = theano.shared(self._var)
         self._stds = np.sqrt(initial_diag)
         self._inv_stds = 1.0 / self._stds
         self._foreground_var = _WeightedVariance(
@@ -194,7 +194,7 @@ class QuadPotentialDiagAdapt(QuadPotential):
         weightvar.current_variance(out=self._var)
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
-        #self._var_theano.set_value(self._var)
+        # self._var_theano.set_value(self._var)
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
@@ -277,7 +277,7 @@ class QuadPotentialDiagAdaptGrad(QuadPotentialDiagAdapt):
         self._var[:] = var
         np.sqrt(self._var, out=self._stds)
         np.divide(1, self._stds, out=self._inv_stds)
-        #self._var_theano.set_value(self._var)
+        # self._var_theano.set_value(self._var)
 
     def update(self, sample, grad, tune):
         """Inform the potential about a new sample during tuning."""
@@ -360,7 +360,7 @@ class QuadPotentialDiag(QuadPotential):
            Diagonal of covariance matrix for the potential vector
         """
         if dtype is None:
-            dtype = 'float32'
+            dtype = "float32"
         self.dtype = dtype
         v = v.astype(self.dtype)
         s = v ** 0.5

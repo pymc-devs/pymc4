@@ -45,7 +45,7 @@ class CpuLeapfrogIntegrator(object):
         None if `out` is provided, else a State namedtuple
         """
         try:
-            return self._step(epsilon, state, out=None)
+            return self._step(epsilon, state)
         except linalg.LinAlgError as err:
             msg = "LinAlgError during leapfrog step."
             raise IntegrationError(msg)
@@ -58,42 +58,24 @@ class CpuLeapfrogIntegrator(object):
             else:
                 raise
 
-    def _step(self, epsilon, state, out=None):
+    def _step(self, epsilon, state):
         pot = self._potential
-        axpy = linalg.blas.get_blas_funcs('axpy', dtype=np.float32)
-
         q, p, v, q_grad, energy, logp = state
-        if out is None:
-            q_new = q.copy()
-            p_new = p.copy()
-            v_new = np.empty_like(q)
-            q_new_grad = np.empty_like(q)
-        else:
-            q_new, p_new, v_new, q_new_grad, energy = out
-            q_new[:] = q
-            p_new[:] = p
 
         dt = 0.5 * epsilon
 
-        # p is already stored in p_new
-        # p_new = p + dt * q_grad
-        axpy(q_grad, p_new, a=dt)
+        # half momentum step
+        p_new = p + dt * q_grad
 
-        pot.velocity(p_new, out=v_new)
-        # q is already stored in q_new
-        # q_new = q + epsilon * v_new
-        axpy(v_new, q_new, a=epsilon)
+        # whole position step
+        v_new = pot.velocity(p_new)
+        q_new = (q + epsilon * v_new).astype(q.dtype)
 
-        logp, q_new_grad[:] = self._logp_dlogp_func(q_new)
-
-        # p_new = p_new + dt * q_new_grad
-        axpy(q_new_grad, p_new, a=dt)
+        # half momentum step
+        logp, q_new_grad = self._logp_dlogp_func(q_new)
+        p_new = p_new + dt * q_new_grad
 
         kinetic = pot.velocity_energy(p_new, v_new)
         energy = kinetic - logp
 
-        if out is not None:
-            out.energy = energy
-            return
-        else:
-            return State(q_new, p_new, v_new, q_new_grad, energy, logp)
+        return State(q_new, p_new, v_new, q_new_grad, energy, logp)

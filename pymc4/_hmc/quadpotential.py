@@ -8,8 +8,6 @@ from scipy import linalg, stats
 __all__ = [
     "quad_potential",
     "QuadPotentialDiag",
-    "QuadPotentialFull",
-    "QuadPotentialFullInv",
     "QuadPotentialDiagAdapt",
     "isquadpotential",
     "QuadPotentialLowRank",
@@ -47,10 +45,7 @@ def quad_potential(C, is_cov):
         else:
             return QuadPotentialDiag(1.0 / C)
     else:
-        if is_cov:
-            return QuadPotentialFull(C)
-        else:
-            return QuadPotentialFullInv(C)
+        raise NotImplementedError("QuadPotentialFull and QuadPotentialFullInv not yet implemented")
 
 
 def partial_check_positive_definite(C):

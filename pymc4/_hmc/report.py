@@ -1,5 +1,4 @@
 from collections import namedtuple
-import logging
 import enum
 
 SamplerWarning = namedtuple("SamplerWarning", "kind, message, level, step, exec_info, extra")

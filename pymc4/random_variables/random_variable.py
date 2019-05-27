@@ -114,6 +114,9 @@ class RandomVariable(WithBackendArithmetic):
 
     def __init__(self, *args, **kwargs):
         self._parents = []
+        # Override default bijector if provided
+        self._bijector = kwargs.pop("bijector", self._bijector)
+
         self._untransformed_distribution = self._base_dist(*args, **kwargs)
         self._sample_shape = ()
         self._dim_names = ()
@@ -132,8 +135,6 @@ class RandomVariable(WithBackendArithmetic):
 
         self._creation_context_id = id(ctx)
         self._backend_tensor = None
-        # Override default bijector if provided
-        self._bijector = kwargs.get("bijector", self._bijector)
 
         self._distribution = tfd.TransformedDistribution(
             distribution=self._untransformed_distribution, bijector=bijectors.Invert(self._bijector)
@@ -149,6 +150,7 @@ class RandomVariable(WithBackendArithmetic):
 
         Done based on the transformed distribution, not the base distribution.
         """
+        # This will trigger self.as_tensor()
         return self._distribution.log_prob(self)
 
     def as_tensor(self):

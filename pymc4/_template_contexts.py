@@ -15,7 +15,7 @@ import threading
 class BaseContext:
     """A context."""
 
-    def add_variable(self, rv):
+    def add_variable(self, rv, name):
         raise NotImplementedError("Abstract method.")
 
     def var_as_backend_tensor(self, rv):
@@ -33,7 +33,7 @@ class BaseContext:
 class FreeForwardContext(BaseContext):
     """As a standalone distribution."""
 
-    def add_variable(self, rv):
+    def add_variable(self, rv, *args):
         pass
 
     def var_as_backend_tensor(self, rv):
@@ -44,11 +44,11 @@ class ForwardContext(BaseContext):
     """Distributions in a Directed Acylical Graph."""
 
     def __init__(self):
-        self.vars = []
+        self.vars = {}
         return
 
-    def add_variable(self, rv):
-        self.vars.append(rv)
+    def add_variable(self, rv, name):
+        self.vars[name] = rv
         return
 
     def var_as_backend_tensor(self, rv):
@@ -58,18 +58,17 @@ class ForwardContext(BaseContext):
 class InferenceContext(BaseContext):
     """When conditioning on data and performing inference."""
 
-    def __init__(self, tensors, expected_vars):
-        self.vars = []
-        self._names = [var.name for var in expected_vars]
-        self._tensors = {var.name: tensor for var, tensor in zip(expected_vars, tensors)}
+    def __init__(self, values):
+        self.vars = {}
+        self._values = values
         return
 
-    def add_variable(self, rv):
-        self.vars.append(rv)
+    def add_variable(self, rv, name):
+        self.vars[name] = rv
         return
 
     def var_as_backend_tensor(self, rv):
-        return self._tensors[rv.name]
+        return self._values[rv.name]
 
 
 _contexts = threading.local()

@@ -138,7 +138,7 @@ class RandomVariable(WithBackendArithmetic):
         self._distribution = tfd.TransformedDistribution(
             distribution=self._untransformed_distribution, bijector=bijectors.Invert(self._bijector)
         )
-        ctx.add_variable(self)
+        ctx.add_variable(self, self.name)
 
     def sample(self):
         """Forward sampling from the base distribution, unconditioned on data."""

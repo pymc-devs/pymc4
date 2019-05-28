@@ -173,7 +173,7 @@ class ChiSquared(PositiveContinuousRV):
     The ChiSquared distribution name is copied over from PyMC3 for continuity. We map it to the
     Chi2 distribution in TensorFlow Probability.
     """
-
+    @staticmethod
     def _base_dist(self, nu: IntTensorLike, *args, **kwargs):
         return tfd.Chi2(df=nu, *args, **kwargs)
 
@@ -454,8 +454,8 @@ class HalfNormal(PositiveContinuousRV):
 
     - sigma: scale
     """
-
-    def _base_dist(self, sigma: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(sigma: TensorLike, *args, **kwargs):
         return tfd.HalfNormal(scale=sigma, **kwargs)
 
 
@@ -930,8 +930,8 @@ class Normal(RandomVariable):
     - mu: loc
     - sigma: scale
     """
-
-    def _base_dist(self, mu: TensorLike, sigma: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(mu: TensorLike, sigma: TensorLike, *args, **kwargs):
         return tfd.Normal(loc=mu, scale=sigma, **kwargs)
 
 

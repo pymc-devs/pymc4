@@ -55,7 +55,8 @@ class Dirichlet(RandomVariable):
     - a: concentration
     """
 
-    def _base_dist(self, a: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(a: TensorLike, *args, **kwargs):
         return tfd.Dirichlet(concentration=a, *args, **kwargs)
 
 
@@ -98,7 +99,8 @@ class LKJ(RandomVariable):
     - eta: concentration
     """
 
-    def _base_dist(self, n: IntTensorLike, eta: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(n: IntTensorLike, eta: TensorLike, *args, **kwargs):
         return tfd.LKJ(dimension=n, concentration=eta, *args, **kwargs)
 
 
@@ -141,7 +143,8 @@ class Multinomial(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, n: IntTensorLike, p: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(n: IntTensorLike, p: TensorLike, *args, **kwargs):
         return tfd.Multinomial(total_count=n, probs=p, *args, **kwargs)
 
 
@@ -188,7 +191,8 @@ class MvNormal(RandomVariable):
     - cov: covariance_matrix
     """
 
-    def _base_dist(self, mu: TensorLike, cov: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(mu: TensorLike, cov: TensorLike, *args, **kwargs):
         return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov, *args, **kwargs)
 
 
@@ -228,7 +232,8 @@ class VonMisesFisher(RandomVariable):
     - kappa: concentration
     """
 
-    def _base_dist(self, mu: TensorLike, kappa: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(mu: TensorLike, kappa: TensorLike, *args, **kwargs):
         return tfd.VonMisesFisher(mean_direction=mu, concentration=kappa, *args, **kwargs)
 
 
@@ -271,5 +276,6 @@ class Wishart(RandomVariable):
     - V: scale
     """
 
-    def _base_dist(self, nu: IntTensorLike, V: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(nu: IntTensorLike, V: TensorLike, *args, **kwargs):
         return tfd.Wishart(df=nu, scale=V, *args, **kwargs)

@@ -110,7 +110,10 @@ class RandomVariable(WithBackendArithmetic):
     """
 
     _bijector = bijectors.Identity()
-    _base_dist = None
+
+    @staticmethod
+    def _base_dist(*args, **kwargs):
+        raise NotImplementedError
 
     def __init__(self, *args, **kwargs):
         self._parents = []

@@ -59,7 +59,8 @@ class Bernoulli(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, p: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(p: TensorLike, *args, **kwargs):
         return tfd.Bernoulli(probs=p, *args, **kwargs)
 
 
@@ -113,12 +114,14 @@ class Binomial(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, n: TensorLike, p: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(n: TensorLike, p: TensorLike, *args, **kwargs):
         return tfd.Binomial(total_count=n, probs=p, *args, **kwargs)
 
 
 class Constant(RandomVariable):
-    def _base_dist(self, value: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(value: TensorLike, *args, **kwargs):
         return tfd.Deterministic(loc=value, *args, **kwargs)
 
 
@@ -162,7 +165,8 @@ class DiscreteUniform(RandomVariable):
         Upper limit (upper > lower).
     """
 
-    def _base_dist(self, lower: TensorLike, upper: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(lower: TensorLike, upper: TensorLike, *args, **kwargs):
         """
         Discrete uniform base distribution.
 
@@ -218,7 +222,8 @@ class Categorical(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, p: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(p: TensorLike, *args, **kwargs):
         return tfd.Categorical(probs=p, *args, **kwargs)
 
 
@@ -266,7 +271,8 @@ class Geometric(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, p: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(p: TensorLike, *args, **kwargs):
         return tfd.Geometric(probs=p, *args, **kwargs)
 
 
@@ -333,7 +339,8 @@ class NegativeBinomial(RandomVariable):
     - mu / (mu + alpha): probs
     """
 
-    def _base_dist(self, mu: TensorLike, alpha: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(mu: TensorLike, alpha: TensorLike, *args, **kwargs):
         total_count = mu + alpha
         probs = mu / (mu + alpha)
         return tfd.NegativeBinomial(total_count=total_count, probs=probs, *args, **kwargs)
@@ -389,7 +396,8 @@ class Poisson(RandomVariable):
     - mu: rate
     """
 
-    def _base_dist(self, mu: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(mu: TensorLike, *args, **kwargs):
         return tfd.Poisson(rate=mu, *args, **kwargs)
 
 
@@ -443,7 +451,8 @@ class ZeroInflatedBinomial(RandomVariable):
         Probability of success in each trial (0 < p < 1).
     """
 
-    def _base_dist(self, psi: TensorLike, n: TensorLike, p: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(psi: TensorLike, n: TensorLike, p: TensorLike, *args, **kwargs):
         """
         Zero-inflated binomial base distribution.
 
@@ -524,7 +533,8 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
         desired.
     """
 
-    def _base_dist(self, psi: TensorLike, mu: TensorLike, alpha: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(psi: TensorLike, mu: TensorLike, alpha: TensorLike, *args, **kwargs):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
             distributions=[
@@ -586,7 +596,8 @@ class ZeroInflatedPoisson(RandomVariable):
         (theta >= 0).
     """
 
-    def _base_dist(self, psi: TensorLike, theta: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(psi: TensorLike, theta: TensorLike, *args, **kwargs):
         return pm.Mixture(
             p=[psi, 1.0 - psi],
             distributions=[pm.Constant(value=0, name="Zero"), pm.Poisson(mu=theta, name="Poisson")],
@@ -636,5 +647,6 @@ class Zipf(RandomVariable):
     - alpha: power
     """
 
-    def _base_dist(self, alpha: TensorLike, *args, **kwargs):
+    @staticmethod
+    def _base_dist(alpha: TensorLike, *args, **kwargs):
         return tfd.Zipf(power=alpha, *args, **kwargs)

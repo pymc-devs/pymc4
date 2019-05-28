@@ -52,6 +52,7 @@ class ForwardContext(BaseContext):
         return
 
     def var_as_backend_tensor(self, rv):
+        print("ForwardContext", rv)
         return rv.sample()
 
 

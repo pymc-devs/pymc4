@@ -83,8 +83,14 @@ class Model:
     def make_log_prob_function(self):
         """Return the log probability of the model."""
 
-        def log_prob(*args):
-            context = contexts.InferenceContext(args, expected_vars=self._forward_context.vars)
+        def log_prob(**kwargs):
+            vars = self._forward_context.vars
+            if set(self._observations.keys()).intersection(set(kwargs.keys())):
+                raise ValueError('Passed variable already specified.')
+            kwargs.update(self._observations)
+            if len(kwargs) != len(vars):
+                raise ValueError('Missing value for variable in logp.')
+            context = contexts.InferenceContext([kwargs[v.name] for v in self._forward_context.vars], expected_vars=self._forward_context.vars)
             with context:
                 self._evaluate()
                 return sum(tf.reduce_sum(var.log_prob()) for var in context.vars)

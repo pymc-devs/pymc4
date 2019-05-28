@@ -95,7 +95,8 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs, request):
         test_model = test_model.configure()
         log_prob = test_model.make_log_prob_function()
         # Assert that values are returned with no exceptions
-        vals = log_prob(sample)
+        _kwargs = {request.node.name:sample}
+        vals = log_prob(**_kwargs)
 
         assert vals is not None
 

@@ -4,8 +4,10 @@ import ast
 from . import _template_contexts as contexts
 from .ast_compiler import uncompile, parse_snippet, recompile, AutoNameTransformer
 
+import numpy as np
+import arviz as az
 import tensorflow as tf
-
+import tensorflow_probability as tfp
 
 __all__ = ["model"]
 
@@ -99,7 +101,9 @@ class Model:
             context = contexts.InferenceContext([kwargs[v.name] for v in self._forward_context.vars], expected_vars=self._forward_context.vars)
             with context:
                 self._evaluate()
-                return sum(tf.reduce_sum(var.log_prob()) for var in context.vars)
+                logp = sum(tf.reduce_sum(var.log_prob(),
+                                         axis=tf.range(1, tf.rank(var.log_prob()))) for var in context.vars)
+                return logp
 
         return log_prob
 
@@ -114,3 +118,35 @@ class Model:
         model = copy.copy(self)
         model._observations.update(kwargs)
         return model
+
+    def sample_posterior(self, num_results=100, num_burnin_steps=10, num_leapfrog_steps=10, step_size=0.005, num_chains=10):
+        """Samples from the posterior of model."""
+        log_prob_func = tf.function(self.make_log_prob_function())
+        # Create input tensors
+        var_names = [var.name for var in self._forward_context.vars]
+        forward_sample = tf.vectorized_map(self.forward_sample, tf.range(num_chains))
+
+        initial_state = [
+            forward_sample[var_name] for var_name in var_names
+        ]
+
+        kernel = tfp.mcmc.HamiltonianMonteCarlo(
+            target_log_prob_fn=log_prob_func,
+            num_leapfrog_steps=num_leapfrog_steps,
+            step_size=step_size)
+
+        kernel = tfp.mcmc.SimpleStepSizeAdaptation(
+            inner_kernel=kernel, num_adaptation_steps=int(num_burnin_steps * 0.8))
+
+        samples, stats = tfp.mcmc.sample_chain(
+            num_results=num_results,
+            num_burnin_steps=num_burnin_steps,
+            current_state=initial_state,
+            kernel=kernel,
+            #trace_fn=None,
+        )
+
+        # Create arviz trace
+        trace = {var_name: np.swapaxes(sample.numpy()[num_burnin_steps:], 0, 1) for var_name, sample in zip(var_names, samples)}
+        trace = az.from_dict(trace)
+        return trace, stats, forward_sample

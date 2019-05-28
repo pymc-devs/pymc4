@@ -143,7 +143,7 @@ class RandomVariable(WithBackendArithmetic):
 
     def sample(self):
         """Forward sampling from the base distribution, unconditioned on data."""
-        return self._untransformed_distribution.sample()
+        return self._distribution.sample()
 
     def log_prob(self):
         """Log probability computation.

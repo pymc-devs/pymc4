@@ -61,6 +61,7 @@ class InferenceContext(BaseContext):
     def __init__(self, tensors, expected_vars):
         self.vars = []
         self._names = [var.name for var in expected_vars]
+        # Link the provided input-tensors to their names
         self._tensors = {var.name: tensor for var, tensor in zip(expected_vars, tensors)}
         return
 

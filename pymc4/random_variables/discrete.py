@@ -637,4 +637,4 @@ class Zipf(RandomVariable):
     """
 
     def _base_dist(self, alpha: TensorLike, *args, **kwargs):
-        return tfd.Zipf(power=alpha, *args, **kwargs)
+        return tfd.Zipf(power=alpha, dtype=np.float32, *args, **kwargs)

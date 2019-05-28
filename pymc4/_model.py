@@ -86,10 +86,10 @@ class Model:
         def log_prob(**kwargs):
             vars = self._forward_context.vars
             if set(self._observations.keys()).intersection(set(kwargs.keys())):
-                raise ValueError('double specified var')
+                raise ValueError('Passed variable already specified.')
             kwargs.update(self._observations)
             if len(kwargs) != len(vars):
-                raise ValueError('missing var')
+                raise ValueError('Missing value for variable in logp.')
             context = contexts.InferenceContext([kwargs[v.name] for v in self._forward_context.vars], expected_vars=self._forward_context.vars)
             with context:
                 self._evaluate()

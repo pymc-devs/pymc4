@@ -83,8 +83,10 @@ class Model:
     def make_log_prob_function(self):
         """Return the log probability of the model."""
 
-        def log_prob(**kwargs):
+        def log_prob(*args, **kwargs):
             varnames = [v.name for v in self._forward_context.vars]
+            if args:
+                kwargs.update({k:v for k,v in zip(varnames, args)})
             already_specified = set(self._observations.keys()).intersection(set(kwargs.keys()))
             if already_specified:
                 raise ValueError('Passed variables {} already specified.'

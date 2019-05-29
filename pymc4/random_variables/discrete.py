@@ -60,7 +60,7 @@ class Bernoulli(RandomVariable):
     """
 
     def _base_dist(self, p: TensorLike, *args, **kwargs):
-        return tfd.Bernoulli(probs=p, *args, **kwargs)
+        return tfd.Bernoulli(probs=p, dtype=tf.float32, *args, **kwargs)
 
 
 class Binomial(RandomVariable):
@@ -219,7 +219,7 @@ class Categorical(RandomVariable):
     """
 
     def _base_dist(self, p: TensorLike, *args, **kwargs):
-        return tfd.Categorical(probs=p, *args, **kwargs)
+        return tfd.Categorical(probs=p, dtype=tf.float32, *args, **kwargs)
 
 
 class Geometric(RandomVariable):
@@ -637,4 +637,4 @@ class Zipf(RandomVariable):
     """
 
     def _base_dist(self, alpha: TensorLike, *args, **kwargs):
-        return tfd.Zipf(power=alpha, *args, **kwargs)
+        return tfd.Zipf(power=alpha, dtype=tf.float32, *args, **kwargs)

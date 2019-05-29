@@ -58,7 +58,7 @@ def random_variable_args():
             {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
         ),
         (random_variables.ZeroInflatedPoisson, {"psi": 0.2, "theta": 2, "sample": 0}),
-        (random_variables.Zipf, {"alpha": 2}),
+        (random_variables.Zipf, {"alpha": 2.0}),
     )
 
     ids = [dist[0].__name__ for dist in _random_variable_args]
@@ -95,7 +95,8 @@ def test_rvs_logp_and_forward_sample(tf_seed, randomvariable, kwargs, request):
         test_model = test_model.configure()
         log_prob = test_model.make_log_prob_function()
         # Assert that values are returned with no exceptions
-        vals = log_prob(sample)
+        _kwargs = {request.node.name: sample}
+        vals = log_prob(**_kwargs)
 
         assert vals is not None
 

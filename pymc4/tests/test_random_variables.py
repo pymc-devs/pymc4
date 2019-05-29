@@ -58,7 +58,7 @@ def random_variable_args():
             {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
         ),
         (random_variables.ZeroInflatedPoisson, {"psi": 0.2, "theta": 2, "sample": 0}),
-        (random_variables.Zipf, {"alpha": 2., "sample": 2.}),
+        (random_variables.Zipf, {"alpha": 2.}),
     )
 
     ids = [dist[0].__name__ for dist in _random_variable_args]

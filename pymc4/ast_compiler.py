@@ -116,21 +116,24 @@ def parse_snippet(source, filename, mode, flags, firstlineno, privateprefix_igno
 
 class AutoNameTransformer(ast.NodeTransformer):
     def visit_Assign(self, tree_node):
-        rv_name = tree_node.targets[0].id
-        # Test if creation of known RV
-        func = tree_node.value.func
-        if hasattr(func, "attr"):
-            call = func.attr
-        else:
-            call = func.id
+        try:
+            rv_name = tree_node.targets[0].id
+            # Test if creation of known RV
+            func = tree_node.value.func
+            if hasattr(func, "attr"):
+                call = func.attr
+            else:
+                call = func.id
 
-        if call not in ALL_RVs:
-            return tree_node
+            if call not in ALL_RVs:
+                return tree_node
 
-        # Test if name keyword is already set
-        if any(kwarg.arg == "name" for kwarg in tree_node.value.keywords):
-            return tree_node
-        else:
-            tree_node.value.keywords.append(ast.keyword("name", ast.Str(rv_name)))
+            # Test if name keyword is already set
+            if any(kwarg.arg == "name" for kwarg in tree_node.value.keywords):
+                return tree_node
+            else:
+                tree_node.value.keywords.append(ast.keyword("name", ast.Str(rv_name)))
+        except AttributeError:
+            pass
 
         return tree_node

@@ -22,6 +22,7 @@ def autoname_test():
     inferred_full_path = pm.random_variables.Normal(0, 1)
     pm.Normal(0, 1, name="supplied_name")
     dummy = pm.Normal(0, 1, name="overwrite_name")
+    dummy + inferred_w_module
     x = create_rvs()
 
 

@@ -68,4 +68,3 @@ def test_forward_sample_rugby():
     forward_sample = model.forward_sample()
     assert len(forward_sample["away_points"]) == 60
     assert len(forward_sample["home_points"]) == 60
-    assert tf.math.equal(forward_sample["home"], 1.6069661)

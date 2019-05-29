@@ -20,7 +20,8 @@ def simple_model():
 
 
 def true_joint_lp(x, y):
-    return tf.reduce_sum(tfd.Normal(0, 1).log_prob(x)) + tf.reduce_sum(tfd.Normal(x, 1).log_prob(y))
+    tnsor = tf.reduce_sum(tfd.Normal(0, 1).log_prob(x)) + tf.reduce_sum(tfd.Normal(x, 1).log_prob(y))
+    return tnsor.numpy()
 
 
 def test_condition_x(simple_model):
@@ -29,7 +30,7 @@ def test_condition_x(simple_model):
 
     logp_func = mod.make_log_prob_function()
     logp_y = logp_func(y=np.float32([1, 2, 3]))
-    assert logp_y == pytest.approx(true_joint_lp(x=np.float32([1, 1, 1]), y=np.float32([1, 2, 3])))
+    assert tf.math.equal(logp_y, true_joint_lp(x=np.float32([1, 1, 1]), y=np.float32([1, 2, 3])))
 
 
 def y(simple_model):
@@ -47,4 +48,4 @@ def test_condition_xy(simple_model):
 
     logp_func = mod.make_log_prob_function()
     logp_xy = logp_func()
-    assert logp_xy == pytest.approx(true_joint_lp(x=np.float32([1, 1, 1]), y=np.float32([1, 2, 3])))
+    assert tf.math.equal(logp_xy, true_joint_lp(x=np.float32([1, 1, 1]), y=np.float32([1, 2, 3])))

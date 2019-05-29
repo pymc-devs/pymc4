@@ -60,7 +60,7 @@ class Bernoulli(RandomVariable):
     """
 
     def _base_dist(self, p: TensorLike, *args, **kwargs):
-        return tfd.Bernoulli(probs=p, *args, **kwargs)
+        return tfd.Bernoulli(probs=p, dtype=tf.float32, *args, **kwargs)
 
 
 class Binomial(RandomVariable):

@@ -20,8 +20,7 @@ def simple_model():
 
 
 def true_joint_lp(x, y):
-    tnsor = tf.reduce_sum(tfd.Normal(0, 1).log_prob(x)) + tf.reduce_sum(tfd.Normal(x, 1).log_prob(y))
-    return tnsor.numpy()
+    return tf.reduce_sum(tfd.Normal(0, 1).log_prob(x)) + tf.reduce_sum(tfd.Normal(x, 1).log_prob(y))
 
 
 def test_condition_x(simple_model):

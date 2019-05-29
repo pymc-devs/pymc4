@@ -1,6 +1,5 @@
-import tensorflow.compat.v2 as tf
+import tensorflow as tf
 
-tf.enable_v2_behavior()
 import tensorflow_probability as tfp
 
 tfd = tfp.distributions

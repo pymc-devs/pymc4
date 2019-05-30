@@ -1,4 +1,5 @@
-from .random_variable import RandomVariable, TensorLike
+'''
+from .base import RandomVariable, TensorLike
 from tensorflow_probability import distributions as tfd
 import pymc4 as pm
 from typing import List
@@ -74,3 +75,4 @@ class Mixture(RandomVariable):
             components=[d._distribution for d in distributions],
             name=kwargs.get("name"),
         )
+'''

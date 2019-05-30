@@ -1,4 +1,5 @@
-from .random_variable import RandomVariable
+from .base import TensorflowDistributionAdapter
+"""
 from .discrete import (
     Bernoulli,
     Binomial,
@@ -85,3 +86,4 @@ __all__ = [
     "VonMisesFisher",
     "Wishart",
 ]
+"""

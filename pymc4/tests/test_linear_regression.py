@@ -9,7 +9,7 @@ from numpy import array, float32
 def linear_regression(tf_session):
     """"""
     # Logp calculation for linear regression
-    @pm.model
+    @pm.coroutine_model
     def linreg(n_points=100):
         # Define priors
         sigma = pm.HalfNormal("sigma", sigma=10)

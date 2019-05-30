@@ -4,14 +4,14 @@ PyMC4 discrete random variables.
 Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
-
+'''
 # pylint: disable=undefined-all-variable
 from tensorflow_probability import distributions as tfd
 import tensorflow_probability as tfp
 import tensorflow as tf
 import numpy as np
 
-from .random_variable import RandomVariable, TensorLike
+from .base import RandomVariable, TensorLike
 import pymc4 as pm
 
 
@@ -638,3 +638,4 @@ class Zipf(RandomVariable):
 
     def _base_dist(self, alpha: TensorLike, *args, **kwargs):
         return tfd.Zipf(power=alpha, *args, **kwargs)
+'''

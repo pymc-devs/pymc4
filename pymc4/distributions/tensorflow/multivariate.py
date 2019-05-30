@@ -4,11 +4,11 @@ PyMC4 multivariate random variables.
 Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
-
+'''
 # pylint: disable=undefined-all-variable
 from tensorflow_probability import distributions as tfd
 
-from .random_variable import RandomVariable, TensorLike, IntTensorLike
+from .base import RandomVariable, TensorLike, IntTensorLike
 
 
 class Dirichlet(RandomVariable):
@@ -273,3 +273,4 @@ class Wishart(RandomVariable):
 
     def _base_dist(self, nu: IntTensorLike, V: TensorLike, *args, **kwargs):
         return tfd.Wishart(df=nu, scale=V, *args, **kwargs)
+'''

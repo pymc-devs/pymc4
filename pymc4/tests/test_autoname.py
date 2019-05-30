@@ -15,7 +15,7 @@ def create_rvs(**kwargs):
     return pm.Normal(0, 1, name="inside_function")
 
 
-@pm.model(auto_name=True)
+@pm.coroutine_model(auto_name=True)
 def autoname_test():
     inferred_w_module = pm.Normal(0, 1)
     inferred_wo_module = Normal(0, 1)

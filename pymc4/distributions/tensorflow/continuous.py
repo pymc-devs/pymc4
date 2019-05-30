@@ -4,13 +4,10 @@ PyMC4 continuous random variables.
 Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
-
+'''
 # pylint: disable=undefined-all-variable
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
-
-from .random_variable import PositiveContinuousRV, RandomVariable, UnitContinuousRV
-from .random_variable import TensorLike, IntTensorLike
 
 
 class Beta(UnitContinuousRV):
@@ -1300,3 +1297,5 @@ class Weibull(PositiveContinuousRV):
             ),
             name="Weibull",
         )
+
+'''

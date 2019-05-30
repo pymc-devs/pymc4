@@ -7,9 +7,9 @@ import __future__
 
 PyCF_MASK = sum(v for k, v in vars(__future__).items() if k.startswith("CO_FUTURE"))
 
-from . import random_variables
+from . import distributions
 
-ALL_RVs = [rv for rv in dir(random_variables) if rv[0].isupper()]
+ALL_RVs = [rv for rv in dir(distributions) if rv[0].isupper()]
 
 
 class Error(Exception):

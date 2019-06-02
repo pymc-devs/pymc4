@@ -152,6 +152,7 @@ class SamplingExecutor(Executor):
         if model_name is None and model_info["keep_return"]:
             error = EvaluationError("Attempting to create unnamed variable")
             control_flow.throw(error)
+            control_flow.close()
             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
         return_name = pymc4.scopes.Scope.variable_name(model_name)
         if not model_info["keep_auxiliary"] and return_name in state.values:

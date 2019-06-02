@@ -1,11 +1,22 @@
-from ..coroutine_model import Model
-from ..scopes import Scope
+import abc
+from ..coroutine_model import Model, unpack
 
 
 class Distribution(Model):
-    def __init__(self, name, keep_auxiliary=False, keep_return=True, transform=None):
-        super().__init__(self.control_flow, name=name, keep_return=keep_return, keep_auxiliary=keep_auxiliary)
+    def __init__(self, name, keep_auxiliary=False, keep_return=True, transform=None, **kwargs):
+        self.conditions = self.unpack_conditions(**kwargs)
+        super().__init__(self.unpack_distribution, name=name, keep_return=keep_return, keep_auxiliary=keep_auxiliary)
         self.transform = transform
+
+    def unpack_distribution(self):
+        return unpack(self)
+
+    @staticmethod
+    def unpack_conditions(**kwargs) -> dict:
+        """
+        Parse arguments
+        """
+        return kwargs
 
     def sample(self, shape=(), seed=None):
         """
@@ -23,39 +34,56 @@ class Distribution(Model):
     def log_prob(self, value):
         raise NotImplementedError
 
-    def control_flow(self):
-        if self.transform is not None and Scope.use_transform():
-            value = yield from self.transformed_control_flow()
-        else:
-            value = yield from self.untransformed_control_flow()
-        return value
 
-    def transformed_control_flow(self):
+class ContinuousDistribution(Distribution):
+    ...
+
+
+class DiscreteDistribution(Distribution):
+    ...
+
+
+class BoundedDistribution(Distribution):
+    @abc.abstractmethod
+    def lower_limit(self):
         raise NotImplementedError
 
-    def untransformed_control_flow(self):
-        value = yield self
-        return value
+    @abc.abstractmethod
+    def upper_limit(self):
+        raise NotImplementedError
 
 
-DIST_CONVERTERS = {
-    # this should be ready to use
-    Distribution: lambda x: x
-}
+class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
+    ...
 
 
-def convert_distribution(dist):
-    matched = list(filter(lambda key: isinstance(dist, key), DIST_CONVERTERS))
-    if matched:
-        return DIST_CONVERTERS[matched[-1]](dist)
-    else:
-        raise TypeError("object {} can't be converted to a PyMC4 distribution".format(dist))
+class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution):
+    ...
 
 
-def register_distribution_converter_function(cls):
-    def wrap(func):
-        DIST_CONVERTERS[cls] = func
-        return func
-    return wrap
+class UnitContinuousDistribution(BoundedContinuousDistribution):
+    def lower_limit(self):
+        return 0.
+
+    def upper_limit(self):
+        return 1.
 
 
+class PositiveContinuousDistribution(BoundedContinuousDistribution):
+    def lower_limit(self):
+        return 0.
+
+    def upper_limit(self):
+        return float("inf")
+
+
+class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
+    def lower_limit(self):
+        return 0
+
+    def upper_limit(self):
+        return float("inf")
+
+
+class SimplexContinuousDistribution(ContinuousDistribution):
+    ...

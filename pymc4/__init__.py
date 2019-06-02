@@ -1,5 +1,6 @@
 """PyMC4."""
 
+from . import utils
 from .scopes import name_scope
 from . import coroutine_model
 from . import distributions

@@ -4,18 +4,12 @@ PyMC4 discrete random variables.
 Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
-'''
+
 # pylint: disable=undefined-all-variable
-from tensorflow_probability import distributions as tfd
-import tensorflow_probability as tfp
-import tensorflow as tf
-import numpy as np
-
-from .base import RandomVariable, TensorLike
-import pymc4 as pm
+from .base import PositiveDiscreteDistribution, BoundedDiscreteDistribution
 
 
-class Bernoulli(RandomVariable):
+class Bernoulli(BoundedDiscreteDistribution):
     r"""Bernoulli random variable.
 
     The Bernoulli distribution describes the probability of successes
@@ -58,12 +52,17 @@ class Bernoulli(RandomVariable):
 
     - p: probs
     """
+    def __init__(self, name, p, **kwargs):
+        super().__init__(name, p=p, **kwargs)
 
-    def _base_dist(self, p: TensorLike, *args, **kwargs):
-        return tfd.Bernoulli(probs=p, *args, **kwargs)
+    def lower_limit(self):
+        return 0
+
+    def upper_limit(self):
+        return 1
 
 
-class Binomial(RandomVariable):
+class Binomial(BoundedDiscreteDistribution):
     r"""
     Binomial random variable.
 
@@ -113,16 +112,28 @@ class Binomial(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, n: TensorLike, p: TensorLike, *args, **kwargs):
-        return tfd.Binomial(total_count=n, probs=p, *args, **kwargs)
+    def __init__(self, name, n, p, **kwargs):
+        super().__init__(name, n=n, p=p, **kwargs)
+
+    def lower_limit(self):
+        return 0
+
+    def upper_limit(self):
+        return self.conditions["n"]
 
 
-class Constant(RandomVariable):
-    def _base_dist(self, value: TensorLike, *args, **kwargs):
-        return tfd.Deterministic(loc=value, *args, **kwargs)
+class Constant(BoundedDiscreteDistribution):
+    def __init__(self, name, value, **kwargs):
+        super().__init__(name, value=value, **kwargs)
+
+    def lower_limit(self):
+        return self.conditions["value"]
+
+    def upper_limit(self):
+        return self.conditions["value"]
 
 
-class DiscreteUniform(RandomVariable):
+class DiscreteUniform(BoundedDiscreteDistribution):
     r"""
     Discrete uniform random variable.
 
@@ -162,22 +173,17 @@ class DiscreteUniform(RandomVariable):
         Upper limit (upper > lower).
     """
 
-    def _base_dist(self, lower: TensorLike, upper: TensorLike, *args, **kwargs):
-        """
-        Discrete uniform base distribution.
+    def __init__(self, name, lower, upper, **kwargs):
+        super().__init__(name, lower=lower, upper=upper, **kwargs)
 
-        A DiscreteUniform is an equiprobable Categorical over (upper - lower),
-        shifted up by low.
-        """
-        probs = np.ones(int(upper - lower)) / (upper - lower)
-        return tfd.TransformedDistribution(
-            distribution=tfd.Categorical(probs=probs, dtype=tf.float32),
-            bijector=tfp.bijectors.AffineScalar(shift=float(lower)),
-            name="DiscreteUniform",
-        )
+    def lower_limit(self):
+        return self.conditions["lower"]
+
+    def upper_limit(self):
+        return self.conditions["upper"]
 
 
-class Categorical(RandomVariable):
+class Categorical(BoundedDiscreteDistribution):
     r"""
     Categorical random variable.
 
@@ -218,11 +224,13 @@ class Categorical(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, p: TensorLike, *args, **kwargs):
-        return tfd.Categorical(probs=p, *args, **kwargs)
+    def __init__(self, name, p, **kwargs):
+        super().__init__(name, p=p, **kwargs)
+
+    # TODO: upper limit
 
 
-class Geometric(RandomVariable):
+class Geometric(BoundedDiscreteDistribution):
     r"""
     Geometric random variable.
 
@@ -249,7 +257,7 @@ class Geometric(RandomVariable):
         plt.show()
 
     ========  =============================
-    Support   :math:`x \in \mathbb{N}_{>0}`
+    Support   :math:`x \in \mathbb{N}_{\ge 0}`
     Mean      :math:`\dfrac{1}{p}`
     Variance  :math:`\dfrac{1 - p}{p^2}`
     ========  =============================
@@ -265,12 +273,17 @@ class Geometric(RandomVariable):
 
     - p: probs
     """
+    def __init__(self, name, p, **kwargs):
+        super().__init__(name, p=p, **kwargs)
 
-    def _base_dist(self, p: TensorLike, *args, **kwargs):
-        return tfd.Geometric(probs=p, *args, **kwargs)
+    def lower_limit(self):
+        return 1
+
+    def upper_limit(self):
+        return float("inf")
 
 
-class NegativeBinomial(RandomVariable):
+class NegativeBinomial(PositiveDiscreteDistribution):
     r"""
     Negative binomial random variable.
 
@@ -333,13 +346,11 @@ class NegativeBinomial(RandomVariable):
     - mu / (mu + alpha): probs
     """
 
-    def _base_dist(self, mu: TensorLike, alpha: TensorLike, *args, **kwargs):
-        total_count = mu + alpha
-        probs = mu / (mu + alpha)
-        return tfd.NegativeBinomial(total_count=total_count, probs=probs, *args, **kwargs)
+    def __init__(self, name, mu, alpha, **kwargs):
+        super().__init__(name, mu=mu, alpha=alpha, **kwargs)
 
 
-class Poisson(RandomVariable):
+class Poisson(PositiveDiscreteDistribution):
     r"""
     Poisson random variable.
 
@@ -389,11 +400,11 @@ class Poisson(RandomVariable):
     - mu: rate
     """
 
-    def _base_dist(self, mu: TensorLike, *args, **kwargs):
-        return tfd.Poisson(rate=mu, *args, **kwargs)
+    def __init__(self, name, mu, **kwargs):
+        super().__init__(name, mu=mu, **kwargs)
 
 
-class ZeroInflatedBinomial(RandomVariable):
+class ZeroInflatedBinomial(PositiveDiscreteDistribution):
     r"""
     Zero-inflated Binomial log-likelihood.
 
@@ -443,21 +454,11 @@ class ZeroInflatedBinomial(RandomVariable):
         Probability of success in each trial (0 < p < 1).
     """
 
-    def _base_dist(self, psi: TensorLike, n: TensorLike, p: TensorLike, *args, **kwargs):
-        """
-        Zero-inflated binomial base distribution.
-
-        A ZeroInflatedBinomial is a mixture between a deterministic
-        distribution and a Binomial distribution.
-        """
-        return pm.Mixture(
-            p=[psi, 1.0 - psi],
-            distributions=[pm.Constant(0, name="Zero"), pm.Binomial(n, p, name="Bin")],
-            name="ZeroInflatedBinomial",
-        )._distribution
+    def __init__(self, name, psi, n, p, **kwargs):
+        super().__init__(name, psi=psi, n=n, p=p, **kwargs)
 
 
-class ZeroInflatedNegativeBinomial(RandomVariable):
+class ZeroInflatedNegativeBinomial(PositiveDiscreteDistribution):
     r"""
     Zero-Inflated Negative binomial random variable.
 
@@ -524,18 +525,11 @@ class ZeroInflatedNegativeBinomial(RandomVariable):
         desired.
     """
 
-    def _base_dist(self, psi: TensorLike, mu: TensorLike, alpha: TensorLike, *args, **kwargs):
-        return pm.Mixture(
-            p=[psi, 1.0 - psi],
-            distributions=[
-                pm.Constant(value=0, name="Zero"),
-                pm.NegativeBinomial(mu=mu, alpha=alpha, name="NegBin"),
-            ],
-            name="ZeroInflatedNegativeBinomial",
-        )._distribution
+    def __init__(self, name, psi, mu, alpha, **kwargs):
+        super().__init__(name, psi=psi, mu=mu, alpha=alpha, **kwargs)
 
 
-class ZeroInflatedPoisson(RandomVariable):
+class ZeroInflatedPoisson(PositiveDiscreteDistribution):
     r"""
     Zero-inflated Poisson random variable.
 
@@ -586,15 +580,11 @@ class ZeroInflatedPoisson(RandomVariable):
         (theta >= 0).
     """
 
-    def _base_dist(self, psi: TensorLike, theta: TensorLike, *args, **kwargs):
-        return pm.Mixture(
-            p=[psi, 1.0 - psi],
-            distributions=[pm.Constant(value=0, name="Zero"), pm.Poisson(mu=theta, name="Poisson")],
-            name="ZeroInflatedPoisson",
-        )._distribution
+    def __init__(self, name, psi, theta, **kwargs):
+        super().__init__(name, psi=psi, theta=theta, **kwargs)
 
 
-class Zipf(RandomVariable):
+class Zipf(BoundedDiscreteDistribution):
     r"""
     Zipf random variable.
 
@@ -636,6 +626,10 @@ class Zipf(RandomVariable):
     - alpha: power
     """
 
-    def _base_dist(self, alpha: TensorLike, *args, **kwargs):
-        return tfd.Zipf(power=alpha, *args, **kwargs)
-'''
+    def __init__(self, name, alpha, **kwargs):
+        super().__init__(name, alpha=alpha, **kwargs)
+
+    def lower_limit(self):
+        return 1
+
+    # TODO: upper limit

@@ -43,10 +43,14 @@ class Scope(object):
         return cls.context.stack
 
     @classmethod
-    def chain(cls, attr, *, leaf=_leaf, predicate=lambda _: True):
+    def chain(cls, attr, *, leaf=_leaf, predicate=lambda _: True, drop_none=False):
         for c in cls.get_contexts():
             if predicate(c):
-                yield getattr(c, attr)
+                attr = getattr(c, attr)
+                if drop_none and attr is None:
+                    continue
+                else:
+                    yield attr
         if leaf is not cls._leaf:
             yield leaf
 
@@ -57,7 +61,7 @@ class Scope(object):
 
         Parameters
         ----------
-        name : str
+        name : str|None
             The desired target name for a variable, can be any, including None
 
         Returns
@@ -74,15 +78,11 @@ class Scope(object):
         ...         print(Scope.variable_name("leaf1"))
         inner/leaf1
         """
-        return "/".join(map(
-            str, filter(
-                lambda n: n is not None,
-                cls.chain("name", leaf=name)
-            )))
+        return "/".join(map(str, cls.chain("name", leaf=name, drop_none=True)))
 
     @classmethod
     def use_transform(cls):
-        flags = list(cls.chain("transformed", predicate=lambda c: c.transformed is not None))
+        flags = list(cls.chain("transformed", drop_none=True))
         return flags and flags[-1]
 
 

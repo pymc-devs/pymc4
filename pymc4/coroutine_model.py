@@ -1,6 +1,7 @@
 import biwrap
 import functools
-
+import types
+import pymc4
 from pymc4.scopes import name_scope
 
 
@@ -37,12 +38,14 @@ class ModelTemplate(object):
 
     Parameters
     ----------
-    genfn : callable
+    template : callable
         generative process, that accepts any arguments as conditioners and returns realizations if any.
     keep_auxiliary : bool
         generative process may require some auxiliary variables to be created, but they are probably will not be used
         anywhere else. In that case it is useful to tell PyMC4 engine that we can get rid of auxiliary variables
         as long as they are not needed any more.
+    keep_return : bool
+        the return value of the model will be recorded
     """
 
     def __init__(self, template, *, name=None, keep_auxiliary=True, keep_return=True):
@@ -82,169 +85,149 @@ class ModelTemplate(object):
         )
 
 
+def unpack(arg):
+    if isinstance(arg, (Model, types.GeneratorType)):
+        return (yield arg)
+    else:
+        return arg
+
+
+def yieldify(fn):
+    @functools.wraps(fn)
+    def wrapped(*args, **kwargs):
+        args, kwargs = pymc4.utils.map_nested(unpack, (args, kwargs))
+        return fn(*args, **kwargs)
+    return wrapped
+
+
 class Model(object):
-    """
-    A container for generators, and the corresponding model
-    """
+    # this is gonna be used for generator-like objects
+    _default_model_info = dict(keep_auxiliary=True, keep_return=False)
+
     def __init__(self, genfn, *, name=None, keep_auxiliary=True, keep_return=True):
         self.genfn = genfn
         self.name = name
-        self.keep_auxiliary = keep_auxiliary
-        self.keep_return = keep_return
+        self._model_info = dict(keep_auxiliary=keep_auxiliary, keep_return=keep_return)
+
+    def model_info(self):
+        info = self._model_info.copy()
+        info.update(scope=name_scope(self.name), name=self.name)
+        return info
+
+    @classmethod
+    def default_model_info(cls):
+        info = cls._default_model_info.copy()
+        info.update(scope=name_scope(None), name=None)
+        return info
+
+    def control_flow(self):
+        return (yield from self.genfn())
 
     def __iter__(self):
-        with name_scope(self.name):
-            # correctly handles the case when gen is just a single Distribution object
-            # in that case we should immediately proceed sampling and other stuff
-            control_flow = self.genfn()
-            ret = yield from control_flow
-            return ret
+        return self.control_flow()
 
     # This will result into unnamed (outer) name scope and not tracked return value
+    @yieldify
     def __add__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value + other
+        return self + other
 
+    @yieldify
     def __radd__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other + value
+        return other + self
 
+    @yieldify
     def __sub__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value - other
+        return self - other
 
+    @yieldify
     def __rsub__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other - value
+        return other - self
 
+    @yieldify
     def __mul__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value * other
+        return self * other
 
+    @yieldify
     def __rmul__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other * value
+        return other * self
 
+    @yieldify
     def __matmul__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value @ other
+        return self @ other
 
+    @yieldify
     def __rmatmul__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other @ value
+        return other @ self
 
+    @yieldify
     def __truediv__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value / other
+        return self / other
 
+    @yieldify
     def __rtruediv__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other / value
+        return other / self
 
+    @yieldify
     def __floordiv__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value // other
+        return self // other
 
+    @yieldify
     def __rfloordiv__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other // value
+        return other // self
 
+    @yieldify
     def __mod__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value % other
+        return self % other
 
+    @yieldify
     def __rmod__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other % value
+        return other % self
 
+    @yieldify
     def __pow__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value ** other
+        return self ** other
 
+    @yieldify
     def __rpow__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other ** value
+        return other ** self
 
+    @yieldify
     def __and__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value & other
+        return self & other
 
+    @yieldify
     def __rand__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other & value
+        return other & self
 
+    @yieldify
     def __xor__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value ^ other
+        return self ^ other
 
+    @yieldify
     def __rxor__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other ^ value
+        return other ^ self
 
+    @yieldify
     def __or__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return value | other
+        return self | other
 
+    @yieldify
     def __ror__(self, other):
-        value = yield self
-        if isinstance(other, Model):
-            other = yield other
-        return other | value
+        return other | self
 
+    @yieldify
     def __neg__(self):
-        value = yield self
-        return -value
+        return -self
 
+    @yieldify
     def __pos__(self):
-        value = yield self
-        return +value
+        return +self
 
+    @yieldify
     def __invert__(self):
-        value = yield self
-        return ~value
+        return ~self
 
+    @yieldify
     def __getitem__(self, slice_spec, var=None):
-        value = yield self
-        return value.__getitem__(slice_spec, var=var)
+        return self.__getitem__(slice_spec, var=var)
+

@@ -102,6 +102,7 @@ class Executor(metaclass=abc.ABCMeta):
                 # and therefore bypass this error up the stack
                 # -----
                 # this message with little modifications will appear in exception
+                control_flow.close()
                 raise
             except EarlyReturn as e:
                 # for some reason we may raise it within model evaluation,

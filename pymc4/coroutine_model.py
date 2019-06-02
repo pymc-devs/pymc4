@@ -1,7 +1,7 @@
 import biwrap
 import functools
 
-from pymc4 import name_scope
+from pymc4.scopes import name_scope
 
 
 @biwrap.biwrap

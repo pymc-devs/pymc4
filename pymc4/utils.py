@@ -22,4 +22,3 @@ def map_nested(fn, structure, cond=lambda obj: True):
         return inner_map(structure)
     finally:
         inner_map = None
-

@@ -18,6 +18,7 @@ class Scope(object):
     ...         print(list(Scope.chain("var")))
     [1, 3]
     """
+
     _leaf = object()
     context = threading.local()
 

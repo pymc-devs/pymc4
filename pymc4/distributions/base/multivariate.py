@@ -6,9 +6,11 @@ Implements random variables not supported by tfp as distributions.
 """
 
 # pylint: disable=undefined-all-variable
-from tensorflow_probability import distributions as tfd
-
-from .base import SimplexContinuousDistribution, DiscreteDistribution, ContinuousDistribution, BoundedDistribution
+from .distribution import (
+    SimplexContinuousDistribution,
+    DiscreteDistribution,
+    ContinuousDistribution,
+)
 
 
 class Dirichlet(SimplexContinuousDistribution):
@@ -140,6 +142,7 @@ class Multinomial(DiscreteDistribution):
     - n: total_count
     - p: probs
     """
+
     def __init__(self, name, n, p, **kwargs):
         super().__init__(name, n=n, p=p, **kwargs)
 
@@ -226,6 +229,7 @@ class VonMisesFisher(ContinuousDistribution):
     - mu: mean_direction
     - kappa: concentration
     """
+
     def __init__(self, name, mu, kappa, **kwargs):
         super().__init__(name, mu=mu, kappa=kappa, **kwargs)
 
@@ -268,6 +272,6 @@ class Wishart(ContinuousDistribution):
     - nu: df
     - V: scale
     """
+
     def __init__(self, name, nu, V, **kwargs):
         super().__init__(name, nu=nu, V=V, **kwargs)
-

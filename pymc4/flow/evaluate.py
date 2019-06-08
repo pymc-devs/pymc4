@@ -65,7 +65,8 @@ class Executor(metaclass=abc.ABCMeta):
                 raise StopExecution(
                     "Attempting to call `evaluate_model` on a "
                     "non model-like object {}. Supported types are "
-                    "`types.GeneratorType` and `pm.coroutine_model.Model`")
+                    "`types.GeneratorType` and `pm.coroutine_model.Model`"
+                )
             control_flow = model
             model_info = pm.coroutine_model.Model.default_model_info()
         return_value = None
@@ -73,9 +74,11 @@ class Executor(metaclass=abc.ABCMeta):
             try:
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
-                    if isinstance(dist, pm.distributions.Distribution):
+                    if isinstance(dist, pm.distributions.base.Distribution):
                         dist = self.modify_distribution(dist, model_info, state)
-                    if isinstance(dist, pm.distributions.Distribution):
+                    if dist is None:
+                        return_value = None
+                    elif isinstance(dist, pm.distributions.base.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(dist, model_info, state)
                         except EvaluationError as error:
@@ -84,7 +87,9 @@ class Executor(metaclass=abc.ABCMeta):
                     elif isinstance(dist, (pm.coroutine_model.Model, types.GeneratorType)):
                         return_value, state = self.evaluate_model(dist, state=state)
                     else:
-                        error = EvaluationError("Type of {} can't be processed in evaluation".format(dist))
+                        error = EvaluationError(
+                            "Type of {} can't be processed in evaluation".format(dist)
+                        )
                         control_flow.throw(error)
                         raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
             except StopExecution:
@@ -114,7 +119,7 @@ class Executor(metaclass=abc.ABCMeta):
         return return_value, state
 
 
-SamplingState = collections.namedtuple("EvaluationState", "values,distributions")
+SamplingState = collections.namedtuple("EvaluationState", "values,distributions,potentials")
 
 
 class SamplingExecutor(Executor):
@@ -124,12 +129,17 @@ class SamplingExecutor(Executor):
     def new_state(self, **do):
         state_do = self.default_do.copy()
         state_do.update(do)
-        return SamplingState(values=state_do, distributions=dict())
+        return SamplingState(values=state_do, distributions=dict(), potentials=[])
 
     def modify_distribution(self, dist, model_info, state):
         return dist
 
     def proceed_distribution(self, dist, model_info, state):
+        if isinstance(dist, pymc4.distributions.base.Potential):
+            value = dist.value
+            state.potentials.append(value)
+            return value, state
+
         scoped_name = pymc4.scopes.Scope.variable_name(dist.name)
         if scoped_name in state.distributions:
             raise EvaluationError(
@@ -137,8 +147,10 @@ class SamplingExecutor(Executor):
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
                 "model/function twice without providing explicit names. If you see this "
                 "error message and the function being called is not wrapped with "
-                "`pm.model`, you should better wrap it to provide explicit name for this model"
-                .format(scoped_name))
+                "`pm.model`, you should better wrap it to provide explicit name for this model".format(
+                    scoped_name
+                )
+            )
         if scoped_name in state.values:
             return_value = state.values[scoped_name]
         else:
@@ -168,4 +180,3 @@ class SamplingExecutor(Executor):
             return_name = pymc4.scopes.Scope.variable_name(model_info["name"])
             state.values[return_name] = return_value
         return return_value, state
-

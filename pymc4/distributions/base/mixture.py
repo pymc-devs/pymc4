@@ -1,4 +1,4 @@
-from .base import Distribution
+from .distribution import Distribution
 
 
 class Mixture(Distribution):
@@ -23,6 +23,6 @@ class Mixture(Distribution):
         or iterable of one-dimensional PyMC4 distributions the
         component distributions :math:`f_1, \ldots, f_n`
     """
+
     def __init__(self, name, p, distributions, **kwargs):
         super().__init__(name, p=p, distributions=distributions, **kwargs)
-

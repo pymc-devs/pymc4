@@ -6,12 +6,12 @@ Implements random variables not supported by tfp as distributions.
 """
 
 # pylint: disable=undefined-all-variable
-from .base import (
+from .distribution import (
     BoundedDistribution,
     BoundedContinuousDistribution,
     ContinuousDistribution,
     UnitContinuousDistribution,
-    PositiveContinuousDistribution
+    PositiveContinuousDistribution,
 )
 import math
 
@@ -652,7 +652,7 @@ class Kumaraswamy(UnitContinuousDistribution):
     - b: concentration1
 
     """
-    
+
     def __init__(self, name, a, b, **kwargs):
         super().__init__(name, a=a, b=b, **kwargs)
 
@@ -705,7 +705,7 @@ class Laplace(ContinuousDistribution):
     - mu: loc
     - b: scale
     """
-    
+
     def __init__(self, name, mu, b, **kwargs):
         super().__init__(name, mu=mu, b=b, **kwargs)
 
@@ -976,13 +976,13 @@ class Pareto(BoundedContinuousDistribution):
     - alpha: concentration
     - m: scale
     """
-    
+
     def __init__(self, name, alpha, m, **kwargs):
         super().__init__(name, alpha=alpha, m=m, **kwargs)
-    
+
     def upper_limit(self):
         return float("inf")
-    
+
     def lower_limit(self):
         return self.conditions["m"]
 
@@ -1052,7 +1052,7 @@ class StudentT(ContinuousDistribution):
     - sigma: scale
     - nu: df
     """
-    
+
     def __init__(self, name, mu, sigma, nu, **kwargs):
         super().__init__(name, mu=mu, sigma=sigma, nu=nu, **kwargs)
 
@@ -1118,7 +1118,7 @@ class Triangular(BoundedDistribution):
     - c: peak
     - upper: high
     """
-    
+
     def __init__(self, name, lower, c, upper, **kwargs):
         super().__init__(name, lower=lower, c=c, upper=upper, **kwargs)
 
@@ -1180,10 +1180,10 @@ class Uniform(BoundedContinuousDistribution):
 
     def __init__(self, name, lower, upper, **kwargs):
         super().__init__(name, lower=lower, upper=upper, **kwargs)
-    
+
     def lower_limit(self):
         return self.conditions["lower"]
-    
+
     def upper_limit(self):
         return self.conditions["upper"]
 
@@ -1244,7 +1244,7 @@ class VonMises(BoundedDistribution):
 
     def lower_limit(self):
         return -math.pi
-    
+
     def upper_limit(self):
         return math.pi
 
@@ -1299,6 +1299,6 @@ class Weibull(PositiveContinuousDistribution):
     - alpha: concentration
     - beta: scale
     """
-    
+
     def __init__(self, name, alpha, beta, **kwargs):
         super().__init__(name, alpha=alpha, beta=beta, **kwargs)

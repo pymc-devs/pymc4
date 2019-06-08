@@ -1,1 +1,1 @@
-from .evaluate import evaluate_model
+from .evaluate import SamplingExecutor

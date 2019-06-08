@@ -8,14 +8,19 @@ from pymc4.scopes import name_scope
 @biwrap.biwrap
 def model(genfn, *, name=None, keep_auxiliary=True, keep_return=True, method=False):
     if method:
-        template = ModelTemplate(genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return)
+        template = ModelTemplate(
+            genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return
+        )
 
         @functools.wraps(genfn)
         def wrapped(*args, **kwargs):
             return template(*args, **kwargs)
+
         return wrapped
     else:
-        template = ModelTemplate(genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return)
+        template = ModelTemplate(
+            genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return
+        )
         return template
 
 
@@ -80,9 +85,7 @@ class ModelTemplate(object):
             keep_auxiliary = self.keep_auxiliary
         if keep_return is None:
             keep_return = keep_return
-        return Model(
-            genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return,
-        )
+        return Model(genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return)
 
 
 def unpack(arg):
@@ -97,6 +100,7 @@ def yieldify(fn):
     def wrapped(*args, **kwargs):
         args, kwargs = pymc4.utils.map_nested(unpack, (args, kwargs))
         return fn(*args, **kwargs)
+
     return wrapped
 
 
@@ -230,4 +234,3 @@ class Model(object):
     @yieldify
     def __getitem__(self, slice_spec, var=None):
         return self.__getitem__(slice_spec, var=var)
-

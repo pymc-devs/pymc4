@@ -1,11 +1,16 @@
 import abc
-from ..coroutine_model import Model, unpack
+from ...coroutine_model import Model, unpack
 
 
 class Distribution(Model):
     def __init__(self, name, keep_auxiliary=False, keep_return=True, transform=None, **kwargs):
         self.conditions = self.unpack_conditions(**kwargs)
-        super().__init__(self.unpack_distribution, name=name, keep_return=keep_return, keep_auxiliary=keep_auxiliary)
+        super().__init__(
+            self.unpack_distribution,
+            name=name,
+            keep_return=keep_return,
+            keep_auxiliary=keep_auxiliary,
+        )
         self.transform = transform
 
     def unpack_distribution(self):
@@ -63,15 +68,15 @@ class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution)
 
 class UnitContinuousDistribution(BoundedContinuousDistribution):
     def lower_limit(self):
-        return 0.
+        return 0.0
 
     def upper_limit(self):
-        return 1.
+        return 1.0
 
 
 class PositiveContinuousDistribution(BoundedContinuousDistribution):
     def lower_limit(self):
-        return 0.
+        return 0.0
 
     def upper_limit(self):
         return float("inf")
@@ -87,3 +92,9 @@ class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
 
 class SimplexContinuousDistribution(ContinuousDistribution):
     ...
+
+
+class Potential(Distribution):
+    def __init__(self, value):
+        super().__init__(name=None)
+        self.value = value

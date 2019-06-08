@@ -6,7 +6,7 @@ Implements random variables not supported by tfp as distributions.
 """
 
 # pylint: disable=undefined-all-variable
-from .base import PositiveDiscreteDistribution, BoundedDiscreteDistribution
+from .distribution import PositiveDiscreteDistribution, BoundedDiscreteDistribution
 
 
 class Bernoulli(BoundedDiscreteDistribution):
@@ -52,6 +52,7 @@ class Bernoulli(BoundedDiscreteDistribution):
 
     - p: probs
     """
+
     def __init__(self, name, p, **kwargs):
         super().__init__(name, p=p, **kwargs)
 
@@ -273,6 +274,7 @@ class Geometric(BoundedDiscreteDistribution):
 
     - p: probs
     """
+
     def __init__(self, name, p, **kwargs):
         super().__init__(name, p=p, **kwargs)
 

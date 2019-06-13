@@ -96,7 +96,7 @@ machine, and develop on a feature branch.
 7. Add changed files using `git add` and then `git commit`:
 
    ```bash
-   $ git add you_modified_file.py
+   $ git add your_modified_file.py
    $ git commit
    ```
 

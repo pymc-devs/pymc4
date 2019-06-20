@@ -1,8 +1,10 @@
-__backend = 'tensorflow'
+import os
 
-if __backend == 'base':
-    from .base import *
-elif __backend == 'tensorflow':
+_backend = 'tensorflow'
+if 'PYMC_BACKEND' in os.environ:
+    _backend = os.environ['PYMC_BACKEND']
+
+if _backend == 'tensorflow':
     from .tensorflow import *
 else:
     raise Exception('Backend %s not supported' % __backend)

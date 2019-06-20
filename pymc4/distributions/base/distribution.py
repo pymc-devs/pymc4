@@ -3,6 +3,7 @@ from ...coroutine_model import Model, unpack
 
 
 class Distribution(Model):
+    """Statistical distribution"""
     def __init__(self, name, keep_auxiliary=False, keep_return=True, transform=None, **kwargs):
         self.conditions = self.unpack_conditions(**kwargs)
         super().__init__(
@@ -12,6 +13,7 @@ class Distribution(Model):
             keep_auxiliary=keep_auxiliary,
         )
         self.transform = transform
+        self._init_backend()
 
     def unpack_distribution(self):
         return unpack(self)
@@ -23,6 +25,12 @@ class Distribution(Model):
         """
         return kwargs
 
+    @abc.abstractmethod
+    def _init_backend(self):
+        """Initialize the backend."""
+        pass
+
+    @abc.abstractmethod
     def sample(self, shape=(), seed=None):
         """
         Forward sampling implementation
@@ -36,6 +44,7 @@ class Distribution(Model):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def log_prob(self, value):
         raise NotImplementedError
 

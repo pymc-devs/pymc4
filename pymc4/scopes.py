@@ -47,11 +47,11 @@ class Scope(object):
     def chain(cls, attr, *, leaf=_leaf, predicate=lambda _: True, drop_none=False):
         for c in cls.get_contexts():
             if predicate(c):
-                attr = getattr(c, attr)
-                if drop_none and attr is None:
+                val = getattr(c, attr)
+                if drop_none and val is None:
                     continue
                 else:
-                    yield attr
+                    yield val
         if leaf is not cls._leaf:
             yield leaf
 
@@ -85,6 +85,9 @@ class Scope(object):
     def use_transform(cls):
         flags = list(cls.chain("transformed", drop_none=True))
         return flags and flags[-1]
+
+    def __repr__(self):
+        return "Scope({})".format(self.__dict__)
 
 
 def name_scope(name):

@@ -7,4 +7,4 @@ if 'PYMC_BACKEND' in os.environ:
 if _backend == 'tensorflow':
     from .tensorflow import *
 else:
-    raise Exception('Backend %s not supported' % __backend)
+    raise Exception('Backend %s not supported' % _backend)

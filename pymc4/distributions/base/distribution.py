@@ -45,7 +45,28 @@ class Distribution(Model):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def sample_numpy(self, shape=(), seed=None):
+        """
+        Forward sampling implementation returning raw numpy arrays
+
+        Parameters
+        ----------
+        shape : tuple
+            sample shape
+        seed : int|None
+            random seed
+        Returns
+        ----------
+        array of given shape
+        """
+
+    @abc.abstractmethod
     def log_prob(self, value):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def log_prob_numpy(self, value):
+        """Return log probability in numpy array format"""
         raise NotImplementedError
 
 

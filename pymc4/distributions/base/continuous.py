@@ -1,8 +1,7 @@
 """
 PyMC4 continuous random variables.
 
-Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
-Implements random variables not supported by tfp as distributions.
+Provides template classes for backend random variables.
 """
 
 # pylint: disable=undefined-all-variable
@@ -912,13 +911,6 @@ class Normal(ContinuousDistribution):
         @pm.model
         def model():
             x = pm.Normal('x', mu=0, sigma=10)
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - sigma: scale
     """
 
     def __init__(self, name, mu, sigma, **kwargs):

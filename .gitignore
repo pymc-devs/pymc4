@@ -76,6 +76,9 @@ venv.bak/
 .idea
 *.iml
 
+# Vim
+*.swp
+
 # OS generated files
 .DS_Store
 .DS_Store?

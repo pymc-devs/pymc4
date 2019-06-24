@@ -86,3 +86,7 @@ class Invert(Transform):
 
     def inverse_jacobian_log_det(self, z):
         return self.transform.jacobian_log_det(z)
+
+
+class Exp(Transform):
+    ...

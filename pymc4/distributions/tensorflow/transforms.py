@@ -1,8 +1,8 @@
 import tensorflow as tf
-from .. import base
+from .. import abstract
 
 
-class Exp(base.transforms.Exp):
+class Exp(abstract.transforms.Exp):
     # do not use tfp bijectors if transform is not too complicated
     def forward(self, x):
         return tf.math.exp(x)

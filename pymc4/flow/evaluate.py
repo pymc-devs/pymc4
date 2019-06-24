@@ -74,11 +74,11 @@ class Executor(metaclass=abc.ABCMeta):
             try:
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
-                    if isinstance(dist, pm.distributions.base.Distribution):
+                    if isinstance(dist, pm.distributions.abstract_distributions.Distribution):
                         dist = self.modify_distribution(dist, model_info, state)
                     if dist is None:
                         return_value = None
-                    elif isinstance(dist, pm.distributions.base.Distribution):
+                    elif isinstance(dist, pm.distributions.abstract_distributions.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(dist, model_info, state)
                         except EvaluationError as error:
@@ -135,7 +135,7 @@ class SamplingExecutor(Executor):
         return dist
 
     def proceed_distribution(self, dist, model_info, state):
-        if isinstance(dist, pymc4.distributions.base.Potential):
+        if isinstance(dist, pymc4.distributions.abstract_distributions.Potential):
             value = dist.value
             state.potentials.append(value)
             return value, state

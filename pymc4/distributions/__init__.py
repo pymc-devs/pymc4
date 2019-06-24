@@ -1,4 +1,5 @@
 import os
+from . import abstract
 
 _backend = 'tensorflow'
 if 'PYMC_BACKEND' in os.environ:

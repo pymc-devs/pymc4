@@ -9,7 +9,7 @@ tfd = tfp.distributions
 
 
 from .distribution import BackendDistribution
-from ..base.continuous import Normal, HalfNormal
+from ..abstract.continuous import Normal, HalfNormal
 
 __all__ = ['Normal', 'HalfNormal']
 

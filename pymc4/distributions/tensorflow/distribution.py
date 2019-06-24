@@ -1,4 +1,4 @@
-from ..base.distribution import Distribution
+from ..abstract.distribution import Distribution
 
 
 class BackendDistribution(Distribution):

@@ -139,7 +139,7 @@ class SamplingExecutor(Executor):
     def proceed_distribution(self, dist, model_info, state):
         if isinstance(dist, pymc4.distributions.abstract.Potential):
             value = dist.value
-            state.potentials.append(value)
+            state.potentials.append(dist)
             return value, state
 
         scoped_name = pymc4.scopes.Scope.variable_name(dist.name)

@@ -4,6 +4,7 @@ from ...coroutine_model import Model, unpack
 
 class Distribution(Model):
     """Statistical distribution"""
+
     def __init__(self, name, keep_auxiliary=False, keep_return=True, transform=None, **kwargs):
         self.conditions = self.unpack_conditions(**kwargs)
         super().__init__(
@@ -128,3 +129,20 @@ class Potential(Distribution):
     def __init__(self, value):
         super().__init__(name=None)
         self.value = value
+
+    def sample(self, shape=(), seed=None):
+        raise NotImplementedError("Unavailable for Potential")
+
+    def sample_numpy(self, shape=(), seed=None):
+        raise NotImplementedError("Unavailable for Potential")
+
+    def log_prob(self, value):
+        raise NotImplementedError("Unavailable for Potential")
+
+    def log_prob_numpy(self, value):
+        raise NotImplementedError("Unavailable for Potential")
+
+    @property
+    @abc.abstractmethod
+    def value_numpy(self):
+        raise NotImplementedError

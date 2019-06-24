@@ -1,4 +1,15 @@
+import enum
+
+
+class JacobianPreference(enum.Enum):
+    Forward = "Forward"
+    Backward = "Backward"
+
+
 class Transform(object):
+    name: str = None
+    jacobian_preference = JacobianPreference.Forward
+
     def forward(self, x):
         """Applies transformation forward to input variable `x`.
         When transform is used on some distribution `p`, it will transform the random variable `x` after sampling
@@ -88,5 +99,7 @@ class Invert(Transform):
         return self.transform.jacobian_log_det(z)
 
 
-class Exp(Transform):
+class Log(Transform):
+    name = "log"
+    JacobianPreference = JacobianPreference.Backward
     ...

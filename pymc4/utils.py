@@ -22,3 +22,27 @@ def map_nested(fn, structure, cond=lambda obj: True):
         return inner_map(structure)
     finally:
         inner_map = None
+
+
+def merge_dicts(*dicts: dict, **kwargs: dict):
+    """
+    Helper function to merge dicts without overlapping keys
+
+    Parameters
+    ----------
+    dicts : dict
+        Arbitrary number of dicts
+    kwargs : dict
+        Dict with keyword args for
+    Returns
+    -------
+    dict
+        Merged dict
+    """
+    for mappable in dicts:
+        if set(mappable) & set(kwargs):
+            raise ValueError(
+                "Found duplicate keys in merge: {}".format(set(mappable) & set(kwargs))
+            )
+        kwargs.update(mappable)
+    return kwargs

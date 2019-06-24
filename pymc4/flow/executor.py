@@ -1,10 +1,10 @@
 import collections
 import pymc4 as pm
-import copy
 import types
 import abc
-import pymc4.scopes
-from pymc4.distributions.abstract.transforms import JacobianPreference
+from pymc4 import scopes
+from .. import utils
+from pymc4.distributions import abstract
 
 
 class EvaluationError(RuntimeError):
@@ -53,9 +53,12 @@ class Executor(metaclass=abc.ABCMeta):
     def finalize_control_flow(self, stop_iteration, model_info, state):
         raise NotImplementedError
 
-    def evaluate_model(self, model, state=None):
+    def evaluate_model(self, model, *args, state=None, **kwargs):
         if state is None:
-            state = self.new_state()
+            state = self.new_state(*args, **kwargs)
+        else:
+            if args or kwargs:
+                raise ValueError("Provided arguments along with not empty state")
         if isinstance(model, pm.coroutine_model.Model):
             model_info = model.model_info()
             try:
@@ -76,11 +79,11 @@ class Executor(metaclass=abc.ABCMeta):
             try:
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
-                    if isinstance(dist, pm.distributions.abstract.Distribution):
+                    if isinstance(dist, abstract.Distribution):
                         dist = self.modify_distribution(dist, model_info, state)
                     if dist is None:
                         return_value = None
-                    elif isinstance(dist, pm.distributions.abstract.Distribution):
+                    elif isinstance(dist, abstract.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(dist, model_info, state)
                         except EvaluationError as error:
@@ -120,29 +123,31 @@ class Executor(metaclass=abc.ABCMeta):
                 break
         return return_value, state
 
+    __call__ = evaluate_model
+
 
 SamplingState = collections.namedtuple("EvaluationState", "values,distributions,potentials")
 
 
 class SamplingExecutor(Executor):
-    def __init__(self, **do):
-        self.default_do = do
+    def __init__(self, *do: dict, **do_kwargs: dict):
+        self.default_do = utils.merge_dicts(*do, do_kwargs)
 
-    def new_state(self, **do):
+    def new_state(self, *do: dict, **do_kwargs: dict):
         state_do = self.default_do.copy()
-        state_do.update(do)
+        state_do.update(utils.merge_dicts(*do, do_kwargs))
         return SamplingState(values=state_do, distributions=dict(), potentials=[])
 
     def modify_distribution(self, dist, model_info, state):
         return dist
 
     def proceed_distribution(self, dist, model_info, state):
-        if isinstance(dist, pymc4.distributions.abstract.Potential):
+        if isinstance(dist, abstract.Potential):
             value = dist.value
             state.potentials.append(dist)
             return value, state
 
-        scoped_name = pymc4.scopes.Scope.variable_name(dist.name)
+        scoped_name = scopes.variable_name(dist.name)
         if scoped_name in state.distributions:
             raise EvaluationError(
                 "Attempting to create duplicate variable '{}', "
@@ -168,7 +173,7 @@ class SamplingExecutor(Executor):
             control_flow.throw(error)
             control_flow.close()
             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
-        return_name = pymc4.scopes.Scope.variable_name(model_name)
+        return_name = scopes.variable_name(model_name)
         if not model_info["keep_auxiliary"] and return_name in state.values:
             raise EarlyReturn(state.values[model_name], state)
         return control_flow
@@ -179,79 +184,6 @@ class SamplingExecutor(Executor):
         else:
             return_value = None
         if return_value is not None and model_info["keep_return"]:
-            return_name = pymc4.scopes.Scope.variable_name(model_info["name"])
+            return_name = scopes.variable_name(model_info["name"])
             state.values[return_name] = return_value
         return return_value, state
-
-
-class TransformedSamplingExecutor(SamplingExecutor):
-    def modify_distribution(self, dist, model_info, state):
-        dist = super().modify_distribution(dist, model_info, state)
-        if not isinstance(dist, pymc4.distributions.abstract.Distribution):
-            return dist
-        # this will be mentioned later, that's the way to avoid loops
-        if dist.transform is None:
-            return dist
-        transform = dist.transform
-        scoped_name = pymc4.scopes.Scope.variable_name(dist.name)
-        transformed_scoped_name = pymc4.scopes.Scope.variable_name(
-            # double underscore stands for transform
-            "__{}_{}".format(transform.name, dist.name)
-        )
-        if transformed_scoped_name in state.values or scoped_name in state.values:
-            if transformed_scoped_name in state.values:
-                transformed_value = state.values[transformed_scoped_name]
-                untransformed_value = transform.backward(transformed_value)
-                state.values[scoped_name] = untransformed_value
-                state.values[transformed_scoped_name] = transformed_value
-            else:
-                untransformed_value = state.values[scoped_name]
-                transformed_value = transform.forward(untransformed_value)
-                state.values[scoped_name] = untransformed_value
-                state.values[transformed_scoped_name] = transformed_value
-
-            def model():
-                # I have no idea yet, how to make that beautiful
-                # here I remove a transform to create another model that
-                # essentially has an untransformed predefined value and the potential
-                # needed to specify the logp properly
-                dist_no_transform = copy.copy(dist)
-                dist_no_transform.transform = None
-
-                # these lines
-                # > state.values[scoped_name] = untransformed_value
-                # > state.values[transformed_scoped_name] = transformed_value
-                # disable sampling and save cached results to store for yield dist
-                # another step is to decide on logdet computation, this might be effective
-                # with transformed value, but not with an untransformed one
-                # this information is stored in transform.jacobian_preference class attribute
-                if transform.jacobian_preference == JacobianPreference.Forward:
-                    potential = transform.jacobian_log_det(untransformed_value)
-                else:
-                    potential = -transform.inverse_jacobian_log_det(transformed_value)
-                yield pymc4.distributions.Potential(potential)
-                # will return untransformed_value
-                # as it is stored in state.values
-                return (yield dist_no_transform)
-
-        else:
-            # we gonna sample here, but logp should be computed for the transformed values
-            def model():
-                # as explained above we make a shallow copy of the distribution and remove the transform
-                dist_no_transform = copy.copy(dist)
-                dist_no_transform.transform = None
-                # sample a value, as we've checked there is no state provided
-                sampled_untransformed_value = yield dist_no_transform
-                sampled_transformed_value = transform.forward(sampled_untransformed_value)
-                # already stored
-                # state.values[scoped_name] = sampled_untransformed_value
-                state.values[transformed_scoped_name] = sampled_transformed_value
-
-                if transform.jacobian_preference == JacobianPreference.Forward:
-                    potential = transform.jacobian_log_det(sampled_untransformed_value)
-                else:
-                    potential = -transform.inverse_jacobian_log_det(sampled_transformed_value)
-                yield pymc4.distributions.Potential(potential)
-                return sampled_untransformed_value
-
-        return model()

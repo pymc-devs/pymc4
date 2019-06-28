@@ -84,6 +84,10 @@ class Transform(object):
 
 class Invert(Transform):
     def __init__(self, transform):
+        if transform.jacobian_preference == JacobianPreference.Forward:
+            self.jacobian_preference = JacobianPreference.Backward
+        else:
+            self.jacobian_preference = JacobianPreference.Forward
         self.transform = transform
 
     def forward(self, x):

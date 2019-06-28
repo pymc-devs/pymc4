@@ -130,13 +130,13 @@ SamplingState = collections.namedtuple("EvaluationState", "values,distributions,
 
 
 class SamplingExecutor(Executor):
-    def __init__(self, *do: dict, **do_kwargs: dict):
-        self.default_do = utils.merge_dicts(*do, do_kwargs)
+    def __init__(self, *conditions: dict, **condition_kwargs: dict):
+        self.default_condition = utils.merge_dicts(*conditions, condition_kwargs)
 
-    def new_state(self, *do: dict, **do_kwargs: dict):
-        state_do = self.default_do.copy()
-        state_do.update(utils.merge_dicts(*do, do_kwargs))
-        return SamplingState(values=state_do, distributions=dict(), potentials=[])
+    def new_state(self, *conditions: dict, **condition_kwargs: dict):
+        condition_state = self.default_condition.copy()
+        condition_state.update(utils.merge_dicts(*conditions, condition_kwargs))
+        return SamplingState(values=condition_state, distributions=dict(), potentials=[])
 
     def modify_distribution(self, dist, model_info, state):
         return dist

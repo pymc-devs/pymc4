@@ -126,7 +126,85 @@ class Executor(metaclass=abc.ABCMeta):
     __call__ = evaluate_model
 
 
-SamplingState = collections.namedtuple("EvaluationState", "values,distributions,potentials")
+_SamplingState = collections.namedtuple("_SamplingState", "values,distributions,potentials")
+
+_NameParts = collections.namedtuple("_NameParts", "path,original_name,untransformed_name,transform_name")
+
+
+class NameParts(_NameParts):
+    @classmethod
+    def parse(cls, name):
+        split = name.split("/")
+        path, original_name = split[:-1], split[-1]
+        if original_name.startswith("__"):
+            idx = original_name[2:].find("_")
+            if idx != -1:
+                untransformed_name = original_name[idx + 3:]
+                transform_name = original_name[2:idx + 3]
+            else:
+                untransformed_name = original_name
+                transform_name = None
+        else:
+            transform_name = None
+            untransformed_name = original_name
+        return NameParts(
+            path=tuple(path), original_name=original_name,
+            untransformed_name=untransformed_name, transform_name=transform_name
+        )
+
+    @property
+    def full_original_name(self):
+        return "/".join(self.path + (self.original_name,))
+
+    @property
+    def full_untransformed_name(self):
+        return "/".join(self.path + (self.untransformed_name,))
+
+    @property
+    def is_transformed(self):
+        return self.transform_name is not None
+
+
+class SamplingState(_SamplingState):
+    @property
+    def transformed_values(self):
+        all_values: dict = self.values.copy()
+        # get rid of `nest/name` if `nest/__transform_name` is present
+        for fullname in self.values:
+            namespec = NameParts.parse(fullname)
+            if namespec.is_transformed:
+                if namespec.full_untransformed_name in all_values:
+                    all_values.pop(namespec.full_untransformed_name)
+        return all_values
+
+    @property
+    def untransformed_values(self):
+        all_values: dict = self.values.copy()
+        # get rid of `nest/name` if `nest/__transform_name` is present
+        for fullname in self.values:
+            namespec = NameParts.parse(fullname)
+            if namespec.is_transformed:
+                all_values.pop(namespec.full_original_name)
+        return all_values
+
+    def new_state_with_untransformed(self):
+        return self.__class__(
+            values=self.untransformed_values,
+            distributions=dict(),
+            potentials=list()
+        )
+
+    def new_state_with_transformed(self):
+        return self.__class__(
+            values=self.transformed_values,
+            distributions=dict(),
+            potentials=list()
+        )
+
+    @classmethod
+    def new(cls, *conditions: dict, **condition_kwargs: dict):
+        condition_state = utils.merge_dicts(*conditions, condition_kwargs)
+        return SamplingState(values=condition_state, distributions=dict(), potentials=[])
 
 
 class SamplingExecutor(Executor):
@@ -135,8 +213,7 @@ class SamplingExecutor(Executor):
 
     def new_state(self, *conditions: dict, **condition_kwargs: dict):
         condition_state = self.default_condition.copy()
-        condition_state.update(utils.merge_dicts(*conditions, condition_kwargs))
-        return SamplingState(values=condition_state, distributions=dict(), potentials=[])
+        return SamplingState.new(condition_state, condition_kwargs, *conditions)
 
     def modify_distribution(self, dist, model_info, state):
         return dist

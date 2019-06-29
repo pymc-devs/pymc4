@@ -62,9 +62,9 @@ class TransformedSamplingExecutor(SamplingExecutor):
                 # with transformed value, but not with an untransformed one
                 # this information is stored in transform.jacobian_preference class attribute
                 if transform.jacobian_preference == JacobianPreference.Forward:
-                    potential = transform.jacobian_log_det(untransformed_value)
+                    potential = -transform.jacobian_log_det(untransformed_value)
                 else:
-                    potential = -transform.inverse_jacobian_log_det(transformed_value)
+                    potential = transform.inverse_jacobian_log_det(transformed_value)
                 yield distributions.Potential(potential)
                 # 3. final return+yield will return untransformed_value
                 # as it is stored in state.values
@@ -87,9 +87,9 @@ class TransformedSamplingExecutor(SamplingExecutor):
                 state.values[transformed_scoped_name] = sampled_transformed_value
                 # 2. increment the potential
                 if transform.jacobian_preference == JacobianPreference.Forward:
-                    potential = transform.jacobian_log_det(sampled_untransformed_value)
+                    potential = -transform.jacobian_log_det(sampled_untransformed_value)
                 else:
-                    potential = -transform.inverse_jacobian_log_det(sampled_transformed_value)
+                    potential = transform.inverse_jacobian_log_det(sampled_transformed_value)
                 yield distributions.Potential(potential)
                 # 3. return value to the user
                 return sampled_untransformed_value

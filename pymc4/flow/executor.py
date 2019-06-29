@@ -206,6 +206,14 @@ class SamplingState(_SamplingState):
         condition_state = utils.merge_dicts(*conditions, condition_kwargs)
         return SamplingState(values=condition_state, distributions=dict(), potentials=[])
 
+    def collect_log_prob(self):
+        logp = 0
+        for name, dist in self.distributions.items():
+            logp += dist.log_prob(self.values[name])
+        for pot in self.potentials:
+            logp += pot.value
+        return logp
+
 
 class SamplingExecutor(Executor):
     def __init__(self, *conditions: dict, **condition_kwargs: dict):

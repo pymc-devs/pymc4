@@ -1,4 +1,4 @@
-from ..abstract.distribution import Distribution, Potential as BasePotential
+from pymc4.distributions.abstract.distribution import Distribution, Potential as BasePotential
 
 
 class BackendDistribution(Distribution):

@@ -3,6 +3,8 @@ import threading
 
 class Scope(object):
     """
+    General purpose variable scoping.
+
     PyMC4 scopes intended to store useful information during forward pass of the model.
     This is intended to have more functionality rather than just name scoping.
     So this class should be a starting point for further development.
@@ -58,7 +60,7 @@ class Scope(object):
     @classmethod
     def variable_name(cls, name):
         """
-        Generate PyMC4 variable name based on name scope we are currently in
+        Generate PyMC4 variable name based on name scope we are currently in.
 
         Parameters
         ----------

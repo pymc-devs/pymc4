@@ -1,5 +1,5 @@
 import abc
-from ...coroutine_model import Model, unpack
+from pymc4.coroutine_model import Model, unpack
 
 
 class Distribution(Model):

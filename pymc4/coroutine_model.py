@@ -1,8 +1,8 @@
 import functools
 import types
 import pymc4
-from .scopes import name_scope
-from .utils import biwrap, NameParts
+from pymc4.scopes import name_scope
+from pymc4.utils import biwrap, NameParts
 
 
 @biwrap
@@ -37,9 +37,10 @@ def get_name(default, base_fn, name):
 
 class ModelTemplate(object):
     """
-    The `ModelTemplate` object, this keeps a function, responsible for a specific generative process.
-    Generative process is one that samples from prior distributions and interacts
-    them in a user defined way arbitrarily complex.
+    Model Template -- generative model with metadata.
+
+    ModelTemplate is a callable object that represents a generative process. A generative process samples
+    from prior distributions and allows them to interact in arbitrarily-complex, user-defined ways.
 
     Parameters
     ----------
@@ -61,6 +62,10 @@ class ModelTemplate(object):
 
     def __call__(self, *args, name=None, keep_auxiliary=None, keep_return=None, **kwargs):
         """
+        Evaluate the model.
+
+        Model evaluation usually comes with :code:`yield` keyword, see Examples below
+
         Parameters
         ----------
         name : str
@@ -77,16 +82,35 @@ class ModelTemplate(object):
         -------
         Model
             The conditioned generative process, for which we can obtain generator (generative process) with :code:`iter`
+
+        Examples
+        --------
+        >>> import pymc4 as pm
+        >>> from pymc4 import distributions as dist
+
+        >>> @pm.model(keep_return=False)  # do not keep `norm` in return
+        ... def nested_model(cond):
+        ...     norm = yield dist.Normal("n", cond, 1)
+        ...     return norm
+
+        >>> @pm.model  # keep_return is True by default
+        ... def main_model():
+        ...     norm = yield dist.Normal("n", 0, 1)
+        ...     result = yield nested_model(norm, name="a")
+        ...     return result
+        >>> ret, state = pm.evaluate_model(main_model())
+        >>> assert "main_model" in state.values
+        >>> assert "main_model/a" not in state.values
         """
         genfn = functools.partial(self.template, *args, **kwargs)
         name = get_name(self.name, self.template, name)
         if name is not None and not NameParts.is_valid_untransformed_name(name):
+            # throw an informative message to fix a name
             raise ValueError(NameParts.UNTRANSFORMED_NAME_ERROR_MESSAGE)
-        # throw an informative message
         if keep_auxiliary is None:
             keep_auxiliary = self.keep_auxiliary
         if keep_return is None:
-            keep_return = keep_return
+            keep_return = self.keep_return
         return Model(genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return)
 
 

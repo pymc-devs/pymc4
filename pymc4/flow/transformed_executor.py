@@ -3,7 +3,7 @@ import copy
 from pymc4 import scopes, distributions
 from pymc4.distributions import abstract
 from pymc4.distributions.abstract.transforms import JacobianPreference
-from .executor import SamplingExecutor, EvaluationError
+from pymc4.flow.executor import SamplingExecutor, EvaluationError
 
 
 class TransformedSamplingExecutor(SamplingExecutor):

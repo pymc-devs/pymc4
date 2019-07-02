@@ -4,8 +4,10 @@ import re
 
 def map_nested(fn, structure, cond=lambda obj: True):
     r"""
-    Applies fn to an object in a possibly nested data structure and returns same
-    structure with every element changed if condition satisfied.
+    Structure preserving nested map.
+
+    Apply fn to an object in a possibly nested data structure and returns
+    same structure with every element changed if condition satisfied.
     """
 
     def inner_map(obj):
@@ -30,7 +32,7 @@ def map_nested(fn, structure, cond=lambda obj: True):
 
 def merge_dicts(*dicts: dict, **kwargs: dict):
     """
-    Helper function to merge dicts without overlapping keys
+    Merge dicts and assert their keys do not overlap.
 
     Parameters
     ----------
@@ -38,6 +40,7 @@ def merge_dicts(*dicts: dict, **kwargs: dict):
         Arbitrary number of dicts
     kwargs : dict
         Dict with keyword args for
+
     Returns
     -------
     dict

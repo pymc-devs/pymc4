@@ -5,7 +5,7 @@ Provides template classes for backend random variables.
 """
 
 # pylint: disable=undefined-all-variable
-from .distribution import (
+from pymc4.distributions.abstract.distribution import (
     BoundedDistribution,
     BoundedContinuousDistribution,
     ContinuousDistribution,

@@ -6,7 +6,7 @@ Implements random variables not supported by tfp as distributions.
 """
 
 # pylint: disable=undefined-all-variable
-from .distribution import PositiveDiscreteDistribution, BoundedDiscreteDistribution
+from pymc4.distributions.abstract.distribution import PositiveDiscreteDistribution, BoundedDiscreteDistribution
 
 
 class Bernoulli(BoundedDiscreteDistribution):

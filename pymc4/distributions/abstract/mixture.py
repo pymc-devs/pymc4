@@ -1,4 +1,4 @@
-from .distribution import Distribution
+from pymc4.distributions.abstract.distribution import Distribution
 
 
 class Mixture(Distribution):

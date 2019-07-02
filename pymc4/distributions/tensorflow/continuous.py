@@ -5,8 +5,8 @@ Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
 import tensorflow_probability as tfp
-from .. import abstract
-from .distribution import BackendDistribution
+from pymc4.distributions import abstract
+from pymc4.distributions.tensorflow.distribution import BackendDistribution
 
 
 tfd = tfp.distributions

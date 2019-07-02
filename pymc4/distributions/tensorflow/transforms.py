@@ -1,5 +1,5 @@
 import tensorflow as tf
-from .. import abstract
+from pymc4.distributions import abstract
 
 
 class Log(abstract.transforms.Log):

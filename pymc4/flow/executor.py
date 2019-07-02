@@ -1,8 +1,9 @@
 import pymc4 as pm
 import types
+from typing import Any, Tuple
 import abc
 from pymc4 import scopes
-from .. import utils
+from pymc4 import utils
 from pymc4.distributions import abstract
 
 
@@ -254,3 +255,9 @@ class SamplingExecutor(Executor):
             return_name = scopes.variable_name(model_info["name"])
             state.values[return_name] = return_value
         return return_value, state
+
+    # just to make type checkers happy
+    def evaluate_model(self, model, *args: dict, state: SamplingState = None, **kwargs) -> Tuple[Any, SamplingState]:
+        return super().evaluate_model(model, *args, state=state, **kwargs)
+
+    __call__ = evaluate_model

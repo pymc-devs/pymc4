@@ -6,7 +6,7 @@ Implements random variables not supported by tfp as distributions.
 """
 
 # pylint: disable=undefined-all-variable
-from .distribution import (
+from pymc4.distributions.abstract.distribution import (
     SimplexContinuousDistribution,
     DiscreteDistribution,
     ContinuousDistribution,

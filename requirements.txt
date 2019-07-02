@@ -1,5 +1,4 @@
 tf-nightly-2.0-preview
 tfp-nightly
-biwrap
 pymc3
 scipy

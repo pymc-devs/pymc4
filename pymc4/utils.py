@@ -1,4 +1,5 @@
 import functools
+import re
 
 
 def map_nested(fn, structure, cond=lambda obj: True):
@@ -65,4 +66,53 @@ def biwrap(wrapper):
         else:
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
+
     return enhanced
+
+
+class NameParts(object):
+    NAME_RE = re.compile(r"^(?:__(?P<transform>[^_]+)_)?(?P<name>[^_].*)$")
+    NAME_ERROR_MESSAGE = (
+        "Invalid name: `{}`, the correct one should look like: `__transform_name` or `name`, "
+        "note only one underscore between the transform and actual name"
+    )
+    UNTRANSFORMED_NAME_ERROR_MESSAGE = (
+        "Invalid name: `{}`, the correct one should look like: " "`name` without leading underscore"
+    )
+    __slots__ = ("path", "original_name", "untransformed_name", "transform_name")
+
+    @classmethod
+    def is_valid_untransformed_name(cls, name):
+        match = cls.NAME_RE.match(name)
+        return match is not None and match["transform"] is None
+
+    @classmethod
+    def is_valid_name(cls, name):
+        match = cls.NAME_RE.match(name)
+        return match is not None
+
+    def __init__(self, name):
+        split = name.split("/")
+        path, original_name = split[:-1], split[-1]
+        match = self.NAME_RE.match(original_name)
+        if not self.is_valid_name(name):
+            raise ValueError(self.NAME_ERROR_MESSAGE)
+        self.path = tuple(path)
+        self.original_name = original_name
+        self.untransformed_name = match["name"]
+        self.transform_name = match["transform"]
+
+    @property
+    def full_original_name(self):
+        return "/".join(self.path + (self.original_name,))
+
+    @property
+    def full_untransformed_name(self):
+        return "/".join(self.path + (self.untransformed_name,))
+
+    @property
+    def is_transformed(self):
+        return self.transform_name is not None
+
+    def __repr__(self):
+        return "<NameParts of {}>".format(self.full_original_name)

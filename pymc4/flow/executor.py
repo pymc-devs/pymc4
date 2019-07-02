@@ -180,7 +180,7 @@ class SamplingState(_SamplingState):
     @property
     def untransformed_values(self):
         all_values: dict = self.values.copy()
-        # get rid of `nest/name` if `nest/__transform_name` is present
+        # get rid of `nest/__transform_name` if `nest/name` is present
         for fullname in self.values:
             namespec = NameParts.parse(fullname)
             if namespec.is_transformed:

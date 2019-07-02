@@ -1,4 +1,3 @@
-import collections
 import pymc4 as pm
 import types
 import abc
@@ -126,52 +125,26 @@ class Executor(metaclass=abc.ABCMeta):
     __call__ = evaluate_model
 
 
-_SamplingState = collections.namedtuple("_SamplingState", "values,distributions,potentials")
+class SamplingState(object):
+    __slots__ = ("values", "distributions", "potentials")
 
-_NameParts = collections.namedtuple("_NameParts", "path,original_name,untransformed_name,transform_name")
+    def __init__(self, values: dict = None, distributions: dict = None, potentials: list = None):
+        if values is None:
+            values = dict()
+        if distributions is None:
+            distributions = dict()
+        if potentials is None:
+            potentials = list()
+        self.values = values
+        self.distributions = distributions
+        self.potentials = potentials
 
-
-class NameParts(_NameParts):
-    @classmethod
-    def parse(cls, name):
-        split = name.split("/")
-        path, original_name = split[:-1], split[-1]
-        if original_name.startswith("__"):
-            idx = original_name[2:].find("_")
-            if idx != -1:
-                untransformed_name = original_name[idx + 3:]
-                transform_name = original_name[2:idx + 3]
-            else:
-                untransformed_name = original_name
-                transform_name = None
-        else:
-            transform_name = None
-            untransformed_name = original_name
-        return NameParts(
-            path=tuple(path), original_name=original_name,
-            untransformed_name=untransformed_name, transform_name=transform_name
-        )
-
-    @property
-    def full_original_name(self):
-        return "/".join(self.path + (self.original_name,))
-
-    @property
-    def full_untransformed_name(self):
-        return "/".join(self.path + (self.untransformed_name,))
-
-    @property
-    def is_transformed(self):
-        return self.transform_name is not None
-
-
-class SamplingState(_SamplingState):
     @property
     def transformed_values(self):
         all_values: dict = self.values.copy()
         # get rid of `nest/name` if `nest/__transform_name` is present
         for fullname in self.values:
-            namespec = NameParts.parse(fullname)
+            namespec = utils.NameParts(fullname)
             if namespec.is_transformed:
                 if namespec.full_untransformed_name in all_values:
                     all_values.pop(namespec.full_untransformed_name)
@@ -182,29 +155,25 @@ class SamplingState(_SamplingState):
         all_values: dict = self.values.copy()
         # get rid of `nest/__transform_name` if `nest/name` is present
         for fullname in self.values:
-            namespec = NameParts.parse(fullname)
+            namespec = utils.NameParts(fullname)
             if namespec.is_transformed:
                 all_values.pop(namespec.full_original_name)
         return all_values
 
     def new_state_with_untransformed(self):
         return self.__class__(
-            values=self.untransformed_values,
-            distributions=dict(),
-            potentials=list()
+            values=self.untransformed_values, distributions=dict(), potentials=list()
         )
 
     def new_state_with_transformed(self):
         return self.__class__(
-            values=self.transformed_values,
-            distributions=dict(),
-            potentials=list()
+            values=self.transformed_values, distributions=dict(), potentials=list()
         )
 
     @classmethod
     def new(cls, *conditions: dict, **condition_kwargs: dict):
         condition_state = utils.merge_dicts(*conditions, condition_kwargs)
-        return SamplingState(values=condition_state, distributions=dict(), potentials=[])
+        return cls(values=condition_state, distributions=dict(), potentials=[])
 
     def collect_log_prob(self):
         logp = 0
@@ -213,6 +182,19 @@ class SamplingState(_SamplingState):
         for pot in self.potentials:
             logp += pot.value
         return logp
+
+    def __repr__(self):
+        # display keys only
+        values = list(self.values)
+        # format like dist:name
+        distributions = [
+            "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
+        ]
+        # be less verbose here
+        num_potentials = len(self.potentials)
+        return "{}(\n    values: {}\n    distributions: {}\n    num_potentials={}\n)".format(
+            self.__class__.__name__, values, distributions, num_potentials
+        )
 
 
 class SamplingExecutor(Executor):
@@ -235,7 +217,7 @@ class SamplingExecutor(Executor):
         scoped_name = scopes.variable_name(dist.name)
         if scoped_name in state.distributions:
             raise EvaluationError(
-                "Attempting to create duplicate variable '{}', "
+                "Attempting to create a duplicate variable '{}', "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
                 "model/function twice without providing explicit names. If you see this "
                 "error message and the function being called is not wrapped with "

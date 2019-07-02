@@ -2,7 +2,7 @@ import functools
 import types
 import pymc4
 from .scopes import name_scope
-from .utils import biwrap
+from .utils import biwrap, NameParts
 
 
 @biwrap
@@ -80,6 +80,8 @@ class ModelTemplate(object):
         """
         genfn = functools.partial(self.template, *args, **kwargs)
         name = get_name(self.name, self.template, name)
+        if name is not None and not NameParts.is_valid_untransformed_name(name):
+            raise ValueError(NameParts.UNTRANSFORMED_NAME_ERROR_MESSAGE)
         # throw an informative message
         if keep_auxiliary is None:
             keep_auxiliary = self.keep_auxiliary

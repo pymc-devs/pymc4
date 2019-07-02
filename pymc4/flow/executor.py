@@ -257,7 +257,9 @@ class SamplingExecutor(Executor):
         return return_value, state
 
     # just to make type checkers happy
-    def evaluate_model(self, model, *args: dict, state: SamplingState = None, **kwargs) -> Tuple[Any, SamplingState]:
+    def evaluate_model(
+        self, model, *args: dict, state: SamplingState = None, **kwargs
+    ) -> Tuple[Any, SamplingState]:
         return super().evaluate_model(model, *args, state=state, **kwargs)
 
     __call__ = evaluate_model

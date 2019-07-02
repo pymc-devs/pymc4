@@ -26,7 +26,12 @@ def test_complex_model():
 
     _, state = pm.evaluate_model(complex_model())
 
-    assert set(state.values) == {"complex_model/n", "complex_model/a", "complex_model/a/n", "complex_model"}
+    assert set(state.values) == {
+        "complex_model/n",
+        "complex_model/a",
+        "complex_model/a/n",
+        "complex_model",
+    }
 
 
 def test_complex_model_no_keep_return():
@@ -72,12 +77,12 @@ def test_transformed_model_transformed_executor_with_passed_value():
         norm = yield dist.HalfNormal("n", 1, transform=dist.transforms.Log())
         return norm
 
-    _, state = pm.evaluate_model_transformed(transformed_model(), n=1.)
+    _, state = pm.evaluate_model_transformed(transformed_model(), n=1.0)
 
     assert set(state.values) == {"n", "__log_n"}
-    np.testing.assert_allclose(state.values["__log_n"], 0.)
+    np.testing.assert_allclose(state.values["__log_n"], 0.0)
 
-    _, state = pm.evaluate_model_transformed(transformed_model(), __log_n=0.)
+    _, state = pm.evaluate_model_transformed(transformed_model(), __log_n=0.0)
 
     assert set(state.values) == {"n", "__log_n"}
-    np.testing.assert_allclose(state.values["n"], 1.)
+    np.testing.assert_allclose(state.values["n"], 1.0)

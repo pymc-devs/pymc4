@@ -2,7 +2,9 @@ import collections
 import pymc4 as pm
 import types
 import abc
-import pymc4.scopes
+from pymc4 import scopes
+from .. import utils
+from pymc4.distributions import abstract
 
 
 class EvaluationError(RuntimeError):
@@ -51,9 +53,12 @@ class Executor(metaclass=abc.ABCMeta):
     def finalize_control_flow(self, stop_iteration, model_info, state):
         raise NotImplementedError
 
-    def evaluate_model(self, model, state=None):
+    def evaluate_model(self, model, *args, state=None, **kwargs):
         if state is None:
-            state = self.new_state()
+            state = self.new_state(*args, **kwargs)
+        else:
+            if args or kwargs:
+                raise ValueError("Provided arguments along with not empty state")
         if isinstance(model, pm.coroutine_model.Model):
             model_info = model.model_info()
             try:
@@ -74,11 +79,11 @@ class Executor(metaclass=abc.ABCMeta):
             try:
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
-                    if isinstance(dist, pm.distributions.base.Distribution):
+                    if isinstance(dist, abstract.Distribution):
                         dist = self.modify_distribution(dist, model_info, state)
                     if dist is None:
                         return_value = None
-                    elif isinstance(dist, pm.distributions.base.Distribution):
+                    elif isinstance(dist, abstract.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(dist, model_info, state)
                         except EvaluationError as error:
@@ -118,29 +123,116 @@ class Executor(metaclass=abc.ABCMeta):
                 break
         return return_value, state
 
+    __call__ = evaluate_model
 
-SamplingState = collections.namedtuple("EvaluationState", "values,distributions,potentials")
+
+_SamplingState = collections.namedtuple("_SamplingState", "values,distributions,potentials")
+
+_NameParts = collections.namedtuple("_NameParts", "path,original_name,untransformed_name,transform_name")
+
+
+class NameParts(_NameParts):
+    @classmethod
+    def parse(cls, name):
+        split = name.split("/")
+        path, original_name = split[:-1], split[-1]
+        if original_name.startswith("__"):
+            idx = original_name[2:].find("_")
+            if idx != -1:
+                untransformed_name = original_name[idx + 3:]
+                transform_name = original_name[2:idx + 3]
+            else:
+                untransformed_name = original_name
+                transform_name = None
+        else:
+            transform_name = None
+            untransformed_name = original_name
+        return NameParts(
+            path=tuple(path), original_name=original_name,
+            untransformed_name=untransformed_name, transform_name=transform_name
+        )
+
+    @property
+    def full_original_name(self):
+        return "/".join(self.path + (self.original_name,))
+
+    @property
+    def full_untransformed_name(self):
+        return "/".join(self.path + (self.untransformed_name,))
+
+    @property
+    def is_transformed(self):
+        return self.transform_name is not None
+
+
+class SamplingState(_SamplingState):
+    @property
+    def transformed_values(self):
+        all_values: dict = self.values.copy()
+        # get rid of `nest/name` if `nest/__transform_name` is present
+        for fullname in self.values:
+            namespec = NameParts.parse(fullname)
+            if namespec.is_transformed:
+                if namespec.full_untransformed_name in all_values:
+                    all_values.pop(namespec.full_untransformed_name)
+        return all_values
+
+    @property
+    def untransformed_values(self):
+        all_values: dict = self.values.copy()
+        # get rid of `nest/__transform_name` if `nest/name` is present
+        for fullname in self.values:
+            namespec = NameParts.parse(fullname)
+            if namespec.is_transformed:
+                all_values.pop(namespec.full_original_name)
+        return all_values
+
+    def new_state_with_untransformed(self):
+        return self.__class__(
+            values=self.untransformed_values,
+            distributions=dict(),
+            potentials=list()
+        )
+
+    def new_state_with_transformed(self):
+        return self.__class__(
+            values=self.transformed_values,
+            distributions=dict(),
+            potentials=list()
+        )
+
+    @classmethod
+    def new(cls, *conditions: dict, **condition_kwargs: dict):
+        condition_state = utils.merge_dicts(*conditions, condition_kwargs)
+        return SamplingState(values=condition_state, distributions=dict(), potentials=[])
+
+    def collect_log_prob(self):
+        logp = 0
+        for name, dist in self.distributions.items():
+            logp += dist.log_prob(self.values[name])
+        for pot in self.potentials:
+            logp += pot.value
+        return logp
 
 
 class SamplingExecutor(Executor):
-    def __init__(self, **do):
-        self.default_do = do
+    def __init__(self, *conditions: dict, **condition_kwargs: dict):
+        self.default_condition = utils.merge_dicts(*conditions, condition_kwargs)
 
-    def new_state(self, **do):
-        state_do = self.default_do.copy()
-        state_do.update(do)
-        return SamplingState(values=state_do, distributions=dict(), potentials=[])
+    def new_state(self, *conditions: dict, **condition_kwargs: dict):
+        condition_state = self.default_condition.copy()
+        return SamplingState.new(condition_state, condition_kwargs, *conditions)
 
     def modify_distribution(self, dist, model_info, state):
         return dist
 
     def proceed_distribution(self, dist, model_info, state):
-        if isinstance(dist, pymc4.distributions.base.Potential):
+        if isinstance(dist, abstract.Potential):
             value = dist.value
-            state.potentials.append(value)
+            state.potentials.append(dist)
             return value, state
 
-        scoped_name = pymc4.scopes.Scope.variable_name(dist.name)
+        scoped_name = scopes.variable_name(dist.name)
         if scoped_name in state.distributions:
             raise EvaluationError(
                 "Attempting to create duplicate variable '{}', "
@@ -166,7 +258,7 @@ class SamplingExecutor(Executor):
             control_flow.throw(error)
             control_flow.close()
             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
-        return_name = pymc4.scopes.Scope.variable_name(model_name)
+        return_name = scopes.variable_name(model_name)
         if not model_info["keep_auxiliary"] and return_name in state.values:
             raise EarlyReturn(state.values[model_name], state)
         return control_flow
@@ -177,6 +269,6 @@ class SamplingExecutor(Executor):
         else:
             return_value = None
         if return_value is not None and model_info["keep_return"]:
-            return_name = pymc4.scopes.Scope.variable_name(model_info["name"])
+            return_name = scopes.variable_name(model_info["name"])
             state.values[return_name] = return_value
         return return_value, state

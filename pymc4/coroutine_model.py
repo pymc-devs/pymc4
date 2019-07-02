@@ -1,11 +1,11 @@
-import biwrap
 import functools
 import types
 import pymc4
-from pymc4.scopes import name_scope
+from .scopes import name_scope
+from .utils import biwrap
 
 
-@biwrap.biwrap
+@biwrap
 def model(genfn, *, name=None, keep_auxiliary=True, keep_return=True, method=False):
     if method:
         template = ModelTemplate(

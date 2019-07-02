@@ -81,11 +81,6 @@ class Scope(object):
         """
         return "/".join(map(str, cls.chain("name", leaf=name, drop_none=True)))
 
-    @classmethod
-    def use_transform(cls):
-        flags = list(cls.chain("transformed", drop_none=True))
-        return flags and flags[-1]
-
     def __repr__(self):
         return "Scope({})".format(self.__dict__)
 
@@ -94,5 +89,4 @@ def name_scope(name):
     return Scope(name=name)
 
 
-def transformed(active=True):
-    return Scope(transformed=active)
+variable_name = Scope.variable_name

@@ -5,16 +5,16 @@ Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
 import tensorflow_probability as tfp
+from .. import abstract
+from .distribution import BackendDistribution
+
+
 tfd = tfp.distributions
 
-
-from .distribution import BackendDistribution
-from ..base.continuous import Normal, HalfNormal
-
-__all__ = ['Normal', 'HalfNormal']
+__all__ = ["Normal", "HalfNormal"]
 
 
-class Normal(BackendDistribution, Normal):
+class Normal(BackendDistribution, abstract.Normal):
     r"""
     Developer Notes
     ---------------
@@ -23,15 +23,14 @@ class Normal(BackendDistribution, Normal):
     - mu: loc
     - sigma: scale
     """
-    __doc__ = Normal.__doc__ + __doc__
+    __doc__ = abstract.Normal.__doc__ + __doc__
 
     def _init_backend(self):
-        mu, sigma = self.conditions['mu'], self.conditions['sigma']
-        self._backend_distribution = tfd.Normal(
-            loc=mu, scale=sigma, name=self.name)
+        mu, sigma = self.conditions["mu"], self.conditions["sigma"]
+        self._backend_distribution = tfd.Normal(loc=mu, scale=sigma, name=self.name)
 
 
-class HalfNormal(BackendDistribution, HalfNormal):
+class HalfNormal(BackendDistribution, abstract.HalfNormal):
     r"""
     Developer Notes
     ---------------
@@ -39,8 +38,8 @@ class HalfNormal(BackendDistribution, HalfNormal):
 
     - sigma: scale
     """
-    __doc__ = HalfNormal.__doc__ + __doc__
+    __doc__ = abstract.HalfNormal.__doc__ + __doc__
 
     def _init_backend(self):
-        sigma = self.conditions['sigma']
+        sigma = self.conditions["sigma"]
         self._backend_distribution = tfd.HalfNormal(scale=sigma, name=self.name)

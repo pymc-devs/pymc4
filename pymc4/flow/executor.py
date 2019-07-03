@@ -178,10 +178,12 @@ class SamplingState(object):
         return cls(values=condition_state, distributions=dict(), potentials=[])
 
     def collect_log_prob(self):
-        return sum(itertools.chain(
-            (dist.log_prob(self.values[name]) for name, dist in self.distributions.items()),
-            (p.value for p in self.potentials)
-        ))
+        return sum(
+            itertools.chain(
+                (dist.log_prob(self.values[name]) for name, dist in self.distributions.items()),
+                (p.value for p in self.potentials),
+            )
+        )
 
     def __repr__(self):
         # display keys only

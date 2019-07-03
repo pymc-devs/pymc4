@@ -1,19 +1,21 @@
 """
 PyMC4 continuous random variables.
 
-Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
-Implements random variables not supported by tfp as distributions.
+Provides template classes for backend random variables.
 """
 
 # pylint: disable=undefined-all-variable
-import tensorflow_probability as tfp
-from tensorflow_probability import distributions as tfd
+from pymc4.distributions.abstract.distribution import (
+    BoundedDistribution,
+    BoundedContinuousDistribution,
+    ContinuousDistribution,
+    UnitContinuousDistribution,
+    PositiveContinuousDistribution,
+)
+import math
 
-from .random_variable import PositiveContinuousRV, RandomVariable, UnitContinuousRV
-from .random_variable import TensorLike, IntTensorLike
 
-
-class Beta(UnitContinuousRV):
+class Beta(UnitContinuousDistribution):
     r"""
     Beta random variable.
 
@@ -68,11 +70,11 @@ class Beta(UnitContinuousRV):
     - beta: concentration1
     """
 
-    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
-        return tfd.Beta(concentration0=alpha, concentration1=beta, *args, **kwargs)
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
 
 
-class Cauchy(RandomVariable):
+class Cauchy(ContinuousDistribution):
     r"""
     Cauchy random variable.
 
@@ -123,11 +125,11 @@ class Cauchy(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
-        return tfd.Cauchy(loc=alpha, scale=beta, **kwargs)
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
 
 
-class ChiSquared(PositiveContinuousRV):
+class ChiSquared(PositiveContinuousDistribution):
     r"""
     :math:`\chi^2` random variable.
 
@@ -174,11 +176,11 @@ class ChiSquared(PositiveContinuousRV):
     Chi2 distribution in TensorFlow Probability.
     """
 
-    def _base_dist(self, nu: IntTensorLike, *args, **kwargs):
-        return tfd.Chi2(df=nu, *args, **kwargs)
+    def __init__(self, name, nu, **kwargs):
+        super().__init__(name, nu=nu, **kwargs)
 
 
-class Exponential(PositiveContinuousRV):
+class Exponential(PositiveContinuousDistribution):
     r"""
     Exponential random variable.
 
@@ -221,11 +223,11 @@ class Exponential(PositiveContinuousRV):
     - lam: rate
     """
 
-    def _base_dist(self, lam: TensorLike, *args, **kwargs):
-        return tfd.Exponential(rate=lam)
+    def __init__(self, name, lam, **kwargs):
+        super().__init__(name, lam=lam, **kwargs)
 
 
-class Gamma(PositiveContinuousRV):
+class Gamma(PositiveContinuousDistribution):
     r"""
     Gamma random variable.
 
@@ -278,11 +280,11 @@ class Gamma(PositiveContinuousRV):
 
     """
 
-    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
-        return tfd.Gamma(concentration=alpha, rate=beta, *args, **kwargs)
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
 
 
-class Gumbel(RandomVariable):
+class Gumbel(ContinuousDistribution):
     r"""
     Univariate Gumbel random variable.
 
@@ -337,11 +339,11 @@ class Gumbel(RandomVariable):
     - beta: scale
     """
 
-    def _base_dist(self, mu: TensorLike, beta: TensorLike, *args, **kwargs):
-        return tfd.Gumbel(loc=mu, scale=beta, *args, **kwargs)
+    def __init__(self, name, mu, beta, **kwargs):
+        super().__init__(name, mu=mu, beta=beta, **kwargs)
 
 
-class HalfCauchy(PositiveContinuousRV):
+class HalfCauchy(PositiveContinuousDistribution):
     r"""
     Half-Cauchy random variable.
 
@@ -387,11 +389,11 @@ class HalfCauchy(PositiveContinuousRV):
     In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def _base_dist(self, beta: TensorLike, *args, **kwargs):
-        return tfd.HalfCauchy(loc=0, scale=beta)
+    def __init__(self, name, beta, **kwargs):
+        super().__init__(name, beta=beta, **kwargs)
 
 
-class HalfNormal(PositiveContinuousRV):
+class HalfNormal(PositiveContinuousDistribution):
     r"""
     Half-normal random variable.
 
@@ -455,11 +457,11 @@ class HalfNormal(PositiveContinuousRV):
     - sigma: scale
     """
 
-    def _base_dist(self, sigma: TensorLike, *args, **kwargs):
-        return tfd.HalfNormal(scale=sigma, **kwargs)
+    def __init__(self, name, sigma, **kwargs):
+        super().__init__(name, sigma=sigma, **kwargs)
 
 
-class HalfStudentT(PositiveContinuousRV):
+class HalfStudentT(PositiveContinuousDistribution):
     r"""
     Half Student's T random variable.
 
@@ -520,20 +522,11 @@ class HalfStudentT(PositiveContinuousRV):
     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def _base_dist(self, nu: IntTensorLike, sigma: TensorLike, *args, **kwargs):
-        """
-        Half student-T base distribution.
-
-        A HalfStudentT is the absolute value of a StudentT.
-        """
-        return tfd.TransformedDistribution(
-            distribution=tfd.StudentT(df=nu, scale=sigma, loc=0, *args, **kwargs),
-            bijector=tfp.bijectors.AbsoluteValue(),
-            name="HalfStudentT",
-        )
+    def __init__(self, name, nu, sigma, **kwargs):
+        super().__init__(name, nu=nu, sigma=sigma, **kwargs)
 
 
-class InverseGamma(PositiveContinuousRV):
+class InverseGamma(PositiveContinuousDistribution):
     r"""
     Inverse gamma random variable, the reciprocal of the gamma distribution.
 
@@ -584,11 +577,11 @@ class InverseGamma(PositiveContinuousRV):
     - beta: rate
     """
 
-    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
-        return tfd.InverseGamma(concentration=alpha, rate=beta, *args, **kwargs)
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
 
 
-class InverseGaussian(PositiveContinuousRV):
+class InverseGaussian(PositiveContinuousDistribution):
     r"""
     InverseGaussian random variable.
 
@@ -605,11 +598,11 @@ class InverseGaussian(PositiveContinuousRV):
     - lam: concentration
     """
 
-    def _base_dist(self, mu: TensorLike, lam: TensorLike, *args, **kwargs):
-        return tfd.InverseGaussian(loc=mu, concentration=lam, *args, **kwargs)
+    def __init__(self, name, mu, lam, **kwargs):
+        super().__init__(name, mu=mu, lam=lam, **kwargs)
 
 
-class Kumaraswamy(UnitContinuousRV):
+class Kumaraswamy(UnitContinuousDistribution):
     r"""
     Kumaraswamy random variable.
 
@@ -659,11 +652,11 @@ class Kumaraswamy(UnitContinuousRV):
 
     """
 
-    def _base_dist(self, a: TensorLike, b: TensorLike, *args, **kwargs):
-        return tfd.Kumaraswamy(concentration0=a, concentration1=b, *args, **kwargs)
+    def __init__(self, name, a, b, **kwargs):
+        super().__init__(name, a=a, b=b, **kwargs)
 
 
-class Laplace(RandomVariable):
+class Laplace(ContinuousDistribution):
     r"""
     Laplace random variable.
 
@@ -712,11 +705,11 @@ class Laplace(RandomVariable):
     - b: scale
     """
 
-    def _base_dist(self, mu: TensorLike, b: TensorLike, *args, **kwargs):
-        return tfd.Laplace(loc=mu, scale=b)
+    def __init__(self, name, mu, b, **kwargs):
+        super().__init__(name, mu=mu, b=b, **kwargs)
 
 
-class Logistic(RandomVariable):
+class Logistic(ContinuousDistribution):
     r"""
     Logistic random variable.
 
@@ -759,11 +752,11 @@ class Logistic(RandomVariable):
         Scale (s > 0).
     """
 
-    def _base_dist(self, mu: TensorLike, s: TensorLike, *args, **kwargs):
-        return tfd.Logistic(loc=mu, scale=s, *args, **kwargs)
+    def __init__(self, name, mu, s, **kwargs):
+        super().__init__(name, mu=mu, s=s, **kwargs)
 
 
-class LogitNormal(UnitContinuousRV):
+class LogitNormal(UnitContinuousDistribution):
     r"""
     LogitNormal random variable.
 
@@ -792,15 +785,11 @@ class LogitNormal(UnitContinuousRV):
     - sigma: scale of tfd.Normal
     """
 
-    def _base_dist(self, mu: TensorLike, sigma: TensorLike, *args, **kwargs):
-        return tfd.TransformedDistribution(
-            distribution=tfd.Normal(loc=mu, scale=sigma, *args, **kwargs),
-            bijector=tfp.bijectors.Sigmoid(),
-            name="LogitNormal",
-        )
+    def __init__(self, name, mu, sigma, **kwargs):
+        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
 
 
-class LogNormal(PositiveContinuousRV):
+class LogNormal(PositiveContinuousDistribution):
     r"""
     Log-normal random variable.
 
@@ -862,11 +851,11 @@ class LogNormal(PositiveContinuousRV):
     - sigma: scale
     """
 
-    def _base_dist(self, mu: TensorLike, sigma: TensorLike, *args, **kwargs):
-        return tfd.LogNormal(loc=mu, scale=sigma, **kwargs)
+    def __init__(self, name, mu, sigma, **kwargs):
+        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
 
 
-class Normal(RandomVariable):
+class Normal(ContinuousDistribution):
     r"""
     Univariate normal random variable.
 
@@ -922,20 +911,13 @@ class Normal(RandomVariable):
         @pm.model
         def model():
             x = pm.Normal('x', mu=0, sigma=10)
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - sigma: scale
     """
 
-    def _base_dist(self, mu: TensorLike, sigma: TensorLike, *args, **kwargs):
-        return tfd.Normal(loc=mu, scale=sigma, **kwargs)
+    def __init__(self, name, mu, sigma, **kwargs):
+        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
 
 
-class Pareto(RandomVariable):
+class Pareto(BoundedContinuousDistribution):
     r"""
     Pareto random variable.
 
@@ -987,11 +969,17 @@ class Pareto(RandomVariable):
     - m: scale
     """
 
-    def _base_dist(self, alpha: TensorLike, m: TensorLike, *args, **kwargs):
-        return tfd.Pareto(concentration=alpha, scale=m)
+    def __init__(self, name, alpha, m, **kwargs):
+        super().__init__(name, alpha=alpha, m=m, **kwargs)
+
+    def upper_limit(self):
+        return float("inf")
+
+    def lower_limit(self):
+        return self.conditions["m"]
 
 
-class StudentT(RandomVariable):
+class StudentT(ContinuousDistribution):
     r"""
     Student's T random variable.
 
@@ -1057,11 +1045,11 @@ class StudentT(RandomVariable):
     - nu: df
     """
 
-    def _base_dist(self, mu: TensorLike, sigma: TensorLike, nu: IntTensorLike, *args, **kwargs):
-        return tfd.StudentT(df=nu, loc=mu, scale=sigma)
+    def __init__(self, name, mu, sigma, nu, **kwargs):
+        super().__init__(name, mu=mu, sigma=sigma, nu=nu, **kwargs)
 
 
-class Triangular(RandomVariable):
+class Triangular(BoundedDistribution):
     r"""
     Continuous Triangular random variable.
 
@@ -1123,11 +1111,17 @@ class Triangular(RandomVariable):
     - upper: high
     """
 
-    def _base_dist(self, lower: TensorLike, c: TensorLike, upper: TensorLike, *args, **kwargs):
-        return tfd.Triangular(low=lower, high=upper, peak=c, *args, **kwargs)
+    def __init__(self, name, lower, c, upper, **kwargs):
+        super().__init__(name, lower=lower, c=c, upper=upper, **kwargs)
+
+    def lower_limit(self):
+        return self.conditions["lower"]
+
+    def upper_limit(self):
+        return self.conditions["upper"]
 
 
-class Uniform(UnitContinuousRV):
+class Uniform(BoundedContinuousDistribution):
     r"""
     Continuous uniform random variable.
 
@@ -1176,11 +1170,17 @@ class Uniform(UnitContinuousRV):
     - upper: high
     """
 
-    def _base_dist(self, lower: TensorLike, upper: TensorLike, *args, **kwargs):
-        return tfd.Uniform(low=lower, high=upper, *args, **kwargs)
+    def __init__(self, name, lower, upper, **kwargs):
+        super().__init__(name, lower=lower, upper=upper, **kwargs)
+
+    def lower_limit(self):
+        return self.conditions["lower"]
+
+    def upper_limit(self):
+        return self.conditions["upper"]
 
 
-class VonMises(RandomVariable):
+class VonMises(BoundedDistribution):
     r"""
     Univariate VonMises random variable.
 
@@ -1231,11 +1231,17 @@ class VonMises(RandomVariable):
     - kappa: concentration
     """
 
-    def _base_dist(self, mu: TensorLike, kappa: TensorLike, *args, **kwargs):
-        return tfd.VonMises(loc=mu, concentration=kappa, *args, **kwargs)
+    def __init__(self, name, mu, kappa, **kwargs):
+        super().__init__(name, mu=mu, kappa=kappa, **kwargs)
+
+    def lower_limit(self):
+        return -math.pi
+
+    def upper_limit(self):
+        return math.pi
 
 
-class Weibull(PositiveContinuousRV):
+class Weibull(PositiveContinuousDistribution):
     r"""
     Weibull random variable.
 
@@ -1286,17 +1292,5 @@ class Weibull(PositiveContinuousRV):
     - beta: scale
     """
 
-    def _base_dist(self, alpha: TensorLike, beta: TensorLike, *args, **kwargs):
-        """
-        Weibull base distribution.
-
-        The inverse of the Weibull bijector applied to a U[0, 1] random
-        variable gives a Weibull-distributed random variable.
-        """
-        return tfd.TransformedDistribution(
-            distribution=tfd.Uniform(low=0.0, high=1.0),
-            bijector=tfp.bijectors.Invert(
-                tfp.bijectors.Weibull(scale=beta, concentration=alpha, *args, **kwargs)
-            ),
-            name="Weibull",
-        )
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)

@@ -6,12 +6,14 @@ Implements random variables not supported by tfp as distributions.
 """
 
 # pylint: disable=undefined-all-variable
-from tensorflow_probability import distributions as tfd
+from pymc4.distributions.abstract.distribution import (
+    SimplexContinuousDistribution,
+    DiscreteDistribution,
+    ContinuousDistribution,
+)
 
-from .random_variable import RandomVariable, TensorLike, IntTensorLike
 
-
-class Dirichlet(RandomVariable):
+class Dirichlet(SimplexContinuousDistribution):
     r"""
     Dirichlet random variable.
 
@@ -55,11 +57,11 @@ class Dirichlet(RandomVariable):
     - a: concentration
     """
 
-    def _base_dist(self, a: TensorLike, *args, **kwargs):
-        return tfd.Dirichlet(concentration=a, *args, **kwargs)
+    def __init__(self, name, a, **kwargs):
+        super().__init__(name, a=a, **kwargs)
 
 
-class LKJ(RandomVariable):
+class LKJ(ContinuousDistribution):
     r"""
     The LKJ (Lewandowski, Kurowicka and Joe) random variable.
 
@@ -98,11 +100,11 @@ class LKJ(RandomVariable):
     - eta: concentration
     """
 
-    def _base_dist(self, n: IntTensorLike, eta: TensorLike, *args, **kwargs):
-        return tfd.LKJ(dimension=n, concentration=eta, *args, **kwargs)
+    def __init__(self, name, n, eta, **kwargs):
+        super().__init__(name, n=n, eta=eta, **kwargs)
 
 
-class Multinomial(RandomVariable):
+class Multinomial(DiscreteDistribution):
     r"""
     Multinomial random variable.
 
@@ -141,11 +143,11 @@ class Multinomial(RandomVariable):
     - p: probs
     """
 
-    def _base_dist(self, n: IntTensorLike, p: TensorLike, *args, **kwargs):
-        return tfd.Multinomial(total_count=n, probs=p, *args, **kwargs)
+    def __init__(self, name, n, p, **kwargs):
+        super().__init__(name, n=n, p=p, **kwargs)
 
 
-class MvNormal(RandomVariable):
+class MvNormal(ContinuousDistribution):
     r"""
     Multivariate normal random variable.
 
@@ -188,11 +190,11 @@ class MvNormal(RandomVariable):
     - cov: covariance_matrix
     """
 
-    def _base_dist(self, mu: TensorLike, cov: TensorLike, *args, **kwargs):
-        return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov, *args, **kwargs)
+    def __init__(self, name, mu, cov, **kwargs):
+        super().__init__(name, mu=mu, cov=cov, **kwargs)
 
 
-class VonMisesFisher(RandomVariable):
+class VonMisesFisher(ContinuousDistribution):
     r"""
     Von Mises-Fisher random variable.
 
@@ -228,11 +230,11 @@ class VonMisesFisher(RandomVariable):
     - kappa: concentration
     """
 
-    def _base_dist(self, mu: TensorLike, kappa: TensorLike, *args, **kwargs):
-        return tfd.VonMisesFisher(mean_direction=mu, concentration=kappa, *args, **kwargs)
+    def __init__(self, name, mu, kappa, **kwargs):
+        super().__init__(name, mu=mu, kappa=kappa, **kwargs)
 
 
-class Wishart(RandomVariable):
+class Wishart(ContinuousDistribution):
     r"""
     Wishart random variable.
 
@@ -271,5 +273,5 @@ class Wishart(RandomVariable):
     - V: scale
     """
 
-    def _base_dist(self, nu: IntTensorLike, V: TensorLike, *args, **kwargs):
-        return tfd.Wishart(df=nu, scale=V, *args, **kwargs)
+    def __init__(self, name, nu, V, **kwargs):
+        super().__init__(name, nu=nu, V=V, **kwargs)

@@ -1,20 +1,11 @@
 """PyMC4."""
-from ._model import *
-from .random_variables import *
 
-import tensorflow as _tf
-from ._template_contexts import get_context as _get_context
-from .random_variables import RandomVariable as _RandomVariable
+from . import utils
+from .scopes import name_scope, variable_name
+from . import coroutine_model
+from . import distributions
+from . import flow
+from .flow import evaluate_model_transformed, evaluate_model
+from .coroutine_model import Model, model
 
 __version__ = "0.0.1"
-
-
-def _convert_rv_to_backend(d, dtype=None, name=None, as_ref=False):
-    if isinstance(d, _RandomVariable):
-        return d.as_tensor()
-    return d
-
-
-_tf.register_tensor_conversion_function(
-    _RandomVariable, conversion_func=_convert_rv_to_backend, priority=0
-)

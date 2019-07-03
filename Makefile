@@ -46,7 +46,7 @@ docstyle:
 
 format:
 	@printf "Checking code style with black...\n"
-	black --check pymc4/
+	black --check --diff pymc4 tests
 	@printf "\033[1;34mBlack passes!\033[0m\n\n"
 
 style:
@@ -55,10 +55,10 @@ style:
 	@printf "\033[1;34mPylint passes!\033[0m\n\n"
 
 black:  # Format code in-place using black.
-	black pymc4/
+	black pymc4/ tests/
 
 test:  # Test code using pytest.
-	pytest -v pymc4/tests/ --cov=pymc4/ --html=testing-report.html --self-contained-html
+	pytest -v pymc4 tests --ignore=pymc4/hmc --doctest-modules --html=testing-report.html --self-contained-html
 
 lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
 

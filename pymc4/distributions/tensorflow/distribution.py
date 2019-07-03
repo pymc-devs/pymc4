@@ -2,11 +2,8 @@ from pymc4.distributions.abstract.distribution import Distribution, Potential as
 
 
 class BackendDistribution(Distribution):
-    """
-    BackendDistribution for Tensorflow distributions
-    """
+    """Backend distribution for Tensorflow distributions."""
 
-    __doc__ = Distribution.__doc__ + __doc__
     _backend_distribution = None
 
     def sample(self, shape=(), seed=None):

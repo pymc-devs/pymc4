@@ -15,15 +15,17 @@ __all__ = ["Normal", "HalfNormal"]
 
 
 class Normal(BackendDistribution, abstract.Normal):
-    r"""
+    __doc__ = r"""{}
+
     Developer Notes
     ---------------
     Parameter mappings to TensorFlow Probability are as follows:
 
     - mu: loc
     - sigma: scale
-    """
-    __doc__ = abstract.Normal.__doc__ + __doc__
+    """.format(
+        abstract.Normal.__doc__
+    )
 
     def _init_backend(self):
         mu, sigma = self.conditions["mu"], self.conditions["sigma"]
@@ -31,14 +33,16 @@ class Normal(BackendDistribution, abstract.Normal):
 
 
 class HalfNormal(BackendDistribution, abstract.HalfNormal):
-    r"""
+    __doc__ = r"""{}
+
     Developer Notes
     ---------------
     Parameter mappings to TensorFlow Probability are as follows:
 
     - sigma: scale
-    """
-    __doc__ = abstract.HalfNormal.__doc__ + __doc__
+    """.format(
+        abstract.HalfNormal.__doc__
+    )
 
     def _init_backend(self):
         sigma = self.conditions["sigma"]

@@ -3,7 +3,10 @@ from pymc4.coroutine_model import Model, unpack
 
 
 class Distribution(Model):
-    """Statistical distribution"""
+    """Statistical distribution.
+
+    An abstract class with consistent API across backends
+    """
 
     def __init__(self, name, keep_auxiliary=False, keep_return=True, transform=None, **kwargs):
         self.conditions = self.unpack_conditions(**kwargs)
@@ -22,7 +25,10 @@ class Distribution(Model):
     @staticmethod
     def unpack_conditions(**kwargs) -> dict:
         """
-        Parse arguments
+        Parse arguments.
+
+        This is used to form :attr:`conditions` for a distributions, as
+        one may desire to have different parametrizations, this all should be done there
         """
         return kwargs
 
@@ -34,7 +40,7 @@ class Distribution(Model):
     @abc.abstractmethod
     def sample(self, shape=(), seed=None):
         """
-        Forward sampling implementation
+        Forward sampling implementation.
 
         Parameters
         ----------
@@ -48,7 +54,7 @@ class Distribution(Model):
     @abc.abstractmethod
     def sample_numpy(self, shape=(), seed=None):
         """
-        Forward sampling implementation returning raw numpy arrays
+        Forward sampling implementation returning raw numpy arrays.
 
         Parameters
         ----------
@@ -63,11 +69,12 @@ class Distribution(Model):
 
     @abc.abstractmethod
     def log_prob(self, value):
+        """Return log probability in backend array format."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def log_prob_numpy(self, value):
-        """Return log probability in numpy array format"""
+        """Return log probability in numpy array format."""
         raise NotImplementedError
 
 

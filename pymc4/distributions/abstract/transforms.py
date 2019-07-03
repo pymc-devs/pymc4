@@ -11,7 +11,10 @@ class Transform(object):
     jacobian_preference = JacobianPreference.Forward
 
     def forward(self, x):
-        """Applies transformation forward to input variable `x`.
+        """
+        Forward of a bijector.
+
+        Applies transformation forward to input variable `x`.
         When transform is used on some distribution `p`, it will transform the random variable `x` after sampling
         from `p`.
 
@@ -21,7 +24,7 @@ class Transform(object):
             Input tensor to be transformed.
 
         Returns
-        --------
+        -------
         tensor
             Transformed tensor.
         """
@@ -29,6 +32,8 @@ class Transform(object):
 
     def backward(self, z):
         """
+        Backward of a bijector.
+
         Applies inverse of transformation to input variable `z`.
         When transform is used on some distribution `p`, which has observed values `z`, it is used to
         transform the values of `z` correctly to the support of `p`.
@@ -47,7 +52,7 @@ class Transform(object):
 
     def jacobian_log_det(self, x):
         """
-        Calculates logarithm of the absolute value of the Jacobian determinant for input `x`.
+        Calculate logarithm of the absolute value of the Jacobian determinant for input `x`.
 
         Parameters
         ----------
@@ -63,7 +68,7 @@ class Transform(object):
 
     def inverse_jacobian_log_det(self, z):
         """
-        Calculates logarithm of the absolute value of the Jacobian determinant for output `z`.
+        Calculate logarithm of the absolute value of the Jacobian determinant for output `z`.
 
         Parameters
         ----------

@@ -1,7 +1,8 @@
-import pymc4 as pm
 import types
 from typing import Any, Tuple
 import abc
+import itertools
+import pymc4 as pm
 from pymc4 import scopes
 from pymc4 import utils
 from pymc4.distributions import abstract
@@ -177,12 +178,10 @@ class SamplingState(object):
         return cls(values=condition_state, distributions=dict(), potentials=[])
 
     def collect_log_prob(self):
-        logp = 0
-        for name, dist in self.distributions.items():
-            logp += dist.log_prob(self.values[name])
-        for pot in self.potentials:
-            logp += pot.value
-        return logp
+        return sum(itertools.chain(
+            (dist.log_prob(self.values[name]) for name, dist in self.distributions.items()),
+            (p.value for p in self.potentials)
+        ))
 
     def __repr__(self):
         # display keys only

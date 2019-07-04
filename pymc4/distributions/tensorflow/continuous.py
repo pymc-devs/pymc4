@@ -11,7 +11,62 @@ from pymc4.distributions.tensorflow.distribution import BackendDistribution
 
 tfd = tfp.distributions
 
-__all__ = ["Normal", "HalfNormal"]
+__all__ = ["Beta", "Cauchy", "HalfCauchy", "Normal", "HalfNormal"]
+
+class Beta(BackendDistribution, abstract.Beta):
+    __doc__ = r"""{}
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration1
+    - beta: concentration0
+    """.format(
+        abstract.Beta.__doc__
+    )
+    __doc__ = abstract.Beta.__doc__ + __doc__
+
+    def _init_backend(self):
+        alpha, beta = self.conditions["alpha"], self.conditions["beta"]
+        self._backend_distribution = tfd.Beta(
+            concentration1=alpha, concentration0=beta, name=self.name)
+
+
+class Cauchy(BackendDistribution, abstract.Cauchy):
+    __doc__ = r"""{}
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: loc
+    - beta: scale
+    """.format(
+        abstract.Cauchy.__doc__
+    )
+
+    def _init_backend(self):
+        alpha, beta = self.conditions["alpha"], self.conditions["beta"]
+        self._backend_distribution = tfd.Cauchy(
+            loc=alpha, scale=beta, name=self.name)
+
+
+class HalfCauchy(BackendDistribution, abstract.HalfCauchy):
+    __doc__ = r"""{}
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: loc
+    - beta: scale
+    """.format(
+        abstract.HalfCauchy.__doc__
+    )
+
+    def _init_backend(self):
+        alpha, beta = self.conditions["alpha"], self.conditions["beta"]
+        self._backend_distribution = tfd.HalfCauchy(
+            loc=alpha, scale=beta, name=self.name)
+
 
 
 class Normal(BackendDistribution, abstract.Normal):

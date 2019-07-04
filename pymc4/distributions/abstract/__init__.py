@@ -1,3 +1,3 @@
 from . import transforms
 from .distribution import Distribution, Potential
-from .continuous import Normal, HalfNormal
+from .continuous import Beta, Cauchy, HalfCauchy, Normal, HalfNormal

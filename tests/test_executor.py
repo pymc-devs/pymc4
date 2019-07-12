@@ -90,8 +90,8 @@ def test_transformed_model_transformed_executor_with_passed_value():
     np.testing.assert_allclose(state.values["n"], 1.0)
 
 
+@pytest.mark.importorskip("tensorflow_probability")
 def test_transformed_executor_logp_tensorflow():
-    pytest.importorskip("tensorflow_probability")
     from tensorflow_probability import bijectors as bij, distributions as tfd
 
     norm_log = tfd.TransformedDistribution(tfd.HalfNormal(1), bij.Invert(bij.Exp()))
@@ -111,8 +111,8 @@ def test_transformed_executor_logp_tensorflow():
     )
 
 
+@pytest.mark.importorskip("tensorflow_probability")
 def test_executor_logp_tensorflow():
-    pytest.importorskip("tensorflow_probability")
     from tensorflow_probability import distributions as tfd
 
     norm = tfd.HalfNormal(1)

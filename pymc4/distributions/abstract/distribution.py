@@ -1,5 +1,4 @@
 import abc
-from typing import Any
 import copy
 from pymc4.coroutine_model import Model, unpack
 
@@ -83,15 +82,14 @@ class Distribution(Model):
 
     @classmethod
     def dist(cls, *args, **kwargs):
-        """
-        Create an anonymous Distribution that can't be used within yield statement
-        """
+        """Create an anonymous Distribution that can't be used within yield statement."""
         return cls(None, *args, **kwargs)
 
     def prior(self, name, *, transform=None, observed=None):
-        """
-        Finalize instantiation of an anonymous Distribution making it act as
-        a prior and allow to participate within yield
+        """Finalize instantiation of an anonymous Distribution.
+
+        The resulting distribution will have the provided name, transform and an observed variable
+        making it act as a prior and allow to participate within yield
         """
         if not self.is_anonymous:
             raise TypeError("Distribution is already not anonymous and cant define a new prior")

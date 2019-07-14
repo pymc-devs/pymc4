@@ -173,13 +173,6 @@ def test_executor_logp_tensorflow(transformed_model):
     np.testing.assert_allclose(state.collect_log_prob(), norm.log_prob(math.pi), equal_nan=False)
 
 
-def test_unnamed_distribution():
-    f = lambda: (yield pm.distributions.Normal.dist(0, 1))
-    with pytest.raises(pm.flow.executor.EvaluationError) as e:
-        pm.evaluate_model(f())
-    assert e.match("anonymous Distribution")
-
-
 def test_single_distribution():
     _, state = pm.evaluate_model(pm.distributions.Normal("n", 0, 1))
     assert "n" in state.all_values
@@ -322,3 +315,22 @@ def test_as_sampling_state_does_not_works_if_untransformed_exec(complex_model):
     with pytest.raises(TypeError) as e:
         state.as_sampling_state()
     e.match("'complex_model/a/__log_n' is not found")
+
+
+def test_unnamed_distribution():
+    f = lambda: (yield pm.distributions.Normal.dist(0, 1))
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model(f())
+    assert e.match("anonymous Distribution")
+
+
+def test_unnamed_distribution_to_prior():
+    f = lambda: (yield pm.distributions.Normal.dist(0, 1).prior("n"))
+    _, state = pm.evaluate_model(f())
+    assert "n" in state.untransformed_values
+
+
+def test_initialized_distribution_cant_be_transformed_into_a_new_prior():
+    with pytest.raises(TypeError) as e:
+        pm.distributions.Normal("m", 0, 1).prior("n")
+    assert e.match("already not anonymous")

@@ -343,7 +343,7 @@ class SamplingState(object):
         )
 
     def as_sampling_state(self):
-        """Sampling state that should me used within MCMC sampling.
+        """Create a sampling state that should me used within MCMC sampling.
 
         There are some principles that hold for the state.
 
@@ -362,10 +362,7 @@ class SamplingState(object):
         observed_values = dict()
         for name, dist in self.distributions.items():
             namespec = utils.NameParts.from_name(name)
-            if (
-                dist.transform is not None
-                and name not in self.observed_values
-            ):
+            if dist.transform is not None and name not in self.observed_values:
                 transformed_namespec = namespec.replace_transform(dist.transform.name)
                 if transformed_namespec.full_original_name not in self.transformed_values:
                     raise TypeError(

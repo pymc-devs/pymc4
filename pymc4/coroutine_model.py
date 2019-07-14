@@ -91,19 +91,43 @@ class ModelTemplate(object):
         >>> import pymc4 as pm
         >>> from pymc4 import distributions as dist
 
-        >>> @pm.model(keep_return=False)  # do not keep `norm` in return
+        >>> @pm.model  # keep_return is True by default
         ... def nested_model(cond):
         ...     norm = yield dist.Normal("n", cond, 1)
         ...     return norm
 
-        >>> @pm.model  # keep_return is True by default
+        >>> @pm.model
         ... def main_model():
         ...     norm = yield dist.Normal("n", 0, 1)
         ...     result = yield nested_model(norm, name="a")
         ...     return result
         >>> ret, state = pm.evaluate_model(main_model())
-        >>> assert "main_model" in state.values
-        >>> assert "main_model/a" not in state.values
+        >>> print(sorted(state.untransformed_values))
+        ['main_model', 'main_model/a', 'main_model/a/n', 'main_model/n']
+
+        Setting :code`keep_return=False` for the nested model we can remove ``'main_model/a'`` from output state
+
+        >>> @pm.model
+        ... def main_model():
+        ...     norm = yield dist.Normal("n", 0, 1)
+        ...     result = yield nested_model(norm, name="a", keep_return=False)
+        ...     return result
+        >>> ret, state = pm.evaluate_model(main_model())
+        >>> print(sorted(state.untransformed_values))
+        ['main_model', 'main_model/a/n', 'main_model/n']
+
+        We can also observe some variables setting :code:`observed=True` in a distribution
+
+        >>> @pm.model  # keep_return is True by default
+        ... def main_model():
+        ...     norm = yield dist.Normal("n", 0, 1, observed=0.)
+        ...     result = yield nested_model(norm, name="a")
+        ...     return result
+        >>> ret, state = pm.evaluate_model(main_model())
+        >>> print(sorted(state.untransformed_values))
+        ['main_model', 'main_model/a', 'main_model/a/n']
+        >>> print(sorted(state.observed_values))
+        ['main_model/n']
         """
         genfn = functools.partial(self.template, *args, **kwargs)
         name = get_name(self.name, self.template, name)

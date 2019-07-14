@@ -11,12 +11,12 @@ def map_nested(fn, structure, cond=lambda obj: True):
     """
 
     def inner_map(obj):
-        if cond(obj):
-            return fn(obj)
         if isinstance(obj, (tuple, list)) and len(obj) > 0:
             return type(obj)(map(inner_map, obj))
         if isinstance(obj, dict) and len(obj) > 0:
             return dict(map(inner_map, obj.items()))
+        if cond(obj):
+            return fn(obj)
         return obj
 
     # After map_nested is called, a inner_map cell will exist. This cell
@@ -82,7 +82,7 @@ class NameParts(object):
     UNTRANSFORMED_NAME_ERROR_MESSAGE = (
         "Invalid name: `{}`, the correct one should look like: " "`name` without leading underscore"
     )
-    __slots__ = ("path", "original_name", "untransformed_name", "transform_name")
+    __slots__ = ("path", "transform_name", "untransformed_name")
 
     @classmethod
     def is_valid_untransformed_name(cls, name):
@@ -94,16 +94,26 @@ class NameParts(object):
         match = cls.NAME_RE.match(name)
         return match is not None
 
-    def __init__(self, name):
+    def __init__(self, path, transform_name, untransfomred_name):
+        self.path = tuple(path)
+        self.untransformed_name = untransfomred_name
+        self.transform_name = transform_name
+
+    @classmethod
+    def from_name(cls, name):
         split = name.split("/")
         path, original_name = split[:-1], split[-1]
-        match = self.NAME_RE.match(original_name)
-        if not self.is_valid_name(name):
-            raise ValueError(self.NAME_ERROR_MESSAGE)
-        self.path = tuple(path)
-        self.original_name = original_name
-        self.untransformed_name = match["name"]
-        self.transform_name = match["transform"]
+        match = cls.NAME_RE.match(original_name)
+        if not cls.is_valid_name(name):
+            raise ValueError(cls.NAME_ERROR_MESSAGE)
+        return cls(path, match["transform"], match["name"])
+
+    @property
+    def original_name(self):
+        if self.is_transformed:
+            return "__{}_{}".format(self.transform_name, self.untransformed_name)
+        else:
+            return self.untransformed_name
 
     @property
     def full_original_name(self):
@@ -119,3 +129,6 @@ class NameParts(object):
 
     def __repr__(self):
         return "<NameParts of {}>".format(self.full_original_name)
+
+    def replace_transform(self, transform_name):
+        return self.__class__(self.path, transform_name, self.untransformed_name)

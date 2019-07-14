@@ -55,7 +55,8 @@ class Scope(object):
                 else:
                     yield val
         if leaf is not cls._leaf:
-            yield leaf
+            if not (drop_none and leaf is None):
+                yield leaf
 
     @classmethod
     def variable_name(cls, name):
@@ -80,8 +81,16 @@ class Scope(object):
         ...     with Scope():
         ...         print(Scope.variable_name("leaf1"))
         inner/leaf1
+
+        empty name results in None name
+        >>> assert Scope.variable_name(None) is None
+        >>> assert Scope.variable_name("") is None
         """
-        return "/".join(map(str, cls.chain("name", leaf=name, drop_none=True)))
+        value = "/".join(map(str, cls.chain("name", leaf=name, drop_none=True)))
+        if not value:
+            return None
+        else:
+            return value
 
     def __repr__(self):
         return "Scope({})".format(self.__dict__)

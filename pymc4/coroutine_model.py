@@ -1,5 +1,6 @@
 import functools
 import types
+
 import pymc4
 from pymc4.scopes import name_scope
 from pymc4.utils import biwrap, NameParts
@@ -73,6 +74,8 @@ class ModelTemplate(object):
             but can be used just once
         keep_auxiliary : bool
             Whether to override the default variable for `keep_auxiliary`
+        keep_return: bool
+            Whether to override the default variable for `keep_return`
         args : tuple
             positional conditioners for generative process
         kwargs : dict
@@ -131,24 +134,21 @@ def yieldify(fn):
 
 
 class Model(object):
-    # this is gonna be used for generator-like objects
-    _default_model_info = dict(keep_auxiliary=True, keep_return=False)
+    # this is gonna be used for generator-like objects,
+    # prohibit modification of this dict wrapping it into a MappingProxy
+    default_model_info = types.MappingProxyType(
+        dict(keep_auxiliary=True, keep_return=False, scope=name_scope(None), name=None)
+    )
 
     def __init__(self, genfn, *, name=None, keep_auxiliary=True, keep_return=True):
         self.genfn = genfn
         self.name = name
-        self._model_info = dict(keep_auxiliary=keep_auxiliary, keep_return=keep_return)
-
-    def model_info(self):
-        info = self._model_info.copy()
-        info.update(scope=name_scope(self.name), name=self.name)
-        return info
-
-    @classmethod
-    def default_model_info(cls):
-        info = cls._default_model_info.copy()
-        info.update(scope=name_scope(None), name=None)
-        return info
+        self.model_info = dict(
+            keep_auxiliary=keep_auxiliary,
+            keep_return=keep_return,
+            scope=name_scope(self.name),
+            name=self.name,
+        )
 
     def control_flow(self):
         return (yield from self.genfn())

@@ -20,9 +20,6 @@ class BackendDistribution(Distribution):
 
 
 class Potential(BasePotential):
-    def _init_backend(self):
-        pass
-
     @property
     def value_numpy(self):
         return self.value.numpy()

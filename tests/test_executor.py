@@ -334,3 +334,54 @@ def test_initialized_distribution_cant_be_transformed_into_a_new_prior():
     with pytest.raises(TypeError) as e:
         pm.distributions.Normal("m", 0, 1).prior("n")
     assert e.match("already not anonymous")
+
+
+def test_unable_to_create_duplicate_variable():
+    def invdalid_model():
+        yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+        yield pm.distributions.Normal("n", 0, 1)
+
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model(invdalid_model())
+    assert e.match("duplicate")
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model_transformed(invdalid_model())
+    assert e.match("duplicate")
+
+
+def test_unnamed_return():
+    @pm.model
+    def a_model():
+        return (
+            yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+        )
+
+    _, state = pm.evaluate_model(a_model())
+    assert "a_model" in state.all_values
+
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model(a_model(name=None))
+    assert e.match("unnamed")
+
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model_transformed(a_model(name=None))
+    assert e.match("unnamed")
+
+
+def test_unnamed_return_2():
+    @pm.model(name=None)
+    def a_model():
+        return (
+            yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+        )
+
+    _, state = pm.evaluate_model(a_model(name="b_model"))
+    assert "b_model" in state.all_values
+
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model(a_model())
+    assert e.match("unnamed")
+
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model_transformed(a_model())
+    assert e.match("unnamed")

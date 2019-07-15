@@ -6,8 +6,12 @@ from pymc4.scopes import name_scope
 from pymc4.utils import biwrap, NameParts
 
 
+# we need that indicator to distinguish between explicit None and no value provided case
+_no_name_provided = object()
+
+
 @biwrap
-def model(genfn, *, name=None, keep_auxiliary=True, keep_return=True, method=False):
+def model(genfn, *, name=_no_name_provided, keep_auxiliary=True, keep_return=True, method=False):
     if method:
         template = ModelTemplate(
             genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return
@@ -26,14 +30,23 @@ def model(genfn, *, name=None, keep_auxiliary=True, keep_return=True, method=Fal
 
 
 def get_name(default, base_fn, name):
-    if name is None:
-        if default is not None:
+    if name is _no_name_provided:
+        if default is not _no_name_provided:
             name = default
         elif hasattr(base_fn, "name"):
             name = getattr(base_fn, "name")
         elif hasattr(base_fn, "__name__"):
             name = base_fn.__name__
     return name
+
+
+def name2value(name):
+    if name is None:
+        return None
+    else:
+        if not isinstance(name, (int, str)):
+            raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
+        return name
 
 
 class ModelTemplate(object):
@@ -61,7 +74,9 @@ class ModelTemplate(object):
         self.keep_auxiliary = keep_auxiliary
         self.keep_return = keep_return
 
-    def __call__(self, *args, name=None, keep_auxiliary=None, keep_return=None, **kwargs):
+    def __call__(
+        self, *args, name=_no_name_provided, keep_auxiliary=None, keep_return=None, **kwargs
+    ):
         """
         Evaluate the model.
 
@@ -166,7 +181,7 @@ class Model(object):
 
     def __init__(self, genfn, *, name=None, keep_auxiliary=True, keep_return=True):
         self.genfn = genfn
-        self.name = name
+        self.name = name2value(name)
         self.model_info = dict(
             keep_auxiliary=keep_auxiliary,
             keep_return=keep_return,

@@ -46,7 +46,7 @@ def name2value(name):
     else:
         if not isinstance(name, (int, str)):
             raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
-        return name
+        return str(name)
 
 
 class ModelTemplate(object):

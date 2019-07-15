@@ -129,24 +129,70 @@ class Executor(metaclass=abc.ABCMeta):
         #       in pymc4 it is model is some generator, that yields distributions and possibly returns a value
         #       at the point of posterior sampling we may want to skip some computations. This is
         #       mainly developer feature that allows to implement compositional distributions like Horseshoe and
-        #       at posterior predictive sampling omit some
+        #       at posterior predictive sampling omit some redundant parts of computational graph
         #   - keep_return
-        #       the return value of generator will be saved in state.values if this set to True. Usually it is what
-        #       we expect returning a value from a model.
+        #       the return value of generator will be saved in state.untransformed_values if this set to True.
         #   - observed
         #       the observed variable(s) for the given model. There are some restrictions on how do we provide
-        #       observed variables. First, every observed variable should have a name either explicitly or implicitly.
-        #       Explicit name is provided in case observed variable is a dictionary. That is related to
-        #       MultiObserved variables like in pymc3. MultiObserved variables were a special case of
-        #       regular variables and the decision to make it MultiObserved depended on the type of observed
-        #       user provided as data. Logp was computed then passing this dict to logp function. In contrast to pymc3
-        #       pymc4 has Model as a first class citizen and Distribution is just a subclass of it. Allowing passing
-        #       an observed variable to a Model sounds nice, but it breaks previous conventions (in pymc3) about
-        #       MultiObserved variables. Allowing passing observed to a Model sounds natural and explicit so far, but
-        #       this turns up with weird corner cases. An important one is a distribution MultiObserved data. It differs
-        #       from a model with separate distributions in a fundamental way as requires lop_prob arguments to be
-        #       packed in dictionary.
+        #       observed variables.
+        #       - Every observed variable should have a name either explicitly or implicitly.
+        #           The explicit way to provide an observed variable is to use `observed` keyword in a Distribution API
+        #           such as `Dist(..., observed=value)`. Observed variables are treated carefully in evaluation
+        #           what will be covered a bit later. The other way, a bit less explicit, is to provide a name
+        #           for the observed variable is creating a dictionary Dict[str, Any] that maps node names to
+        #           the observed values and provide it to the evaluator.
+        #       - Every distribution has to have only one value or none of them: either observed or (un)transformed one.
+        #           This constraint removes undefined choice and the need to guess for the intent.
+        #       Consequently, the above conventions create interesting situations that may appear in API usage.
+        #       As mentioned above, a distribution has to have only one value provided or none. Therefore we have to
+        #       perform a check at some point to make sure no ambiguous situations happen. The accepted cases should
+        #       then contain:
+        #       1. observed value is provided in `Dist(..., observed=value)`. This is the regular usage of PyMC4
+        #       2. observed value provided in `Dist(..., observed=value)` is suppressed. The case we perform
+        #           posterior/prior predictive checks. If the value is not suppressed, the executor will
+        #           yield the old value without sampling.
+        #       3. observed value provided in `Dist(..., observed=value)` is replaced with new data. The common case
+        #           of model being reused to fit for different datasets
+        #       4. unobserved value is provided in executor directly to replace an observed value.
+        #           An advanced usage of PyMC4 where we change the set of observed nodes (not variables)
         #
+        #       The above 4 cases should work with MCMC sampling engine and provide the correct log probability
+        #       computation from PyMC4 side. We should now recall that all the computation of log probability
+        #       is done in the transformed space, where parameters lie in Rn without any constraints.
+        #
+        #       The tempting questing is "what happens with the observed variables?". Without careful treatment
+        #       we would compute log probability for the transformed space if `Dist` in `Dist(..., observed=value)`
+        #       is bounded. But this is not required and redundant, the observed variable does not violate the bounds
+        #       and is not adjusted in MCMC. Therefore we should take care and not autotransfrom them in the transformed
+        #       Executor.
+        #
+        #       Some other issues may happen if we omit checks proceeding cases 1-4
+        #       Case 1. Nothing special here. We just make sure not to see the same value again in unobserved that is
+        #           probably a mistake.
+        #       Case 2. How do we know we need forward sample a particular observed node? The solution is to provide a
+        #           convention that passing `observed={"observed/variable/name": None}` suppresses an observed set as
+        #           `Dist(..., observed=value)` and instructs to sample from this distribution.
+        #       Case 3. That's probably explicit to pass `observed={"observed/variable/name": new_value}` to executor
+        #           and ask to replace the old observed
+        #       Case 4. Suppose we provide an observed value for a specific variable using `Dist(..., observed=value)`.
+        #           What should happen if we accidentally pass (un)transformed value to the executor with the same name?
+        #           Do we want to replace the observed value with a new one but not observed or it is a typo/mistake?
+        #           It may be very hard to track the intent except having a convention that we want to override the
+        #           value in here and perform inference on it. My (@ferrine'e) guess is that convention is very unsafe
+        #           and implicit, therefore I propose to additionally provide an intent suppressing the observed
+        #           variable by name. Actual code should contain `observed={"old/observed/variable/name": None}` passed
+        #           along with `values={"old/observed/variable/name": new_inference_value}` to the executor. We can be
+        #           sure there is no mistake and safely replace "old/observed/variable/name" with an unobserved one.
+        #
+        #       You may now see, that logic becomes quite complicated once we care about the details and common
+        #       use cases. So far we figured out what checks are to be performed, the next question is at what time they
+        #       are performed. In most cases we only get enough information at the time we actually see the node, not
+        #       before the execution, therefore there is not choice but to put all the execution validation at runtime.
+        #       These checks differ a bit for the transformed and untransformed variables as for the debug purposes
+        #       (we want to get the initial sampling state but bored in manually applying the transform) a provided
+        #       value for bounded distribution may be either in transformed or untransformed space. So far validation
+        #       logic is spread among different places, it probably worth unifying we way we validate execution state.
+
         if isinstance(model, abstract.Distribution):
             # usually happens when
             #   pm.evaluate_model(pm.distributions.Normal("n", 0, 1))

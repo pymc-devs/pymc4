@@ -298,9 +298,11 @@ class SamplingState(object):
         ]
         # be less verbose here
         num_potentials = len(self.potentials)
-        indent = (len(self.__class__.__name__) + 1) * " "
+        indent = 4 * " "
         return (
-            "{}(untransformed_values: {}\n"
+            "{}(\n"
+            + indent
+            + "untransformed_values: {}\n"
             + indent
             + "transformed_values: {}\n"
             + indent

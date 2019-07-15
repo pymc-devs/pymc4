@@ -38,7 +38,7 @@ script:
 
   # Tests command is default in dockerfile cmd
   - if [[ $NAME == UNIT ]]; then docker run  --mount type=bind,source="$(pwd)",target=/opt/pymc4 --name pymc4_test pymc4:latest bash -c \
-                                              "pytest -v tests --ignore=pymc4/hmc --doctest-modules --cov=pymc4/";
+                                              "pytest -v tests --doctest-modules --cov=pymc4/";
     fi
 
   - if [[ $NAME == LINT ]]; then docker run pymc4:latest bash -c "make lint";

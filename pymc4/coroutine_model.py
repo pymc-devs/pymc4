@@ -40,15 +40,6 @@ def get_name(default, base_fn, name):
     return name
 
 
-def name2value(name):
-    if name is None:
-        return None
-    else:
-        if not isinstance(name, (int, str)):
-            raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
-        return str(name)
-
-
 class ModelTemplate(object):
     """
     Model Template -- generative model with metadata.
@@ -181,7 +172,13 @@ class Model(object):
 
     def __init__(self, genfn, *, name=None, keep_auxiliary=True, keep_return=True):
         self.genfn = genfn
-        self.name = name2value(name)
+        if name is not None and not isinstance(name, (int, str)):
+            raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
+        elif name is None:
+            self.name = None
+        else:
+            self.name = str(name)
+
         self.model_info = dict(
             keep_auxiliary=keep_auxiliary,
             keep_return=keep_return,

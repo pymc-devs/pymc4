@@ -403,3 +403,13 @@ def test_uncatched_exception_works():
     with pytest.raises(pm.flow.executor.StopExecution) as e:
         pm.evaluate_model_transformed(a_model())
     assert e.match("something_bad")
+
+
+def test_none_yield():
+    def model():
+        yield None
+        yield dist.Normal("n", 0, 1)
+
+    with pytest.raises(pm.flow.executor.EvaluationError) as e:
+        pm.evaluate_model_transformed(model())
+    assert e.match("processed in evaluation")

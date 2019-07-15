@@ -223,14 +223,22 @@ class Executor(metaclass=abc.ABCMeta):
             try:
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
+                    if not isinstance(
+                        dist, (types.GeneratorType, coroutine_model.Model, abstract.Potential)
+                    ):
+                        # prohibit any unknown type
+                        error = EvaluationError(
+                            "Type {} can't be processed in evaluation".format(type(dist))
+                        )
+                        control_flow.throw(error)
+                        raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
+                    # dist is a clean, known type
+
+                    if isinstance(dist, abstract.Distribution):
+                        dist = self.modify_distribution(dist, model_info, state)
                     if isinstance(dist, abstract.Potential):
                         state.potentials.append(dist)
                         return_value = dist
-                        continue
-                    if isinstance(dist, abstract.Distribution):
-                        dist = self.modify_distribution(dist, model_info, state)
-                    if dist is None:
-                        return_value = None
                     elif isinstance(dist, abstract.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(dist, model_info, state)
@@ -243,7 +251,9 @@ class Executor(metaclass=abc.ABCMeta):
                         )
                     else:
                         error = EvaluationError(
-                            "Type of {} can't be processed in evaluation".format(dist)
+                            "Type {} can't be processed in evaluation. This error may appear "
+                            "due to wrong implementation, please submit a bug report to "
+                            "https://github.com/pymc-devs/pymc4/issues".format(type(dist))
                         )
                         control_flow.throw(error)
                         raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error

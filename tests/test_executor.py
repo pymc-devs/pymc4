@@ -385,3 +385,21 @@ def test_unnamed_return_2():
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model_transformed(a_model())
     assert e.match("unnamed")
+
+
+def test_uncatched_exception_works():
+    @pm.model
+    def a_model():
+        try:
+            yield 1
+        except:
+            pass
+        yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+
+    with pytest.raises(pm.flow.executor.StopExecution) as e:
+        pm.evaluate_model(a_model())
+    assert e.match("something_bad")
+
+    with pytest.raises(pm.flow.executor.StopExecution) as e:
+        pm.evaluate_model_transformed(a_model())
+    assert e.match("something_bad")

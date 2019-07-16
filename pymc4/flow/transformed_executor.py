@@ -6,7 +6,8 @@ from pymc4.flow.executor import SamplingExecutor, EvaluationError, observed_valu
 
 
 class TransformedSamplingExecutor(SamplingExecutor):
-    def validate_state(self, state):
+    @staticmethod
+    def validate_state(state):
         return
 
     def modify_distribution(self, dist, model_info, state):

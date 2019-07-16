@@ -413,3 +413,12 @@ def test_none_yield():
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model_transformed(model())
     assert e.match("processed in evaluation")
+
+
+def test_differently_shaped_logp():
+    def model():
+        yield dist.Normal("n1", np.zeros(10), np.ones(10))
+        yield dist.Normal("n2", np.zeros(3), np.ones(3))
+
+    _, state = pm.evaluate_model(model())
+    state.collect_log_prob()  # this should work

@@ -1,11 +1,7 @@
-import os
-from . import abstract
+from pymc4 import _backend
+from pymc4.distributions import abstract
 
-_backend = "tensorflow"
-if "PYMC_BACKEND" in os.environ:
-    _backend = os.environ["PYMC_BACKEND"]
-
-if _backend == "tensorflow":
+if _backend.TENSORFLOW:
     from .tensorflow import *  # pylint: disable=wildcard-import
 else:
-    raise ImportError("Backend {} not supported".format(_backend))
+    raise ImportError("Backend {} not supported".format(_backend.BACKEND))

@@ -900,9 +900,9 @@ class Normal(ContinuousDistribution):
 
     Parameters
     ----------
-    mu : float
+    mu : float|tensor
         Mean.
-    sigma : float
+    sigma : float|tensor
         Standard deviation (sigma > 0).
 
     Examples
@@ -956,9 +956,9 @@ class Pareto(BoundedContinuousDistribution):
 
     Parameters
     ----------
-    alpha : float
+    alpha : float|tensor
         Shape parameter (alpha > 0).
-    m : float
+    m : float|tensor
         Scale parameter (m > 0).
 
     Developer Notes
@@ -1020,11 +1020,11 @@ class StudentT(ContinuousDistribution):
 
     Parameters
     ----------
-    nu : float
+    nu : float|tensor
         Degrees of freedom, also known as normality parameter (nu > 0).
-    mu : float
+    mu : float|tensor
         Location parameter.
-    sigma : float
+    sigma : float|tensor
         Scale parameter (sigma > 0). Converges to the standard deviation as nu
         increases. (only required if lam is not specified)
 
@@ -1095,11 +1095,11 @@ class Triangular(BoundedDistribution):
 
     Parameters
     ----------
-    lower : float
+    lower : float|tensor
         Lower limit.
-    c: float
+    c: float|tensor
         mode
-    upper : float
+    upper : float|tensor
         Upper limit.
 
     Developer Notes
@@ -1157,9 +1157,9 @@ class Uniform(BoundedContinuousDistribution):
 
     Parameters
     ----------
-    lower : float
+    lower : float|tensor
         Lower limit.
-    upper : float
+    upper : float|tensor
         Upper limit.
 
     Developer Notes
@@ -1218,9 +1218,9 @@ class VonMises(BoundedDistribution):
 
     Parameters
     ----------
-    mu : float
+    mu : float|tensor
         Mean.
-    kappa : float
+    kappa : float|tensor
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
 
     Developer Notes
@@ -1279,9 +1279,9 @@ class Weibull(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    alpha : float
+    alpha : float|tensor
         Shape parameter (alpha > 0).
-    beta : float
+    beta : float|tensor
         Scale parameter (beta > 0).
 
     Developer Notes

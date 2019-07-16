@@ -2,6 +2,7 @@ import types
 from typing import Any, Tuple, Dict, Union, List
 import collections
 import itertools
+from pymc4 import _backend
 import pymc4 as pm
 from pymc4 import coroutine_model
 from pymc4 import scopes
@@ -103,12 +104,11 @@ class SamplingState(object):
         self.potentials = potentials
 
     def collect_log_prob(self):
-        return sum(
-            itertools.chain(
-                (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
-                (p.value for p in self.potentials),
-            )
+        all_terms = itertools.chain(
+            (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
+            (p.value for p in self.potentials),
         )
+        return sum(map(_backend.ops.sum, all_terms))
 
     def __repr__(self):
         # display keys only

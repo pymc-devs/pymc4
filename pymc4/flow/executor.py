@@ -242,10 +242,11 @@ class SamplingExecutor(object):
     def evaluate_model(
         self,
         model: ModelType,
-        *args: dict,
+        *,
         state: SamplingState = None,
         _validate_state: bool = True,
-        **kwargs: Any,
+        values: Dict[str, Any] = None,
+        observed: Dict[str, Any] = None,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -263,9 +264,9 @@ class SamplingExecutor(object):
         # as general as possible, just to restrict the imagination and reduce complexity.
 
         if state is None:
-            state = self.new_state(*args, **kwargs)
+            state = self.new_state(values=values, observed=observed)
         else:
-            if args or kwargs:
+            if values or observed:
                 raise ValueError("Provided arguments along with not empty state")
         if _validate_state:
             self.validate_state(state)

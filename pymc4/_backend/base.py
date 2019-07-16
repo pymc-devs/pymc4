@@ -1,6 +1,6 @@
 import abc
 import numpy as np
-from typing import *
+from typing import TypeVar, Tuple, Union, Any, Type
 
 
 T = TypeVar("T")  # like a tensor dummy

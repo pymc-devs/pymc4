@@ -1,7 +1,7 @@
 from pymc4._backend.base import Backend
 import tensorflow as tf
 import numpy as np
-from typing import *
+from typing import TypeVar, Tuple, Union, Any, Type
 
 T = TypeVar("T")
 

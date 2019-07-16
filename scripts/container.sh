@@ -19,5 +19,5 @@ fi
 if [[ $* == *--test* ]]; then
     echo "Testing PyMC4"
     docker run --mount type=bind,source="$(pwd)",target=/opt/pymc4/ pymc4:latest bash -c \
-                                      "pytest -v pymc4/tests/ --cov=pymc4/"
+                                      "pytest -v pymc4 tests --doctest-modules --cov=pymc4/"
 fi

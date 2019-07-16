@@ -1,8 +1,7 @@
 """
 PyMC4 discrete random variables.
 
-Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
-Implements random variables not supported by tfp as distributions.
+Provides template classes for backend random variables.
 """
 
 # pylint: disable=undefined-all-variable
@@ -48,12 +47,6 @@ class Bernoulli(BoundedDiscreteDistribution):
     ----------
     p : float
         Probability of success (0 < p < 1).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - p: probs
     """
 
     def __init__(self, name, p, **kwargs):
@@ -107,13 +100,6 @@ class Binomial(BoundedDiscreteDistribution):
         Number of Bernoulli trials (n >= 0).
     p : float
         Probability of success in each trial (0 < p < 1).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - n: total_count
-    - p: probs
     """
 
     def __init__(self, name, n, p, **kwargs):
@@ -220,18 +206,16 @@ class Categorical(BoundedDiscreteDistribution):
     p : array of floats
         p > 0 and the elements of p must sum to 1. They will be automatically
         rescaled otherwise.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - p: probs
     """
 
     def __init__(self, name, p, **kwargs):
         super().__init__(name, p=p, **kwargs)
 
-    # TODO: upper limit
+    def lower_limit(self):
+        return 0
+
+    def upper_limit(self):
+        return len(self.conditions["p"]) - 1
 
 
 class Geometric(BoundedDiscreteDistribution):
@@ -271,11 +255,6 @@ class Geometric(BoundedDiscreteDistribution):
     p : float
         Probability of success on an individual trial (0 < p <= 1).
 
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - p: probs
     """
 
     def __init__(self, name, p, **kwargs):
@@ -342,13 +321,6 @@ class NegativeBinomial(PositiveDiscreteDistribution):
     alpha : float
         Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
         desired.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu + alpha: total_count
-    - mu / (mu + alpha): probs
     """
 
     def __init__(self, name, mu, alpha, **kwargs):
@@ -397,12 +369,6 @@ class Poisson(PositiveDiscreteDistribution):
     -----
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: rate
     """
 
     def __init__(self, name, mu, **kwargs):

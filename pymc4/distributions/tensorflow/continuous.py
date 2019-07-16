@@ -13,6 +13,7 @@ tfd = tfp.distributions
 
 __all__ = ["Beta", "Cauchy", "HalfCauchy", "Normal", "HalfNormal"]
 
+
 class Beta(BackendDistribution, abstract.Beta):
     __doc__ = r"""{}
     Developer Notes
@@ -24,7 +25,6 @@ class Beta(BackendDistribution, abstract.Beta):
     """.format(
         abstract.Beta.__doc__
     )
-    __doc__ = abstract.Beta.__doc__ + __doc__
 
     def _init_backend(self):
         alpha, beta = self.conditions["alpha"], self.conditions["beta"]

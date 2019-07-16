@@ -32,13 +32,13 @@ class TransformedSamplingExecutor(SamplingExecutor):
             # but raise if we have transformed value passed in dict
             if transformed_scoped_name in state.transformed_values:
                 raise EvaluationError(
-                    EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_TRANSFORMED_VALUE_PASSEED.format(
+                    EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_TRANSFORMED_VALUE_PASSED.format(
                         scoped_name, transformed_scoped_name
                     )
                 )
             if scoped_name in state.untransformed_values:
                 raise EvaluationError(
-                    EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSEED.format(
+                    EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSED.format(
                         scoped_name, scoped_name
                     )
                 )

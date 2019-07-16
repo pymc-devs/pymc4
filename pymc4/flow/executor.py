@@ -14,14 +14,14 @@ ModelType = Union[types.GeneratorType, coroutine_model.Model]
 
 class EvaluationError(RuntimeError):
     # common error messages
-    OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSEED = (
+    OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSED = (
         "Attempting to evaluate a model with both "
         "observed and unobserved values provided "
         "what requires to choose what value to actually yield. "
         "To remove this error you either need to add `observed={{{0!r}: None}}` "
         "or remove {0!r} from untransformed values."
     )
-    OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_TRANSFORMED_VALUE_PASSEED = (
+    OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_TRANSFORMED_VALUE_PASSED = (
         "Attempting to evaluate a model with both "
         "observed and unobserved values provided "
         "what requires to choose what value to actually yield. "
@@ -480,7 +480,7 @@ class SamplingExecutor(object):
             else:
                 if scoped_name in state.untransformed_values:
                     raise EvaluationError(
-                        EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSEED.format(
+                        EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSED.format(
                             scoped_name
                         )
                     )

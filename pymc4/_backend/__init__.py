@@ -1,7 +1,10 @@
 import os
 from pymc4._backend.base import Backend
 
-ops: Backend  # to make type checkers happy
+
+__all__ = ["ops", "SUPPORTED_BACKEND_NAMES", "TENSORFLOW"]
+
+ops: Backend  # to make type checkers a bit more happy
 SUPPORTED_BACKEND_NAMES = {"tensorflow"}
 TENSORFLOW = False
 

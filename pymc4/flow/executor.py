@@ -1,7 +1,6 @@
 import types
 from typing import Any, Tuple, Dict, Union, List
 import collections
-import abc
 import itertools
 import pymc4 as pm
 from pymc4 import coroutine_model

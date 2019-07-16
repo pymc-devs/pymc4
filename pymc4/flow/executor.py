@@ -232,9 +232,7 @@ class SamplingExecutor(object):
     """
 
     def validate_return_object(self, return_object: Any):
-        if isinstance(
-            return_object, MODEL_AND_POTENTIAL_TYPES
-        ):
+        if isinstance(return_object, MODEL_AND_POTENTIAL_TYPES):
             raise EvaluationError(
                 "Return values should not contain instances of "
                 "apm.coroutine_model.Model`, "
@@ -383,9 +381,7 @@ class SamplingExecutor(object):
             try:
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
-                    if not isinstance(
-                        dist, MODEL_AND_POTENTIAL_TYPES
-                    ):
+                    if not isinstance(dist, MODEL_AND_POTENTIAL_TYPES):
                         # prohibit any unknown type
                         error = EvaluationError(
                             "Type {} can't be processed in evaluation".format(type(dist))

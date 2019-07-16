@@ -82,7 +82,7 @@ class TransformedSamplingExecutor(SamplingExecutor):
                 # 2. here decide on logdet computation, this might be effective
                 # with transformed value, but not with an untransformed one
                 # this information is stored in transform.jacobian_preference class attribute
-                # we pospone the computation of logdet as it might have some overhead
+                # we postpone the computation of logdet as it might have some overhead
                 if transform.jacobian_preference == JacobianPreference.Forward:
                     potential_fn = functools.partial(
                         transform.jacobian_log_det, untransformed_value

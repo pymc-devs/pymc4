@@ -10,6 +10,8 @@ from pymc4.distributions import abstract
 
 
 ModelType = Union[types.GeneratorType, coroutine_model.Model]
+MODEL_TYPES = (types.GeneratorType, coroutine_model.Model)
+MODEL_AND_POTENTIAL_TYPES = (types.GeneratorType, coroutine_model.Model, abstract.Potential)
 
 
 class EvaluationError(RuntimeError):
@@ -231,7 +233,7 @@ class SamplingExecutor(object):
 
     def validate_return_object(self, return_object: Any):
         if isinstance(
-            return_object, (coroutine_model.Model, types.GeneratorType, abstract.Potential)
+            return_object, MODEL_AND_POTENTIAL_TYPES
         ):
             raise EvaluationError(
                 "Return values should not contain instances of "
@@ -382,7 +384,7 @@ class SamplingExecutor(object):
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
                     if not isinstance(
-                        dist, (types.GeneratorType, coroutine_model.Model, abstract.Potential)
+                        dist, MODEL_AND_POTENTIAL_TYPES
                     ):
                         # prohibit any unknown type
                         error = EvaluationError(
@@ -403,7 +405,7 @@ class SamplingExecutor(object):
                         except EvaluationError as error:
                             control_flow.throw(error)
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
-                    elif isinstance(dist, (coroutine_model.Model, types.GeneratorType)):
+                    elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
                             dist, state=state, _validate_state=False
                         )

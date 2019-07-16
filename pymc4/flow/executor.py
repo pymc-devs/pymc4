@@ -230,7 +230,9 @@ class SamplingExecutor(object):
     """
 
     def validate_return_object(self, return_object: Any):
-        if isinstance(return_object, (coroutine_model.Model, types.GeneratorType, abstract.Potential)):
+        if isinstance(
+            return_object, (coroutine_model.Model, types.GeneratorType, abstract.Potential)
+        ):
             raise EvaluationError(
                 "Return values should not contain instances of "
                 "apm.coroutine_model.Model`, "

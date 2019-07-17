@@ -1,6 +1,9 @@
 import abc
 import copy
+from typing import Optional, Union
 from pymc4.coroutine_model import Model, unpack
+
+NameType = Union[str, int]
 
 
 class Distribution(Model):
@@ -9,7 +12,7 @@ class Distribution(Model):
     An abstract class with consistent API across backends
     """
 
-    def __init__(self, name, *, transform=None, observed=None, **kwargs):
+    def __init__(self, name: Optional[NameType], *, transform=None, observed=None, **kwargs):
         self.conditions = self.unpack_conditions(**kwargs)
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
@@ -85,7 +88,7 @@ class Distribution(Model):
         """Create an anonymous Distribution that can't be used within yield statement."""
         return cls(None, *args, **kwargs)
 
-    def prior(self, name, *, transform=None, observed=None):
+    def prior(self, name: NameType, *, transform=None, observed=None):
         """Finalize instantiation of an anonymous Distribution.
 
         The resulting distribution will have the provided name, transform and an observed variable

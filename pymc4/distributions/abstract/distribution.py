@@ -103,7 +103,7 @@ class Distribution(Model):
         cloned_dist.conditions = cloned_dist.conditions.copy()
         if transform is not None:
             cloned_dist.transform = transform
-        cloned_dist.name = name
+        cloned_dist.name = cloned_dist.validate_name(name)
         return cloned_dist
 
     @property

@@ -170,15 +170,18 @@ class Model(object):
         dict(keep_auxiliary=True, keep_return=False, scope=name_scope(None), name=None)
     )
 
-    def __init__(self, genfn, *, name=None, keep_auxiliary=True, keep_return=True):
-        self.genfn = genfn
+    @staticmethod
+    def validate_name(name):
         if name is not None and not isinstance(name, (int, str)):
             raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
         elif name is None:
-            self.name = None
+            return None
         else:
-            self.name = str(name)
+            return str(name)
 
+    def __init__(self, genfn, *, name=None, keep_auxiliary=True, keep_return=True):
+        self.genfn = genfn
+        self.name = self.validate_name(name)
         self.model_info = dict(
             keep_auxiliary=keep_auxiliary,
             keep_return=keep_return,

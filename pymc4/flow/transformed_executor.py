@@ -1,30 +1,56 @@
-import copy
-
+import functools
 from pymc4 import scopes, distributions
 from pymc4.distributions import abstract
 from pymc4.distributions.abstract.transforms import JacobianPreference
-from pymc4.flow.executor import SamplingExecutor, EvaluationError
+from pymc4.flow.executor import SamplingExecutor, EvaluationError, observed_value_in_evaluation
 
 
 class TransformedSamplingExecutor(SamplingExecutor):
+    def validate_state(self, state):
+        return
+
     def modify_distribution(self, dist, model_info, state):
         dist = super().modify_distribution(dist, model_info, state)
         if not isinstance(dist, abstract.Distribution):
             return dist
-        # this will be mentioned later, that's the way to avoid loops
-        if dist.transform is None:
+        scoped_name = scopes.variable_name(dist.name)
+
+        if dist.transform is None or dist.model_info.get(  # do nothing else if no transform is set
+            "autotransformed", False
+        ):  # already autotransformed, do nothing else
             return dist
         transform = dist.transform
-        scoped_name = scopes.variable_name(dist.name)
         transformed_scoped_name = scopes.variable_name(
             # double underscore stands for transform
             "__{}_{}".format(transform.name, dist.name)
         )
-        if transformed_scoped_name in state.values or scoped_name in state.values:
+        if observed_value_in_evaluation(scoped_name, dist, state) is not None:
+            # do not modify a distribution if it is observed
+            # same for programmatically observed
+            # but not for programmatically set to unobserved (when value is None)
+            # but raise if we have transformed value passed in dict
+            if transformed_scoped_name in state.transformed_values:
+                raise EvaluationError(
+                    EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_TRANSFORMED_VALUE_PASSED.format(
+                        scoped_name, transformed_scoped_name
+                    )
+                )
+            if scoped_name in state.untransformed_values:
+                raise EvaluationError(
+                    EvaluationError.OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSED.format(
+                        scoped_name, scoped_name
+                    )
+                )
+            return dist
+
+        if transformed_scoped_name in state.transformed_values:
             # We do not sample in this if branch
 
             # 0. do not allow ambiguity in state, make sure only one value is provided to compute logp
-            if transformed_scoped_name in state.values and scoped_name in state.values:
+            if (
+                transformed_scoped_name in state.transformed_values
+                and scoped_name in state.untransformed_values
+            ):
                 raise EvaluationError(
                     "Found both transformed and untransformed variables in the state: "
                     "'{} and '{}', but need exactly one".format(
@@ -34,15 +60,15 @@ class TransformedSamplingExecutor(SamplingExecutor):
 
             def model():
                 # 1. now compute all the variables: in the transformed and untransformed space
-                if transformed_scoped_name in state.values:
-                    transformed_value = state.values[transformed_scoped_name]
+                if transformed_scoped_name in state.transformed_values:
+                    transformed_value = state.transformed_values[transformed_scoped_name]
                     untransformed_value = transform.backward(transformed_value)
                 else:
-                    untransformed_value = state.values[scoped_name]
+                    untransformed_value = state.untransformed_values[scoped_name]
                     transformed_value = transform.forward(untransformed_value)
                 # these lines below
-                state.values[scoped_name] = untransformed_value
-                state.values[transformed_scoped_name] = transformed_value
+                state.untransformed_values[scoped_name] = untransformed_value
+                state.transformed_values[transformed_scoped_name] = transformed_value
                 # disable sampling and save cached results to store for yield dist
 
                 # once we are done with variables we can yield the value in untransformed space
@@ -50,47 +76,54 @@ class TransformedSamplingExecutor(SamplingExecutor):
 
                 # Important:
                 # I have no idea yet, how to make that beautiful.
-                # Here we remove a transform to create another model that
-                # essentially has an untransformed predefined value and the potential
-                # needed to specify the logp properly
-                dist_no_transform = copy.copy(dist)
-                dist_no_transform.transform = None
-                # If we do not set transform to None we will appear here again and again ending
-                # up with an unclosed recursion
+                # Here we indicate the distribution is already autotransformed nto to get in the infinite loop
+                dist.model_info["autotransformed"] = True
 
                 # 2. here decide on logdet computation, this might be effective
                 # with transformed value, but not with an untransformed one
                 # this information is stored in transform.jacobian_preference class attribute
+                # we postpone the computation of logdet as it might have some overhead
                 if transform.jacobian_preference == JacobianPreference.Forward:
-                    potential = -transform.jacobian_log_det(untransformed_value)
+                    potential_fn = functools.partial(
+                        transform.jacobian_log_det, untransformed_value
+                    )
+                    coef = -1.0
                 else:
-                    potential = transform.inverse_jacobian_log_det(transformed_value)
-                yield distributions.Potential(potential)
+                    potential_fn = functools.partial(
+                        transform.inverse_jacobian_log_det, transformed_value
+                    )
+                    coef = 1.0
+                yield distributions.Potential(potential_fn, coef=coef)
                 # 3. final return+yield will return untransformed_value
                 # as it is stored in state.values
                 # Note: we need yield here to make another checks on name duplicates, etc
-                return (yield dist_no_transform)
+                return (yield dist)
 
         else:
             # we gonna sample here, but logp should be computed for the transformed space
             def model():
-                # 0. as explained above we make a shallow copy of the distribution and remove the transform
-                dist_no_transform = copy.copy(dist)
-                dist_no_transform.transform = None
+                # 0. as explained above we indicate we already performed autotransform
+                dist.model_info["autotransformed"] = True
                 # 1. sample a value, as we've checked there is no state provided
-                # we need transform = None here not to get in a trouble
+                # we need `dist.model_info["autotransformed"] = True` here not to get in a trouble
                 # the return value is not yet user facing
-                sampled_untransformed_value = yield dist_no_transform
+                sampled_untransformed_value = yield dist
                 sampled_transformed_value = transform.forward(sampled_untransformed_value)
                 # already stored untransformed value via yield
                 # state.values[scoped_name] = sampled_untransformed_value
-                state.values[transformed_scoped_name] = sampled_transformed_value
+                state.transformed_values[transformed_scoped_name] = sampled_transformed_value
                 # 2. increment the potential
                 if transform.jacobian_preference == JacobianPreference.Forward:
-                    potential = -transform.jacobian_log_det(sampled_untransformed_value)
+                    potential_fn = functools.partial(
+                        transform.jacobian_log_det, sampled_untransformed_value
+                    )
+                    coef = -1.0
                 else:
-                    potential = transform.inverse_jacobian_log_det(sampled_transformed_value)
-                yield distributions.Potential(potential)
+                    potential_fn = functools.partial(
+                        transform.inverse_jacobian_log_det, sampled_transformed_value
+                    )
+                    coef = 1.0
+                yield distributions.Potential(potential_fn, coef=coef)
                 # 3. return value to the user
                 return sampled_untransformed_value
 

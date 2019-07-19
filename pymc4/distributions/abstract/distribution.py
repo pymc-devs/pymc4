@@ -1,5 +1,9 @@
 import abc
+import copy
+from typing import Optional, Union
 from pymc4.coroutine_model import Model, unpack
+
+NameType = Union[str, int]
 
 
 class Distribution(Model):
@@ -8,14 +12,16 @@ class Distribution(Model):
     An abstract class with consistent API across backends
     """
 
-    def __init__(self, name, keep_auxiliary=False, keep_return=True, transform=None, **kwargs):
+    def __init__(self, name: Optional[NameType], *, transform=None, observed=None, **kwargs):
         self.conditions = self.unpack_conditions(**kwargs)
         super().__init__(
-            self.unpack_distribution,
-            name=name,
-            keep_return=keep_return,
-            keep_auxiliary=keep_auxiliary,
+            self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )
+        if name is None and observed is not None:
+            raise ValueError(
+                "Observed variables are not allowed for anonymous (with name=None) Distributions"
+            )
+        self.model_info.update(observed=observed)
         self.transform = transform
         self._init_backend()
 
@@ -77,6 +83,40 @@ class Distribution(Model):
         """Return log probability in numpy array format."""
         raise NotImplementedError
 
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        """Create an anonymous Distribution that can't be used within yield statement."""
+        return cls(None, *args, **kwargs)
+
+    def prior(self, name: NameType, *, transform=None, observed=None):
+        """Finalize instantiation of an anonymous Distribution.
+
+        The resulting distribution will have the provided name, transform and an observed variable
+        making it act as a prior and allow to participate within yield
+        """
+        if not self.is_anonymous:
+            raise TypeError("Distribution is already not anonymous and cant define a new prior")
+        if name is None:
+            raise ValueError("Can't create a prior Distribution without a name")
+        # internally is is ok to make a shallow copy of a distribution
+        cloned_dist = copy.copy(self)
+        # some mutable variables are required to be copied as well
+        cloned_dist.model_info = cloned_dist.model_info.copy()
+        cloned_dist.model_info.update(observed=observed)
+        cloned_dist.conditions = cloned_dist.conditions.copy()
+        if transform is not None:
+            cloned_dist.transform = transform
+        cloned_dist.name = cloned_dist.validate_name(name)
+        return cloned_dist
+
+    @property
+    def is_anonymous(self):
+        return self.name is None
+
+    @property
+    def is_observed(self):
+        return self.model_info["observed"] is not None
+
 
 class ContinuousDistribution(Distribution):
     ...
@@ -132,22 +172,19 @@ class SimplexContinuousDistribution(ContinuousDistribution):
     ...
 
 
-class Potential(Distribution):
-    def __init__(self, value):
-        super().__init__(name=None)
-        self.value = value
+class Potential(object):
+    __slots__ = ("_value", "_coef")
 
-    def sample(self, shape=(), seed=None):
-        raise NotImplementedError("Unavailable for Potential")
+    def __init__(self, value, coef=1.0):
+        self._value = value
+        self._coef = coef
 
-    def sample_numpy(self, shape=(), seed=None):
-        raise NotImplementedError("Unavailable for Potential")
-
-    def log_prob(self, value):
-        raise NotImplementedError("Unavailable for Potential")
-
-    def log_prob_numpy(self, value):
-        raise NotImplementedError("Unavailable for Potential")
+    @property
+    def value(self):
+        if callable(self._value):
+            return self._value() * self._coef
+        else:
+            return self._value * self._coef
 
     @property
     @abc.abstractmethod

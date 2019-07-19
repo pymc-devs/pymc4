@@ -1,12 +1,17 @@
 import functools
 import types
+
 import pymc4
 from pymc4.scopes import name_scope
 from pymc4.utils import biwrap, NameParts
 
 
+# we need that indicator to distinguish between explicit None and no value provided case
+_no_name_provided = object()
+
+
 @biwrap
-def model(genfn, *, name=None, keep_auxiliary=True, keep_return=True, method=False):
+def model(genfn, *, name=_no_name_provided, keep_auxiliary=True, keep_return=True, method=False):
     if method:
         template = ModelTemplate(
             genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return
@@ -25,8 +30,8 @@ def model(genfn, *, name=None, keep_auxiliary=True, keep_return=True, method=Fal
 
 
 def get_name(default, base_fn, name):
-    if name is None:
-        if default is not None:
+    if name is _no_name_provided:
+        if default is not _no_name_provided:
             name = default
         elif hasattr(base_fn, "name"):
             name = getattr(base_fn, "name")
@@ -60,7 +65,9 @@ class ModelTemplate(object):
         self.keep_auxiliary = keep_auxiliary
         self.keep_return = keep_return
 
-    def __call__(self, *args, name=None, keep_auxiliary=None, keep_return=None, **kwargs):
+    def __call__(
+        self, *args, name=_no_name_provided, keep_auxiliary=None, keep_return=None, **kwargs
+    ):
         """
         Evaluate the model.
 
@@ -73,6 +80,8 @@ class ModelTemplate(object):
             but can be used just once
         keep_auxiliary : bool
             Whether to override the default variable for `keep_auxiliary`
+        keep_return: bool
+            Whether to override the default variable for `keep_return`
         args : tuple
             positional conditioners for generative process
         kwargs : dict
@@ -88,19 +97,43 @@ class ModelTemplate(object):
         >>> import pymc4 as pm
         >>> from pymc4 import distributions as dist
 
-        >>> @pm.model(keep_return=False)  # do not keep `norm` in return
+        >>> @pm.model  # keep_return is True by default
         ... def nested_model(cond):
         ...     norm = yield dist.Normal("n", cond, 1)
         ...     return norm
 
-        >>> @pm.model  # keep_return is True by default
+        >>> @pm.model
         ... def main_model():
         ...     norm = yield dist.Normal("n", 0, 1)
         ...     result = yield nested_model(norm, name="a")
         ...     return result
         >>> ret, state = pm.evaluate_model(main_model())
-        >>> assert "main_model" in state.values
-        >>> assert "main_model/a" not in state.values
+        >>> print(sorted(state.untransformed_values))
+        ['main_model', 'main_model/a', 'main_model/a/n', 'main_model/n']
+
+        Setting :code`keep_return=False` for the nested model we can remove ``'main_model/a'`` from output state
+
+        >>> @pm.model
+        ... def main_model():
+        ...     norm = yield dist.Normal("n", 0, 1)
+        ...     result = yield nested_model(norm, name="a", keep_return=False)
+        ...     return result
+        >>> ret, state = pm.evaluate_model(main_model())
+        >>> print(sorted(state.untransformed_values))
+        ['main_model', 'main_model/a/n', 'main_model/n']
+
+        We can also observe some variables setting :code:`observed=True` in a distribution
+
+        >>> @pm.model  # keep_return is True by default
+        ... def main_model():
+        ...     norm = yield dist.Normal("n", 0, 1, observed=0.)
+        ...     result = yield nested_model(norm, name="a")
+        ...     return result
+        >>> ret, state = pm.evaluate_model(main_model())
+        >>> print(sorted(state.untransformed_values))
+        ['main_model', 'main_model/a', 'main_model/a/n']
+        >>> print(sorted(state.observed_values))
+        ['main_model/n']
         """
         genfn = functools.partial(self.template, *args, **kwargs)
         name = get_name(self.name, self.template, name)
@@ -131,24 +164,30 @@ def yieldify(fn):
 
 
 class Model(object):
-    # this is gonna be used for generator-like objects
-    _default_model_info = dict(keep_auxiliary=True, keep_return=False)
+    # this is gonna be used for generator-like objects,
+    # prohibit modification of this dict wrapping it into a MappingProxy
+    default_model_info = types.MappingProxyType(
+        dict(keep_auxiliary=True, keep_return=False, scope=name_scope(None), name=None)
+    )
+
+    @staticmethod
+    def validate_name(name):
+        if name is not None and not isinstance(name, (int, str)):
+            raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
+        elif name is None:
+            return None
+        else:
+            return str(name)
 
     def __init__(self, genfn, *, name=None, keep_auxiliary=True, keep_return=True):
         self.genfn = genfn
-        self.name = name
-        self._model_info = dict(keep_auxiliary=keep_auxiliary, keep_return=keep_return)
-
-    def model_info(self):
-        info = self._model_info.copy()
-        info.update(scope=name_scope(self.name), name=self.name)
-        return info
-
-    @classmethod
-    def default_model_info(cls):
-        info = cls._default_model_info.copy()
-        info.update(scope=name_scope(None), name=None)
-        return info
+        self.name = self.validate_name(name)
+        self.model_info = dict(
+            keep_auxiliary=keep_auxiliary,
+            keep_return=keep_return,
+            scope=name_scope(self.name),
+            name=self.name,
+        )
 
     def control_flow(self):
         return (yield from self.genfn())

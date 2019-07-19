@@ -29,7 +29,7 @@ class Normal(BackendDistribution, abstract.Normal):
 
     def _init_backend(self):
         mu, sigma = self.conditions["mu"], self.conditions["sigma"]
-        self._backend_distribution = tfd.Normal(loc=mu, scale=sigma, name=self.name)
+        self._backend_distribution = tfd.Normal(loc=mu, scale=sigma)
 
 
 class HalfNormal(BackendDistribution, abstract.HalfNormal):
@@ -46,4 +46,4 @@ class HalfNormal(BackendDistribution, abstract.HalfNormal):
 
     def _init_backend(self):
         sigma = self.conditions["sigma"]
-        self._backend_distribution = tfd.HalfNormal(scale=sigma, name=self.name)
+        self._backend_distribution = tfd.HalfNormal(scale=sigma)

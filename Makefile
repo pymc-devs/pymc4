@@ -58,7 +58,7 @@ black:  # Format code in-place using black.
 	black pymc4/ tests/
 
 test:  # Test code using pytest.
-	pytest -v pymc4 tests --ignore=pymc4/hmc --doctest-modules --html=testing-report.html --self-contained-html
+	pytest -v pymc4 tests --doctest-modules --html=testing-report.html --self-contained-html
 
 lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
 

@@ -1,10 +1,11 @@
 from pymc4.distributions.abstract.distribution import Distribution, Potential as BasePotential
+from tensorflow_probability import distributions as tfd
 
 
 class BackendDistribution(Distribution):
     """Backend distribution for Tensorflow distributions."""
 
-    _backend_distribution = None
+    _backend_distribution: tfd.Distribution = None  # make type checkers happy
 
     def sample(self, shape=(), seed=None):
         return self._backend_distribution.sample(shape, seed)
@@ -20,9 +21,6 @@ class BackendDistribution(Distribution):
 
 
 class Potential(BasePotential):
-    def _init_backend(self):
-        pass
-
     @property
     def value_numpy(self):
         return self.value.numpy()

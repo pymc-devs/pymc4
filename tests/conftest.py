@@ -3,6 +3,7 @@ import pytest
 import tensorflow as tf
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="function", autouse=True)
 def tf_seed():
     tf.random.set_seed(37208)  # random.org
+    yield

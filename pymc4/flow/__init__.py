@@ -1,4 +1,4 @@
-from .executor import SamplingExecutor
+from .executor import SamplingExecutor, SamplingState
 from .transformed_executor import TransformedSamplingExecutor
 
 __all__ = [

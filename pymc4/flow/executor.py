@@ -61,6 +61,7 @@ class SamplingState(object):
         "untransformed_values",
         "observed_values",
         "all_values",
+        "all_unobserved_values",
         "distributions",
         "potentials",
     )
@@ -99,6 +100,9 @@ class SamplingState(object):
         self.observed_values = observed_values
         self.all_values = collections.ChainMap(
             self.untransformed_values, self.transformed_values, self.observed_values
+        )
+        self.all_unobserved_values = collections.ChainMap(
+            self.transformed_values, self.untransformed_values
         )
         self.distributions = distributions
         self.potentials = potentials

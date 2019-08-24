@@ -16,5 +16,5 @@ def initialize_state(model: Model, observed: Optional[dict] = None) -> flow.Samp
     -------
     pymc4.flow.SamplingState
     """
-    _, state = flow.evaluate_model(model, observed=observed)
+    _, state = flow.evaluate_model_transformed(model, observed=observed)
     return state.as_sampling_state()

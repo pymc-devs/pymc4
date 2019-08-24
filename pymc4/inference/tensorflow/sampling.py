@@ -1,5 +1,5 @@
 from typing import Optional
-
+import tensorflow as tf
 from pymc4.inference.utils import initialize_state
 from pymc4.coroutine_model import Model
 from pymc4 import flow
@@ -57,6 +57,12 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
+    logpfn, init = build_logp_function(model, state=state, observed=observed)
+
+
+def build_logp_function(
+    model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+):
     if not isinstance(model, Model):
         raise TypeError(
             "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
@@ -69,3 +75,16 @@ def sample(
         state = initialize_state(model, observed=observed)
     else:
         state = state.as_sampling_state()
+
+    observed = state.observed_values
+    unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
+
+    @tf.function(autograph=False)
+    def logpfn(values):
+        st = flow.SamplingState.from_values(
+            dict(zip(unobserved_keys, values)), observed_values=observed
+        )
+        _, st = flow.evaluate_model_transformed(model, state=st)
+        return st.collect_log_prob()
+
+    return logpfn, list(unobserved_values)

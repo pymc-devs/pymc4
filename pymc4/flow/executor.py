@@ -1,5 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, List
+from typing import Any, Tuple, Dict, Union, List, Optional
 import collections
 import itertools
 from pymc4 import _backend

@@ -5,6 +5,7 @@ from pymc4 import Model, flow
 
 def initialize_state(model: Model, observed: Optional[dict] = None) -> flow.SamplingState:
     """
+    Initilize the model provided state and/or observed variables
 
      Parameters
     ----------

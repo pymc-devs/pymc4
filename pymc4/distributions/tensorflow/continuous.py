@@ -61,31 +61,31 @@ class Cauchy(BackendDistribution, abstract.Cauchy):
         self.backend_distribution = tfd.Cauchy(loc=alpha, scale=beta)
 
 
-class ChiSquared(Back, abstract.ChiSquared):
+class ChiSquared(BackendDistribution, abstract.ChiSquared):
     def _init_backend(self):
         nu = self.conditions["nu"]
         self.backend_distribution = tfd.Chi2(df=nu)
 
 
-class Exponential(BackendDistribution, Exponential):
+class Exponential(BackendDistribution, abstract.Exponential):
     def _init_backend(self):
         lam = self.conditions["lam"]
         self.backend_distribution = tfd.Exponential(rate=lam)
 
 
-class Gamma(BackendDistribution, Gamma):
+class Gamma(BackendDistribution, abstract.Gamma):
     def _init_backend(self):
         alpha, beta = self.conditions["alpha"], self.conditions["beta"]
         self.backend_distribution = tfd.Gamma(concentration=alpha, rate=beta)
 
 
-class Gumbel(BackendDistribution, Gumbel):
+class Gumbel(BackendDistribution, abstract.Gumbel):
     def _init_backend(self):
         alpha, beta = self.conditions["alpha"], self.conditions["beta"]
         self.backend_distribution = tfd.Gumbel(loc=mu, scale=beta)
 
 
-class HalfCauchy(BackendDistribution, HalfCauchy):
+class HalfCauchy(BackendDistribution, abstract.HalfCauchy):
     def _init_backend(self):
         beta = self.conditions["beta"]
         self.backend_distribution = tfd.HalfCauchy(loc=0, scale=beta)

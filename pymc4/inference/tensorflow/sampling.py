@@ -1,12 +1,18 @@
 from typing import Optional
 import tensorflow as tf
+from tensorflow_probability import experimental
+from tensorflow_probability import mcmc
 from pymc4.inference.utils import initialize_state
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 
 
 def sample(
-    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+    model: Model, num_samples=1000, num_chains=10, burn_in=100, step_size=0.1,
+        observed: Optional[dict] = None,
+        state: Optional[flow.SamplingState] = None,
+        nuts_kwargs=None, adaptation_kwargs=None,
+        sample_chain_kwargs=None
 ):
     """
     The main API to perform MCMC sampling using NUTS (for now)
@@ -14,8 +20,28 @@ def sample(
     Parameters
     ----------
     model : pymc4.Model
+        Model to sample posterior for
+    num_samples : int
+        Num samples in a chain
+    num_chains : int
+        Num chains to run
+    burn_in : int
+        Length of burn-in period
+    step_size : float
+        Initial step size
     observed : Optional[dict]
+        New observed values (optional)
     state : Optional[pymc4.flow.SamplingState]
+        Alternative way to pass specify initial values and observed values
+    nuts_kwargs : Optional[dict]
+        Pass non-default values for nuts kernel, see
+        ``tensorflow_probability.experimental.mcmc.NoUTurnSamplerUnrolled`` for options
+    adaptation_kwargs : Optional[dict]
+        Pass non-default values for nuts kernel, see
+        ``tensorflow_probability.mcmc.dual_averaging_step_size_adaptation.DualAveragingStepSizeAdaptation`` for options
+    sample_chain_kwargs : dict
+        Pass non-default values for nuts kernel, see
+        ``tensorflow_probability.mcmc.sample_chain`` for options
 
     Returns
     -------
@@ -45,19 +71,42 @@ def sample(
     Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling. Nothing special is required
     but passing the model to ``pm.sample``, the rest configuration is held by PyMC4.
 
-    >>> trace = sample(model)
+    >>> trace = sample(conditioned)
 
     Notes
     -----
     Things that are considered to be under discussion are overriding observed variables. The API for that may look like
 
     >>> new_observed = {"nested_model/n": np.random.randn(10) + 1}
-    >>> trace = sample(model, observed=new_observed)
+    >>> trace = sample(conditioned, observed=new_observed)
 
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
     logpfn, init = build_logp_function(model, state=state, observed=observed)
+    init = [
+        tf.tile(tf.expand_dims(tens, 0), [num_chains] + [1] * tens.ndim)
+        for tens in init
+    ]
+    nuts_kernel = mcmc.NoUTurnSampler(
+        target_log_prob_fn=logpfn,
+        step_size=step_size,
+        **(nuts_kwargs or dict()),
+    )
+    adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
+        inner_kernel=nuts_kernel,
+        num_adaptation_steps=burn_in,
+        **(adaptation_kwargs or dict()),
+    )
+
+    results = mcmc.sample_chain(
+        num_samples+burn_in,
+        current_state=init,
+        kernel=adapt_nuts_kernel,
+        num_burnin_steps=burn_in,
+        **(sample_chain_kwargs or dict()),
+    )
+    return results
 
 
 def build_logp_function(
@@ -80,7 +129,7 @@ def build_logp_function(
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
     @tf.function(autograph=False)
-    def logpfn(values):
+    def logpfn(*values):
         st = flow.SamplingState.from_values(
             dict(zip(unobserved_keys, values)), observed_values=observed
         )

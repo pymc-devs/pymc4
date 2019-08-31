@@ -96,6 +96,9 @@ def sample(
     adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
         inner_kernel=nuts_kernel,
         num_adaptation_steps=burn_in,
+        step_size_getter_fn=lambda pkr: pkr.step_size,
+        log_accept_prob_getter_fn=lambda pkr: pkr.log_accept_ratio,
+        step_size_setter_fn=lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
         **(adaptation_kwargs or dict()),
     )
 

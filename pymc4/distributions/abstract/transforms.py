@@ -10,6 +10,19 @@ class Transform(object):
     name: str = None
     jacobian_preference = JacobianPreference.Forward
 
+    @classmethod
+    def create(cls, *args, **kwargs):
+        import pymc4.distributions
+
+        if hasattr(pymc4.distributions.transforms, cls.__name__):
+            return getattr(pymc4.distributions.transforms, cls.__name__)(*args, **kwargs)
+        else:
+            raise NotImplementedError(
+                "{} does not implement {} transform".format(
+                    pymc4.distributions._backend, cls.__name__
+                )
+            )
+
     def forward(self, x):
         """
         Forward of a bijector.

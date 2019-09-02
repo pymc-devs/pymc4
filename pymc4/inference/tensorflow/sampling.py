@@ -1,6 +1,5 @@
 from typing import Optional
 import tensorflow as tf
-from tensorflow_probability import experimental
 from tensorflow_probability import mcmc
 from pymc4.inference.utils import initialize_state
 from pymc4.coroutine_model import Model
@@ -8,11 +7,16 @@ from pymc4 import flow
 
 
 def sample(
-    model: Model, num_samples=1000, num_chains=10, burn_in=100, step_size=0.1,
-        observed: Optional[dict] = None,
-        state: Optional[flow.SamplingState] = None,
-        nuts_kwargs=None, adaptation_kwargs=None,
-        sample_chain_kwargs=None
+    model: Model,
+    num_samples=1000,
+    num_chains=10,
+    burn_in=100,
+    step_size=0.1,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
+    nuts_kwargs=None,
+    adaptation_kwargs=None,
+    sample_chain_kwargs=None,
 ):
     """
     The main API to perform MCMC sampling using NUTS (for now)
@@ -84,14 +88,17 @@ def sample(
 
     """
     logpfn, init = build_logp_function(model, state=state, observed=observed)
-    init = [
-        tf.tile(tf.expand_dims(tens, 0), [num_chains] + [1] * tens.ndim)
-        for tens in init
-    ]
+    init = [tf.tile(tf.expand_dims(tens, 0), [num_chains] + [1] * tens.ndim) for tens in init]
+
+    @tf.function(autograph=False)
+    def vectorized_logpfn(*state):  # TODO: vectorize this better
+        out = []
+        for i in range(num_chains):
+            out.append(logpfn(*[s[i] for s in state]))
+        return tf.stack(out)
+
     nuts_kernel = mcmc.NoUTurnSampler(
-        target_log_prob_fn=logpfn,
-        step_size=step_size,
-        **(nuts_kwargs or dict()),
+        target_log_prob_fn=vectorized_logpfn, step_size=step_size, **(nuts_kwargs or dict())
     )
     adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
         inner_kernel=nuts_kernel,
@@ -103,7 +110,7 @@ def sample(
     )
 
     results = mcmc.sample_chain(
-        num_samples+burn_in,
+        num_samples + burn_in,
         current_state=init,
         kernel=adapt_nuts_kernel,
         num_burnin_steps=burn_in,

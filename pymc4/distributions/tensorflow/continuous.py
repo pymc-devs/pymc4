@@ -1,8 +1,5 @@
 """
-PyMC4 continuous random variables.
-
-Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
-Implements random variables not supported by tfp as distributions.
+PyMC4 continuous random variables for tensorflow.
 """
 import tensorflow_probability as tfp
 from pymc4.distributions import abstract
@@ -11,7 +8,29 @@ from pymc4.distributions.tensorflow.distribution import BackendDistribution
 
 tfd = tfp.distributions
 
-__all__ = ["Normal", "HalfNormal"]
+__all__ = [
+    "Beta",
+    "Cauchy",
+    "ChiSquared",
+    "Exponential",
+    "Gamma",
+    "Gumbel",
+    "HalfCauchy",
+    "HalfNormal",
+    "InverseGamma",
+    "InverseGaussian",
+    "Kumaraswamy",
+    "Laplace",
+    "LogNormal",
+    "Logistic",
+    "LogitNormal",
+    "Normal",
+    "Pareto",
+    "StudentT",
+    "Triangular",
+    "Uniform",
+    "VonMises",
+]
 
 
 class Normal(BackendDistribution, abstract.Normal):

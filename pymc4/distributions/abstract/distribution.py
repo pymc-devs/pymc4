@@ -1,6 +1,7 @@
 import abc
 import copy
 from typing import Optional, Union
+from . import transforms
 from pymc4.coroutine_model import Model, unpack
 
 NameType = Union[str, int]
@@ -22,8 +23,11 @@ class Distribution(Model):
                 "Observed variables are not allowed for anonymous (with name=None) Distributions"
             )
         self.model_info.update(observed=observed)
-        self.transform = transform
+        self.transform = self._init_transform(transform)
         self._init_backend()
+
+    def _init_transform(self, transform):
+        return transform
 
     def unpack_distribution(self):
         return unpack(self)
@@ -153,6 +157,12 @@ class UnitContinuousDistribution(BoundedContinuousDistribution):
 
 
 class PositiveContinuousDistribution(BoundedContinuousDistribution):
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.Log.create()
+        else:
+            return transform
+
     def lower_limit(self):
         return 0.0
 

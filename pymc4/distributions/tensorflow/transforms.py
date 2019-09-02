@@ -1,6 +1,8 @@
 import tensorflow as tf
 from pymc4.distributions import abstract
 
+__all__ = ["Log"]
+
 
 class Log(abstract.transforms.Log):
     # do not use tfp bijectors if transform is not too complicated

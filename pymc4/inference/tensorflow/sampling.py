@@ -8,16 +8,11 @@ from pymc4 import flow
 
 
 def sample(
-    model: Model,
-    num_samples=1000,
-    num_chains=10,
-    burn_in=100,
-    step_size=0.1,
-    observed: Optional[dict] = None,
-    state: Optional[flow.SamplingState] = None,
-    nuts_kwargs=None,
-    adaptation_kwargs=None,
-    sample_chain_kwargs=None,
+    model: Model, num_samples=1000, num_chains=10, burn_in=100, step_size=0.1,
+        observed: Optional[dict] = None,
+        state: Optional[flow.SamplingState] = None,
+        nuts_kwargs=None, adaptation_kwargs=None,
+        sample_chain_kwargs=None, xla=False,
 ):
     """
     The main API to perform MCMC sampling using NUTS (for now)
@@ -100,7 +95,7 @@ def sample(
     @tf.function
     def run_chains(init):
         nuts_kernel = mcmc.NoUTurnSampler(
-            target_log_prob_fn=logpfn, #parallel_logpfn does not work yet
+            target_log_prob_fn=parallel_logpfn, #does not work yet
             step_size=step_size,
             **(nuts_kwargs or dict()),
         )
@@ -123,7 +118,10 @@ def sample(
 
         return results
 
-    results, stats = tf.xla.experimental.compile(run_chains, inputs=[init])
+    if xla:
+        results, stats = tf.xla.experimental.compile(run_chains, inputs=[init])
+    else:
+        results, stats = run_chains(init)
 
     return results
 
@@ -149,10 +147,12 @@ def build_logp_function(
 
     @tf.function(autograph=False)
     def logpfn(*values):
+        # TODO vmap passes things in a tuple, hack to unwrap
+        values = values[0]
         st = flow.SamplingState.from_values(
             dict(zip(unobserved_keys, values)), observed_values=observed
         )
-        _, st = flow.evaluate_model_transformed(model, state=st)
+        _, st = flow.evaluate_model_transformed(model, state=st, sample=False)
         return st.collect_log_prob()
 
     return logpfn, list(unobserved_values)

@@ -63,7 +63,7 @@ class Transform(object):
         """
         raise NotImplementedError
 
-    def jacobian_log_det(self, x):
+    def jacobian_log_det(self, x,):
         """
         Calculate logarithm of the absolute value of the Jacobian determinant for input `x`.
 

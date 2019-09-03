@@ -151,6 +151,8 @@ class QuadPotentialDiagAdapt(QuadPotential):
         if initial_diag is None:
             initial_diag = np.ones(n, dtype=dtype)
             initial_weight = 1
+        else:
+            initial_diag = initial_diag.astype(dtype)
 
         self.dtype = dtype
         self._n = n

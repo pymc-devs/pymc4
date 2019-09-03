@@ -3,7 +3,6 @@ import copy
 from typing import Optional, Union
 from . import transforms
 from pymc4.coroutine_model import Model, unpack
-from tensorflow_probability import bijectors as tfb
 
 NameType = Union[str, int]
 

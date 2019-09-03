@@ -95,7 +95,7 @@ def sample(
     @tf.function
     def run_chains(init):
         nuts_kernel = mcmc.NoUTurnSampler(
-            target_log_prob_fn=parallel_logpfn, #does not work yet
+            target_log_prob_fn=parallel_logpfn,
             step_size=step_size,
             **(nuts_kwargs or dict()),
         )

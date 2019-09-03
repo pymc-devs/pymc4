@@ -7,6 +7,12 @@ class BackendDistribution(Distribution):
 
     _backend_distribution: tfd.Distribution = None  # make type checkers happy
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.plate is not None:
+            self._backend_distribution = tfd.Sample(self._backend_distribution, sample_shape=self.plate)
+
     def sample(self, shape=(), seed=None):
         return self._backend_distribution.sample(shape, seed)
 

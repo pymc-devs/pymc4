@@ -1,5 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, List
+from typing import Any, Tuple, Dict, Union, List, Optional
 import collections
 import itertools
 from pymc4 import _backend
@@ -61,6 +61,7 @@ class SamplingState(object):
         "untransformed_values",
         "observed_values",
         "all_values",
+        "all_unobserved_values",
         "distributions",
         "potentials",
     )
@@ -99,6 +100,9 @@ class SamplingState(object):
         self.observed_values = observed_values
         self.all_values = collections.ChainMap(
             self.untransformed_values, self.transformed_values, self.observed_values
+        )
+        self.all_unobserved_values = collections.ChainMap(
+            self.transformed_values, self.untransformed_values
         )
         self.distributions = distributions
         self.potentials = potentials
@@ -257,7 +261,7 @@ class SamplingExecutor(object):
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
-        # 1) we need to check for state or generate one
+        # 1) we need to check for state or generate
 
         #   in a state we might have:
         #   - return values for distributions/models
@@ -277,9 +281,9 @@ class SamplingExecutor(object):
                 raise ValueError("Provided arguments along with not empty state")
         if _validate_state:
             self.validate_state(state)
-        # 2) we can proceed 2 typed of models:
-        #   - generator object that yields other model-like objects
-        #   - Model objects that come up with additional user provided information
+        # 2) we can proceed with 2 types of models:
+        #   1. generator object that yields other model-like objects
+        #   2. Model objects that come up with additional user provided information
 
         # some words about "user provided information"
         # they are:
@@ -318,7 +322,7 @@ class SamplingExecutor(object):
         #       computation from PyMC4 side. We should now recall that all the computation of log probability
         #       is done in the transformed space, where parameters lie in Rn without any constraints.
         #
-        #       The tempting questing is "what happens with the observed variables?". Without careful treatment
+        #       The tempting question is "what happens with the observed variables?". Without careful treatment
         #       we would compute log probability for the transformed space if `Dist` in `Dist(..., observed=value)`
         #       is bounded. But this is not required and redundant, the observed variable does not violate the bounds
         #       and is not adjusted in MCMC. Therefore we should take care and not autotransfrom them in the transformed
@@ -327,7 +331,7 @@ class SamplingExecutor(object):
         #       Some other issues may happen if we omit checks proceeding cases 1-4
         #       Case 1. Nothing special here. We just make sure not to see the same value again in unobserved that is
         #           probably a mistake.
-        #       Case 2. How do we know we need forward sample a particular observed node? The solution is to provide a
+        #       Case 2. How do we know we need to forward sample a particular observed node? The solution is to provide a
         #           convention that passing `observed={"observed/variable/name": None}` suppresses an observed set as
         #           `Dist(..., observed=value)` and instructs to sample from this distribution.
         #       Case 3. That's probably explicit to pass `observed={"observed/variable/name": new_value}` to executor
@@ -388,8 +392,10 @@ class SamplingExecutor(object):
                         )
                         control_flow.throw(error)
                         raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
-                    # dist is a clean, known type
 
+                    # dist is a clean, known type from here on
+
+                    # If distribution, potentially transform it
                     if isinstance(dist, abstract.Distribution):
                         dist = self.modify_distribution(dist, model_info, state)
                     if isinstance(dist, abstract.Potential):
@@ -458,6 +464,8 @@ class SamplingExecutor(object):
         return dist
 
     def proceed_distribution(self, dist: abstract.Distribution, state: SamplingState):
+        """TODO
+        """
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")
         scoped_name = scopes.variable_name(dist.name)

@@ -62,7 +62,7 @@ class TransformedSamplingExecutor(SamplingExecutor):
                 # 1. now compute all the variables: in the transformed and untransformed space
                 if transformed_scoped_name in state.transformed_values:
                     transformed_value = state.transformed_values[transformed_scoped_name]
-                    untransformed_value = transform.backward(transformed_value)
+                    untransformed_value = transform.inverse(transformed_value)
                 else:
                     untransformed_value = state.untransformed_values[scoped_name]
                     transformed_value = transform.forward(untransformed_value)
@@ -85,12 +85,12 @@ class TransformedSamplingExecutor(SamplingExecutor):
                 # we postpone the computation of logdet as it might have some overhead
                 if transform.jacobian_preference == JacobianPreference.Forward:
                     potential_fn = functools.partial(
-                        transform.jacobian_log_det, untransformed_value
+                        transform.forward_log_det_jacobian, untransformed_value
                     )
                     coef = -1.0
                 else:
                     potential_fn = functools.partial(
-                        transform.inverse_jacobian_log_det, transformed_value
+                        transform.inverse_log_det_jacobian, transformed_value
                     )
                     coef = 1.0
                 yield distributions.Potential(potential_fn, coef=coef)
@@ -115,12 +115,12 @@ class TransformedSamplingExecutor(SamplingExecutor):
                 # 2. increment the potential
                 if transform.jacobian_preference == JacobianPreference.Forward:
                     potential_fn = functools.partial(
-                        transform.jacobian_log_det, sampled_untransformed_value
+                        transform.forward_log_det_jacobian, sampled_untransformed_value
                     )
                     coef = -1.0
                 else:
                     potential_fn = functools.partial(
-                        transform.inverse_jacobian_log_det, sampled_transformed_value
+                        transform.inverse_log_det_jacobian, sampled_transformed_value
                     )
                     coef = 1.0
                 yield distributions.Potential(potential_fn, coef=coef)

@@ -258,7 +258,6 @@ class SamplingExecutor(object):
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
-        sample=True,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -404,7 +403,7 @@ class SamplingExecutor(object):
                         return_value = dist
                     elif isinstance(dist, abstract.Distribution):
                         try:
-                            return_value, state = self.proceed_distribution(dist, state, sample=sample)
+                            return_value, state = self.proceed_distribution(dist, state)
                         except EvaluationError as error:
                             control_flow.throw(error)
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
@@ -464,7 +463,7 @@ class SamplingExecutor(object):
     ):
         return dist
 
-    def proceed_distribution(self, dist: abstract.Distribution, state: SamplingState, sample=True):
+    def proceed_distribution(self, dist: abstract.Distribution, state: SamplingState):
         """TODO
         """
         if dist.is_anonymous:
@@ -503,10 +502,7 @@ class SamplingExecutor(object):
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
         else:
-            if sample:
-                return_value = state.untransformed_values[scoped_name] = dist.sample()
-            else:
-                return_value = None
+            return_value = state.untransformed_values[scoped_name] = dist.sample()
         state.distributions[scoped_name] = dist
         return return_value, state
 

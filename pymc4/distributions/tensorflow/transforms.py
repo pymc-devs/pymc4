@@ -1,4 +1,3 @@
-import tensorflow as tf
 from pymc4.distributions import abstract
 from tensorflow_probability import bijectors as tfb
 
@@ -6,19 +5,22 @@ __all__ = ["Log"]
 
 
 class Log(abstract.transforms.Log):
-    # do not use tfp bijectors if transform is not too complicated
+    def __init__(self):
+        # NOTE: We actually need the inverse to match PyMC3, do we?
+        self._backend_transform = tfb.Exp()
+
     def forward(self, x):
-        return tfb.Exp().forward(x)
-        #return tf.math.log(x)
+        return self._backend_transform.inverse(x)
 
-    def backward(self, z):
-        return tfb.Exp().inverse(z)
-        #return tf.math.exp(z)
+    def inverse(self, z):
+        return self._backend_transform.forward(z)
 
-    def jacobian_log_det(self, x):
-        return tfb.Exp().forward_log_det_jacobian(x, 1)
-        #return -tf.math.log(x)
+    def forward_log_det_jacobian(self, x):
+        return self._backend_transform.inverse_log_det_jacobian(
+            x, self._backend_transform.inverse_min_event_ndims
+        )
 
-    def inverse_jacobian_log_det(self, z):
-        return z
-        #return z
+    def inverse_log_det_jacobian(self, z):
+        return self._backend_transform.forward_log_det_jacobian(
+            z, self._backend_transform.forward_min_event_ndims
+        )

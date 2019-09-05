@@ -1,6 +1,5 @@
 from typing import Optional
 import tensorflow as tf
-from tensorflow_probability import experimental
 from tensorflow_probability import mcmc
 from pymc4.inference.utils import initialize_state
 from pymc4.coroutine_model import Model
@@ -18,6 +17,7 @@ def sample(
     nuts_kwargs=None,
     adaptation_kwargs=None,
     sample_chain_kwargs=None,
+    xla=False,
 ):
     """
     The main API to perform MCMC sampling using NUTS (for now)
@@ -47,6 +47,8 @@ def sample(
     sample_chain_kwargs : dict
         Pass non-default values for nuts kernel, see
         ``tensorflow_probability.mcmc.sample_chain`` for options
+    xla : bool
+        Enable experimental XLA
 
     Returns
     -------
@@ -89,20 +91,16 @@ def sample(
 
     """
     logpfn, init = build_logp_function(model, state=state, observed=observed)
-    init = [
-        tf.tile(tf.expand_dims(tens, 0), [num_chains] + [1] * tens.ndim)
-        for tens in init
-    ]
+    init = [tf.tile(tf.expand_dims(tens, 0), [num_chains] + [1] * tens.ndim) for tens in init]
 
     def parallel_logpfn(*state):
-        return tf.vectorized_map(logpfn, state)
+        # NOTE: vmap passes things in a tuple, hack to unwrap
+        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
 
     @tf.function
     def run_chains(init):
         nuts_kernel = mcmc.NoUTurnSampler(
-            target_log_prob_fn=logpfn, #parallel_logpfn does not work yet
-            step_size=step_size,
-            **(nuts_kwargs or dict()),
+            target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
         )
         adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
             inner_kernel=nuts_kernel,
@@ -114,7 +112,7 @@ def sample(
         )
 
         results = mcmc.sample_chain(
-            num_samples+burn_in,
+            num_samples + burn_in,
             current_state=init,
             kernel=adapt_nuts_kernel,
             num_burnin_steps=burn_in,
@@ -123,7 +121,10 @@ def sample(
 
         return results
 
-    results, stats = tf.xla.experimental.compile(run_chains, inputs=[init])
+    if xla:
+        results, stats = tf.xla.experimental.compile(run_chains, inputs=[init])
+    else:
+        results, stats = run_chains(init)
 
     return results
 

@@ -13,7 +13,9 @@ class Distribution(Model):
     An abstract class with consistent API across backends
     """
 
-    def __init__(self, name: Optional[NameType], *, transform=None, observed=None, plate=None, **kwargs):
+    def __init__(
+        self, name: Optional[NameType], *, transform=None, observed=None, plate=None, **kwargs
+    ):
         self.conditions = self.unpack_conditions(**kwargs)
         self.plate = plate
         super().__init__(

@@ -43,7 +43,7 @@ class Transform(object):
         """
         raise NotImplementedError
 
-    def backward(self, z):
+    def inverse(self, z):
         """
         Backward of a bijector.
 
@@ -63,7 +63,7 @@ class Transform(object):
         """
         raise NotImplementedError
 
-    def jacobian_log_det(self, x):
+    def forward_log_det_jacobian(self, x):
         """
         Calculate logarithm of the absolute value of the Jacobian determinant for input `x`.
 
@@ -79,7 +79,7 @@ class Transform(object):
         """
         raise NotImplementedError
 
-    def inverse_jacobian_log_det(self, z):
+    def inverse_log_det_jacobian(self, z):
         """
         Calculate logarithm of the absolute value of the Jacobian determinant for output `z`.
 
@@ -97,7 +97,7 @@ class Transform(object):
         -----
         May be desired to be implemented efficiently
         """
-        raise -self.jacobian_log_det(self.backward(z))
+        raise -self.forward_log_det_jacobian(self.inverse(z))
 
 
 class Invert(Transform):
@@ -109,16 +109,16 @@ class Invert(Transform):
         self.transform = transform
 
     def forward(self, x):
-        return self.transform.backward(x)
+        return self.transform.inverse(x)
 
-    def backward(self, z):
+    def inverse(self, z):
         return self.transform.forward(z)
 
-    def jacobian_log_det(self, x):
-        return self.transform.inverse_jacobian_log_det(x)
+    def forward_log_det_jacobian(self, x):
+        return self.transform.inverse_log_det_jacobian(x)
 
-    def inverse_jacobian_log_det(self, z):
-        return self.transform.jacobian_log_det(z)
+    def inverse_log_det_jacobian(self, z):
+        return self.transform.forward_log_det_jacobian(z)
 
 
 class Log(Transform):

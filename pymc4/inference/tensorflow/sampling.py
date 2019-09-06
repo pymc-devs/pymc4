@@ -20,7 +20,7 @@ def sample(
     xla=False,
 ):
     """
-    The main API to perform MCMC sampling using NUTS (for now)
+    Perform MCMC sampling using NUTS (for now).
 
     Parameters
     ----------

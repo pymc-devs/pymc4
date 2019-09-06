@@ -6,7 +6,7 @@ from .. import Model, flow
 
 def initialize_state(model: Model, observed: Optional[dict] = None) -> flow.SamplingState:
     """
-    Initilize the model provided state and/or observed variables
+    Initilize the model provided state and/or observed variables.
 
     Parameters
     ----------
@@ -20,8 +20,11 @@ def initialize_state(model: Model, observed: Optional[dict] = None) -> flow.Samp
     _, state = flow.evaluate_model_transformed(model, observed=observed)
     return state.as_sampling_state()
 
+
 def trace_to_arviz(pm4_trace):
     """
+    Tensorflow to Arviz trace convertor.
+
     Convert a PyMC4 trace as returned by sample() to an ArviZ trace object
     that can be passed to e.g. arviz.plot_trace().
 
@@ -34,5 +37,6 @@ def trace_to_arviz(pm4_trace):
     arviz.data.inference_data.InferenceData
     """
     import arviz as az
+
     az_dict = {k: np.swapaxes(v.numpy(), 1, 0) for k, v in pm4_trace.items()}
     return az.from_dict(az_dict)

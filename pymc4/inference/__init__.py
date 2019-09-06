@@ -1,5 +1,5 @@
 from .. import _backend
-from . import  utils
+from . import utils
 
 if _backend.TENSORFLOW:
     from .tensorflow import *  # pylint: disable=wildcard-import

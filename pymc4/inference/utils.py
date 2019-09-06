@@ -21,7 +21,7 @@ def initialize_state(model: Model, observed: Optional[dict] = None) -> flow.Samp
     return state.as_sampling_state()
 
 
-def trace_to_arviz(pm4_trace):
+def trace_to_arviz(pm4_trace, pm4_sample_stats):
     """
     Tensorflow to Arviz trace convertor.
 
@@ -38,5 +38,7 @@ def trace_to_arviz(pm4_trace):
     """
     import arviz as az
 
-    az_dict = {k: np.swapaxes(v.numpy(), 1, 0) for k, v in pm4_trace.items()}
-    return az.from_dict(az_dict)
+    posterior = {k: np.swapaxes(v.numpy(), 1, 0) for k, v in pm4_trace.items()}
+    sample_stats = {k: v.numpy().T for k, v in pm4_sample_stats.items()}
+    sample_stats['tree_size'] = np.diff(sample_stats['tree_size'], axis=1)
+    return az.from_dict(posterior=posterior, sample_stats=sample_stats)

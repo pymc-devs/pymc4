@@ -96,8 +96,17 @@ def sample(
     parallel_logpfn = vectorize_logp_function(logpfn)
     init_state = tile_init(init_state, num_chains)
 
-    @tf.function
-    def run_chains(init):
+    def trace_fn(_, pkr):
+        return (
+            pkr.inner_results.target_log_prob,
+            pkr.inner_results.leapfrogs_taken,
+            pkr.inner_results.has_divergence,
+            pkr.inner_results.energy,
+            pkr.inner_results.log_accept_ratio
+        )
+
+    @tf.function(autograph=False)
+    def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
             target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
         )
@@ -110,23 +119,26 @@ def sample(
             **(adaptation_kwargs or dict()),
         )
 
-        results = mcmc.sample_chain(
-            num_samples + burn_in,
+        results, sample_stats = mcmc.sample_chain(
+            num_samples,
             current_state=init,
             kernel=adapt_nuts_kernel,
             num_burnin_steps=burn_in,
-            trace_fn=None,
+            trace_fn=trace_fn,
             **(sample_chain_kwargs or dict()),
         )
 
-        return results
+        return results, sample_stats
 
     if xla:
-        results = tf.xla.experimental.compile(run_chains, inputs=[init_state])
+        results, sample_stats = tf.xla.experimental.compile(run_chains, inputs=[init_state, step_size])
     else:
-        results = run_chains(init_state)
+        results, sample_stats = run_chains(init_state, step_size)
 
-    return dict(zip(init_keys, results))
+    posterior = dict(zip(init_keys, results))
+    # Keep in sync with pymc3 naming convention
+    sampler_stats = dict(zip(['lp', 'tree_size', 'diverging', 'energy', 'mean_tree_accept'], sample_stats))
+    return posterior, sampler_stats
 
 
 def build_logp_function(

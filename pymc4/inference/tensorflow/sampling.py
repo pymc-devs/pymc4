@@ -91,11 +91,10 @@ def sample(
 
     """
     logpfn, init = build_logp_function(model, state=state, observed=observed)
-    init = [tf.tile(tf.expand_dims(tens, 0), [num_chains] + [1] * tens.ndim) for tens in init]
-
-    def parallel_logpfn(*state):
-        # NOTE: vmap passes things in a tuple, hack to unwrap
-        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+    init_state = list(init.values())
+    init_keys = list(init.keys())
+    parallel_logpfn = vectorize_logp_function(logpfn)
+    init_state = tile_init(init_state, num_chains)
 
     @tf.function
     def run_chains(init):
@@ -122,11 +121,11 @@ def sample(
         return results
 
     if xla:
-        results, stats = tf.xla.experimental.compile(run_chains, inputs=[init])
+        results, stats = tf.xla.experimental.compile(run_chains, inputs=[init_state])
     else:
-        results, stats = run_chains(init)
+        results, stats = run_chains(init_state)
 
-    return results
+    return dict(zip(init_keys, results)), stats
 
 
 def build_logp_function(
@@ -149,11 +148,25 @@ def build_logp_function(
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
     @tf.function(autograph=False)
-    def logpfn(*values):
-        st = flow.SamplingState.from_values(
-            dict(zip(unobserved_keys, values)), observed_values=observed
-        )
+    def logpfn(*values, **kwargs):
+        if kwargs and values:
+            raise TypeError("Either list state should be passed or a dict one")
+        elif values:
+            kwargs = dict(zip(unobserved_keys, values))
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
         _, st = flow.evaluate_model_transformed(model, state=st)
         return st.collect_log_prob()
 
-    return logpfn, list(unobserved_values)
+    return logpfn, dict(state.all_unobserved_values)
+
+
+def vectorize_logp_function(logpfn):
+    # TODO: vectorize with dict
+    def vectorized_logpfn(*state):
+        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+
+    return vectorized_logpfn
+
+
+def tile_init(init, num_repeats):
+    return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]

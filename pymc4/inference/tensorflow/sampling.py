@@ -115,17 +115,18 @@ def sample(
             current_state=init,
             kernel=adapt_nuts_kernel,
             num_burnin_steps=burn_in,
+            trace_fn=None,
             **(sample_chain_kwargs or dict()),
         )
 
         return results
 
     if xla:
-        results, stats = tf.xla.experimental.compile(run_chains, inputs=[init_state])
+        results = tf.xla.experimental.compile(run_chains, inputs=[init_state])
     else:
-        results, stats = run_chains(init_state)
+        results = run_chains(init_state)
 
-    return dict(zip(init_keys, results)), stats
+    return dict(zip(init_keys, results))
 
 
 def build_logp_function(

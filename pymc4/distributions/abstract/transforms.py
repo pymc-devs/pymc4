@@ -1,4 +1,5 @@
 import enum
+from typing import Optional
 
 
 class JacobianPreference(enum.Enum):
@@ -7,7 +8,7 @@ class JacobianPreference(enum.Enum):
 
 
 class Transform(object):
-    name: str = None
+    name: Optional[str] = None
     jacobian_preference = JacobianPreference.Forward
 
     @classmethod

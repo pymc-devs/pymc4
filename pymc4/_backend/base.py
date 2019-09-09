@@ -9,8 +9,7 @@ T = TypeVar("T")  # like a tensor dummy
 
 
 class Backend(abc.ABC):
-    """
-    Abstract backend that defines common shared API for internal pymc4 needs.
+    """Abstract backend that defines common shared API for internal pymc4 needs.
 
     The backend should not be used by directly by users as this creates too much teaching overhead.
     Instead, this backend should be used by only the PyMC4 internals. The abstract base class ensures all

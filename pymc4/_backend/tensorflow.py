@@ -5,7 +5,7 @@ from typing import TypeVar, Tuple, Union, Any, Type
 
 __all__ = ["TensorflowBackend"]
 
-T = TypeVar("T")
+T = TypeVar("T", bound="tf.Tensor")
 
 
 class TensorflowBackend(Backend):

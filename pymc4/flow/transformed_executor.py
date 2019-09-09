@@ -1,3 +1,8 @@
+"""Execute graph in a transformed state.
+
+Specifically, we wish to transform distributions whose support is bounded on
+one or both sides to distributions that are supported for all real numbers.
+"""
 import functools
 from pymc4 import scopes, distributions
 from pymc4.distributions import abstract
@@ -6,10 +11,14 @@ from pymc4.flow.executor import SamplingExecutor, EvaluationError, observed_valu
 
 
 class TransformedSamplingExecutor(SamplingExecutor):
+    """Perform inference in an unconstrained space."""
+
     def validate_state(self, state):
+        """Validate that the model is not in a bad state."""
         return
 
     def modify_distribution(self, dist, model_info, state):
+        """Apply transformations to a distribution."""
         dist = super().modify_distribution(dist, model_info, state)
         if not isinstance(dist, abstract.Distribution):
             return dist

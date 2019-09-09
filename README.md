@@ -1,5 +1,6 @@
 # PyMC4 (Pre-release)
 
-[![Build Status](https://travis-ci.org/pymc-devs/pymc4.svg?branch=master)](https://travis-ci.org/pymc-devs/pymc4) [![Coverage Status](https://coveralls.io/repos/github/pymc-devs/pymc4/badge.svg?branch=master)](https://coveralls.io/github/pymc-devs/pymc4?branch=master)
+[![Build Status](https://dev.azure.com/pymc-devs/pymc4/_apis/build/status/pymc-devs.pymc4?branchName=master)](https://dev.azure.com/pymc-devs/pymc4/_build/latest?definitionId=1&branchName=master)
+![Azure DevOps coverage](https://img.shields.io/azure-devops/coverage/pymc-devs/pymc4/1)
 
 Now with flowing tensors.

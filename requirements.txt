@@ -1,4 +1,5 @@
 arviz
+gast~=0.2
 tf-nightly-2.0-preview
 tfp-nightly
 pymc3

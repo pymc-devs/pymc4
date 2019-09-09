@@ -1,44 +1,44 @@
 trigger:
-- master
+  - master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: "ubuntu-latest"
 strategy:
   matrix:
     Python36:
-      python.version: '3.6'
+      python.version: "3.6"
     Python37:
-      python.version: '3.7'
+      python.version: "3.7"
 
 steps:
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '$(python.version)'
-  displayName: 'Use Python $(python.version)'
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "$(python.version)"
+    displayName: "Use Python $(python.version)"
 
-- script: |
-    python -m pip install --upgrade pip
-    python -m pip install .
-    python -m pip install -r requirements-dev.txt
-  displayName: 'Install dependencies'
+  - script: |
+      python -m pip install --upgrade pip
+      python -m pip install .
+      python -m pip install -r requirements-dev.txt
+    displayName: "Install dependencies"
 
-- script: |
-    ./scripts/lint.sh
-  displayName: 'lint'
+  - script: |
+      ./scripts/lint.sh
+    displayName: "lint"
 
-- script: |
-    python -m pip install pytest-azurepipelines
-    python -m pytest -xv --cov couplings --junitxml=junit/test-results.xml --cov-report xml --cov-report term --cov-report html .
-  displayName: 'pytest'
+  - script: |
+      python -m pip install pytest-azurepipelines
+      python -m pytest -xv --cov pymc4 --junitxml=junit/test-results.xml --cov-report xml --cov-report term --cov-report html .
+    displayName: "pytest"
 
-- task: PublishTestResults@2
-  condition: succeededOrFailed()
-  inputs:
-    testResultsFiles: '**/test-*.xml'
-    testRunTitle: 'Publish test results for Python $(python.version)'
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: "**/test-*.xml"
+      testRunTitle: "Publish test results for Python $(python.version)"
 
-- task: PublishCodeCoverageResults@1
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-    reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/coverage.xml"
+      reportDirectory: "$(System.DefaultWorkingDirectory)/**/htmlcov"

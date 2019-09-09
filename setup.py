@@ -12,7 +12,7 @@ README_FILE = PROJECT_ROOT / "README.md"
 VERSION_FILE = PROJECT_ROOT / "pymc4" / "__init__.py"
 
 NAME = "PyMC4"
-DESCRIPTION = "A Python probabilistic programming interface to Tensorflow, for Bayesian modelling and machine learning."
+DESCRIPTION = "A Python probabilistic programming interface to TensorFlow, for Bayesian modelling and machine learning."
 AUTHOR = "PyMC Developers"
 AUTHOR_EMAIL = "pymc.devs@gmail.com"
 URL = ("https://github.com/pymc-devs/pymc4",)

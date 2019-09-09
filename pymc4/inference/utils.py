@@ -40,5 +40,5 @@ def trace_to_arviz(pm4_trace, pm4_sample_stats):
 
     posterior = {k: np.swapaxes(v.numpy(), 1, 0) for k, v in pm4_trace.items()}
     sample_stats = {k: v.numpy().T for k, v in pm4_sample_stats.items()}
-    sample_stats['tree_size'] = np.diff(sample_stats['tree_size'], axis=1)
+    sample_stats["tree_size"] = np.diff(sample_stats["tree_size"], axis=1)
     return az.from_dict(posterior=posterior, sample_stats=sample_stats)

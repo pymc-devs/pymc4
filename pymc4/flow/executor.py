@@ -55,7 +55,7 @@ class EarlyReturn(StopIteration):
     ...
 
 
-class SamplingState(object):
+class SamplingState:
     __slots__ = (
         "transformed_values",
         "untransformed_values",
@@ -148,7 +148,9 @@ class SamplingState(object):
         )
 
     @classmethod
-    def from_values(cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None):
+    def from_values(
+        cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None
+    ) -> SamplingState:
         if values is None:
             return cls(observed_values=observed_values)
         transformed_values = dict()
@@ -171,7 +173,7 @@ class SamplingState(object):
             potentials=self.potentials,
         )
 
-    def as_sampling_state(self):
+    def as_sampling_state(self) -> SamplingState:
         """Create a sampling state that should me used within MCMC sampling.
 
         There are some principles that hold for the state.
@@ -227,9 +229,8 @@ class SamplingState(object):
 # therefore it is convenient to disable inspection about static methods
 
 # noinspection PyMethodMayBeStatic
-class SamplingExecutor(object):
-    """
-    Base untransformed executor.
+class SamplingExecutor:
+    """Base untransformed executor.
 
     This executor performs model evaluation in the untransformed space. Class structure is convenient since its
     subclass :class:`TransformedSamplingExecutor` will reuse some parts from parent class and extending functionality.
@@ -364,13 +365,13 @@ class SamplingExecutor(object):
             # without it, we obtain values={"n/n": ...}
             # However, we disallow return statements that are models
             _model_ref = model
-            model = (lambda: (yield _model_ref))()
+            model = (lambda: (yield _model_ref))()  # type: ignore
         if isinstance(model, coroutine_model.Model):
             model_info = model.model_info
             try:
                 control_flow = self.prepare_model_control_flow(model, model_info, state)
             except EarlyReturn as e:
-                return e.args
+                return e.args, state
         else:
             if not isinstance(model, types.GeneratorType):
                 raise StopExecution(
@@ -412,13 +413,13 @@ class SamplingExecutor(object):
                             dist, state=state, _validate_state=False
                         )
                     else:
-                        error = EvaluationError(
+                        err = EvaluationError(
                             "Type {} can't be processed in evaluation. This error may appear "
                             "due to wrong implementation, please submit a bug report to "
                             "https://github.com/pymc-devs/pymc4/issues".format(type(dist))
                         )
-                        control_flow.throw(error)
-                        raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
+                        control_flow.throw(err)
+                        raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from err
             except StopExecution:
                 # for some reason outer scope (control flow) may silence an exception in `yield`
                 # try:
@@ -439,16 +440,17 @@ class SamplingExecutor(object):
             except EarlyReturn as e:
                 # for some reason we may raise it within model evaluation,
                 # e.g. in self.proceed_distribution
-                return e.args
+                return e.args, state
             except StopIteration as stop_iteration:
                 self.validate_return_value(stop_iteration.args[:1])
-                return_value, state = self.finalize_control_flow(stop_iteration, model_info, state)
-                break
+                return self.finalize_control_flow(stop_iteration, model_info, state)
         return return_value, state
 
     __call__ = evaluate_model
 
-    def new_state(self, values: Dict[str, Any] = None, observed: Dict[str, Any] = None):
+    def new_state(
+        self, values: Dict[str, Any] = None, observed: Dict[str, Any] = None
+    ) -> SamplingState:
         return SamplingState.from_values(values=values, observed_values=observed)
 
     def validate_state(self, state):
@@ -463,7 +465,9 @@ class SamplingExecutor(object):
     ):
         return dist
 
-    def proceed_distribution(self, dist: abstract.Distribution, state: SamplingState):
+    def proceed_distribution(
+        self, dist: abstract.Distribution, state: SamplingState
+    ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")

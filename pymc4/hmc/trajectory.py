@@ -1,3 +1,4 @@
+# pylint: disable-all
 from collections import namedtuple
 
 import theano

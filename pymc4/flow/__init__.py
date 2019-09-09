@@ -1,3 +1,4 @@
+"""Functions for evaluating log probabilities."""
 from .executor import SamplingExecutor, SamplingState
 from .transformed_executor import TransformedSamplingExecutor
 

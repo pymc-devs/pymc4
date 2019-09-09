@@ -102,7 +102,7 @@ def sample(
             pkr.inner_results.leapfrogs_taken,
             pkr.inner_results.has_divergence,
             pkr.inner_results.energy,
-            pkr.inner_results.log_accept_ratio
+            pkr.inner_results.log_accept_ratio,
         )
 
     @tf.function(autograph=False)
@@ -131,13 +131,17 @@ def sample(
         return results, sample_stats
 
     if xla:
-        results, sample_stats = tf.xla.experimental.compile(run_chains, inputs=[init_state, step_size])
+        results, sample_stats = tf.xla.experimental.compile(
+            run_chains, inputs=[init_state, step_size]
+        )
     else:
         results, sample_stats = run_chains(init_state, step_size)
 
     posterior = dict(zip(init_keys, results))
     # Keep in sync with pymc3 naming convention
-    sampler_stats = dict(zip(['lp', 'tree_size', 'diverging', 'energy', 'mean_tree_accept'], sample_stats))
+    sampler_stats = dict(
+        zip(["lp", "tree_size", "diverging", "energy", "mean_tree_accept"], sample_stats)
+    )
     return posterior, sampler_stats
 
 

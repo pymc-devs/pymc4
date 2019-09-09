@@ -148,9 +148,7 @@ class SamplingState:
         )
 
     @classmethod
-    def from_values(
-        cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None
-    ) -> SamplingState:
+    def from_values(cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None):
         if values is None:
             return cls(observed_values=observed_values)
         transformed_values = dict()
@@ -173,7 +171,7 @@ class SamplingState:
             potentials=self.potentials,
         )
 
-    def as_sampling_state(self) -> SamplingState:
+    def as_sampling_state(self) -> "SamplingState":
         """Create a sampling state that should me used within MCMC sampling.
 
         There are some principles that hold for the state.

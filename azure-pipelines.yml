@@ -22,9 +22,21 @@ steps:
       python -m pip install -r requirements-dev.txt
     displayName: "Install dependencies"
 
+  # - script: |
+  #     python -m pydocstyle --convention=numpy pymc4/
+  #   displayName: "pydocstyle"
+
   - script: |
-      ./scripts/lint.sh
-    displayName: "lint"
+      python -m black -l 100 --check pymc4/
+    displayName: "black"
+
+  - script: |
+      python -m mypy --ignore-missing-imports pymc4/
+    displayName: "mypy"
+
+  - script: |
+      python -m pylint pymc4/
+    displayName: "pylint"
 
   - script: |
       python -m pip install pytest-azurepipelines

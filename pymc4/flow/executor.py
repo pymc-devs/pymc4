@@ -1,5 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, List, Optional
+from typing import Any, Tuple, Dict, Union, List
 import collections
 import itertools
 from pymc4 import _backend
@@ -464,8 +464,7 @@ class SamplingExecutor(object):
         return dist
 
     def proceed_distribution(self, dist: abstract.Distribution, state: SamplingState):
-        """TODO
-        """
+        # TODO: docs
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")
         scoped_name = scopes.variable_name(dist.name)

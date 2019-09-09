@@ -20,7 +20,7 @@ def sample(
     xla=False,
 ):
     """
-    The main API to perform MCMC sampling using NUTS (for now)
+    Perform MCMC sampling using NUTS (for now).
 
     Parameters
     ----------
@@ -91,14 +91,22 @@ def sample(
 
     """
     logpfn, init = build_logp_function(model, state=state, observed=observed)
-    init = [tf.tile(tf.expand_dims(tens, 0), [num_chains] + [1] * tens.ndim) for tens in init]
+    init_state = list(init.values())
+    init_keys = list(init.keys())
+    parallel_logpfn = vectorize_logp_function(logpfn)
+    init_state = tile_init(init_state, num_chains)
 
-    def parallel_logpfn(*state):
-        # NOTE: vmap passes things in a tuple, hack to unwrap
-        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+    def trace_fn(_, pkr):
+        return (
+            pkr.inner_results.target_log_prob,
+            pkr.inner_results.leapfrogs_taken,
+            pkr.inner_results.has_divergence,
+            pkr.inner_results.energy,
+            pkr.inner_results.log_accept_ratio
+        )
 
-    @tf.function
-    def run_chains(init):
+    @tf.function(autograph=False)
+    def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
             target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
         )
@@ -111,22 +119,26 @@ def sample(
             **(adaptation_kwargs or dict()),
         )
 
-        results = mcmc.sample_chain(
-            num_samples + burn_in,
+        results, sample_stats = mcmc.sample_chain(
+            num_samples,
             current_state=init,
             kernel=adapt_nuts_kernel,
             num_burnin_steps=burn_in,
+            trace_fn=trace_fn,
             **(sample_chain_kwargs or dict()),
         )
 
-        return results
+        return results, sample_stats
 
     if xla:
-        results, stats = tf.xla.experimental.compile(run_chains, inputs=[init])
+        results, sample_stats = tf.xla.experimental.compile(run_chains, inputs=[init_state, step_size])
     else:
-        results, stats = run_chains(init)
+        results, sample_stats = run_chains(init_state, step_size)
 
-    return results
+    posterior = dict(zip(init_keys, results))
+    # Keep in sync with pymc3 naming convention
+    sampler_stats = dict(zip(['lp', 'tree_size', 'diverging', 'energy', 'mean_tree_accept'], sample_stats))
+    return posterior, sampler_stats
 
 
 def build_logp_function(
@@ -149,11 +161,25 @@ def build_logp_function(
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
     @tf.function(autograph=False)
-    def logpfn(*values):
-        st = flow.SamplingState.from_values(
-            dict(zip(unobserved_keys, values)), observed_values=observed
-        )
+    def logpfn(*values, **kwargs):
+        if kwargs and values:
+            raise TypeError("Either list state should be passed or a dict one")
+        elif values:
+            kwargs = dict(zip(unobserved_keys, values))
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
         _, st = flow.evaluate_model_transformed(model, state=st)
         return st.collect_log_prob()
 
-    return logpfn, list(unobserved_values)
+    return logpfn, dict(state.all_unobserved_values)
+
+
+def vectorize_logp_function(logpfn):
+    # TODO: vectorize with dict
+    def vectorized_logpfn(*state):
+        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+
+    return vectorized_logpfn
+
+
+def tile_init(init, num_repeats):
+    return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]

@@ -1,6 +1,4 @@
-"""
-PyMC4 continuous random variables for tensorflow.
-"""
+"""PyMC4 continuous random variables for tensorflow."""
 import tensorflow_probability as tfp
 from pymc4.distributions import abstract
 from pymc4.distributions.tensorflow.distribution import BackendDistribution

@@ -28,7 +28,7 @@ steps:
   #   displayName: "pydocstyle"
 
   - script: |
-      python -m black -l 100 --check pymc4/ tests/
+      python -m black --check pymc4/ tests/
     displayName: "black"
 
   - script: |

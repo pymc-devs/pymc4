@@ -27,7 +27,7 @@ steps:
   #   displayName: "pydocstyle"
 
   - script: |
-      python -m black -l 100 --check pymc4/
+      python -m black -l 100 --check pymc4/ tests/
     displayName: "black"
 
   - script: |
@@ -35,7 +35,7 @@ steps:
     displayName: "mypy"
 
   - script: |
-      python -m pylint pymc4/
+      python -m pylint pymc4/ tests/
     displayName: "pylint"
 
   - script: |

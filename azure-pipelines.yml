@@ -20,14 +20,15 @@ steps:
       python -m pip install --upgrade pip
       python -m pip install .
       python -m pip install -r requirements-dev.txt
+      python -m pip freeze
     displayName: "Install dependencies"
 
   # - script: |
-  #     python -m pydocstyle --convention=numpy pymc4/
+  #     python -m pydocstyle --convention=numpy pymc4/ tests/
   #   displayName: "pydocstyle"
 
   - script: |
-      python -m black -l 100 --check pymc4/
+      python -m black --check pymc4/ tests/
     displayName: "black"
 
   - script: |
@@ -35,7 +36,7 @@ steps:
     displayName: "mypy"
 
   - script: |
-      python -m pylint pymc4/
+      python -m pylint pymc4/ tests/
     displayName: "pylint"
 
   - script: |

@@ -84,7 +84,9 @@ def test_rvs_logp_and_forward_sample(tf_seed, distribution_name, kwargs):
         np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
 
 
-@pytest.mark.xfail(raises=TypeError, reason="Raising Typerror at the moment. Should double check if still needed")
+@pytest.mark.xfail(
+    raises=TypeError, reason="Raising Typerror at the moment. Should double check if still needed"
+)
 def test_rvs_backend_arithmetic(tf_seed):
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
     x = pm.Normal("NormA", mu=0, sigma=1)

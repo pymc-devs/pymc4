@@ -203,3 +203,22 @@ class Potential(object):
     @abc.abstractmethod
     def value_numpy(self):
         raise NotImplementedError
+
+
+class Deterministic(Model):
+    """An object that can be sampled, but has no log probability."""
+
+    def __init__(self, name: Optional[NameType], value):
+        super().__init__(
+            self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
+        )
+        self._init_backend()
+        self.value = value
+
+    def unpack_distribution(self):
+        return unpack(self.value)
+
+    @abc.abstractmethod
+    def _init_backend(self):
+        """Initialize the backend."""
+        pass

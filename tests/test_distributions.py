@@ -3,8 +3,10 @@ Tests for PyMC4 random variables
 """
 import pytest
 import numpy as np
+import numpy.testing as npt
 
 import pymc4 as pm
+import tensorflow as tf
 
 
 def random_variable_args():
@@ -70,7 +72,7 @@ def random_variable_args():
 
 
 @pytest.mark.parametrize(**random_variable_args())
-def test_rvs_logp_and_forward_sample(tf_seed, distribution_name, kwargs):
+def test_rvs_logp_and_forward_sample(distribution_name, kwargs):
     """Test forward sampling and evaluating the logp for all random variables."""
     sample = kwargs.pop("sample", 0.1)
     expected_value = kwargs.pop("expected", None)
@@ -87,7 +89,7 @@ def test_rvs_logp_and_forward_sample(tf_seed, distribution_name, kwargs):
 @pytest.mark.xfail(
     raises=TypeError, reason="Raising Typerror at the moment. Should double check if still needed"
 )
-def test_rvs_backend_arithmetic(tf_seed):
+def test_rvs_backend_arithmetic():
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
     x = pm.Normal("NormA", mu=0, sigma=1)
     y = pm.Normal("NormB", mu=1, sigma=2)
@@ -102,3 +104,20 @@ def test_rvs_backend_arithmetic(tf_seed):
     assert x % y is not None
     assert x ** y is not None
     assert -x is not None
+
+
+def test_deterministic():
+    @pm.model
+    def half_normal(mu, sigma):
+        normal = yield pm.Normal(name="normal", mu=mu, sigma=sigma, plate=20)
+        yield pm.Deterministic(name="abs_normal", value=tf.math.abs(normal))
+
+    _, state = pm.evaluate_model(half_normal(0, 1))
+    normal = state.untransformed_values["half_normal/normal"].numpy()
+    abs_normal = state.untransformed_values["half_normal/abs_normal"].numpy()
+
+    # There were some entries less than 0
+    assert np.any(normal < 0)
+
+    # The deterministic variable is all positive
+    npt.assert_allclose(np.abs(normal), abs_normal)

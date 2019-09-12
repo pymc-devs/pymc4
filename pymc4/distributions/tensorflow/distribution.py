@@ -1,4 +1,8 @@
-from pymc4.distributions.abstract.distribution import Distribution, Potential as BasePotential
+from pymc4.distributions.abstract.distribution import (
+    Distribution,
+    Potential as BasePotential,
+    Deterministic as BaseDeterministic,
+)
 from tensorflow_probability import distributions as tfd
 
 
@@ -32,3 +36,7 @@ class Potential(BasePotential):
     @property
     def value_numpy(self):
         return self.value.numpy()
+
+
+class Deterministic(BaseDeterministic):
+    """Backend distribution for Tensorflow distributions."""

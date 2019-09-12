@@ -1,7 +1,8 @@
+"""Main model functionality."""
 import functools
 import types
+from typing import Optional, Union
 
-import pymc4
 from pymc4.scopes import name_scope
 from pymc4.utils import biwrap, NameParts
 
@@ -12,6 +13,7 @@ _no_name_provided = object()
 
 @biwrap
 def model(genfn, *, name=_no_name_provided, keep_auxiliary=True, keep_return=True, method=False):
+    """Flexibly wrap a generator function into a Model template."""
     if method:
         template = ModelTemplate(
             genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return
@@ -29,7 +31,22 @@ def model(genfn, *, name=_no_name_provided, keep_auxiliary=True, keep_return=Tru
         return template
 
 
-def get_name(default, base_fn, name):
+def get_name(default, base_fn, name) -> Optional[str]:
+    """Parse the name of an rv from arguments.
+
+    Parameters
+    ----------
+    default : _no_name_provided, str, or None
+        Default to fall back to
+    base_fn : callable
+        In case the random variable has a name attribute, use that
+    name : _no_name_provided, str, or None
+        Provided argument
+
+    Returns
+    -------
+    str or None
+    """
     if name is _no_name_provided:
         if default is not _no_name_provided:
             name = default
@@ -40,9 +57,8 @@ def get_name(default, base_fn, name):
     return name
 
 
-class ModelTemplate(object):
-    """
-    Model Template -- generative model with metadata.
+class ModelTemplate:
+    """Model Template -- generative model with metadata.
 
     ModelTemplate is a callable object that represents a generative process. A generative process samples
     from prior distributions and allows them to interact in arbitrarily-complex, user-defined ways.
@@ -148,22 +164,19 @@ class ModelTemplate(object):
 
 
 def unpack(arg):
+    """Convert an argument into a generator or a value."""
     if isinstance(arg, (Model, types.GeneratorType)):
         return (yield arg)
     else:
         return arg
 
 
-def yieldify(fn):
-    @functools.wraps(fn)
-    def wrapped(*args, **kwargs):
-        args, kwargs = pymc4.utils.map_nested(unpack, (args, kwargs))
-        return fn(*args, **kwargs)
+class Model:
+    """Base coroutine object.
 
-    return wrapped
+    Supports iteration over random variables via `.control_flow`.
+    """
 
-
-class Model(object):
     # this is gonna be used for generator-like objects,
     # prohibit modification of this dict wrapping it into a MappingProxy
     default_model_info = types.MappingProxyType(
@@ -171,7 +184,8 @@ class Model(object):
     )
 
     @staticmethod
-    def validate_name(name):
+    def validate_name(name: Optional[Union[int, str]]) -> Optional[str]:
+        """Validate the type of the name argument."""
         if name is not None and not isinstance(name, (int, str)):
             raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
         elif name is None:
@@ -190,4 +204,5 @@ class Model(object):
         )
 
     def control_flow(self):
+        """Iterate over the random variables in the model."""
         return (yield from self.genfn())

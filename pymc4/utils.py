@@ -58,6 +58,8 @@ def merge_dicts(*dicts: dict, **kwargs: dict):
 def biwrap(wrapper):
     @functools.wraps(wrapper)
     def enhanced(*args, **kwargs):
+
+        # What does this do? Seems to check if args are passed to decorator?
         is_bound_method = hasattr(args[0], wrapper.__name__) if args else False
         if is_bound_method:
             count = 1

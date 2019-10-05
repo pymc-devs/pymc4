@@ -66,13 +66,13 @@ class ModelTemplate:
     Parameters
     ----------
     template : callable
-        generative process, that accepts any arguments as conditioners and returns realizations if any.
+        Generative process, that accepts any arguments as conditioners and returns realizations if any.
     keep_auxiliary : bool
-        generative process may require some auxiliary variables to be created, but they are probably will not be used
+        Generative process may require some auxiliary variables to be created, but they are probably will not be used
         anywhere else. In that case it is useful to tell PyMC4 engine that we can get rid of auxiliary variables
         as long as they are not needed any more.
     keep_return : bool
-        the return value of the model will be recorded
+        The return value of the model will be recorded
     """
 
     def __init__(self, template, *, name=None, keep_auxiliary=True, keep_return=True):
@@ -160,6 +160,7 @@ class ModelTemplate:
             keep_auxiliary = self.keep_auxiliary
         if keep_return is None:
             keep_return = self.keep_return
+
         return Model(genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return)
 
 

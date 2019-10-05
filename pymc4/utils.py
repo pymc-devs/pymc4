@@ -56,19 +56,32 @@ def merge_dicts(*dicts: dict, **kwargs: dict):
 
 
 def biwrap(wrapper):
+    """Decorator that allows for optional keyword arguments in lower level decoratrors.
+
+    Notes
+    -----
+    Currently this is only used to wrap pm.Model to capture model runtime flags such as
+    keep_auxiliary and keep_return. See pm.Model for all possible keyword parameters
+
+    """
     @functools.wraps(wrapper)
     def enhanced(*args, **kwargs):
 
-        # What does this do? Seems to check if args are passed to decorator?
+        # Check if decorated method is bound to a class
         is_bound_method = hasattr(args[0], wrapper.__name__) if args else False
         if is_bound_method:
+            # If bound to a class, `self` will be an argument
             count = 1
         else:
             count = 0
         if len(args) > count:
+            # If lower level decorator is not called user model will be an argument
+            # fill in parameters and call pm.Model
             newfn = wrapper(*args, **kwargs)
             return newfn
         else:
+            # If lower level decorator is called user model will not be passed in as an argument
+            # prefill args and kwargs but do not call pm.Model
             newwrapper = functools.partial(wrapper, *args, **kwargs)
             return newwrapper
 

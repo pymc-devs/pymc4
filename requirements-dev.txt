@@ -5,3 +5,4 @@ pytest-cov
 pytest-html
 pylint
 black
+mock

@@ -15,15 +15,19 @@ def mock_biwrap_functools_call(monkeypatch):
 
     def _partial(*args, **kwargs):
         raise Exception("Mocked functools partial")
+
     _functools.partial = _partial
 
-    monkeypatch.setattr(pm.utils, 'functools', _functools)
+    monkeypatch.setattr(pm.utils, "functools", _functools)
 
 
-def test_biwrao_and_mocked_functools_raises_exception_with_called_decorator(mock_biwrap_functools_call):
+def test_biwrao_and_mocked_functools_raises_exception_with_called_decorator(
+    mock_biwrap_functools_call
+):
     """Test code path for called decorator by adding exception to to pm4.utils.functools.partial"""
 
     with pytest.raises(Exception) as e:
+
         @pm.model()
         def fake_model():
             yield None
@@ -42,8 +46,3 @@ def test_biwrap_with_uncalled_decorator(mock_biwrap_functools_call):
     @pm.model
     def fake_model():
         yield None
-
-
-
-
-

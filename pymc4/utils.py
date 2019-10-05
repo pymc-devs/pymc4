@@ -64,6 +64,7 @@ def biwrap(wrapper):
     keep_auxiliary and keep_return. See pm.Model for all possible keyword parameters
 
     """
+
     @functools.wraps(wrapper)
     def enhanced(*args, **kwargs):
 

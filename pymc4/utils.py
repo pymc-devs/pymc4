@@ -1,5 +1,6 @@
 import functools
 import re
+from typing import Callable
 
 
 def map_nested(fn, structure, cond=lambda obj: True):
@@ -55,7 +56,7 @@ def merge_dicts(*dicts: dict, **kwargs: dict):
     return kwargs
 
 
-def biwrap(wrapper):
+def biwrap(wrapper) -> Callable:
     """Allow for optional keyword arguments in lower level decoratrors.
 
     Notes
@@ -66,7 +67,7 @@ def biwrap(wrapper):
     """
 
     @functools.wraps(wrapper)
-    def enhanced(*args, **kwargs):
+    def enhanced(*args, **kwargs) -> Callable:
 
         # Check if decorated method is bound to a class
         is_bound_method = hasattr(args[0], wrapper.__name__) if args else False

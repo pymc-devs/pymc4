@@ -56,7 +56,7 @@ def merge_dicts(*dicts: dict, **kwargs: dict):
 
 
 def biwrap(wrapper):
-    """Decorator that allows for optional keyword arguments in lower level decoratrors.
+    """Allow for optional keyword arguments in lower level decoratrors.
 
     Notes
     -----

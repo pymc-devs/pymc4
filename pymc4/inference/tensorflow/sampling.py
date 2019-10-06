@@ -105,7 +105,7 @@ def sample(
             pkr.inner_results.log_accept_ratio,
         )
 
-    @tf.function(autograph=False, experimental_compile=xla)
+    @tf.function(autograph=False)
     def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
             target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
@@ -130,7 +130,12 @@ def sample(
 
         return results, sample_stats
 
-    results, sample_stats = run_chains(init_state, step_size)
+    if xla:
+        results, sample_stats = tf.xla.experimental.compile(
+            run_chains, inputs=[init_state, step_size]
+        )
+    else:
+        results, sample_stats = run_chains(init_state, step_size)
 
     posterior = dict(zip(init_keys, results))
     # Keep in sync with pymc3 naming convention

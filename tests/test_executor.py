@@ -68,13 +68,13 @@ def transformed_model_with_observed():
 
 @pytest.fixture("module")
 def class_model():
-    class PyMC4ClassModel:
+    class ClassModel:
         @pm.model
         def class_model_method(self):
             norm = yield pm.Normal("n", 0, 1)
             return norm
 
-    return PyMC4ClassModel()
+    return ClassModel()
 
 
 def test_class_model(class_model):

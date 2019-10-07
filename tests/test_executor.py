@@ -66,6 +66,27 @@ def transformed_model_with_observed():
     return transformed_model_with_observed
 
 
+@pytest.fixture("module")
+def class_model():
+
+    class PyMC4ClassModel:
+
+        @pm.model
+        def class_model_method(self):
+            norm = yield pm.Normal("n", 0, 1)
+            return norm
+
+    return PyMC4ClassModel()
+
+
+def test_class_model(class_model):
+    """Test that model can be defined as method in an object definition"""
+    _, state = pm.evaluate_model(class_model.class_model_method(class_model))
+    assert "class_model_method/n" in state.untransformed_values
+    assert not state.observed_values
+    assert not state.transformed_values
+
+
 def test_simple_model(simple_model):
     _, state = pm.evaluate_model(simple_model())
     assert "n" in state.untransformed_values

@@ -172,7 +172,7 @@ class SamplingState:
         )
 
     def as_sampling_state(self) -> "SamplingState":
-        """Create a sampling state that should me used within MCMC sampling.
+        """Create a sampling state that should be used within MCMC sampling.
 
         There are some principles that hold for the state.
 

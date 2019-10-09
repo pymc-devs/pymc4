@@ -15,6 +15,7 @@ _no_name_provided = object()
 def model(genfn, *, name=_no_name_provided, keep_auxiliary=True, keep_return=True, method=False):
     """Flexibly wrap a generator function into a Model template."""
     if method:
+        # What is this block for?
         template = ModelTemplate(
             genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return
         )

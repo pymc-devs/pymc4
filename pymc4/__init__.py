@@ -10,7 +10,4 @@ from .coroutine_model import Model, model
 from . import inference
 from .distributions import *
 
-# do not export "abstract" from distributions
-del abstract
-
 __version__ = "0.0.1"

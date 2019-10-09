@@ -2,17 +2,19 @@ import types
 from typing import Any, Tuple, Dict, Union, List
 import collections
 import itertools
-from pymc4 import _backend
+
+import tensorflow as tf
+
 import pymc4 as pm
 from pymc4 import coroutine_model
 from pymc4 import scopes
 from pymc4 import utils
-from pymc4.distributions import abstract
+from pymc4.distributions import distribution
 
 
 ModelType = Union[types.GeneratorType, coroutine_model.Model]
 MODEL_TYPES = (types.GeneratorType, coroutine_model.Model)
-MODEL_AND_POTENTIAL_TYPES = (types.GeneratorType, coroutine_model.Model, abstract.Potential)
+MODEL_AND_POTENTIAL_TYPES = (types.GeneratorType, coroutine_model.Model, distribution.Potential)
 
 
 class EvaluationError(RuntimeError):
@@ -71,8 +73,8 @@ class SamplingState:
         transformed_values: Dict[str, Any] = None,
         untransformed_values: Dict[str, Any] = None,
         observed_values: Dict[str, Any] = None,
-        distributions: Dict[str, abstract.Distribution] = None,
-        potentials: List[abstract.Potential] = None,
+        distributions: Dict[str, distribution.Distribution] = None,
+        potentials: List[distribution.Potential] = None,
     ):
         # verbose __init__
         if transformed_values is None:
@@ -112,7 +114,7 @@ class SamplingState:
             (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
             (p.value for p in self.potentials),
         )
-        return sum(map(_backend.ops.sum, all_terms))
+        return sum(map(tf.reduce_sum, all_terms))
 
     def __repr__(self):
         # display keys only
@@ -354,7 +356,7 @@ class SamplingExecutor:
         #       value for bounded distribution may be either in transformed or untransformed space. So far validation
         #       logic is spread among different places, it probably worth unifying we way we validate execution state.
 
-        if isinstance(model, abstract.Distribution):
+        if isinstance(model, distribution.Distribution):
             # usually happens when
             #   pm.evaluate_model(pm.distributions.Normal("n", 0, 1))
             # is called
@@ -395,12 +397,12 @@ class SamplingExecutor:
                     # dist is a clean, known type from here on
 
                     # If distribution, potentially transform it
-                    if isinstance(dist, abstract.Distribution):
+                    if isinstance(dist, distribution.Distribution):
                         dist = self.modify_distribution(dist, model_info, state)
-                    if isinstance(dist, abstract.Potential):
+                    if isinstance(dist, distribution.Potential):
                         state.potentials.append(dist)
                         return_value = dist
-                    elif isinstance(dist, abstract.Distribution):
+                    elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(dist, state)
                         except EvaluationError as error:
@@ -459,12 +461,12 @@ class SamplingExecutor:
             )
 
     def modify_distribution(
-        self, dist: abstract.Distribution, model_info: Dict[str, Any], state: SamplingState
+        self, dist: distribution.Distribution, model_info: Dict[str, Any], state: SamplingState
     ):
         return dist
 
     def proceed_distribution(
-        self, dist: abstract.Distribution, state: SamplingState
+        self, dist: distribution.Distribution, state: SamplingState
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         if dist.is_anonymous:
@@ -540,6 +542,6 @@ class SamplingExecutor:
 
 
 def observed_value_in_evaluation(
-    scoped_name: str, dist: abstract.Distribution, state: SamplingState
+    scoped_name: str, dist: distribution.Distribution, state: SamplingState
 ):
     return state.observed_values.get(scoped_name, dist.model_info["observed"])

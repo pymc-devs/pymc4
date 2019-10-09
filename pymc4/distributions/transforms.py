@@ -1,28 +1,19 @@
 import enum
 from typing import Optional
 
+from tensorflow_probability import bijectors as tfb
+
+__all__ = ["Log"]
+
 
 class JacobianPreference(enum.Enum):
     Forward = "Forward"
     Backward = "Backward"
 
 
-class Transform(object):
+class Transform:
     name: Optional[str] = None
     jacobian_preference = JacobianPreference.Forward
-
-    @classmethod
-    def create(cls, *args, **kwargs):
-        import pymc4.distributions
-
-        if hasattr(pymc4.distributions.transforms, cls.__name__):
-            return getattr(pymc4.distributions.transforms, cls.__name__)(*args, **kwargs)
-        else:
-            raise NotImplementedError(
-                "{} does not implement {} transform".format(
-                    pymc4.distributions._backend, cls.__name__
-                )
-            )
 
     def forward(self, x):
         """
@@ -125,4 +116,19 @@ class Invert(Transform):
 class Log(Transform):
     name = "log"
     JacobianPreference = JacobianPreference.Backward
-    ...
+
+    def __init__(self):
+        # NOTE: We actually need the inverse to match PyMC3, do we?
+        self._transform = tfb.Exp()
+
+    def forward(self, x):
+        return self._transform.inverse(x)
+
+    def inverse(self, z):
+        return self._transform.forward(z)
+
+    def forward_log_det_jacobian(self, x):
+        return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
+
+    def inverse_log_det_jacobian(self, z):
+        return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)

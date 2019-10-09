@@ -1,6 +1,7 @@
-from pymc4.distributions.abstract.distribution import Distribution
+from pymc4.distributions.distribution import Distribution
 
 
+# TODO: Implement this
 class Mixture(Distribution):
     r"""
     Mixture random variable.

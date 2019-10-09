@@ -5,8 +5,8 @@ one or both sides to distributions that are supported for all real numbers.
 """
 import functools
 from pymc4 import scopes, distributions
-from pymc4.distributions import abstract
-from pymc4.distributions.abstract.transforms import JacobianPreference
+from pymc4.distributions import distribution
+from pymc4.distributions.transforms import JacobianPreference
 from pymc4.flow.executor import SamplingExecutor, EvaluationError, observed_value_in_evaluation
 
 
@@ -20,7 +20,7 @@ class TransformedSamplingExecutor(SamplingExecutor):
     def modify_distribution(self, dist, model_info, state):
         """Apply transformations to a distribution."""
         dist = super().modify_distribution(dist, model_info, state)
-        if not isinstance(dist, abstract.Distribution):
+        if not isinstance(dist, distribution.Distribution):
             return dist
         scoped_name = scopes.variable_name(dist.name)
 

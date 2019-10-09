@@ -1,30 +1,60 @@
-"""
-PyMC4 continuous random variables.
-
-Provides template classes for backend random variables.
-"""
-
-# pylint: disable=undefined-all-variable
-from pymc4.distributions.abstract.distribution import (
-    BoundedDistribution,
-    BoundedContinuousDistribution,
-    ContinuousDistribution,
-    UnitContinuousDistribution,
-    PositiveContinuousDistribution,
-)
+"""PyMC4 continuous random variables for tensorflow."""
 import math
 
+import tensorflow_probability as tfp
+from pymc4.distributions.distribution import (
+    ContinuousDistribution,
+    PositiveContinuousDistribution,
+    UnitContinuousDistribution,
+    BoundedContinuousDistribution,
+)
 
-class Beta(UnitContinuousDistribution):
-    r"""
-    Beta random variable.
+
+tfd = tfp.distributions
+
+__all__ = [
+    "Beta",
+    "Cauchy",
+    "ChiSquared",
+    "Exponential",
+    "Gamma",
+    "Gumbel",
+    "HalfCauchy",
+    "HalfNormal",
+    "InverseGamma",
+    "InverseGaussian",
+    "Kumaraswamy",
+    "Laplace",
+    "LogNormal",
+    "Logistic",
+    "LogitNormal",
+    "Normal",
+    "Pareto",
+    "StudentT",
+    "Triangular",
+    "Uniform",
+    "VonMises",
+]
+
+
+class Normal(ContinuousDistribution):
+    r"""Univariate normal random variable.
 
     The pdf of this distribution is
 
     .. math::
 
-       f(x \mid \alpha, \beta) =
-           \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
+       f(x \mid \mu, \tau) =
+           \sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
+
+    Normal distribution can be parameterized either in terms of precision
+    or standard deviation. The link between the two parametrizations is
+    given by
+
+    .. math::
+
+       \tau = \dfrac{1}{\sigma^2}
 
     .. plot::
 
@@ -32,370 +62,56 @@ class Beta(UnitContinuousDistribution):
         import numpy as np
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
-        x = np.linspace(0, 1, 200)
-        alphas = [.5, 5., 1., 2., 2.]
-        betas = [.5, 1., 3., 2., 5.]
-        for a, b in zip(alphas, betas):
-            pdf = st.beta.pdf(x, a, b)
-            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.ylim(0, 4.5)
-        plt.legend(loc=9)
-        plt.show()
-
-    ========  ==============================================================
-    Support   :math:`x \in (0, 1)`
-    Mean      :math:`\dfrac{\alpha}{\alpha + \beta}`
-    Variance  :math:`\dfrac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
-    ========  ==============================================================
-
-    Parameters
-    ----------
-    alpha : float
-        alpha > 0.
-    beta : float
-        beta > 0.
-
-    Notes
-    -----
-    Beta distribution is a conjugate prior for the parameter :math:`p` of
-    the binomial distribution.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - alpha: concentration0
-    - beta: concentration1
-    """
-
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
-
-
-class Cauchy(ContinuousDistribution):
-    r"""
-    Cauchy random variable.
-
-    Also known as the Lorentz or the Breit-Wigner distribution.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \alpha, \beta) =
-           \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(-5, 5, 500)
-        alphas = [0., 0., 0., -2.]
-        betas = [.5, 1., 2., 1.]
-        for a, b in zip(alphas, betas):
-            pdf = st.cauchy.pdf(x, loc=a, scale=b)
-            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        x = np.linspace(-5, 5, 1000)
+        mus = [0., 0., 0., -2.]
+        sigmas = [0.4, 1., 2., 0.4]
+        for mu, sigma in zip(mus, sigmas):
+            pdf = st.norm.pdf(x, mu, sigma)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
         plt.show()
-
-    ========  ========================
-    Support   :math:`x \in \mathbb{R}`
-    Mode      :math:`\alpha`
-    Mean      undefined
-    Variance  undefined
-    ========  ========================
-
-    Parameters
-    ----------
-    alpha : float
-        Location parameter
-    beta : float
-        Scale parameter > 0
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-    - alpha: loc
-    - beta: scale
-    """
-
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
-
-
-class ChiSquared(PositiveContinuousDistribution):
-    r"""
-    :math:`\chi^2` random variable.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(0, 15, 200)
-        for df in [1, 2, 3, 6, 9]:
-            pdf = st.chi2.pdf(x, df)
-            plt.plot(x, pdf, label=r'$\nu$ = {}'.format(df))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.ylim(0, 0.6)
-        plt.legend(loc=1)
-        plt.show()
-
-    ========  ===============================
-    Support   :math:`x \in [0, \infty)`
-    Mean      :math:`\nu`
-    Variance  :math:`2 \nu`
-    ========  ===============================
-
-    Parameters
-    ----------
-    nu : int
-        Degrees of freedom (nu > 0).
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - nu: df
-
-    The ChiSquared distribution name is copied over from PyMC3 for continuity. We map it to the
-    Chi2 distribution in TensorFlow Probability.
-    """
-
-    def __init__(self, name, nu, **kwargs):
-        super().__init__(name, nu=nu, **kwargs)
-
-
-class Exponential(PositiveContinuousDistribution):
-    r"""
-    Exponential random variable.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(0, 3, 100)
-        for lam in [0.5, 1., 2.]:
-            pdf = st.expon.pdf(x, scale=1.0/lam)
-            plt.plot(x, pdf, label=r'$\lambda$ = {}'.format(lam))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
-
-    ========  ============================
-    Support   :math:`x \in [0, \infty)`
-    Mean      :math:`\dfrac{1}{\lambda}`
-    Variance  :math:`\dfrac{1}{\lambda^2}`
-    ========  ============================
-
-    Parameters
-    ----------
-    lam : float
-        Rate or inverse scale (lam > 0)
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - lam: rate
-    """
-
-    def __init__(self, name, lam, **kwargs):
-        super().__init__(name, lam=lam, **kwargs)
-
-
-class Gamma(PositiveContinuousDistribution):
-    r"""
-    Gamma random variable.
-
-    Represents the sum of alpha exponentially distributed random variables,
-    each of which has mean beta.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \alpha, \beta) =
-           \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(0, 20, 200)
-        alphas = [1., 2., 3., 7.5]
-        betas = [.5, .5, 1., 1.]
-        for a, b in zip(alphas, betas):
-            pdf = st.gamma.pdf(x, a, scale=1.0/b)
-            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
-
-    ========  ===============================
-    Support   :math:`x \in (0, \infty)`
-    Mean      :math:`\dfrac{\alpha}{\beta}`
-    Variance  :math:`\dfrac{\alpha}{\beta^2}`
-    ========  ===============================
-
-    Parameters
-    ----------
-    alpha : float
-        Shape parameter (alpha > 0).
-    beta : float
-        Rate parameter (beta > 0).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - alpha: concentration
-    - beta: rate
-
-    """
-
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
-
-
-class Gumbel(ContinuousDistribution):
-    r"""
-    Univariate Gumbel random variable.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \mu, \beta) = \frac{1}{\beta}e^{-(z + e^{-z})}
-
-    where
-
-    .. math::
-
-        z = \frac{x - \mu}{\beta}.
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(-10, 20, 200)
-        mus = [0., 4., -1.]
-        betas = [2., 2., 4.]
-        for mu, beta in zip(mus, betas):
-            pdf = st.gumbel_r.pdf(x, loc=mu, scale=beta)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\beta$ = {}'.format(mu, beta))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
-
 
     ========  ==========================================
     Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
-    Variance  :math:`\frac{\pi^2}{6} \beta^2`
+    Mean      :math:`\mu`
+    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
     ========  ==========================================
 
     Parameters
     ----------
-    mu : float
-        Location parameter.
-    beta : float
-        Scale parameter (beta > 0).
+    mu : float|tensor
+        Mean.
+    sigma : float|tensor
+        Standard deviation (sigma > 0).
+
+    Examples
+    --------
+    .. code-block:: python
+        @pm.model
+        def model():
+            x = pm.Normal('x', mu=0, sigma=10)
 
     Developer Notes
     ---------------
     Parameter mappings to TensorFlow Probability are as follows:
 
     - mu: loc
-    - beta: scale
+    - sigma: scale
     """
 
-    def __init__(self, name, mu, beta, **kwargs):
-        super().__init__(name, mu=mu, beta=beta, **kwargs)
+    def __init__(self, name, mu, sigma, **kwargs):
+        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
 
-
-class HalfCauchy(PositiveContinuousDistribution):
-    r"""
-    Half-Cauchy random variable.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(0, 5, 200)
-        for b in [0.5, 1.0, 2.0]:
-            pdf = st.cauchy.pdf(x, scale=b)
-            plt.plot(x, pdf, label=r'$\beta$ = {}'.format(b))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
-
-    ========  ========================
-    Support   :math:`x \in [0, \infty)`
-    Mode      0
-    Mean      undefined
-    Variance  undefined
-    ========  ========================
-
-    Parameters
-    ----------
-    beta : float
-        Scale parameter (beta > 0).
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - beta: scale
-
-    In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
-    """
-
-    def __init__(self, name, beta, **kwargs):
-        super().__init__(name, beta=beta, **kwargs)
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, sigma = conditions["mu"], conditions["sigma"]
+        return tfd.Normal(loc=mu, scale=sigma)
 
 
 class HalfNormal(PositiveContinuousDistribution):
-    r"""
-    Half-normal random variable.
+    r"""Half-normal random variable.
 
     The pdf of this distribution is
 
@@ -460,19 +176,372 @@ class HalfNormal(PositiveContinuousDistribution):
     def __init__(self, name, sigma, **kwargs):
         super().__init__(name, sigma=sigma, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        sigma = conditions["sigma"]
+        return tfd.HalfNormal(scale=sigma)
 
-class HalfStudentT(PositiveContinuousDistribution):
-    r"""
-    Half Student's T random variable.
+
+class Beta(UnitContinuousDistribution):
+    r"""Beta random variable.
 
     The pdf of this distribution is
 
     .. math::
 
-        f(x \mid \sigma,\nu) =
-            \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
-            {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\sigma^2}}
-            \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
+       f(x \mid \alpha, \beta) =
+           \frac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 1, 200)
+        alphas = [.5, 5., 1., 2., 2.]
+        betas = [.5, 1., 3., 2., 5.]
+        for a, b in zip(alphas, betas):
+            pdf = st.beta.pdf(x, a, b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 4.5)
+        plt.legend(loc=9)
+        plt.show()
+
+    ========  ==============================================================
+    Support   :math:`x \in (0, 1)`
+    Mean      :math:`\dfrac{\alpha}{\alpha + \beta}`
+    Variance  :math:`\dfrac{\alpha \beta}{(\alpha+\beta)^2(\alpha+\beta+1)}`
+    ========  ==============================================================
+
+    Parameters
+    ----------
+    alpha : float
+        alpha > 0.
+    beta : float
+        beta > 0.
+
+    Notes
+    -----
+    Beta distribution is a conjugate prior for the parameter :math:`p` of
+    the binomial distribution.
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration0
+    - beta: concentration1
+    """
+
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        alpha, beta = conditions["alpha"], conditions["beta"]
+        return tfd.Beta(concentration0=alpha, concentration1=beta)
+
+
+class Cauchy(ContinuousDistribution):
+    r"""Cauchy random variable.
+
+    Also known as the Lorentz or the Breit-Wigner distribution.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{1}{\pi \beta [1 + (\frac{x-\alpha}{\beta})^2]}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-5, 5, 500)
+        alphas = [0., 0., 0., -2.]
+        betas = [.5, 1., 2., 1.]
+        for a, b in zip(alphas, betas):
+            pdf = st.cauchy.pdf(x, loc=a, scale=b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    Mode      :math:`\alpha`
+    Mean      undefined
+    Variance  undefined
+    ========  ========================
+
+    Parameters
+    ----------
+    alpha : float
+        Location parameter
+    beta : float
+        Scale parameter > 0
+
+    Developer Notes
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+    - alpha: loc
+    - beta: scale
+    """
+
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        alpha, beta = conditions["alpha"], conditions["beta"]
+        return tfd.Cauchy(loc=alpha, scale=beta)
+
+
+class ChiSquared(PositiveContinuousDistribution):
+    r""":math:`\chi^2` random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \nu) = \frac{x^{(\nu-2)/2}e^{-x/2}}{2^{\nu/2}\Gamma(\nu/2)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 15, 200)
+        for df in [1, 2, 3, 6, 9]:
+            pdf = st.chi2.pdf(x, df)
+            plt.plot(x, pdf, label=r'$\nu$ = {}'.format(df))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 0.6)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ===============================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\nu`
+    Variance  :math:`2 \nu`
+    ========  ===============================
+
+    Parameters
+    ----------
+    nu : int
+        Degrees of freedom (nu > 0).
+
+    Developer Notes
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - nu: df
+
+    The ChiSquared distribution name is copied over from PyMC3 for continuity. We map it to the
+    Chi2 distribution in TensorFlow Probability.
+    """
+
+    def __init__(self, name, nu, **kwargs):
+        super().__init__(name, nu=nu, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        nu = conditions["nu"]
+        return tfd.Chi2(df=nu)
+
+
+class Exponential(PositiveContinuousDistribution):
+    r"""Exponential random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \lambda) = \lambda \exp\left\{ -\lambda x \right\}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 100)
+        for lam in [0.5, 1., 2.]:
+            pdf = st.expon.pdf(x, scale=1.0/lam)
+            plt.plot(x, pdf, label=r'$\lambda$ = {}'.format(lam))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ============================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\dfrac{1}{\lambda}`
+    Variance  :math:`\dfrac{1}{\lambda^2}`
+    ========  ============================
+
+    Parameters
+    ----------
+    lam : float
+        Rate or inverse scale (lam > 0)
+
+    Developer Notes
+    ----------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - lam: rate
+    """
+
+    def __init__(self, name, lam, **kwargs):
+        super().__init__(name, lam=lam, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        lam = conditions["lam"]
+        return tfd.Exponential(rate=lam)
+
+
+class Gamma(PositiveContinuousDistribution):
+    r"""Gamma random variable.
+
+    Represents the sum of alpha exponentially distributed random variables,
+    each of which has mean beta.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \alpha, \beta) =
+           \frac{\beta^{\alpha}x^{\alpha-1}e^{-\beta x}}{\Gamma(\alpha)}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 20, 200)
+        alphas = [1., 2., 3., 7.5]
+        betas = [.5, .5, 1., 1.]
+        for a, b in zip(alphas, betas):
+            pdf = st.gamma.pdf(x, a, scale=1.0/b)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ===============================
+    Support   :math:`x \in (0, \infty)`
+    Mean      :math:`\dfrac{\alpha}{\beta}`
+    Variance  :math:`\dfrac{\alpha}{\beta^2}`
+    ========  ===============================
+
+    Parameters
+    ----------
+    alpha : float
+        Shape parameter (alpha > 0).
+    beta : float
+        Rate parameter (beta > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - alpha: concentration
+    - beta: rate
+
+    """
+
+    def __init__(self, name, alpha, beta, **kwargs):
+        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        alpha, beta = conditions["alpha"], conditions["beta"]
+        return tfd.Gamma(concentration=alpha, rate=beta)
+
+
+class Gumbel(ContinuousDistribution):
+    r"""Univariate Gumbel random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \beta) = \frac{1}{\beta}e^{-(z + e^{-z})}
+
+    where
+
+    .. math::
+
+        z = \frac{x - \mu}{\beta}.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-10, 20, 200)
+        mus = [0., 4., -1.]
+        betas = [2., 2., 4.]
+        for mu, beta in zip(mus, betas):
+            pdf = st.gumbel_r.pdf(x, loc=mu, scale=beta)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\beta$ = {}'.format(mu, beta))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu + \beta\gamma`, where \gamma is the Euler-Mascheroni constant
+    Variance  :math:`\frac{\pi^2}{6} \beta^2`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    mu : float
+        Location parameter.
+    beta : float
+        Scale parameter (beta > 0).
+
+    Developer Notes
+    ---------------
+    Parameter mappings to TensorFlow Probability are as follows:
+
+    - mu: loc
+    - beta: scale
+    """
+
+    def __init__(self, name, mu, beta, **kwargs):
+        super().__init__(name, mu=mu, beta=beta, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, beta = conditions["mu"], conditions["beta"]
+        return tfd.Gumbel(loc=mu, scale=beta)
+
+
+class HalfCauchy(PositiveContinuousDistribution):
+    r"""Half-Cauchy random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \beta) = \frac{2}{\pi \beta [1 + (\frac{x}{\beta})^2]}
 
     .. plot::
 
@@ -481,11 +550,9 @@ class HalfStudentT(PositiveContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(0, 5, 200)
-        sigmas = [1., 1., 2., 1.]
-        nus = [.5, 1., 1., 30.]
-        for sigma, nu in zip(sigmas, nus):
-            pdf = st.t.pdf(x, df=nu, loc=0, scale=sigma)
-            plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(sigma, nu))
+        for b in [0.5, 1.0, 2.0]:
+            pdf = st.cauchy.pdf(x, scale=b)
+            plt.plot(x, pdf, label=r'$\beta$ = {}'.format(b))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -493,42 +560,36 @@ class HalfStudentT(PositiveContinuousDistribution):
 
     ========  ========================
     Support   :math:`x \in [0, \infty)`
+    Mode      0
+    Mean      undefined
+    Variance  undefined
     ========  ========================
 
     Parameters
     ----------
-    nu : float
-        Degrees of freedom, also known as normality parameter (nu > 0).
-    sigma : float
-        Scale parameter (sigma > 0). Converges to the standard deviation as nu
-        increases. (only required if lam is not specified)
-
-    Examples
-    --------
-    .. code-block:: python
-
-        # Only pass in one of lam or sigma, but not both.
-        @pm.model
-        def model():
-            x = pm.HalfStudentT('x', sigma=10, nu=10)
+    beta : float
+        Scale parameter (beta > 0).
 
     Developer Notes
-    ---------------
+    ----------------
     Parameter mappings to TensorFlow Probability are as follows:
 
-    - nu: df
-    - sigma: scale
+    - beta: scale
 
-    In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
+    In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def __init__(self, name, nu, sigma, **kwargs):
-        super().__init__(name, nu=nu, sigma=sigma, **kwargs)
+    def __init__(self, name, beta, **kwargs):
+        super().__init__(name, beta=beta, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        beta = conditions["beta"]
+        return tfd.HalfCauchy(loc=0, scale=beta)
 
 
 class InverseGamma(PositiveContinuousDistribution):
-    r"""
-    Inverse gamma random variable, the reciprocal of the gamma distribution.
+    r"""Inverse gamma random variable, the reciprocal of the gamma distribution.
 
     The pdf of this distribution is
 
@@ -580,10 +641,14 @@ class InverseGamma(PositiveContinuousDistribution):
     def __init__(self, name, alpha, beta, **kwargs):
         super().__init__(name, alpha=alpha, beta=beta, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        alpha, beta = conditions["alpha"], conditions["beta"]
+        return tfd.InverseGamma(concentration=alpha, scale=beta)
+
 
 class InverseGaussian(PositiveContinuousDistribution):
-    r"""
-    InverseGaussian random variable.
+    r"""InverseGaussian random variable.
 
     Parameters
     ----------
@@ -601,10 +666,14 @@ class InverseGaussian(PositiveContinuousDistribution):
     def __init__(self, name, mu, lam, **kwargs):
         super().__init__(name, mu=mu, lam=lam, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, lam = conditions["mu"], conditions["lam"]
+        return tfd.InverseGaussian(loc=mu, concentration=lam)
+
 
 class Kumaraswamy(UnitContinuousDistribution):
-    r"""
-    Kumaraswamy random variable.
+    r"""Kumaraswamy random variable.
 
     The pdf of this distribution is
 
@@ -655,10 +724,14 @@ class Kumaraswamy(UnitContinuousDistribution):
     def __init__(self, name, a, b, **kwargs):
         super().__init__(name, a=a, b=b, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        a, b = conditions["a"], conditions["b"]
+        return tfd.Kumaraswamy(concentration0=a, concentration1=b)
+
 
 class Laplace(ContinuousDistribution):
-    r"""
-    Laplace random variable.
+    r"""Laplace random variable.
 
     The pdf of this distribution is
 
@@ -708,10 +781,14 @@ class Laplace(ContinuousDistribution):
     def __init__(self, name, mu, b, **kwargs):
         super().__init__(name, mu=mu, b=b, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, b = conditions["mu"], conditions["b"]
+        return tfd.Laplace(loc=mu, scale=b)
+
 
 class Logistic(ContinuousDistribution):
-    r"""
-    Logistic random variable.
+    r"""Logistic random variable.
 
     The pdf of this distribution is
 
@@ -755,10 +832,14 @@ class Logistic(ContinuousDistribution):
     def __init__(self, name, mu, s, **kwargs):
         super().__init__(name, mu=mu, s=s, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, s = conditions["mu"], conditions["s"]
+        return tfd.Logistic(loc=mu, scale=s)
+
 
 class LogitNormal(UnitContinuousDistribution):
-    r"""
-    LogitNormal random variable.
+    r"""LogitNormal random variable.
 
     Distribution of any random variable whose logit is normally distributed.
     If Y is normally distributed, and f(Y) is the standard logistic function,
@@ -788,10 +869,18 @@ class LogitNormal(UnitContinuousDistribution):
     def __init__(self, name, mu, sigma, **kwargs):
         super().__init__(name, mu=mu, sigma=sigma, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, sigma = conditions["mu"], conditions["sigma"]
+        return tfd.TransformedDistribution(
+            distribution=tfd.Normal(loc=mu, scale=sigma),
+            bijector=tfp.bijectors.Sigmoid(),
+            name="LogitNormal",
+        )
+
 
 class LogNormal(PositiveContinuousDistribution):
-    r"""
-    Log-normal random variable.
+    r"""Log-normal random variable.
 
     Distribution of any random variable whose logarithm is normally
     distributed. A variable might be modeled as log-normal if it can
@@ -854,72 +943,14 @@ class LogNormal(PositiveContinuousDistribution):
     def __init__(self, name, mu, sigma, **kwargs):
         super().__init__(name, mu=mu, sigma=sigma, **kwargs)
 
-
-class Normal(ContinuousDistribution):
-    r"""
-    Univariate normal random variable.
-
-    The pdf of this distribution is
-
-    .. math::
-
-       f(x \mid \mu, \tau) =
-           \sqrt{\frac{\tau}{2\pi}}
-           \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
-
-    Normal distribution can be parameterized either in terms of precision
-    or standard deviation. The link between the two parametrizations is
-    given by
-
-    .. math::
-
-       \tau = \dfrac{1}{\sigma^2}
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(-5, 5, 1000)
-        mus = [0., 0., 0., -2.]
-        sigmas = [0.4, 1., 2., 0.4]
-        for mu, sigma in zip(mus, sigmas):
-            pdf = st.norm.pdf(x, mu, sigma)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
-
-    ========  ==========================================
-    Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu`
-    Variance  :math:`\dfrac{1}{\tau}` or :math:`\sigma^2`
-    ========  ==========================================
-
-    Parameters
-    ----------
-    mu : float|tensor
-        Mean.
-    sigma : float|tensor
-        Standard deviation (sigma > 0).
-
-    Examples
-    --------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.Normal('x', mu=0, sigma=10)
-    """
-
-    def __init__(self, name, mu, sigma, **kwargs):
-        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, sigma = conditions["mu"], conditions["sigma"]
+        return tfd.LogNormal(loc=mu, scale=sigma)
 
 
 class Pareto(BoundedContinuousDistribution):
-    r"""
-    Pareto random variable.
+    r"""Pareto random variable.
 
     Often used to characterize wealth distribution, or other examples of the
     80/20 rule.
@@ -972,6 +1003,11 @@ class Pareto(BoundedContinuousDistribution):
     def __init__(self, name, alpha, m, **kwargs):
         super().__init__(name, alpha=alpha, m=m, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        alpha, m = conditions["alpha"], conditions["m"]
+        return tfd.Pareto(concentration=alpha, scale=m)
+
     def upper_limit(self):
         return float("inf")
 
@@ -979,9 +1015,78 @@ class Pareto(BoundedContinuousDistribution):
         return self.conditions["m"]
 
 
+# TODO: Implement this
+# class HalfStudentT(PositiveContinuousDistribution):
+#     r"""Half Student's T random variable.
+
+#     The pdf of this distribution is
+
+#     .. math::
+
+#         f(x \mid \sigma,\nu) =
+#             \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
+#             {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\sigma^2}}
+#             \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
+
+#     .. plot::
+
+#         import matplotlib.pyplot as plt
+#         import numpy as np
+#         import scipy.stats as st
+#         plt.style.use('seaborn-darkgrid')
+#         x = np.linspace(0, 5, 200)
+#         sigmas = [1., 1., 2., 1.]
+#         nus = [.5, 1., 1., 30.]
+#         for sigma, nu in zip(sigmas, nus):
+#             pdf = st.t.pdf(x, df=nu, loc=0, scale=sigma)
+#             plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(sigma, nu))
+#         plt.xlabel('x', fontsize=12)
+#         plt.ylabel('f(x)', fontsize=12)
+#         plt.legend(loc=1)
+#         plt.show()
+
+#     ========  ========================
+#     Support   :math:`x \in [0, \infty)`
+#     ========  ========================
+
+#     Parameters
+#     ----------
+#     nu : float
+#         Degrees of freedom, also known as normality parameter (nu > 0).
+#     sigma : float
+#         Scale parameter (sigma > 0). Converges to the standard deviation as nu
+#         increases. (only required if lam is not specified)
+
+#     Examples
+#     --------
+#     .. code-block:: python
+
+#         # Only pass in one of lam or sigma, but not both.
+#         @pm.model
+#         def model():
+#             x = pm.HalfStudentT('x', sigma=10, nu=10)
+
+#     Developer Notes
+#     ---------------
+#     Parameter mappings to TensorFlow Probability are as follows:
+
+#     - nu: df
+#     - sigma: scale
+
+#     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
+#     """
+
+#     def __init__(self, name, nu, sigma, **kwargs):
+#         super().__init__(name, nu=nu, sigma=sigma, **kwargs)
+
+#     @staticmethod
+#     def _init_distribution(conditions):
+#         nu, sigma = conditions["nu"], conditions["sigma"]
+#         return tfd.HalfStudentT(df=nu, scale=sigma)
+
+
 class StudentT(ContinuousDistribution):
-    r"""
-    Student's T random variable.
+    r"""Student's T random variable.
 
     Describes a normal variable whose precision is gamma distributed.
     If only nu parameter is passed, this specifies a standard (central)
@@ -1048,10 +1153,14 @@ class StudentT(ContinuousDistribution):
     def __init__(self, name, mu, sigma, nu, **kwargs):
         super().__init__(name, mu=mu, sigma=sigma, nu=nu, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        nu, mu, sigma = conditions["nu"], conditions["mu"], conditions["sigma"]
+        return tfd.StudentT(df=nu, loc=mu, scale=sigma)
 
-class Triangular(BoundedDistribution):
-    r"""
-    Continuous Triangular random variable.
+
+class Triangular(BoundedContinuousDistribution):
+    r"""Continuous Triangular random variable.
 
     The pdf of this distribution is
 
@@ -1114,6 +1223,11 @@ class Triangular(BoundedDistribution):
     def __init__(self, name, lower, c, upper, **kwargs):
         super().__init__(name, lower=lower, c=c, upper=upper, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        lower, upper, c = conditions["lower"], conditions["upper"], conditions["c"]
+        return tfd.Triangular(low=lower, high=upper, peak=c)
+
     def lower_limit(self):
         return self.conditions["lower"]
 
@@ -1122,8 +1236,7 @@ class Triangular(BoundedDistribution):
 
 
 class Uniform(BoundedContinuousDistribution):
-    r"""
-    Continuous uniform random variable.
+    r"""Continuous uniform random variable.
 
     The pdf of this distribution is
 
@@ -1173,6 +1286,11 @@ class Uniform(BoundedContinuousDistribution):
     def __init__(self, name, lower, upper, **kwargs):
         super().__init__(name, lower=lower, upper=upper, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        lower, upper = conditions["lower"], conditions["upper"]
+        return tfd.Uniform(low=lower, high=upper)
+
     def lower_limit(self):
         return self.conditions["lower"]
 
@@ -1180,9 +1298,8 @@ class Uniform(BoundedContinuousDistribution):
         return self.conditions["upper"]
 
 
-class VonMises(BoundedDistribution):
-    r"""
-    Univariate VonMises random variable.
+class VonMises(BoundedContinuousDistribution):
+    r"""Univariate VonMises random variable.
 
     The pdf of this distribution is
 
@@ -1234,6 +1351,11 @@ class VonMises(BoundedDistribution):
     def __init__(self, name, mu, kappa, **kwargs):
         super().__init__(name, mu=mu, kappa=kappa, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, kappa = conditions["mu"], conditions["kappa"]
+        return tfd.VonMises(loc=mu, concentration=kappa)
+
     def lower_limit(self):
         return -math.pi
 
@@ -1241,56 +1363,61 @@ class VonMises(BoundedDistribution):
         return math.pi
 
 
-class Weibull(PositiveContinuousDistribution):
-    r"""
-    Weibull random variable.
+# TODO: Implement this
+# class Weibull(PositiveContinuousDistribution):
+#     r"""Weibull random variable.
 
-    The pdf of this distribution is
+#     The pdf of this distribution is
 
-    .. math::
+#     .. math::
 
-       f(x \mid \alpha, \beta) =
-           \frac{\alpha x^{\alpha - 1}
-           \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+#        f(x \mid \alpha, \beta) =
+#            \frac{\alpha x^{\alpha - 1}
+#            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
-    .. plot::
+#     .. plot::
 
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.linspace(0, 3, 200)
-        alphas = [.5, 1., 1.5, 5., 5.]
-        betas = [1., 1., 1., 1.,  2]
-        for a, b in zip(alphas, betas):
-            pdf = st.weibull_min.pdf(x, a, scale=b)
-            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.ylim(0, 2.5)
-        plt.legend(loc=1)
-        plt.show()
+#         import matplotlib.pyplot as plt
+#         import numpy as np
+#         import scipy.stats as st
+#         plt.style.use('seaborn-darkgrid')
+#         x = np.linspace(0, 3, 200)
+#         alphas = [.5, 1., 1.5, 5., 5.]
+#         betas = [1., 1., 1., 1.,  2]
+#         for a, b in zip(alphas, betas):
+#             pdf = st.weibull_min.pdf(x, a, scale=b)
+#             plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+#         plt.xlabel('x', fontsize=12)
+#         plt.ylabel('f(x)', fontsize=12)
+#         plt.ylim(0, 2.5)
+#         plt.legend(loc=1)
+#         plt.show()
 
-    ========  ====================================================
-    Support   :math:`x \in [0, \infty)`
-    Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
-    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
-    ========  ====================================================
+#     ========  ====================================================
+#     Support   :math:`x \in [0, \infty)`
+#     Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
+#     Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
+#     ========  ====================================================
 
-    Parameters
-    ----------
-    alpha : float|tensor
-        Shape parameter (alpha > 0).
-    beta : float|tensor
-        Scale parameter (beta > 0).
+#     Parameters
+#     ----------
+#     alpha : float|tensor
+#         Shape parameter (alpha > 0).
+#     beta : float|tensor
+#         Scale parameter (beta > 0).
 
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
+#     Developer Notes
+#     ---------------
+#     Parameter mappings to TensorFlow Probability are as follows:
 
-    - alpha: concentration
-    - beta: scale
-    """
+#     - alpha: concentration
+#     - beta: scale
+#     """
 
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+#     def __init__(self, name, alpha, beta, **kwargs):
+#         super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+
+#     @staticmethod
+#     def _init_distribution(conditions):
+#         alpha, beta = conditions["alpha"], conditions["beta"]
+#         return tfd.Weibull(concentration=alpha, scale=beta)

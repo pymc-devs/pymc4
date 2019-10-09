@@ -1,21 +1,20 @@
-"""
-PyMC4 multivariate random variables.
+"""PyMC4 multivariate random variables.
 
 Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
-
-# pylint: disable=undefined-all-variable
-from pymc4.distributions.abstract.distribution import (
+from tensorflow_probability import distributions as tfd
+from pymc4.distributions.distribution import (
     SimplexContinuousDistribution,
     DiscreteDistribution,
     ContinuousDistribution,
 )
 
+__all__ = ("Dirichlet", "LKJ", "Multinomial", "MvNormal", "VonMisesFisher", "Wishart")
+
 
 class Dirichlet(SimplexContinuousDistribution):
-    r"""
-    Dirichlet random variable.
+    r"""Dirichlet random variable.
 
     The Dirichlet distribution is used to model the probability distribution
     of the probability parameters of a Multinomial distribution. We basically
@@ -60,10 +59,14 @@ class Dirichlet(SimplexContinuousDistribution):
     def __init__(self, name, a, **kwargs):
         super().__init__(name, a=a, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        a = conditions["a"]
+        return tfd.Dirichlet(concentration=a)
+
 
 class LKJ(ContinuousDistribution):
-    r"""
-    The LKJ (Lewandowski, Kurowicka and Joe) random variable.
+    r"""The LKJ (Lewandowski, Kurowicka and Joe) random variable.
 
     The LKJ distribution is a prior distribution for correlation matrices.
     If eta = 1 this corresponds to the uniform distribution over correlation
@@ -102,6 +105,11 @@ class LKJ(ContinuousDistribution):
 
     def __init__(self, name, n, eta, **kwargs):
         super().__init__(name, n=n, eta=eta, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        n, eta = conditions["n"], conditions["eta"]
+        return tfd.LKJ(dimension=n, concentration=eta)
 
 
 class Multinomial(DiscreteDistribution):
@@ -145,6 +153,11 @@ class Multinomial(DiscreteDistribution):
 
     def __init__(self, name, n, p, **kwargs):
         super().__init__(name, n=n, p=p, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        n, p = conditions["n"], conditions["p"]
+        return tfd.Multinomial(total_count=n, probs=p)
 
 
 class MvNormal(ContinuousDistribution):
@@ -193,6 +206,11 @@ class MvNormal(ContinuousDistribution):
     def __init__(self, name, mu, cov, **kwargs):
         super().__init__(name, mu=mu, cov=cov, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, cov = conditions["mu"], conditions["cov"]
+        return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov)
+
 
 class VonMisesFisher(ContinuousDistribution):
     r"""
@@ -232,6 +250,11 @@ class VonMisesFisher(ContinuousDistribution):
 
     def __init__(self, name, mu, kappa, **kwargs):
         super().__init__(name, mu=mu, kappa=kappa, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, kappa = conditions["mu"], conditions["kappa"]
+        return tfd.VonMisesFisher(mean_direction=mu, concentration=kappa)
 
 
 class Wishart(ContinuousDistribution):
@@ -275,3 +298,8 @@ class Wishart(ContinuousDistribution):
 
     def __init__(self, name, nu, V, **kwargs):
         super().__init__(name, nu=nu, V=V, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        nu, V = conditions["nu"], conditions["V"]
+        return tfd.Wishart(df=nu, scale=V)

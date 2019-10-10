@@ -1,15 +1,21 @@
-"""
-PyMC4 discrete random variables.
-
-Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
-Implements random variables not supported by tfp as distributions.
-"""
-
-# pylint: disable=undefined-all-variable
-from pymc4.distributions.abstract.distribution import (
+"""PyMC4 discrete random variables."""
+import tensorflow as tf
+from tensorflow_probability import distributions as tfd
+from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
 )
+
+__all__ = [
+    "Bernoulli",
+    "Binomial",
+    "DiscreteUniform",
+    "Categorical",
+    "Geometric",
+    "NegativeBinomial",
+    "Poisson",
+    "Zipf",
+]
 
 
 class Bernoulli(BoundedDiscreteDistribution):
@@ -59,6 +65,11 @@ class Bernoulli(BoundedDiscreteDistribution):
     def __init__(self, name, p, **kwargs):
         super().__init__(name, p=p, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        p = conditions["p"]
+        return tfd.Bernoulli(probs=p)
+
     def lower_limit(self):
         return 0
 
@@ -67,8 +78,7 @@ class Bernoulli(BoundedDiscreteDistribution):
 
 
 class Binomial(BoundedDiscreteDistribution):
-    r"""
-    Binomial random variable.
+    r"""Binomial random variable.
 
     The discrete probability distribution of the number of successes
     in a sequence of n independent yes/no experiments, each of which
@@ -119,6 +129,11 @@ class Binomial(BoundedDiscreteDistribution):
     def __init__(self, name, n, p, **kwargs):
         super().__init__(name, n=n, p=p, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        n, p = conditions["n"], conditions["p"]
+        return tfd.Binomial(total_count=n, probs=p)
+
     def lower_limit(self):
         return 0
 
@@ -126,20 +141,8 @@ class Binomial(BoundedDiscreteDistribution):
         return self.conditions["n"]
 
 
-class Constant(BoundedDiscreteDistribution):
-    def __init__(self, name, value, **kwargs):
-        super().__init__(name, value=value, **kwargs)
-
-    def lower_limit(self):
-        return self.conditions["value"]
-
-    def upper_limit(self):
-        return self.conditions["value"]
-
-
 class DiscreteUniform(BoundedDiscreteDistribution):
-    r"""
-    Discrete uniform random variable.
+    r"""Discrete uniform random variable.
 
     The pmf of this distribution is
 
@@ -180,6 +183,12 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     def __init__(self, name, lower, upper, **kwargs):
         super().__init__(name, lower=lower, upper=upper, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        lower, upper = conditions["lower"], conditions["upper"]
+        outcomes = tf.range(lower, upper + 1)
+        return tfd.FiniteDiscrete(outcomes, probs=outcomes / (upper - lower))
+
     def lower_limit(self):
         return self.conditions["lower"]
 
@@ -188,8 +197,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
 
 
 class Categorical(BoundedDiscreteDistribution):
-    r"""
-    Categorical random variable.
+    r"""Categorical random variable.
 
     The most general discrete distribution. The pmf of this distribution is
 
@@ -218,8 +226,7 @@ class Categorical(BoundedDiscreteDistribution):
     Parameters
     ----------
     p : array of floats
-        p > 0 and the elements of p must sum to 1. They will be automatically
-        rescaled otherwise.
+        p > 0 and the elements of p must sum to 1.
 
     Developer Notes
     ---------------
@@ -231,12 +238,21 @@ class Categorical(BoundedDiscreteDistribution):
     def __init__(self, name, p, **kwargs):
         super().__init__(name, p=p, **kwargs)
 
-    # TODO: upper limit
+    @staticmethod
+    def _init_distribution(conditions):
+        p = conditions["p"]
+        outcomes = tf.range(float(len(p)))
+        return tfd.FiniteDiscrete(outcomes, probs=p)
+
+    def lower_limit(self):
+        return 0
+
+    def upper_limit(self):
+        return len(self.conditions["p"])
 
 
 class Geometric(BoundedDiscreteDistribution):
-    r"""
-    Geometric random variable.
+    r"""Geometric random variable.
 
     The probability that the first success in a sequence of Bernoulli
     trials occurs on the x'th trial.
@@ -281,6 +297,11 @@ class Geometric(BoundedDiscreteDistribution):
     def __init__(self, name, p, **kwargs):
         super().__init__(name, p=p, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        p = conditions["p"]
+        return tfd.Geometric(probs=p)
+
     def lower_limit(self):
         return 1
 
@@ -289,8 +310,7 @@ class Geometric(BoundedDiscreteDistribution):
 
 
 class NegativeBinomial(PositiveDiscreteDistribution):
-    r"""
-    Negative binomial random variable.
+    r"""Negative binomial random variable.
 
     The negative binomial distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
@@ -354,10 +374,14 @@ class NegativeBinomial(PositiveDiscreteDistribution):
     def __init__(self, name, mu, alpha, **kwargs):
         super().__init__(name, mu=mu, alpha=alpha, **kwargs)
 
+    @staticmethod
+    def _init_distribution(conditions):
+        mu, alpha = conditions["mu"], conditions["alpha"]
+        return tfd.NegativeBinomial(total_count=mu + alpha, probs=mu / (mu + alpha))
+
 
 class Poisson(PositiveDiscreteDistribution):
-    r"""
-    Poisson random variable.
+    r"""Poisson random variable.
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
@@ -408,190 +432,203 @@ class Poisson(PositiveDiscreteDistribution):
     def __init__(self, name, mu, **kwargs):
         super().__init__(name, mu=mu, **kwargs)
 
-
-class ZeroInflatedBinomial(PositiveDiscreteDistribution):
-    r"""
-    Zero-inflated Binomial log-likelihood.
-
-    The pmf of this distribution is
-
-    .. math::
-
-        f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
-            (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
-            \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
-            \end{array} \right.
-
-    .. plot::
-
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.arange(0, 25)
-        ns = [10, 20]
-        ps = [0.5, 0.7]
-        psis = [0.7, 0.4]
-        for n, p, psi in zip(ns, ps, psis):
-            pmf = st.binom.pmf(x, n, p)
-            pmf[0] = (1 - psi) + pmf[0]
-            pmf[1:] =  psi * pmf[1:]
-            pmf /= pmf.sum()
-            plt.plot(x, pmf, '-o', label='n = {}, p = {}, $\\psi$ = {}'.format(n, p, psi))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
-
-    ========  ==========================
-    Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`(1 - \psi) n p`
-    Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
-    ========  ==========================
-
-    Parameters
-    ----------
-    psi : float
-        Expected proportion of Binomial variates (0 < psi < 1)
-    n : int
-        Number of Bernoulli trials (n >= 0).
-    p : float
-        Probability of success in each trial (0 < p < 1).
-    """
-
-    def __init__(self, name, psi, n, p, **kwargs):
-        super().__init__(name, psi=psi, n=n, p=p, **kwargs)
+    @staticmethod
+    def _init_distribution(conditions):
+        mu = conditions["mu"]
+        return tfd.Poisson(rate=mu)
 
 
-class ZeroInflatedNegativeBinomial(PositiveDiscreteDistribution):
-    r"""
-    Zero-Inflated Negative binomial random variable.
+# TODO: Implement this
+# class ZeroInflatedBinomial(PositiveDiscreteDistribution):
+#     r"""Zero-inflated Binomial log-likelihood.
 
-    The Zero-inflated version of the Negative Binomial (NB).
-    The NB distribution describes a Poisson random variable
-    whose rate parameter is gamma distributed.
+#     The pmf of this distribution is
 
-    The pmf of this distribution is
+#     .. math::
 
-    .. math::
-       f(x \mid \psi, \mu, \alpha) = \left\{
-         \begin{array}{l}
-           (1-\psi) + \psi \left (
-             \frac{\alpha}{\alpha+\mu}
-           \right) ^\alpha, \text{if } x = 0 \\
-           \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (
-             \frac{\alpha}{\mu+\alpha}
-           \right)^\alpha \left(
-             \frac{\mu}{\mu+\alpha}
-           \right)^x, \text{if } x=1,2,3,\ldots
-         \end{array}
-       \right.
+#         f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
+#             (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
+#             \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
+#             \end{array} \right.
 
-    .. plot::
+#     .. plot::
 
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        from scipy import special
-        plt.style.use('seaborn-darkgrid')
-        def ZeroInfNegBinom(a, m, psi, x):
-            pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
-            pmf[0] = (1 - psi) + pmf[0]
-            pmf[1:] =  psi * pmf[1:]
-            pmf /= pmf.sum()
-            return pmf
-        x = np.arange(0, 25)
-        alphas = [2, 4]
-        mus = [2, 8]
-        psis = [0.7, 0.7]
-        for a, m, psi in zip(alphas, mus, psis):
-            pmf = ZeroInfNegBinom(a, m, psi, x)
-            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}, $\psi$ = {}'.format(a, m, psi))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
+#         import matplotlib.pyplot as plt
+#         import numpy as np
+#         import scipy.stats as st
+#         plt.style.use('seaborn-darkgrid')
+#         x = np.arange(0, 25)
+#         ns = [10, 20]
+#         ps = [0.5, 0.7]
+#         psis = [0.7, 0.4]
+#         for n, p, psi in zip(ns, ps, psis):
+#             pmf = st.binom.pmf(x, n, p)
+#             pmf[0] = (1 - psi) + pmf[0]
+#             pmf[1:] =  psi * pmf[1:]
+#             pmf /= pmf.sum()
+#             plt.plot(x, pmf, '-o', label='n = {}, p = {}, $\\psi$ = {}'.format(n, p, psi))
+#         plt.xlabel('x', fontsize=12)
+#         plt.ylabel('f(x)', fontsize=12)
+#         plt.legend(loc=1)
+#         plt.show()
 
-    ========  ==========================
-    Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`\psi\mu`
-    Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
-    ========  ==========================
+#     ========  ==========================
+#     Support   :math:`x \in \mathbb{N}_0`
+#     Mean      :math:`(1 - \psi) n p`
+#     Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
+#     ========  ==========================
 
-    Parameters
-    ----------
-    psi : float
-        Expected proportion of NegativeBinomial variates (0 < psi < 1)
-    mu : float
-        Poission distribution parameter (mu > 0). Also corresponds to the number of expected
-        successes before the number of desired failures (alpha) is reached.
-    alpha : float
-        Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
-        desired.
-    """
+#     Parameters
+#     ----------
+#     psi : float
+#         Expected proportion of Binomial variates (0 < psi < 1)
+#     n : int
+#         Number of Bernoulli trials (n >= 0).
+#     p : float
+#         Probability of success in each trial (0 < p < 1).
+#     """
 
-    def __init__(self, name, psi, mu, alpha, **kwargs):
-        super().__init__(name, psi=psi, mu=mu, alpha=alpha, **kwargs)
+#     def __init__(self, name, psi, n, p, **kwargs):
+#         super().__init__(name, psi=psi, n=n, p=p, **kwargs)
+
+#     @staticmethod
+#     def _init_distribution(conditions):
+#         fill this in
 
 
-class ZeroInflatedPoisson(PositiveDiscreteDistribution):
-    r"""
-    Zero-inflated Poisson random variable.
+# TODO: Implement this
+# class ZeroInflatedNegativeBinomial(PositiveDiscreteDistribution):
+#     r"""Zero-Inflated Negative binomial random variable.
 
-    Often used to model the number of events occurring in a fixed period
-    of time when the times at which events occur are independent.
+#     The Zero-inflated version of the Negative Binomial (NB).
+#     The NB distribution describes a Poisson random variable
+#     whose rate parameter is gamma distributed.
 
-    The pmf of this distribution is
+#     The pmf of this distribution is
 
-    .. math::
+#     .. math::
+#        f(x \mid \psi, \mu, \alpha) = \left\{
+#          \begin{array}{l}
+#            (1-\psi) + \psi \left (
+#              \frac{\alpha}{\alpha+\mu}
+#            \right) ^\alpha, \text{if } x = 0 \\
+#            \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (
+#              \frac{\alpha}{\mu+\alpha}
+#            \right)^\alpha \left(
+#              \frac{\mu}{\mu+\alpha}
+#            \right)^x, \text{if } x=1,2,3,\ldots
+#          \end{array}
+#        \right.
 
-        f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
-            (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
-            \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
-            \end{array} \right.
+#     .. plot::
 
-    .. plot::
+#         import matplotlib.pyplot as plt
+#         import numpy as np
+#         import scipy.stats as st
+#         from scipy import special
+#         plt.style.use('seaborn-darkgrid')
+#         def ZeroInfNegBinom(a, m, psi, x):
+#             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
+#             pmf[0] = (1 - psi) + pmf[0]
+#             pmf[1:] =  psi * pmf[1:]
+#             pmf /= pmf.sum()
+#             return pmf
+#         x = np.arange(0, 25)
+#         alphas = [2, 4]
+#         mus = [2, 8]
+#         psis = [0.7, 0.7]
+#         for a, m, psi in zip(alphas, mus, psis):
+#             pmf = ZeroInfNegBinom(a, m, psi, x)
+#             plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}, $\psi$ = {}'.format(a, m, psi))
+#         plt.xlabel('x', fontsize=12)
+#         plt.ylabel('f(x)', fontsize=12)
+#         plt.legend(loc=1)
+#         plt.show()
 
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
-        x = np.arange(0, 22)
-        psis = [0.7, 0.4]
-        thetas = [8, 4]
-        for psi, theta in zip(psis, thetas):
-            pmf = st.poisson.pmf(x, theta)
-            pmf[0] = (1 - psi) + pmf[0]
-            pmf[1:] =  psi * pmf[1:]
-            pmf /= pmf.sum()
-            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.legend(loc=1)
-        plt.show()
+#     ========  ==========================
+#     Support   :math:`x \in \mathbb{N}_0`
+#     Mean      :math:`\psi\mu`
+#     Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
+#     ========  ==========================
 
-    ========  ==========================
-    Support   :math:`x \in \mathbb{N}_0`
-    Mean      :math:`\psi\theta`
-    Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
-    ========  ==========================
+#     Parameters
+#     ----------
+#     psi : float
+#         Expected proportion of NegativeBinomial variates (0 < psi < 1)
+#     mu : float
+#         Poission distribution parameter (mu > 0). Also corresponds to the number of expected
+#         successes before the number of desired failures (alpha) is reached.
+#     alpha : float
+#         Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
+#         desired.
+#     """
 
-    Parameters
-    ----------
-    psi : float
-        Expected proportion of Poisson variates (0 < psi < 1)
-    theta : float
-        Expected number of occurrences during the given interval
-        (theta >= 0).
-    """
-
-    def __init__(self, name, psi, theta, **kwargs):
-        super().__init__(name, psi=psi, theta=theta, **kwargs)
+#     def __init__(self, name, psi, mu, alpha, **kwargs):
+#         super().__init__(name, psi=psi, mu=mu, alpha=alpha, **kwargs)
 
 
-class Zipf(BoundedDiscreteDistribution):
-    r"""
-    Zipf random variable.
+# TODO: Implement this
+# class ZeroInflatedPoisson(PositiveDiscreteDistribution):
+#     r"""
+#     Zero-inflated Poisson random variable.
+
+#     Often used to model the number of events occurring in a fixed period
+#     of time when the times at which events occur are independent.
+
+#     The pmf of this distribution is
+
+#     .. math::
+
+#         f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
+#             (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+#             \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
+#             \end{array} \right.
+
+#     .. plot::
+
+#         import matplotlib.pyplot as plt
+#         import numpy as np
+#         import scipy.stats as st
+#         plt.style.use('seaborn-darkgrid')
+#         x = np.arange(0, 22)
+#         psis = [0.7, 0.4]
+#         thetas = [8, 4]
+#         for psi, theta in zip(psis, thetas):
+#             pmf = st.poisson.pmf(x, theta)
+#             pmf[0] = (1 - psi) + pmf[0]
+#             pmf[1:] =  psi * pmf[1:]
+#             pmf /= pmf.sum()
+#             plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
+#         plt.xlabel('x', fontsize=12)
+#         plt.ylabel('f(x)', fontsize=12)
+#         plt.legend(loc=1)
+#         plt.show()
+
+#     ========  ==========================
+#     Support   :math:`x \in \mathbb{N}_0`
+#     Mean      :math:`\psi\theta`
+#     Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
+#     ========  ==========================
+
+#     Parameters
+#     ----------
+#     psi : float
+#         Expected proportion of Poisson variates (0 < psi < 1)
+#     theta : float
+#         Expected number of occurrences during the given interval
+#         (theta >= 0).
+#     """
+
+#     def __init__(self, name, psi, theta, **kwargs):
+#         super().__init__(name, psi=psi, theta=theta, **kwargs)
+
+#     @staticmethod
+#     def _init_distribution(conditions):
+#         fill this in
+
+
+class Zipf(PositiveDiscreteDistribution):
+    r"""Zipf random variable.
 
     The pmf of this distribution is
 
@@ -634,7 +671,7 @@ class Zipf(BoundedDiscreteDistribution):
     def __init__(self, name, alpha, **kwargs):
         super().__init__(name, alpha=alpha, **kwargs)
 
-    def lower_limit(self):
-        return 1
-
-    # TODO: upper limit
+    @staticmethod
+    def _init_distribution(conditions):
+        alpha = conditions["alpha"]
+        return tfd.Zipf(power=alpha)

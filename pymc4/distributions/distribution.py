@@ -1,22 +1,36 @@
 import abc
 import copy
 from typing import Optional, Union
-from . import transforms
+
+from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
+from . import transforms
 
 NameType = Union[str, int]
 
+__all__ = (
+    "Distribution",
+    "Potential",
+    "ContinuousDistribution",
+    "DiscreteDistribution",
+    "PositiveContinuousDistribution",
+    "PositiveDiscreteDistribution",
+    "BoundedDistribution",
+    "BoundedDiscreteDistribution",
+    "BoundedContinuousDistribution",
+    "UnitContinuousDistribution",
+    "SimplexContinuousDistribution",
+)
+
 
 class Distribution(Model):
-    """Statistical distribution.
-
-    An abstract class with consistent API across backends
-    """
+    """Statistical distribution."""
 
     def __init__(
         self, name: Optional[NameType], *, transform=None, observed=None, plate=None, **kwargs
     ):
         self.conditions = self.unpack_conditions(**kwargs)
+        self._distribution = self._init_distribution(self.conditions)
         self.plate = plate
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
@@ -27,7 +41,12 @@ class Distribution(Model):
             )
         self.model_info.update(observed=observed)
         self.transform = self._init_transform(transform)
-        self._init_backend()
+        if self.plate is not None:
+            self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
+
+    @staticmethod
+    def _init_distribution(conditions: dict) -> tfd.Distribution:
+        ...
 
     def _init_transform(self, transform):
         return transform
@@ -45,12 +64,6 @@ class Distribution(Model):
         """
         return kwargs
 
-    @abc.abstractmethod
-    def _init_backend(self):
-        """Initialize the backend."""
-        pass
-
-    @abc.abstractmethod
     def sample(self, shape=(), seed=None):
         """
         Forward sampling implementation.
@@ -62,9 +75,8 @@ class Distribution(Model):
         seed : int|None
             random seed
         """
-        raise NotImplementedError
+        return self._distribution.sample(shape, seed)
 
-    @abc.abstractmethod
     def sample_numpy(self, shape=(), seed=None):
         """
         Forward sampling implementation returning raw numpy arrays.
@@ -79,16 +91,15 @@ class Distribution(Model):
         ----------
         array of given shape
         """
+        return self.sample(shape, seed).numpy()
 
-    @abc.abstractmethod
     def log_prob(self, value):
-        """Return log probability in backend array format."""
-        raise NotImplementedError
+        """Return log probability as tensor."""
+        return self._distribution.log_prob(value)
 
-    @abc.abstractmethod
     def log_prob_numpy(self, value):
         """Return log probability in numpy array format."""
-        raise NotImplementedError
+        return self.log_prob(value).numpy()
 
     @classmethod
     def dist(cls, *args, **kwargs):
@@ -123,6 +134,25 @@ class Distribution(Model):
     @property
     def is_observed(self):
         return self.model_info["observed"] is not None
+
+
+class Potential:
+    __slots__ = ("_value", "_coef")
+
+    def __init__(self, value, coef=1.0):
+        self._value = value
+        self._coef = coef
+
+    @property
+    def value(self):
+        if callable(self._value):
+            return self._value() * self._coef
+        else:
+            return self._value * self._coef
+
+    @property
+    def value_numpy(self):
+        return self.value.numpy()
 
 
 class ContinuousDistribution(Distribution):
@@ -162,7 +192,7 @@ class UnitContinuousDistribution(BoundedContinuousDistribution):
 class PositiveContinuousDistribution(BoundedContinuousDistribution):
     def _init_transform(self, transform):
         if transform is None:
-            return transforms.Log.create()
+            return transforms.Log()
         else:
             return transform
 
@@ -183,23 +213,3 @@ class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
 
 class SimplexContinuousDistribution(ContinuousDistribution):
     ...
-
-
-class Potential(object):
-    __slots__ = ("_value", "_coef")
-
-    def __init__(self, value, coef=1.0):
-        self._value = value
-        self._coef = coef
-
-    @property
-    def value(self):
-        if callable(self._value):
-            return self._value() * self._coef
-        else:
-            return self._value * self._coef
-
-    @property
-    @abc.abstractmethod
-    def value_numpy(self):
-        raise NotImplementedError

@@ -69,7 +69,7 @@ def transformed_model_with_observed():
 @pytest.fixture("module")
 def class_model():
     class ClassModel:
-        @pm.model
+        @pm.model(method=True)
         def class_model_method(self):
             norm = yield pm.Normal("n", 0, 1)
             return norm
@@ -79,7 +79,7 @@ def class_model():
 
 def test_class_model(class_model):
     """Test that model can be defined as method in an object definition"""
-    _, state = pm.evaluate_model(class_model.class_model_method(class_model))
+    _, state = pm.evaluate_model(class_model.class_model_method())
     assert "class_model_method/n" in state.untransformed_values
     assert not state.observed_values
     assert not state.transformed_values

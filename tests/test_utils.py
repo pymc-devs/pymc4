@@ -21,7 +21,7 @@ def mock_biwrap_functools_call(monkeypatch):
     monkeypatch.setattr(pm.utils, "functools", _functools)
 
 
-def test_biwrao_and_mocked_functools_raises_exception_with_called_decorator(
+def test_biwrap_and_mocked_functools_raises_exception_with_called_decorator(
     mock_biwrap_functools_call
 ):
     """Test code path for called decorator by adding exception to to pm4.utils.functools.partial"""

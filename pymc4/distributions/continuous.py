@@ -63,11 +63,11 @@ class Normal(ContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-5, 5, 1000)
-        mus = [0., 0., 0., -2.]
-        sigmas = [0.4, 1., 2., 0.4]
-        for mu, sigma in zip(mus, sigmas):
-            pdf = st.norm.pdf(x, mu, sigma)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+        locs = [0., 0., 0., -2.]
+        scales = [0.4, 1., 2., 0.4]
+        for loc, scale in zip(locs, scales):
+            pdf = st.norm.pdf(x, loc, scale)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(loc, scale))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -81,33 +81,26 @@ class Normal(ContinuousDistribution):
 
     Parameters
     ----------
-    mu : float|tensor
+    loc : float|tensor
         Mean.
-    sigma : float|tensor
-        Standard deviation (sigma > 0).
+    scale : float|tensor
+        Standard deviation (scale > 0).
 
     Examples
     --------
     .. code-block:: python
         @pm.model
         def model():
-            x = pm.Normal('x', mu=0, sigma=10)
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - sigma: scale
+            x = pm.Normal('x', loc=0, scale=10)
     """
 
-    def __init__(self, name, mu, sigma, **kwargs):
-        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, sigma = conditions["mu"], conditions["sigma"]
-        return tfd.Normal(loc=mu, scale=sigma)
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.Normal(loc=loc, scale=scale)
 
 
 class HalfNormal(PositiveContinuousDistribution):
@@ -139,9 +132,9 @@ class HalfNormal(PositiveContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(0, 5, 200)
-        for sigma in [0.4, 1., 2.]:
-            pdf = st.halfnorm.pdf(x, scale=sigma)
-            plt.plot(x, pdf, label=r'$\sigma$ = {}'.format(sigma))
+        for scale in [0.4, 1., 2.]:
+            pdf = st.halfnorm.pdf(x, scale=scale)
+            plt.plot(x, pdf, label=r'$\sigma$ = {}'.format(scale))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -155,7 +148,7 @@ class HalfNormal(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    sigma : float
+    scale : float
         Scale parameter :math:`sigma` (``sigma`` > 0) (only required if ``tau`` is not specified).
 
     Examples
@@ -164,22 +157,16 @@ class HalfNormal(PositiveContinuousDistribution):
 
         @pm.model
         def model():
-            x = pm.HalfNormal('x', sigma=10)
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - sigma: scale
+            x = pm.HalfNormal('x', scale=10)
     """
 
-    def __init__(self, name, sigma, **kwargs):
-        super().__init__(name, sigma=sigma, **kwargs)
+    def __init__(self, name, scale, **kwargs):
+        super().__init__(name, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        sigma = conditions["sigma"]
-        return tfd.HalfNormal(scale=sigma)
+        scale = conditions["scale"]
+        return tfd.HalfNormal(scale=scale)
 
 
 class Beta(UnitContinuousDistribution):
@@ -218,31 +205,26 @@ class Beta(UnitContinuousDistribution):
 
     Parameters
     ----------
-    alpha : float
-        alpha > 0.
-    beta : float
+    concentration0 : float
+        concentration0 > 0.
+    concentration1 : float
         beta > 0.
 
     Notes
     -----
     Beta distribution is a conjugate prior for the parameter :math:`p` of
     the binomial distribution.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - alpha: concentration0
-    - beta: concentration1
     """
 
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+    def __init__(self, name, concentration0, concentration1, **kwargs):
+        super().__init__(
+            name, concentration0=concentration0, concentration1=concentration1, **kwargs
+        )
 
     @staticmethod
     def _init_distribution(conditions):
-        alpha, beta = conditions["alpha"], conditions["beta"]
-        return tfd.Beta(concentration0=alpha, concentration1=beta)
+        concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
+        return tfd.Beta(concentration0=concentration0, concentration1=concentration1)
 
 
 class Cauchy(ContinuousDistribution):
@@ -283,27 +265,22 @@ class Cauchy(ContinuousDistribution):
 
     Parameters
     ----------
-    alpha : float
+    loc : float
         Location parameter
-    beta : float
+    scale : float
         Scale parameter > 0
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-    - alpha: loc
-    - beta: scale
     """
 
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        alpha, beta = conditions["alpha"], conditions["beta"]
-        return tfd.Cauchy(loc=alpha, scale=beta)
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.Cauchy(loc=loc, scale=scale)
 
 
+# FIXME should we call this Chi2?
 class ChiSquared(PositiveContinuousDistribution):
     r""":math:`\chi^2` random variable.
 
@@ -337,26 +314,22 @@ class ChiSquared(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    nu : int
-        Degrees of freedom (nu > 0).
+    df : int
+        Degrees of freedom (df > 0).
 
     Developer Notes
     ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - nu: df
-
     The ChiSquared distribution name is copied over from PyMC3 for continuity. We map it to the
     Chi2 distribution in TensorFlow Probability.
     """
 
-    def __init__(self, name, nu, **kwargs):
-        super().__init__(name, nu=nu, **kwargs)
+    def __init__(self, name, df, **kwargs):
+        super().__init__(name, df=df, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        nu = conditions["nu"]
-        return tfd.Chi2(df=nu)
+        df = conditions["df"]
+        return tfd.Chi2(df=df)
 
 
 class Exponential(PositiveContinuousDistribution):
@@ -391,23 +364,17 @@ class Exponential(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    lam : float
-        Rate or inverse scale (lam > 0)
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - lam: rate
+    rate : float
+        Rate or inverse scale (rate > 0)
     """
 
-    def __init__(self, name, lam, **kwargs):
-        super().__init__(name, lam=lam, **kwargs)
+    def __init__(self, name, rate, **kwargs):
+        super().__init__(name, rate=rate, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        lam = conditions["lam"]
-        return tfd.Exponential(rate=lam)
+        rate = conditions["rate"]
+        return tfd.Exponential(rate=rate)
 
 
 class Gamma(PositiveContinuousDistribution):
@@ -448,27 +415,19 @@ class Gamma(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    alpha : float
-        Shape parameter (alpha > 0).
-    beta : float
-        Rate parameter (beta > 0).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - alpha: concentration
-    - beta: rate
-
+    concentration : float
+        Shape parameter (concentration > 0).
+    rate : float
+        Rate parameter (rate > 0).
     """
 
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+    def __init__(self, name, concentration, rate, **kwargs):
+        super().__init__(name, concentration=concentration, rate=rate, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        alpha, beta = conditions["alpha"], conditions["beta"]
-        return tfd.Gamma(concentration=alpha, rate=beta)
+        concentration, rate = conditions["concentration"], conditions["rate"]
+        return tfd.Gamma(concentration=concentration, rate=rate)
 
 
 class Gumbel(ContinuousDistribution):
@@ -493,11 +452,11 @@ class Gumbel(ContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-10, 20, 200)
-        mus = [0., 4., -1.]
+        locs = [0., 4., -1.]
         betas = [2., 2., 4.]
-        for mu, beta in zip(mus, betas):
-            pdf = st.gumbel_r.pdf(x, loc=mu, scale=beta)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\beta$ = {}'.format(mu, beta))
+        for loc, beta in zip(locs, betas):
+            pdf = st.gumbel_r.pdf(x, loc=loc, scale=beta)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\beta$ = {}'.format(loc, beta))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -512,26 +471,19 @@ class Gumbel(ContinuousDistribution):
 
     Parameters
     ----------
-    mu : float
+    loc : float
         Location parameter.
-    beta : float
-        Scale parameter (beta > 0).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - beta: scale
+    scale : float
+        Scale parameter (scale > 0).
     """
 
-    def __init__(self, name, mu, beta, **kwargs):
-        super().__init__(name, mu=mu, beta=beta, **kwargs)
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, beta = conditions["mu"], conditions["beta"]
-        return tfd.Gumbel(loc=mu, scale=beta)
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.Gumbel(loc=loc, scale=scale)
 
 
 class HalfCauchy(PositiveContinuousDistribution):
@@ -567,25 +519,21 @@ class HalfCauchy(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    beta : float
-        Scale parameter (beta > 0).
+    scale : float
+        Scale parameter (scale > 0).
 
     Developer Notes
     ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - beta: scale
-
     In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
 
-    def __init__(self, name, beta, **kwargs):
-        super().__init__(name, beta=beta, **kwargs)
+    def __init__(self, name, scale, **kwargs):
+        super().__init__(name, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        beta = conditions["beta"]
-        return tfd.HalfCauchy(loc=0, scale=beta)
+        scale = conditions["scale"]
+        return tfd.HalfCauchy(loc=0, scale=scale)
 
 
 class InverseGamma(PositiveContinuousDistribution):
@@ -625,26 +573,19 @@ class InverseGamma(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    alpha : float
-        Shape parameter (alpha > 0).
-    beta : float
-        Scale parameter (beta > 0).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - alpha: concentration
-    - beta: rate
+    concentration : float
+        Shape parameter (concentration > 0).
+    scale : float
+        Scale parameter (scale > 0).
     """
 
-    def __init__(self, name, alpha, beta, **kwargs):
-        super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+    def __init__(self, name, concentration, scale, **kwargs):
+        super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        alpha, beta = conditions["alpha"], conditions["beta"]
-        return tfd.InverseGamma(concentration=alpha, scale=beta)
+        concentration, scale = conditions["concentration"], conditions["scale"]
+        return tfd.InverseGamma(concentration=concentration, scale=scale)
 
 
 class InverseGaussian(PositiveContinuousDistribution):
@@ -652,24 +593,17 @@ class InverseGaussian(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    mu : float
-    lam : float
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - lam: concentration
+    loc : float
+    concentration : float
     """
 
-    def __init__(self, name, mu, lam, **kwargs):
-        super().__init__(name, mu=mu, lam=lam, **kwargs)
+    def __init__(self, name, loc, concentration, **kwargs):
+        super().__init__(name, loc=loc, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, lam = conditions["mu"], conditions["lam"]
-        return tfd.InverseGaussian(loc=mu, concentration=lam)
+        loc, concentration = conditions["loc"], conditions["concentration"]
+        return tfd.InverseGaussian(loc=loc, concentration=concentration)
 
 
 class Kumaraswamy(UnitContinuousDistribution):
@@ -707,27 +641,21 @@ class Kumaraswamy(UnitContinuousDistribution):
 
     Parameters
     ----------
-    a : float
-        a > 0.
-    b : float
-        b > 0.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - a: concentration0
-    - b: concentration1
-
+    concentration0 : float
+        concentration0 > 0.
+    concentration1 : float
+        concentration1 > 0.
     """
 
-    def __init__(self, name, a, b, **kwargs):
-        super().__init__(name, a=a, b=b, **kwargs)
+    def __init__(self, name, concentration0, concentration1, **kwargs):
+        super().__init__(
+            name, concentration0=concentration0, concentration1=concentration1, **kwargs
+        )
 
     @staticmethod
     def _init_distribution(conditions):
-        a, b = conditions["a"], conditions["b"]
-        return tfd.Kumaraswamy(concentration0=a, concentration1=b)
+        concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
+        return tfd.Kumaraswamy(concentration0=concentration0, concentration1=concentration1)
 
 
 class Laplace(ContinuousDistribution):
@@ -747,11 +675,11 @@ class Laplace(ContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-10, 10, 1000)
-        mus = [0., 0., 0., -5.]
+        locs = [0., 0., 0., -5.]
         bs = [1., 2., 4., 4.]
-        for mu, b in zip(mus, bs):
-            pdf = st.laplace.pdf(x, loc=mu, scale=b)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $b$ = {}'.format(mu, b))
+        for loc, b in zip(locs, bs):
+            pdf = st.laplace.pdf(x, loc=loc, scale=b)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $b$ = {}'.format(loc, b))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -765,26 +693,19 @@ class Laplace(ContinuousDistribution):
 
     Parameters
     ----------
-    mu : float
+    loc : float
         Location parameter.
-    b : float
-        Scale parameter (b > 0).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - b: scale
+    scale : float
+        Scale parameter (scale > 0).
     """
 
-    def __init__(self, name, mu, b, **kwargs):
-        super().__init__(name, mu=mu, b=b, **kwargs)
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, b = conditions["mu"], conditions["b"]
-        return tfd.Laplace(loc=mu, scale=b)
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.Laplace(loc=loc, scale=scale)
 
 
 class Logistic(ContinuousDistribution):
@@ -804,11 +725,11 @@ class Logistic(ContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-5, 5, 200)
-        mus = [0., 0., 0., -2.]
+        locs = [0., 0., 0., -2.]
         ss = [.4, 1., 2., .4]
-        for mu, s in zip(mus, ss):
-            pdf = st.logistic.pdf(x, loc=mu, scale=s)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $s$ = {}'.format(mu, s))
+        for loc, s in zip(locs, ss):
+            pdf = st.logistic.pdf(x, loc=loc, scale=s)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $s$ = {}'.format(loc, s))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -823,19 +744,19 @@ class Logistic(ContinuousDistribution):
 
     Parameters
     ----------
-    mu : float
+    loc : float
         Mean.
-    s : float
-        Scale (s > 0).
+    scale : float
+        Scale (scale > 0).
     """
 
-    def __init__(self, name, mu, s, **kwargs):
-        super().__init__(name, mu=mu, s=s, **kwargs)
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, s = conditions["mu"], conditions["s"]
-        return tfd.Logistic(loc=mu, scale=s)
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.Logistic(loc=loc, scale=scale)
 
 
 class LogitNormal(UnitContinuousDistribution):
@@ -850,30 +771,25 @@ class LogitNormal(UnitContinuousDistribution):
 
     Parameters
     ----------
-    mu : float
+    loc : float
         Location parameter.
-    sigma : float
-        Standard deviation. (sigma > 0).
+    scale : float
+        Standard deviation. (scale > 0).
 
     Developer Notes
     ---------------
     The logit-normal is implemented as Normal distribution transformed by the
     Sigmoid bijector.
-
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc of tfd.Normal
-    - sigma: scale of tfd.Normal
     """
 
-    def __init__(self, name, mu, sigma, **kwargs):
-        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, sigma = conditions["mu"], conditions["sigma"]
+        loc, scale = conditions["loc"], conditions["scale"]
         return tfd.TransformedDistribution(
-            distribution=tfd.Normal(loc=mu, scale=sigma),
+            distribution=tfd.Normal(loc=loc, scale=scale),
             bijector=tfp.bijectors.Sigmoid(),
             name="LogitNormal",
         )
@@ -902,11 +818,11 @@ class LogNormal(PositiveContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(0, 3, 100)
-        mus = [0., 0., 0.]
-        sigmas = [.25, .5, 1.]
-        for mu, sigma in zip(mus, sigmas):
-            pdf = st.lognorm.pdf(x, sigma, scale=np.exp(mu))
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(mu, sigma))
+        locs = [0., 0., 0.]
+        scales = [.25, .5, 1.]
+        for loc, scale in zip(locs, scales):
+            pdf = st.lognorm.pdf(x, scale, scale=np.exp(loc))
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(loc, scale))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -920,33 +836,26 @@ class LogNormal(PositiveContinuousDistribution):
 
     Parameters
     ----------
-    mu : float
+    loc : float
         Location parameter.
-    sigma : float
-        Standard deviation. (sigma > 0).
+    scale : float
+        Standard deviation. (scale > 0).
 
     Example
     -------
     .. code-block:: python
         @pm.model
         def model():
-            x = pm.Lognormal('x', mu=2, sigma=30)
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - sigma: scale
+            x = pm.Lognormal('x', loc=2, scale=30)
     """
 
-    def __init__(self, name, mu, sigma, **kwargs):
-        super().__init__(name, mu=mu, sigma=sigma, **kwargs)
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, sigma = conditions["mu"], conditions["sigma"]
-        return tfd.LogNormal(loc=mu, scale=sigma)
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.LogNormal(loc=loc, scale=scale)
 
 
 class Pareto(BoundedContinuousDistribution):
@@ -987,32 +896,25 @@ class Pareto(BoundedContinuousDistribution):
 
     Parameters
     ----------
-    alpha : float|tensor
-        Shape parameter (alpha > 0).
-    m : float|tensor
-        Scale parameter (m > 0).
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - alpha: concentration
-    - m: scale
+    concentration : float|tensor
+        Shape parameter (concentration > 0).
+    scale : float|tensor
+        Scale parameter (scale > 0).
     """
 
-    def __init__(self, name, alpha, m, **kwargs):
-        super().__init__(name, alpha=alpha, m=m, **kwargs)
+    def __init__(self, name, concentration, scale, **kwargs):
+        super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        alpha, m = conditions["alpha"], conditions["m"]
-        return tfd.Pareto(concentration=alpha, scale=m)
+        concentration, scale = conditions["concentration"], conditions["scale"]
+        return tfd.Pareto(concentration=concentration, scale=scale)
 
     def upper_limit(self):
         return float("inf")
 
     def lower_limit(self):
-        return self.conditions["m"]
+        return self.conditions["scale"]
 
 
 # TODO: Implement this
@@ -1035,11 +937,11 @@ class Pareto(BoundedContinuousDistribution):
 #         import scipy.stats as st
 #         plt.style.use('seaborn-darkgrid')
 #         x = np.linspace(0, 5, 200)
-#         sigmas = [1., 1., 2., 1.]
+#         scales = [1., 1., 2., 1.]
 #         nus = [.5, 1., 1., 30.]
-#         for sigma, nu in zip(sigmas, nus):
-#             pdf = st.t.pdf(x, df=nu, loc=0, scale=sigma)
-#             plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(sigma, nu))
+#         for scale, df in zip(scales, nus):
+#             pdf = st.t.pdf(x, df=df, loc=0, scale=scale)
+#             plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(scale, df))
 #         plt.xlabel('x', fontsize=12)
 #         plt.ylabel('f(x)', fontsize=12)
 #         plt.legend(loc=1)
@@ -1051,45 +953,38 @@ class Pareto(BoundedContinuousDistribution):
 
 #     Parameters
 #     ----------
-#     nu : float
-#         Degrees of freedom, also known as normality parameter (nu > 0).
-#     sigma : float
-#         Scale parameter (sigma > 0). Converges to the standard deviation as nu
+#     df : float
+#         Degrees of freedom, also known as normality parameter (df > 0).
+#     scale : float
+#         Scale parameter (scale > 0). Converges to the standard deviation as df
 #         increases. (only required if lam is not specified)
 
 #     Examples
 #     --------
 #     .. code-block:: python
 
-#         # Only pass in one of lam or sigma, but not both.
+#         # Only pass in one of lam or scale, but not both.
 #         @pm.model
 #         def model():
-#             x = pm.HalfStudentT('x', sigma=10, nu=10)
-
-#     Developer Notes
-#     ---------------
-#     Parameter mappings to TensorFlow Probability are as follows:
-
-#     - nu: df
-#     - sigma: scale
+#             x = pm.HalfStudentT('x', scale=10, df=10)
 
 #     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
 #     """
 
-#     def __init__(self, name, nu, sigma, **kwargs):
-#         super().__init__(name, nu=nu, sigma=sigma, **kwargs)
+#     def __init__(self, name, df, scale, **kwargs):
+#         super().__init__(name, df=df, scale=scale, **kwargs)
 
 #     @staticmethod
 #     def _init_distribution(conditions):
-#         nu, sigma = conditions["nu"], conditions["sigma"]
-#         return tfd.HalfStudentT(df=nu, scale=sigma)
+#         df, scale = conditions["df"], conditions["scale"]
+#         return tfd.HalfStudentT(df=df, scale=scale)
 
 
 class StudentT(ContinuousDistribution):
     r"""Student's T random variable.
 
     Describes a normal variable whose precision is gamma distributed.
-    If only nu parameter is passed, this specifies a standard (central)
+    If only df parameter is passed, this specifies a standard (central)
     Student's T.
 
     The pdf of this distribution is
@@ -1108,12 +1003,12 @@ class StudentT(ContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-8, 8, 200)
-        mus = [0., 0., -2., -2.]
-        sigmas = [1., 1., 1., 2.]
+        locs = [0., 0., -2., -2.]
+        scales = [1., 1., 1., 2.]
         dfs = [1., 5., 5., 5.]
-        for mu, sigma, df in zip(mus, sigmas, dfs):
-            pdf = st.t.pdf(x, df, loc=mu, scale=sigma)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(mu, sigma, df))
+        for loc, scale, df in zip(locs, scales, dfs):
+            pdf = st.t.pdf(x, df, loc=loc, scale=scale)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}, $\nu$ = {}'.format(loc, scale, df))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -1125,12 +1020,12 @@ class StudentT(ContinuousDistribution):
 
     Parameters
     ----------
-    nu : float|tensor
-        Degrees of freedom, also known as normality parameter (nu > 0).
-    mu : float|tensor
+    df : float|tensor
+        Degrees of freedom, also known as normality parameter (df > 0).
+    loc : float|tensor
         Location parameter.
-    sigma : float|tensor
-        Scale parameter (sigma > 0). Converges to the standard deviation as nu
+    scale : float|tensor
+        Scale parameter (scale > 0). Converges to the standard deviation as df
         increases. (only required if lam is not specified)
 
     Examples
@@ -1139,24 +1034,16 @@ class StudentT(ContinuousDistribution):
 
         @pm.model
         def model():
-            x = pm.StudentT('x', nu=15, mu=0, sigma=10)
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - sigma: scale
-    - nu: df
+            x = pm.StudentT('x', df=15, loc=0, scale=10)
     """
 
-    def __init__(self, name, mu, sigma, nu, **kwargs):
-        super().__init__(name, mu=mu, sigma=sigma, nu=nu, **kwargs)
+    def __init__(self, name, loc, scale, df, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, df=df, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        nu, mu, sigma = conditions["nu"], conditions["mu"], conditions["sigma"]
-        return tfd.StudentT(df=nu, loc=mu, scale=sigma)
+        df, loc, scale = conditions["df"], conditions["loc"], conditions["scale"]
+        return tfd.StudentT(df=df, loc=loc, scale=scale)
 
 
 class Triangular(BoundedContinuousDistribution):
@@ -1204,35 +1091,27 @@ class Triangular(BoundedContinuousDistribution):
 
     Parameters
     ----------
-    lower : float|tensor
+    low : float|tensor
         Lower limit.
-    c: float|tensor
+    peak: float|tensor
         mode
-    upper : float|tensor
+    high : float|tensor
         Upper limit.
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - lower: low
-    - c: peak
-    - upper: high
     """
 
-    def __init__(self, name, lower, c, upper, **kwargs):
-        super().__init__(name, lower=lower, c=c, upper=upper, **kwargs)
+    def __init__(self, name, low, peak, high, **kwargs):
+        super().__init__(name, low=low, peak=peak, high=high, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        lower, upper, c = conditions["lower"], conditions["upper"], conditions["c"]
-        return tfd.Triangular(low=lower, high=upper, peak=c)
+        low, high, peak = conditions["low"], conditions["high"], conditions["peak"]
+        return tfd.Triangular(low=low, high=high, peak=peak)
 
     def lower_limit(self):
-        return self.conditions["lower"]
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self.conditions["upper"]
+        return self.conditions["high"]
 
 
 class Uniform(BoundedContinuousDistribution):
@@ -1270,32 +1149,26 @@ class Uniform(BoundedContinuousDistribution):
 
     Parameters
     ----------
-    lower : float|tensor
+    low : float|tensor
         Lower limit.
-    upper : float|tensor
+    high : float|tensor
         Upper limit.
-
-    Developer Notes
-    ----------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - lower: low
-    - upper: high
     """
 
-    def __init__(self, name, lower, upper, **kwargs):
-        super().__init__(name, lower=lower, upper=upper, **kwargs)
+    def __init__(self, name, low, high, **kwargs):
+        super().__init__(name, low=low, high=high, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        lower, upper = conditions["lower"], conditions["upper"]
-        return tfd.Uniform(low=lower, high=upper)
+        low, high = conditions["low"], conditions["high"]
+        return tfd.Uniform(low=low, high=high)
 
+    # FIXME should we rename this functions as well?
     def lower_limit(self):
-        return self.conditions["lower"]
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self.conditions["upper"]
+        return self.conditions["high"]
 
 
 class VonMises(BoundedContinuousDistribution):
@@ -1317,11 +1190,11 @@ class VonMises(BoundedContinuousDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-np.pi, np.pi, 200)
-        mus = [0., 0., 0.,  -2.5]
-        kappas = [.01, 0.5,  4., 2.]
-        for mu, kappa in zip(mus, kappas):
-            pdf = st.vonmises.pdf(x, kappa, loc=mu)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $\kappa$ = {}'.format(mu, kappa))
+        locs = [0., 0., 0.,  -2.5]
+        concentrations = [.01, 0.5,  4., 2.]
+        for loc, concentration in zip(locs, concentrations):
+            pdf = st.vonmises.pdf(x, concentration, loc=loc)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\kappa$ = {}'.format(loc, concentration))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -1335,26 +1208,19 @@ class VonMises(BoundedContinuousDistribution):
 
     Parameters
     ----------
-    mu : float|tensor
+    loc : float|tensor
         Mean.
-    kappa : float|tensor
+    concentration : float|tensor
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - kappa: concentration
     """
 
-    def __init__(self, name, mu, kappa, **kwargs):
-        super().__init__(name, mu=mu, kappa=kappa, **kwargs)
+    def __init__(self, name, loc, concentration, **kwargs):
+        super().__init__(name, loc=loc, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, kappa = conditions["mu"], conditions["kappa"]
-        return tfd.VonMises(loc=mu, concentration=kappa)
+        loc, concentration = conditions["loc"], conditions["concentration"]
+        return tfd.VonMises(loc=loc, concentration=concentration)
 
     def lower_limit(self):
         return -math.pi
@@ -1382,11 +1248,11 @@ class VonMises(BoundedContinuousDistribution):
 #         import scipy.stats as st
 #         plt.style.use('seaborn-darkgrid')
 #         x = np.linspace(0, 3, 200)
-#         alphas = [.5, 1., 1.5, 5., 5.]
-#         betas = [1., 1., 1., 1.,  2]
-#         for a, b in zip(alphas, betas):
-#             pdf = st.weibull_min.pdf(x, a, scale=b)
-#             plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(a, b))
+#         concentrations = [.5, 1., 1.5, 5., 5.]
+#         scales = [1., 1., 1., 1.,  2]
+#         for concentration, scale in zip(concentrations, scales):
+#             pdf = st.weibull_min.pdf(x, concentration, scale)
+#             plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(concentration, scale))
 #         plt.xlabel('x', fontsize=12)
 #         plt.ylabel('f(x)', fontsize=12)
 #         plt.ylim(0, 2.5)
@@ -1401,23 +1267,16 @@ class VonMises(BoundedContinuousDistribution):
 
 #     Parameters
 #     ----------
-#     alpha : float|tensor
-#         Shape parameter (alpha > 0).
-#     beta : float|tensor
-#         Scale parameter (beta > 0).
-
-#     Developer Notes
-#     ---------------
-#     Parameter mappings to TensorFlow Probability are as follows:
-
-#     - alpha: concentration
-#     - beta: scale
+#     concentration : float|tensor
+#         Shape parameter (concentration > 0).
+#     scale : float|tensor
+#         Scale parameter (scale > 0).
 #     """
 
-#     def __init__(self, name, alpha, beta, **kwargs):
-#         super().__init__(name, alpha=alpha, beta=beta, **kwargs)
+#     def __init__(self, name, concentration, scale, **kwargs):
+#         super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
 #     @staticmethod
 #     def _init_distribution(conditions):
-#         alpha, beta = conditions["alpha"], conditions["beta"]
-#         return tfd.Weibull(concentration=alpha, scale=beta)
+#         concentration, scale = conditions["concentration"], conditions["scale"]
+#         return tfd.Weibull(concentration=concentration, scale=scale)

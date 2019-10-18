@@ -48,9 +48,8 @@ class Normal(ContinuousDistribution):
            \sqrt{\frac{\tau}{2\pi}}
            \exp\left\{ -\frac{\tau}{2} (x-\mu)^2 \right\}
 
-    Normal distribution can be parameterized either in terms of precision
-    or standard deviation. The link between the two parametrizations is
-    given by
+    The normal distribution can be parameterized either in terms of precision or
+    standard deviation. The link between the two parametrizations is given by
 
     .. math::
 
@@ -81,10 +80,11 @@ class Normal(ContinuousDistribution):
 
     Parameters
     ----------
-    loc : float|tensor
-        Mean.
-    scale : float|tensor
-        Standard deviation (scale > 0).
+    loc : float
+        Location parameter. For the normal distribution, this is the mean.
+    scale : float
+        Scale parameter. For the normal distribution, this is the standard
+        deviation (scale > 0).
 
     Examples
     --------
@@ -208,7 +208,7 @@ class Beta(UnitContinuousDistribution):
     concentration0 : float
         concentration0 > 0.
     concentration1 : float
-        beta > 0.
+        concentration1 > 0.
 
     Notes
     -----

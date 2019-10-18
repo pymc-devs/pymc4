@@ -12,49 +12,49 @@ def random_variable_args():
 
     # Commented out tests are currently failing and will be fixed
     _random_variable_args = (
-        ("Bernoulli", {"p": 0.5, "sample": 1.0}),
-        ("Beta", {"alpha": 1, "beta": 1}),
-        ("Binomial", {"n": 5.0, "p": 0.5, "sample": 1.0}),
-        ("Categorical", {"p": [0.1, 0.5, 0.4], "sample": 2.0}),
-        ("Cauchy", {"alpha": 0, "beta": 1}),
-        ("ChiSquared", {"nu": 2}),
-        ("Dirichlet", {"a": [1, 2], "sample": [0.5, 0.5]}),
-        ("DiscreteUniform", {"lower": 2.0, "upper": 10.0, "sample": 5.0}),
-        ("Exponential", {"lam": 1}),
-        ("Gamma", {"alpha": 3.0, "beta": 2.0}),
-        ("Geometric", {"p": 0.5, "sample": 10.0}),
-        ("Gumbel", {"mu": 0, "beta": 1}),
-        ("HalfCauchy", {"beta": 1}),
-        ("HalfNormal", {"sigma": 3.0}),
-        # ("HalfStudentT", {"sigma": 1, "nu": 10}),
-        ("InverseGamma", {"alpha": 3, "beta": 2}),
-        ("InverseGaussian", {"mu": 1, "lam": 1}),
-        ("Kumaraswamy", {"a": 0.5, "b": 0.5}),
-        ("LKJ", {"n": 1, "eta": 1.5, "sample": [[1.0]]}),
-        ("Laplace", {"mu": 0, "b": 1}),
-        ("LogNormal", {"mu": 0, "sigma": 1}),
-        ("Logistic", {"mu": 0, "s": 3}),
-        ("Multinomial", {"n": 4, "p": [0.2, 0.3, 0.5], "sample": [1.0, 1.0, 2.0]}),
-        ("LogitNormal", {"mu": 0, "sigma": 1}),
-        ("MvNormal", {"mu": [1, 2], "cov": [[0.36, 0.12], [0.12, 0.36]], "sample": [1.0, 2.0]}),
-        ("NegativeBinomial", {"mu": 3, "alpha": 6, "sample": 5.0}),
-        ("Normal", {"mu": 0, "sigma": 1}),
-        ("Pareto", {"alpha": 1, "m": 0.1, "sample": 5.0}),
-        ("Poisson", {"mu": 2}),
-        ("StudentT", {"mu": 0, "sigma": 1, "nu": 10}),
-        ("Triangular", {"lower": 0.0, "upper": 1.0, "c": 0.5}),
-        ("Uniform", {"lower": 0, "upper": 1}),
-        ("VonMises", {"mu": 0, "kappa": 1}),
-        ("VonMisesFisher", {"mu": [0, 1], "kappa": 1, "sample": [0.0, 1.0]}),
+        ("Bernoulli", {"probs": 0.5, "sample": 1.0}),
+        ("Beta", {"concentration0": 1, "concentration1": 1}),
+        ("Binomial", {"total_count": 5.0, "probs": 0.5, "sample": 1.0}),
+        ("Categorical", {"probs": [0.1, 0.5, 0.4], "sample": 2.0}),
+        ("Cauchy", {"loc": 0, "scale": 1}),
+        ("ChiSquared", {"df": 2}),
+        ("Dirichlet", {"concentration": [1, 2], "sample": [0.5, 0.5]}),
+        ("DiscreteUniform", {"low": 2.0, "high": 10.0, "sample": 5.0}),
+        ("Exponential", {"rate": 1}),
+        ("Gamma", {"concentration": 3.0, "rate": 2.0}),
+        ("Geometric", {"probs": 0.5, "sample": 10.0}),
+        ("Gumbel", {"loc": 0, "scale": 1}),
+        ("HalfCauchy", {"scale": 1}),
+        ("HalfNormal", {"scale": 3.0}),
+        # ("HalfStudentT", {"scale": 1, "nu": 10}),
+        ("InverseGamma", {"concentration": 3, "scale": 2}),
+        ("InverseGaussian", {"loc": 1, "concentration": 1}),
+        ("Kumaraswamy", {"concentration0": 0.5, "concentration1": 0.5}),
+        ("LKJ", {"dimension": 1, "concentration": 1.5, "sample": [[1.0]]}),
+        ("Laplace", {"loc": 0, "scale": 1}),
+        ("LogNormal", {"loc": 0, "scale": 1}),
+        ("Logistic", {"loc": 0, "scale": 3}),
+        ("Multinomial", {"total_count": 4, "probs": [0.2, 0.3, 0.5], "sample": [1.0, 1.0, 2.0]}),
+        ("LogitNormal", {"loc": 0, "scale": 1}),
+        ("MvNormal", {"loc": [1, 2], "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]], "sample": [1.0, 2.0]}),
+        ("NegativeBinomial", {"total_count": 3, "probs": 0.6, "sample": 5.0}),
+        ("Normal", {"loc": 0, "scale": 1}),
+        ("Pareto", {"concentration": 1, "scale": 0.1, "sample": 5.0}),
+        ("Poisson", {"rate": 2}),
+        ("StudentT", {"loc": 0, "scale": 1, "df": 10}),
+        ("Triangular", {"low": 0.0, "high": 1.0, "peak": 0.5}),
+        ("Uniform", {"low": 0, "high": 1}),
+        ("VonMises", {"loc": 0, "concentration": 1}),
+        ("VonMisesFisher", {"mean_direction": [0, 1], "concentration": 1, "sample": [0.0, 1.0]}),
         # ("Weibull", {"beta": 0.1, "alpha": 1.0}),
-        ("Wishart", {"nu": 3, "V": [[1]], "sample": [[1.0]]}),
-        # ("ZeroInflatedBinomial", {"psi": 0.2, "n": 10, "p": 0.5, "sample": 0.0}),
+        ("Wishart", {"df": 3, "scale": [[1]], "sample": [[1.0]]}),
+        # ("ZeroInflatedBinomial", {"psi": 0.2, "total_count": 10, "p": 0.5, "sample": 0.0}),
         # (
         #     "ZeroInflatedNegativeBinomial",
         #     {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
         # ),
         # ("ZeroInflatedPoisson", {"psi": 0.2, "theta": 2, "sample": 0}),
-        ("Zipf", {"alpha": 2.0}),
+        ("Zipf", {"power": 2.0}),
     )
 
     ids = [dist[0] for dist in _random_variable_args]
@@ -85,8 +85,8 @@ def test_rvs_logp_and_forward_sample(tf_seed, distribution_name, kwargs):
 )
 def test_rvs_backend_arithmetic(tf_seed):
     """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
-    x = pm.Normal("NormA", mu=0, sigma=1)
-    y = pm.Normal("NormB", mu=1, sigma=2)
+    x = pm.Normal("NormA", loc=0, scale=1)
+    y = pm.Normal("NormB", loc=1, scale=2)
 
     assert x + y is not None
     assert x - y is not None

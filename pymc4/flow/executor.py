@@ -550,3 +550,18 @@ def observed_value_in_evaluation(
     scoped_name: str, dist: distribution.Distribution, state: SamplingState
 ):
     return state.observed_values.get(scoped_name, dist.model_info["observed"])
+
+
+def model_log_prob_elemwise(
+    model: ModelType,
+    *,
+    state: SamplingState = None,
+    _validate_state: bool = True,
+    values: Dict[str, Any] = None,
+    observed: Dict[str, Any] = None,
+) -> Dict[str, tf.Tensor]:
+    _, state = SamplingExecutor()(
+        model, state=state, _validate_state=_validate_state, values=values, observed=observed
+    )
+    output = state.collect_log_prob_elemwise()
+    return output

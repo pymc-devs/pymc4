@@ -53,7 +53,7 @@ class Bernoulli(BoundedDiscreteDistribution):
     Parameters
     ----------
     probs : float
-        Probability of success (0 < p < 1).
+        Probability of success (0 < probs < 1).
     """
 
     def __init__(self, name, probs, **kwargs):

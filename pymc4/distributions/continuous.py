@@ -726,10 +726,10 @@ class Logistic(ContinuousDistribution):
         plt.style.use('seaborn-darkgrid')
         x = np.linspace(-5, 5, 200)
         locs = [0., 0., 0., -2.]
-        ss = [.4, 1., 2., .4]
-        for loc, s in zip(locs, ss):
-            pdf = st.logistic.pdf(x, loc=loc, scale=s)
-            plt.plot(x, pdf, label=r'$\mu$ = {}, $s$ = {}'.format(loc, s))
+        scales = [.4, 1., 2., .4]
+        for loc, scale in zip(locs, scales):
+            pdf = st.logistic.pdf(x, loc=loc, scale=scale)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, scale = {}'.format(loc, scale))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)

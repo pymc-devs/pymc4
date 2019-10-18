@@ -46,31 +46,26 @@ class Dirichlet(SimplexContinuousDistribution):
 
     Parameters
     ----------
-    a : array
-        Concentration parameters (a > 0).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - a: concentration
+    concentration : array
+        Concentration parameters (concentration > 0).
     """
 
-    def __init__(self, name, a, **kwargs):
-        super().__init__(name, a=a, **kwargs)
+    def __init__(self, name, concentration, **kwargs):
+        super().__init__(name, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        a = conditions["a"]
-        return tfd.Dirichlet(concentration=a)
+        concentration = conditions["concentration"]
+        return tfd.Dirichlet(concentration=concentration)
 
 
 class LKJ(ContinuousDistribution):
     r"""The LKJ (Lewandowski, Kurowicka and Joe) random variable.
 
-    The LKJ distribution is a prior distribution for correlation matrices.
-    If eta = 1 this corresponds to the uniform distribution over correlation
-    matrices. For eta -> oo the LKJ prior approaches the identity matrix.
+    The LKJ distribution is a prior distribution for correlation matrices. If
+    concentration = 1 this corresponds to the uniform distribution over
+    correlation matrices. For concentration -> oo the LKJ prior approaches the
+    identity matrix.
 
     ========  ==============================================
     Support   Upper triangular matrix with values in [-1, 1]
@@ -78,12 +73,13 @@ class LKJ(ContinuousDistribution):
 
     Parameters
     ----------
-    n : int
+    dimension : int
         Dimension of the covariance matrix (n > 1).
-    eta : float
-        The shape parameter (eta > 0) of the LKJ distribution. eta = 1
-        implies a uniform distribution of the correlation matrices;
-        larger values put more weight on matrices with few correlations.
+    concentration : float
+        The shape parameter (concentration > 0) of the LKJ distribution.
+        concentration = 1 implies a uniform distribution of the correlation
+        matrices; larger values put more weight on matrices with few
+        correlations.
 
     References
     ----------
@@ -96,20 +92,15 @@ class LKJ(ContinuousDistribution):
     ---------------
     Unlike PyMC3's implementation, the LKJ distribution in PyMC4 returns fully
     populated covariance matrices, rather than upper triangle matrices.
-
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - n: dimension
-    - eta: concentration
     """
 
-    def __init__(self, name, n, eta, **kwargs):
-        super().__init__(name, n=n, eta=eta, **kwargs)
+    def __init__(self, name, dimension, concentration, **kwargs):
+        super().__init__(name, dimension=dimension, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        n, eta = conditions["n"], conditions["eta"]
-        return tfd.LKJ(dimension=n, concentration=eta)
+        dimension, concentration = conditions["dimension"], conditions["concentration"]
+        return tfd.LKJ(dimension=dimension, concentration=concentration)
 
 
 class Multinomial(DiscreteDistribution):
@@ -136,28 +127,21 @@ class Multinomial(DiscreteDistribution):
 
     Parameters
     ----------
-    n : int or array
-        Number of trials (n > 0). If n is an array its shape must be (N,) with
+    total_count : int or array
+        Number of trials (total_count > 0). If total_count is an array its shape must be (N,) with
         N = p.shape[0]
-    p : one- or two-dimensional array
+    probs : one- or two-dimensional array
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1 along the last axis.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - n: total_count
-    - p: probs
     """
 
-    def __init__(self, name, n, p, **kwargs):
-        super().__init__(name, n=n, p=p, **kwargs)
+    def __init__(self, name, total_count, probs, **kwargs):
+        super().__init__(name, total_count=total_count, probs=probs, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        n, p = conditions["n"], conditions["p"]
-        return tfd.Multinomial(total_count=n, probs=p)
+        total_count, probs = conditions["total_count"], conditions["probs"]
+        return tfd.Multinomial(total_count=total_count, probs=probs)
 
 
 class MvNormal(ContinuousDistribution):
@@ -187,29 +171,25 @@ class MvNormal(ContinuousDistribution):
     Define a multivariate normal variable for a given covariance
     matrix::
 
-        cov = np.array([[1., 0.5], [0.5, 2]])
+        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
         mu = np.zeros(2)
-        vals = pm.MvNormal('vals', mu=mu, cov=cov, shape=(5, 2))
+        vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
 
     Developer Notes
     ---------------
     ``MvNormal`` is based on TensorFlow Probability's
     ``MutivariateNormalFullCovariance``, in which the full covariance matrix
     must be specified.
-
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: loc
-    - cov: covariance_matrix
     """
 
-    def __init__(self, name, mu, cov, **kwargs):
-        super().__init__(name, mu=mu, cov=cov, **kwargs)
+    def __init__(self, name, loc, covariance_matrix, **kwargs):
+        super().__init__(name, loc=loc, covariance_matrix=covariance_matrix, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, cov = conditions["mu"], conditions["cov"]
-        return tfd.MultivariateNormalFullCovariance(loc=mu, covariance_matrix=cov)
+        loc, covariance_matrix = conditions["loc"], conditions["covariance_matrix"]
+        return tfd.MultivariateNormalFullCovariance(loc=loc,
+                covariance_matrix=covariance_matrix)
 
 
 class VonMisesFisher(ContinuousDistribution):
@@ -230,31 +210,24 @@ class VonMisesFisher(ContinuousDistribution):
 
     Parameters
     ----------
-    mu : array
+    mean_direction : array
         Mean.
-    kappa : float
+    concentration : float
         Concentration (\frac{1}{kappa} is analogous to \sigma^2).
 
     Note
     ----
     Currently only n in {2, 3, 4, 5} are supported. For n=5 some numerical instability can
     occur for low concentrations (<.01).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: mean_direction
-    - kappa: concentration
     """
 
-    def __init__(self, name, mu, kappa, **kwargs):
-        super().__init__(name, mu=mu, kappa=kappa, **kwargs)
+    def __init__(self, name, mean_direction, concentration, **kwargs):
+        super().__init__(name, mean_direction=mean_direction, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, kappa = conditions["mu"], conditions["kappa"]
-        return tfd.VonMisesFisher(mean_direction=mu, concentration=kappa)
+        mean_direction, concentration = conditions["mean_direction"], conditions["concentration"]
+        return tfd.VonMisesFisher(mean_direction=mean_direction, concentration=concentration)
 
 
 class Wishart(ContinuousDistribution):
@@ -283,23 +256,16 @@ class Wishart(ContinuousDistribution):
 
     Parameters
     ----------
-    nu : int
+    df : int
         Degrees of freedom, > 0.
-    V : array
+    scale : array
         p x p positive definite matrix.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - nu: df
-    - V: scale
     """
 
-    def __init__(self, name, nu, V, **kwargs):
-        super().__init__(name, nu=nu, V=V, **kwargs)
+    def __init__(self, name, df, scale, **kwargs):
+        super().__init__(name, df=df, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        nu, V = conditions["nu"], conditions["V"]
-        return tfd.Wishart(df=nu, scale=V)
+        df, scale = conditions["df"], conditions["scale"]
+        return tfd.Wishart(df=df, scale=scale)

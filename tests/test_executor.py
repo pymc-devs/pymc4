@@ -3,6 +3,26 @@ import pymc4 as pm
 import math
 import numpy as np
 from pymc4 import distributions as dist
+import tensorflow as tf
+
+
+TEST_SHAPES = [(), (1,), (3,), (1, 1), (1, 3), (5, 3)]
+
+
+@pytest.fixture("module", params=TEST_SHAPES, ids=str)
+def fixture_batch_shapes(request):
+    return request.param
+
+
+@pytest.fixture("module", params=TEST_SHAPES, ids=str)
+def fixture_sample_shapes(request):
+    return request.param
+
+
+@pytest.fixture("module")
+def fixture_distribution_parameters(fixture_batch_shapes, fixture_sample_shapes):
+    observed = np.ones(fixture_sample_shapes + fixture_batch_shapes)
+    return fixture_batch_shapes, observed
 
 
 @pytest.fixture("module")
@@ -75,6 +95,19 @@ def class_model():
             return norm
 
     return ClassModel()
+
+
+@pytest.fixture("module")
+def fixture_model_with_tiles(fixture_distribution_parameters):
+    batch_shape, observed = fixture_distribution_parameters
+    expected_rv_shapes = {"loc": (), "obs": np.broadcast(observed, np.empty(batch_shape)).shape}
+
+    def model():
+        loc = yield pm.Normal("loc", 0, 1)
+        obs = yield pm.Normal("obs", loc, 1, batch_shape=batch_shape, observed=observed)
+        return obs
+
+    return model, expected_rv_shapes
 
 
 def test_class_model(class_model):
@@ -442,3 +475,15 @@ def test_differently_shaped_logp():
 
     _, state = pm.evaluate_model(model())
     state.collect_log_prob()  # this should work
+
+
+def test_log_prob_elemwise(fixture_model_with_tiles):
+    model, expected_rv_shapes = fixture_model_with_tiles
+    _, state = pm.evaluate_model(model())
+    log_prob_elemwise = state.collect_log_prob_elemwise()
+    log_prob = state.collect_log_prob()
+    print(log_prob_elemwise)
+    assert len(log_prob_elemwise) == len(expected_rv_shapes)
+    assert all(rv in log_prob_elemwise for rv in expected_rv_shapes)
+    assert all(log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items())
+    assert log_prob.numpy() == sum(map(tf.reduce_sum, log_prob_elemwise.values())).numpy()

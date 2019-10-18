@@ -36,7 +36,14 @@ def random_variable_args():
         ("Logistic", {"loc": 0, "scale": 3}),
         ("Multinomial", {"total_count": 4, "probs": [0.2, 0.3, 0.5], "sample": [1.0, 1.0, 2.0]}),
         ("LogitNormal", {"loc": 0, "scale": 1}),
-        ("MvNormal", {"loc": [1, 2], "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]], "sample": [1.0, 2.0]}),
+        (
+            "MvNormal",
+            {
+                "loc": [1, 2],
+                "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]],
+                "sample": [1.0, 2.0],
+            },
+        ),
         ("NegativeBinomial", {"total_count": 3, "probs": 0.6, "sample": 5.0}),
         ("Normal", {"loc": 0, "scale": 1}),
         ("Pareto", {"concentration": 1, "scale": 0.1, "sample": 5.0}),

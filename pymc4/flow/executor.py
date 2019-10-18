@@ -116,6 +116,11 @@ class SamplingState:
         )
         return sum(map(tf.reduce_sum, all_terms))
 
+    def collect_log_prob_elemwise(self):
+        return {
+            name: dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()
+        }
+
     def __repr__(self):
         # display keys only
         untransformed_values = list(self.untransformed_values)

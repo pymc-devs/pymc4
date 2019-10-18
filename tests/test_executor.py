@@ -106,7 +106,10 @@ def class_model():
 def fixture_model_with_tiles(fixture_distribution_parameters, fixture_pm_model_decorate):
     batch_shape, observed = fixture_distribution_parameters
     if fixture_pm_model_decorate:
-        expected_rv_shapes = {"model/loc": (), "model/obs": np.broadcast(observed, np.empty(batch_shape)).shape}
+        expected_rv_shapes = {
+            "model/loc": (),
+            "model/obs": np.broadcast(observed, np.empty(batch_shape)).shape,
+        }
     else:
         expected_rv_shapes = {"loc": (), "obs": np.broadcast(observed, np.empty(batch_shape)).shape}
 

@@ -11,11 +11,25 @@ REQUIREMENTS_DEV_FILE = PROJECT_ROOT / "requirements-dev.txt"
 README_FILE = PROJECT_ROOT / "README.md"
 VERSION_FILE = PROJECT_ROOT / "pymc4" / "__init__.py"
 
-NAME = "PyMC4"
+NAME = "pymc4"
 DESCRIPTION = "A Python probabilistic programming interface to TensorFlow, for Bayesian modelling and machine learning."
 AUTHOR = "PyMC Developers"
 AUTHOR_EMAIL = "pymc.devs@gmail.com"
 URL = ("https://github.com/pymc-devs/pymc4",)
+LICENSE = "Apache License, Version 2.0"
+
+CLASSIFIERS = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Operating System :: OS Independent",
+]
 
 
 def get_requirements(path):
@@ -43,9 +57,11 @@ if __name__ == "__main__":
         name=NAME,
         version=get_version(),
         description=DESCRIPTION,
+        license=LICENSE,
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
         url=URL,
+        classifiers=CLASSIFIERS,
         packages=find_packages(),
         install_requires=get_requirements(REQUIREMENTS_FILE),
         tests_require=get_requirements(REQUIREMENTS_DEV_FILE),

@@ -17,7 +17,7 @@ def random_variable_args():
         ("Binomial", {"total_count": 5.0, "probs": 0.5, "sample": 1.0}),
         ("Categorical", {"probs": [0.1, 0.5, 0.4], "sample": 2.0}),
         ("Cauchy", {"loc": 0, "scale": 1}),
-        ("ChiSquared", {"df": 2}),
+        ("Chi2", {"df": 2}),
         ("Dirichlet", {"concentration": [1, 2], "sample": [0.5, 0.5]}),
         ("DiscreteUniform", {"low": 2.0, "high": 10.0, "sample": 5.0}),
         ("Exponential", {"rate": 1}),

@@ -15,7 +15,7 @@ tfd = tfp.distributions
 __all__ = [
     "Beta",
     "Cauchy",
-    "ChiSquared",
+    "Chi2",
     "Exponential",
     "Gamma",
     "Gumbel",
@@ -280,8 +280,7 @@ class Cauchy(ContinuousDistribution):
         return tfd.Cauchy(loc=loc, scale=scale)
 
 
-# FIXME should we call this Chi2?
-class ChiSquared(PositiveContinuousDistribution):
+class Chi2(PositiveContinuousDistribution):
     r""":math:`\chi^2` random variable.
 
     The pdf of this distribution is
@@ -316,11 +315,6 @@ class ChiSquared(PositiveContinuousDistribution):
     ----------
     df : int
         Degrees of freedom (df > 0).
-
-    Developer Notes
-    ----------------
-    The ChiSquared distribution name is copied over from PyMC3 for continuity. We map it to the
-    Chi2 distribution in TensorFlow Probability.
     """
 
     def __init__(self, name, df, **kwargs):

@@ -188,8 +188,7 @@ class MvNormal(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, covariance_matrix = conditions["loc"], conditions["covariance_matrix"]
-        return tfd.MultivariateNormalFullCovariance(loc=loc,
-                covariance_matrix=covariance_matrix)
+        return tfd.MultivariateNormalFullCovariance(loc=loc, covariance_matrix=covariance_matrix)
 
 
 class VonMisesFisher(ContinuousDistribution):

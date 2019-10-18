@@ -9,20 +9,25 @@ import tensorflow as tf
 TEST_SHAPES = [(), (1,), (3,), (1, 1), (1, 3), (5, 3)]
 
 
-@pytest.fixture("module", params=TEST_SHAPES, ids=str)
+@pytest.fixture(scope="module", params=TEST_SHAPES, ids=str)
 def fixture_batch_shapes(request):
     return request.param
 
 
-@pytest.fixture("module", params=TEST_SHAPES, ids=str)
+@pytest.fixture(scope="module", params=TEST_SHAPES, ids=str)
 def fixture_sample_shapes(request):
     return request.param
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def fixture_distribution_parameters(fixture_batch_shapes, fixture_sample_shapes):
-    observed = np.ones(fixture_sample_shapes + fixture_batch_shapes)
+    observed = np.random.randn(*(fixture_sample_shapes + fixture_batch_shapes))
     return fixture_batch_shapes, observed
+
+
+@pytest.fixture(scope="module", params=[False, True], ids=str)
+def fixture_pm_model_decorate(request):
+    return request.param
 
 
 @pytest.fixture("module")
@@ -97,15 +102,21 @@ def class_model():
     return ClassModel()
 
 
-@pytest.fixture("module")
-def fixture_model_with_tiles(fixture_distribution_parameters):
+@pytest.fixture(scope="module")
+def fixture_model_with_tiles(fixture_distribution_parameters, fixture_pm_model_decorate):
     batch_shape, observed = fixture_distribution_parameters
-    expected_rv_shapes = {"loc": (), "obs": np.broadcast(observed, np.empty(batch_shape)).shape}
+    if fixture_pm_model_decorate:
+        expected_rv_shapes = {"model/loc": (), "model/obs": np.broadcast(observed, np.empty(batch_shape)).shape}
+    else:
+        expected_rv_shapes = {"loc": (), "obs": np.broadcast(observed, np.empty(batch_shape)).shape}
 
     def model():
         loc = yield pm.Normal("loc", 0, 1)
         obs = yield pm.Normal("obs", loc, 1, batch_shape=batch_shape, observed=observed)
         return obs
+
+    if fixture_pm_model_decorate:
+        model = pm.model(model)
 
     return model, expected_rv_shapes
 
@@ -482,8 +493,15 @@ def test_log_prob_elemwise(fixture_model_with_tiles):
     _, state = pm.evaluate_model(model())
     log_prob_elemwise = state.collect_log_prob_elemwise()
     log_prob = state.collect_log_prob()
-    print(log_prob_elemwise)
     assert len(log_prob_elemwise) == len(expected_rv_shapes)
     assert all(rv in log_prob_elemwise for rv in expected_rv_shapes)
     assert all(log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items())
     assert log_prob.numpy() == sum(map(tf.reduce_sum, log_prob_elemwise.values())).numpy()
+
+
+def test_log_prob_elemwise_api(fixture_model_with_tiles):
+    model, expected_rv_shapes = fixture_model_with_tiles
+    log_prob_elemwise = pm.model_log_prob_elemwise(model())
+    assert len(log_prob_elemwise) == len(expected_rv_shapes)
+    assert all(rv in log_prob_elemwise for rv in expected_rv_shapes)
+    assert all(log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items())

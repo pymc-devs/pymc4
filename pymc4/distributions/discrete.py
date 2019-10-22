@@ -35,9 +35,9 @@ class Bernoulli(BoundedDiscreteDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = [0, 1]
-        for p in [0, 0.5, 0.8]:
-            pmf = st.bernoulli.pmf(x, p)
-            plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        for prob in [0, 0.5, 0.8]:
+            pmf = st.bernoulli.pmf(x, prob)
+            plt.plot(x, pmf, '-o', label='p = {}'.format(prob))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
@@ -52,23 +52,17 @@ class Bernoulli(BoundedDiscreteDistribution):
 
     Parameters
     ----------
-    p : float
-        Probability of success (0 < p < 1).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - p: probs
+    probs : float
+        Probability of success (0 < probs < 1).
     """
 
-    def __init__(self, name, p, **kwargs):
-        super().__init__(name, p=p, **kwargs)
+    def __init__(self, name, probs, **kwargs):
+        super().__init__(name, probs=probs, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        p = conditions["p"]
-        return tfd.Bernoulli(probs=p)
+        probs = conditions["probs"]
+        return tfd.Bernoulli(probs=probs)
 
     def lower_limit(self):
         return 0
@@ -95,11 +89,11 @@ class Binomial(BoundedDiscreteDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.arange(0, 22)
-        ns = [10, 17]
-        ps = [0.5, 0.7]
-        for n, p in zip(ns, ps):
-            pmf = st.binom.pmf(x, n, p)
-            plt.plot(x, pmf, '-o', label='n = {}, p = {}'.format(n, p))
+        total_counts = [10, 17]
+        probs = [0.5, 0.7]
+        for total_count, prob in zip(total_counts, probs):
+            pmf = st.binom.pmf(x, total_count, prob)
+            plt.plot(x, pmf, '-o', label='n = {}, p = {}'.format(total_count, prob))
         plt.xlabel('x', fontsize=14)
         plt.ylabel('f(x)', fontsize=14)
         plt.legend(loc=1)
@@ -113,32 +107,25 @@ class Binomial(BoundedDiscreteDistribution):
 
     Parameters
     ----------
-    n : int
-        Number of Bernoulli trials (n >= 0).
-    p : float
-        Probability of success in each trial (0 < p < 1).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - n: total_count
-    - p: probs
+    total_count : int
+        Number of Bernoulli trials (total_count >= 0).
+    probs : float
+        Probability of success in each trial (0 < probs < 1).
     """
 
-    def __init__(self, name, n, p, **kwargs):
-        super().__init__(name, n=n, p=p, **kwargs)
+    def __init__(self, name, total_count, probs, **kwargs):
+        super().__init__(name, total_count=total_count, probs=probs, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        n, p = conditions["n"], conditions["p"]
-        return tfd.Binomial(total_count=n, probs=p)
+        total_count, probs = conditions["total_count"], conditions["probs"]
+        return tfd.Binomial(total_count=total_count, probs=probs)
 
     def lower_limit(self):
         return 0
 
     def upper_limit(self):
-        return self.conditions["n"]
+        return self.conditions["total_count"]
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):
@@ -146,7 +133,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
 
     The pmf of this distribution is
 
-    .. math:: f(x \mid lower, upper) = \frac{1}{upper-lower}
+    .. math:: f(x \mid low, high) = \frac{1}{high-low}
 
     .. plot::
 
@@ -154,12 +141,12 @@ class DiscreteUniform(BoundedDiscreteDistribution):
         import numpy as np
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
-        ls = [1, -2]
-        us = [6, 2]
-        for l, u in zip(ls, us):
-            x = np.arange(l, u+1)
-            pmf = [1 / (u - l)] * len(x)
-            plt.plot(x, pmf, '-o', label='lower = {}, upper = {}'.format(l, u))
+        lows = [1, -2]
+        highs = [6, 2]
+        for low, high in zip(lows, highs):
+            x = np.arange(low, high+1)
+            pmf = [1 / (high - low)] * len(x)
+            plt.plot(x, pmf, '-o', label='low = {}, high = {}'.format(low, high))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0, 0.4)
@@ -167,33 +154,33 @@ class DiscreteUniform(BoundedDiscreteDistribution):
         plt.show()
 
     ========  ===============================================
-    Support   :math:`x \in {lower, lower + 1, \ldots, upper}`
-    Mean      :math:`\dfrac{lower + upper}{2}`
-    Variance  :math:`\dfrac{(upper - lower)^2}{12}`
+    Support   :math:`x \in {low, low + 1, \ldots, high}`
+    Mean      :math:`\dfrac{low + high}{2}`
+    Variance  :math:`\dfrac{(high - low)^2}{12}`
     ========  ===============================================
 
     Parameters
     ----------
-    lower : int
+    low : int
         Lower limit.
-    upper : int
-        Upper limit (upper > lower).
+    high : int
+        Upper limit (high > low).
     """
 
-    def __init__(self, name, lower, upper, **kwargs):
-        super().__init__(name, lower=lower, upper=upper, **kwargs)
+    def __init__(self, name, low, high, **kwargs):
+        super().__init__(name, low=low, high=high, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        lower, upper = conditions["lower"], conditions["upper"]
-        outcomes = tf.range(lower, upper + 1)
-        return tfd.FiniteDiscrete(outcomes, probs=outcomes / (upper - lower))
+        low, high = conditions["low"], conditions["high"]
+        outcomes = tf.range(low, high + 1)
+        return tfd.FiniteDiscrete(outcomes, probs=outcomes / (high - low))
 
     def lower_limit(self):
-        return self.conditions["lower"]
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self.conditions["upper"]
+        return self.conditions["high"]
 
 
 class Categorical(BoundedDiscreteDistribution):
@@ -209,10 +196,10 @@ class Categorical(BoundedDiscreteDistribution):
         import numpy as np
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
-        ps = [[0.1, 0.6, 0.3], [0.3, 0.1, 0.1, 0.5]]
-        for p in ps:
-            x = range(len(p))
-            plt.plot(x, p, '-o', label='p = {}'.format(p))
+        probs = [[0.1, 0.6, 0.3], [0.3, 0.1, 0.1, 0.5]]
+        for prob in probs:
+            x = range(len(prob))
+            plt.plot(x, prob, '-o', label='p = {}'.format(prob))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
@@ -225,30 +212,24 @@ class Categorical(BoundedDiscreteDistribution):
 
     Parameters
     ----------
-    p : array of floats
-        p > 0 and the elements of p must sum to 1.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - p: probs
+    probs : array of floats
+        probs > 0 and the elements of probs must sum to 1.
     """
 
-    def __init__(self, name, p, **kwargs):
-        super().__init__(name, p=p, **kwargs)
+    def __init__(self, name, probs, **kwargs):
+        super().__init__(name, probs=probs, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        p = conditions["p"]
-        outcomes = tf.range(float(len(p)))
-        return tfd.FiniteDiscrete(outcomes, probs=p)
+        probs = conditions["probs"]
+        outcomes = tf.range(float(len(probs)))
+        return tfd.FiniteDiscrete(outcomes, probs=probs)
 
     def lower_limit(self):
         return 0
 
     def upper_limit(self):
-        return len(self.conditions["p"])
+        return len(self.conditions["probs"])
 
 
 class Geometric(BoundedDiscreteDistribution):
@@ -268,9 +249,9 @@ class Geometric(BoundedDiscreteDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.arange(1, 11)
-        for p in [0.1, 0.25, 0.75]:
-            pmf = st.geom.pmf(x, p)
-            plt.plot(x, pmf, '-o', label='p = {}'.format(p))
+        for prob in [0.1, 0.25, 0.75]:
+            pmf = st.geom.pmf(x, prob)
+            plt.plot(x, pmf, '-o', label='p = {}'.format(prob))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -284,23 +265,17 @@ class Geometric(BoundedDiscreteDistribution):
 
     Parameters
     ----------
-    p : float
-        Probability of success on an individual trial (0 < p <= 1).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - p: probs
+    probs : float
+        Probability of success on an individual trial (0 < probs <= 1).
     """
 
-    def __init__(self, name, p, **kwargs):
-        super().__init__(name, p=p, **kwargs)
+    def __init__(self, name, probs, **kwargs):
+        super().__init__(name, probs=probs, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        p = conditions["p"]
-        return tfd.Geometric(probs=p)
+        probs = conditions["probs"]
+        return tfd.Geometric(probs=probs)
 
     def lower_limit(self):
         return 1
@@ -339,11 +314,11 @@ class NegativeBinomial(PositiveDiscreteDistribution):
             return pmf
 
         x = np.arange(0, 22)
-        alphas = [0.9, 2, 4]
-        mus = [1, 2, 8]
-        for a, m in zip(alphas, mus):
-            pmf = NegBinom(a, m, x)
-            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}'.format(a, m))
+        total_counts = [0.9, 2, 4]
+        probs = [1, 2, 8]
+        for total_count, prob in zip(total_counts, probs):
+            pmf = NegBinom(total_count, prob, x)
+            plt.plot(x, pmf, '-o', label=r'$n$ = {}, $p$ = {}'.format(total_count, prob))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.legend(loc=1)
@@ -356,28 +331,19 @@ class NegativeBinomial(PositiveDiscreteDistribution):
 
     Parameters
     ----------
-    mu : float
-        Poission distribution parameter (mu > 0). Also corresponds to the number of expected
-        successes before the number of desired failures (alpha) is reached.
-    alpha : float
-        Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
-        desired.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu + alpha: total_count
-    - mu / (mu + alpha): probs
+    total_count : int
+        The number of negative Bernoulli trials (i.e. failures) to stop at.
+    probs : float
+        Probability of success on an individual trial (0 < probs <= 1).
     """
 
-    def __init__(self, name, mu, alpha, **kwargs):
-        super().__init__(name, mu=mu, alpha=alpha, **kwargs)
+    def __init__(self, name, total_count, probs, **kwargs):
+        super().__init__(name, total_count=total_count, probs=probs, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu, alpha = conditions["mu"], conditions["alpha"]
-        return tfd.NegativeBinomial(total_count=mu + alpha, probs=mu / (mu + alpha))
+        total_count, probs = conditions["total_count"], conditions["probs"]
+        return tfd.NegativeBinomial(total_count=total_count, probs=probs)
 
 
 class Poisson(PositiveDiscreteDistribution):
@@ -396,9 +362,9 @@ class Poisson(PositiveDiscreteDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.arange(0, 15)
-        for m in [0.5, 3, 8]:
-            pmf = st.poisson.pmf(x, m)
-            plt.plot(x, pmf, '-o', label='$\mu$ = {}'.format(m))
+        for rate in [0.5, 3, 8]:
+            pmf = st.poisson.pmf(x, rate)
+            plt.plot(x, pmf, '-o', label='$\mu$ = {}'.format(rate))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
@@ -413,29 +379,23 @@ class Poisson(PositiveDiscreteDistribution):
 
     Parameters
     ----------
-    mu : float
+    rate : float
         Expected number of occurrences during the given interval
-        (mu >= 0).
+        (rate >= 0).
 
     Notes
     -----
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - mu: rate
     """
 
-    def __init__(self, name, mu, **kwargs):
-        super().__init__(name, mu=mu, **kwargs)
+    def __init__(self, name, rate, **kwargs):
+        super().__init__(name, rate=rate, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        mu = conditions["mu"]
-        return tfd.Poisson(rate=mu)
+        rate = conditions["rate"]
+        return tfd.Poisson(rate=rate)
 
 
 # TODO: Implement this
@@ -643,9 +603,9 @@ class Zipf(PositiveDiscreteDistribution):
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
         x = np.arange(1, 8)
-        for alpha in [1.1, 2., 5.]:
-            pmf = st.zipf.pmf(x, alpha)
-            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}'.format(alpha))
+        for power in [1.1, 2., 5.]:
+            pmf = st.zipf.pmf(x, power)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}'.format(power))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0)
@@ -658,20 +618,14 @@ class Zipf(PositiveDiscreteDistribution):
 
     Parameters
     ----------
-    alpha : float
-        Exponent parameter (alpha > 1).
-
-    Developer Notes
-    ---------------
-    Parameter mappings to TensorFlow Probability are as follows:
-
-    - alpha: power
+    power : float
+        Exponent parameter (power > 1).
     """
 
-    def __init__(self, name, alpha, **kwargs):
-        super().__init__(name, alpha=alpha, **kwargs)
+    def __init__(self, name, power, **kwargs):
+        super().__init__(name, power=power, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        alpha = conditions["alpha"]
-        return tfd.Zipf(power=alpha)
+        power = conditions["power"]
+        return tfd.Zipf(power=power)

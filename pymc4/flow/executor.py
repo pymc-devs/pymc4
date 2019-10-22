@@ -10,6 +10,7 @@ from pymc4 import coroutine_model
 from pymc4 import scopes
 from pymc4 import utils
 from pymc4.distributions import distribution
+from pymc4.distributions.distribution import Deterministic
 
 
 ModelType = Union[types.GeneratorType, coroutine_model.Model]
@@ -111,7 +112,11 @@ class SamplingState:
 
     def collect_log_prob(self):
         all_terms = itertools.chain(
-            (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
+            (
+                dist.log_prob(self.all_values[name])
+                for name, dist in self.distributions.items()
+                if not isinstance(dist, Deterministic)
+            ),
             (p.value for p in self.potentials),
         )
         return sum(map(tf.reduce_sum, all_terms))

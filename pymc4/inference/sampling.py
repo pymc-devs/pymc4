@@ -90,10 +90,11 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
-    logpfn, init = build_logp_function(model, state=state, observed=observed)
+    wrapper = LogProbDeterministicWrapper(model, state=state, observed=observed)
+    parallel_logpfn = wrapper.logpfn()
+    init = wrapper.state
     init_state = list(init.values())
     init_keys = list(init.keys())
-    parallel_logpfn = vectorize_logp_function(logpfn)
     init_state = tile_init(init_state, num_chains)
 
     def trace_fn(_, pkr):
@@ -172,17 +173,48 @@ def build_logp_function(
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
         _, st = flow.evaluate_model_transformed(model, state=st)
-        return st.collect_log_prob()
+        return st.collect_log_prob_and_deterministic()
 
     return logpfn, dict(state.all_unobserved_values)
 
 
 def vectorize_logp_function(logpfn):
     # TODO: vectorize with dict
-    def vectorized_logpfn(*state):
-        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+    def vectorized_logpfn_and_deterministics(*state):
+        return tf.nest.map_structure(tf.vectorized_map, logpfn(*state))
+#    def vectorized_logpfn(*state):
+#        return tuple([
+#            tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+#        ])
 
-    return vectorized_logpfn
+    return vectorized_logpfn_and_deterministics
+
+
+class LogProbDeterministicWrapper:
+    __slots__ = ("_func", "_state", "deterministic_dists", "deterministic_values")
+
+    def __init__(self, model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None):
+        logpfn, self._state = build_logp_function(model=model, observed=observed, state=state)
+        self._func = vectorize_logp_function(logpfn)
+        # TODO: Use model state instead of self._state because part of it can be overwritten
+        self.deterministic_dists = self.state.deterministics
+
+    def __call__(self, *args, **kwargs):
+        output = self._func(*args, **kwargs)
+        log_prob = output[0]
+        self.deterministic_values = output[1:]
+        return log_prob
+
+    @property
+    def logpfn(self):
+        return self.__call__
+
+    @property
+    def state(self):
+        return self._state
+
+    def get_deterministic_values(self, *):
+        return dict(zip(self.deterministic_dists, self.deterministic_values))
 
 
 def tile_init(init, num_repeats):

@@ -98,6 +98,7 @@ class SamplingState:
             potentials = list()
         else:
             potentials = potentials.copy()
+        self.deterministics = [d for d in self.distributions if isinstance(d, Deterministic)]
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
@@ -120,6 +121,9 @@ class SamplingState:
             (p.value for p in self.potentials),
         )
         return sum(map(tf.reduce_sum, all_terms))
+
+    def collect_log_prob_and_deterministic(self):
+        return (self.collect_log_prob(),) + tuple([d.value for d in self.deterministics])
 
     def __repr__(self):
         # display keys only

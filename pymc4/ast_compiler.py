@@ -125,13 +125,13 @@ class AutoNameVisitor(ast.NodeVisitor):
         # raise an exception.
         if not isinstance(yielded, ast.Call):
             msg = "Unable to auto-name: a yielded expression is not a function call."
-            raise ValueError(msg)
+            raise RuntimeError(msg)
 
         # We expect there to be only one target. If there are more, raise an
         # exception.
         if len(names) > 1:
             msg = "Unable to auto-name: expected one target."
-            raise ValueError(msg)
+            raise RuntimeError(msg)
 
         name = names[0].id
         self.random_variable_names.append(name)
@@ -139,6 +139,22 @@ class AutoNameVisitor(ast.NodeVisitor):
         # Recursively visit child nodes.
         self.generic_visit(node)
 
-    # TODO: edge case of augmented and type-annotated assignments.
-    # visit_AugAssign = visit_Assign
-    # visit_AnnAssign = visit_Assign
+
+def parse_random_variable_names(model):
+    """
+    Parameters
+    ----------
+    model : function
+        Model function.
+
+    Returns
+    -------
+    random_variable_names : list
+        List of random variable names.
+    """
+
+    visitor = AutoNameVisitor()
+    uncompiled = uncompile(model.__code__)
+    tree = parse_snippet(*uncompiled)
+    visitor.visit(tree)
+    return visitor.random_variable_names

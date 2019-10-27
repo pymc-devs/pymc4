@@ -1,5 +1,6 @@
 import pymc4 as pm
-from pymc4.ast_compiler import uncompile, parse_snippet, AutoNameVisitor
+from pymc4.ast_compiler import parse_random_variable_names
+import pytest
 
 
 def model_with_only_good_yields():
@@ -27,26 +28,20 @@ def model_with_yield_non_function_call():
 
 
 def test_parsing_model_with_only_good_yields():
-    visitor = AutoNameVisitor()
-    unc = uncompile(model_with_only_good_yields.__code__)
-    tree = parse_snippet(*unc)
-    visitor.visit(tree)
-    names = visitor.random_variable_names
+    names = parse_random_variable_names(model_with_only_good_yields)
     assert names == ["x", "y", "z"]
 
 
 def test_parsing_model_with_yields_and_other_assigns():
-    visitor = AutoNameVisitor()
-    unc = uncompile(model_with_yields_and_other_assigns.__code__)
-    tree = parse_snippet(*unc)
-    visitor.visit(tree)
-    names = visitor.random_variable_names
+    names = parse_random_variable_names(model_with_yields_and_other_assigns)
     assert names == ["x", "y", "z"]
 
 
 def test_parsing_model_with_yield_tuple():
-    pass
+    with pytest.raises(RuntimeError):
+        names = parse_random_variable_names(model_with_yield_tuple)
 
 
 def test_parsing_model_with_yield_non_function_call():
-    pass
+    with pytest.raises(RuntimeError):
+        names = parse_random_variable_names(model_with_yield_non_function_call)

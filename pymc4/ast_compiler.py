@@ -139,6 +139,8 @@ class AutoNameVisitor(ast.NodeVisitor):
 
 def parse_random_variable_names(model):
     """
+    Parse all random variable names for all yielded distributions in a model function.
+
     Parameters
     ----------
     model : function

@@ -114,26 +114,39 @@ def parse_snippet(source, filename, mode, flags, firstlineno, privateprefix_igno
     return a
 
 
-class AutoNameTransformer(ast.NodeTransformer):
-    def visit_Assign(self, tree_node):
-        try:
-            rv_name = tree_node.targets[0].id
-            # Test if creation of known RV
-            func = tree_node.value.func
-            if hasattr(func, "attr"):
-                call = func.attr
-            else:
-                call = func.id
+class AutoNameVisitor(ast.NodeVisitor):
+    def __init__(self):
+        self.random_variable_names = []
 
-            if call not in ALL_RVs:
-                return tree_node
+    def visit_Assign(self, node):
+        names = node.targets  # LHS of assignment expression
+        assigned = node.value  # RHS of assignment expression
 
-            # Test if name keyword is already set
-            if any(kwarg.arg == "name" for kwarg in tree_node.value.keywords):
-                return tree_node
-            else:
-                tree_node.value.keywords.append(ast.keyword("name", ast.Str(rv_name)))
-        except AttributeError:
-            pass
+        # If the assigned value is not a yield expression, skip it.
+        # I.e. do nothing to assignments like `N = 10` or `mu = x.mean()`
+        if not any([isinstance(assigned, expr) for expr in [ast.Yield, ast.YieldFrom]]):
+            return
 
-        return tree_node
+        yielded = assigned.value  # Yielded expression
+
+        # We expect the yielded expression to be a function call. If it is not,
+        # raise an exception.
+        if not isinstance(yielded, ast.Call):
+            msg = "Not a function call!"
+            raise ValueError(msg)
+
+        # We expect there to be only one target. If there are more, raise an
+        # exception.
+        if len(names) > 1:
+            msg = ""
+            raise ValueError(msg)
+
+        name = names[0].id
+        self.random_variable_names.append(name)
+
+        # Recursively visit child nodes.
+        self.generic_visit(node)
+
+    # TODO: edge case of augmented and type-annotated assignments.
+    # visit_AugAssign = visit_Assign
+    # visit_AnnAssign = visit_Assign

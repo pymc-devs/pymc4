@@ -1,43 +1,35 @@
 # Taken from http://code.activestate.com/recipes/578353-code-to-source-and-back/
 
-import ast, inspect, re
-from types import CodeType as code
-
 import __future__
-
-PyCF_MASK = sum(v for k, v in vars(__future__).items() if k.startswith("CO_FUTURE"))
+import ast
+import inspect
+import re
+from types import CodeType as code
 
 from . import distributions
 
+PyCF_MASK = sum(v for k, v in vars(__future__).items() if k.startswith("CO_FUTURE"))
 ALL_RVs = [rv for rv in dir(distributions) if rv[0].isupper()]
 
 
-class Error(Exception):
-    pass
-
-
-class Unsupported(Error):
-    pass
-
-
-class NoSource(Error):
+class SourceCodeNotFoundError(Exception):
     pass
 
 
 def uncompile(c):
     """uncompile(codeobj) -> [source, filename, mode, flags, firstlineno, privateprefix]."""
     if c.co_flags & inspect.CO_NESTED or c.co_freevars:
-        raise Unsupported("nested functions not supported")
+        raise NotImplementedError("nested functions not supported")
     if c.co_name == "<lambda>":
-        raise Unsupported("lambda functions not supported")
+        raise NotImplementedError("lambda functions not supported")
     if c.co_filename == "<string>":
-        raise Unsupported("code without source file not supported")
+        raise NotImplementedError("code without source file not supported")
 
     filename = inspect.getfile(c)
     try:
         lines, firstlineno = inspect.getsourcelines(c)
     except IOError:
-        raise NoSource("source code not available")
+        raise SourceCodeNotFoundError("source code not available")
     source = "".join(lines)
 
     # __X is mangled to _ClassName__X in methods. Find this prefix:
@@ -132,13 +124,13 @@ class AutoNameVisitor(ast.NodeVisitor):
         # We expect the yielded expression to be a function call. If it is not,
         # raise an exception.
         if not isinstance(yielded, ast.Call):
-            msg = "Not a function call!"
+            msg = "Unable to auto-name: a yielded expression is not a function call."
             raise ValueError(msg)
 
         # We expect there to be only one target. If there are more, raise an
         # exception.
         if len(names) > 1:
-            msg = ""
+            msg = "Unable to auto-name: expected one target."
             raise ValueError(msg)
 
         name = names[0].id

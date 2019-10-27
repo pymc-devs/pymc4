@@ -150,8 +150,19 @@ def parse_random_variable_names(model):
     -------
     random_variable_names : list
         List of random variable names.
-    """
 
+    Usage
+    -----
+    ```python
+    import pymc4 as pm
+
+    def model():
+        x = yield pm.Normal(loc=0, scale=1)
+
+    names = parse_random_variable_names(model)
+    assert names == ["x"]
+    ```
+    """
     visitor = AutoNameVisitor()
     uncompiled = uncompile(model.__code__)
     tree = parse_snippet(*uncompiled)

@@ -121,13 +121,13 @@ class AutoNameVisitor(ast.NodeVisitor):
         # We expect the yielded expression to be a function call. If it is not,
         # raise an exception.
         if not isinstance(yielded, ast.Call):
-            msg = "Unable to auto-name: a yielded expression is not a function call."
+            msg = "Unable to auto-name: expected all yielded expressions to be function calls."
             raise RuntimeError(msg)
 
         # We expect there to be only one target. If there are more, raise an
         # exception.
         if len(names) > 1:
-            msg = "Unable to auto-name: expected one target."
+            msg = "Unable to auto-name: expected all yielded expressions to be assigned to only one target."
             raise RuntimeError(msg)
 
         name = names[0].id

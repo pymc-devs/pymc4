@@ -6,10 +6,7 @@ import inspect
 import re
 from types import CodeType as code
 
-from . import distributions
-
 PyCF_MASK = sum(v for k, v in vars(__future__).items() if k.startswith("CO_FUTURE"))
-ALL_RVs = [rv for rv in dir(distributions) if rv[0].isupper()]
 
 
 class SourceCodeNotFoundError(Exception):
@@ -51,7 +48,7 @@ def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None
         a = parse_snippet(source, filename, mode, flags, firstlineno)
     node = a.body[0]
     if not isinstance(node, ast.FunctionDef):
-        raise Error("Expecting function AST node")
+        raise ValueError("Expecting function AST node")
 
     c0 = compile(a, filename, mode, flags, True)
 
@@ -62,7 +59,7 @@ def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None
         if c.co_name == node.name and c.co_firstlineno == node.lineno:
             break
     else:
-        raise Error("Function body code not found")
+        raise RuntimeError("Function body code not found")
 
     # Re-mangle private names:
     if privateprefix is not None:

@@ -105,6 +105,7 @@ def parse_snippet(source, filename, mode, flags, firstlineno, privateprefix_igno
 
 class AutoNameVisitor(ast.NodeVisitor):
     def __init__(self):
+        super(AutoNameVisitor, self).__init__()
         self.random_variable_names = []
 
     def visit_Assign(self, node):

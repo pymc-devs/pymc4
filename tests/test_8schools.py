@@ -14,7 +14,7 @@ def schools_pm4():
 
     theta = mu + tau * eta
 
-    obs = yield pm4.Normal("obs", theta, sigma=sigma, observed=y)
+    obs = yield pm4.Normal("obs", theta, sigma, observed=y)
     return obs
 
 

@@ -1,43 +1,32 @@
 # Taken from http://code.activestate.com/recipes/578353-code-to-source-and-back/
 
-import ast, inspect, re
-from types import CodeType as code
-
 import __future__
+import ast
+import inspect
+import re
+from types import CodeType as code
 
 PyCF_MASK = sum(v for k, v in vars(__future__).items() if k.startswith("CO_FUTURE"))
 
-from . import distributions
 
-ALL_RVs = [rv for rv in dir(distributions) if rv[0].isupper()]
-
-
-class Error(Exception):
-    pass
-
-
-class Unsupported(Error):
-    pass
-
-
-class NoSource(Error):
+class SourceCodeNotFoundError(Exception):
     pass
 
 
 def uncompile(c):
     """uncompile(codeobj) -> [source, filename, mode, flags, firstlineno, privateprefix]."""
     if c.co_flags & inspect.CO_NESTED or c.co_freevars:
-        raise Unsupported("nested functions not supported")
+        raise NotImplementedError("nested functions not supported")
     if c.co_name == "<lambda>":
-        raise Unsupported("lambda functions not supported")
+        raise NotImplementedError("lambda functions not supported")
     if c.co_filename == "<string>":
-        raise Unsupported("code without source file not supported")
+        raise NotImplementedError("code without source file not supported")
 
     filename = inspect.getfile(c)
     try:
         lines, firstlineno = inspect.getsourcelines(c)
     except IOError:
-        raise NoSource("source code not available")
+        raise SourceCodeNotFoundError("source code not available")
     source = "".join(lines)
 
     # __X is mangled to _ClassName__X in methods. Find this prefix:
@@ -59,7 +48,7 @@ def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None
         a = parse_snippet(source, filename, mode, flags, firstlineno)
     node = a.body[0]
     if not isinstance(node, ast.FunctionDef):
-        raise Error("Expecting function AST node")
+        raise ValueError("Expecting function AST node")
 
     c0 = compile(a, filename, mode, flags, True)
 
@@ -70,7 +59,7 @@ def recompile(source, filename, mode, flags=0, firstlineno=1, privateprefix=None
         if c.co_name == node.name and c.co_firstlineno == node.lineno:
             break
     else:
-        raise Error("Function body code not found")
+        raise RuntimeError("Function body code not found")
 
     # Re-mangle private names:
     if privateprefix is not None:
@@ -114,26 +103,69 @@ def parse_snippet(source, filename, mode, flags, firstlineno, privateprefix_igno
     return a
 
 
-class AutoNameTransformer(ast.NodeTransformer):
-    def visit_Assign(self, tree_node):
-        try:
-            rv_name = tree_node.targets[0].id
-            # Test if creation of known RV
-            func = tree_node.value.func
-            if hasattr(func, "attr"):
-                call = func.attr
-            else:
-                call = func.id
+class AutoNameVisitor(ast.NodeVisitor):
+    def __init__(self):
+        super(AutoNameVisitor, self).__init__()
+        self.random_variable_names = []
 
-            if call not in ALL_RVs:
-                return tree_node
+    def visit_Assign(self, node):
+        names = node.targets  # LHS of assignment expression
+        assigned = node.value  # RHS of assignment expression
 
-            # Test if name keyword is already set
-            if any(kwarg.arg == "name" for kwarg in tree_node.value.keywords):
-                return tree_node
-            else:
-                tree_node.value.keywords.append(ast.keyword("name", ast.Str(rv_name)))
-        except AttributeError:
-            pass
+        # If the assigned value is not a yield expression, skip it.
+        # I.e. do nothing to assignments like `N = 10` or `mu = x.mean()`
+        if not any([isinstance(assigned, expr) for expr in [ast.Yield, ast.YieldFrom]]):
+            return
 
-        return tree_node
+        yielded = assigned.value  # Yielded expression
+
+        # We expect the yielded expression to be a function call. If it is not,
+        # raise an exception.
+        if not isinstance(yielded, ast.Call):
+            msg = "Unable to auto-name: expected all yielded expressions to be function calls."
+            raise RuntimeError(msg)
+
+        # We expect there to be only one target. If there are more, raise an
+        # exception.
+        if len(names) > 1:
+            msg = "Unable to auto-name: expected all yielded expressions to be assigned to only one target."
+            raise RuntimeError(msg)
+
+        name = names[0].id
+        self.random_variable_names.append(name)
+
+        # Recursively visit child nodes.
+        self.generic_visit(node)
+
+
+def parse_random_variable_names(model):
+    """
+    Parse all random variable names for all yielded distributions in a model function.
+
+    Parameters
+    ----------
+    model : function
+        Model function.
+
+    Returns
+    -------
+    random_variable_names : list
+        List of random variable names.
+
+    Usage
+    -----
+    ```python
+    import pymc4 as pm
+
+    def model():
+        x = yield pm.Normal(loc=0, scale=1)
+
+    names = parse_random_variable_names(model)
+    assert names == ["x"]
+    ```
+    """
+    visitor = AutoNameVisitor()
+    uncompiled = uncompile(model.__code__)
+    tree = parse_snippet(*uncompiled)
+    visitor.visit(tree)
+    return visitor.random_variable_names

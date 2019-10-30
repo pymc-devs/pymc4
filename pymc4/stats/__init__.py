@@ -9,6 +9,7 @@ See https://arviz-devs.github.io/arviz/ for details.
 import sys
 import arviz as az
 
+
 # Access all ArviZ statistics
 for stat in az.stats.__all__:
     setattr(sys.modules[__name__], stat, getattr(az.stats, stat))

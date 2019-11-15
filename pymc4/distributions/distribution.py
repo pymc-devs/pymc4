@@ -2,6 +2,7 @@ import abc
 import copy
 from typing import Optional, Union, Any
 
+import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
 from . import transforms
@@ -160,20 +161,22 @@ class Deterministic(Model):
 
     __slots__ = ("value",)
 
-    def __init__(self, name: Optional[NameType], value: Any, observed: Optional[Any] = None):
-        if observed is not None:
-            raise TypeError(
-                "Deterministics cannot have observed values! You passed observed={}".format(
-                    observed
-                )
-            )
-        self.value = value
+    def __init__(self, name: Optional[NameType], value: Any):
+        self.value = tf.identity(value)
         super().__init__(
-            self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
+            self.get_value, name=name, keep_return=True, keep_auxiliary=False
         )
 
-    def unpack_distribution(self):
-        return unpack(self.value)
+    def get_value(self):
+        return self.value
+
+    @property
+    def value_numpy(self):
+        return self.value.numpy()
+
+    @property
+    def is_anonymous(self):
+        return self.name is None
 
 
 class ContinuousDistribution(Distribution):

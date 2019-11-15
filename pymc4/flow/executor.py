@@ -10,12 +10,11 @@ from pymc4 import coroutine_model
 from pymc4 import scopes
 from pymc4 import utils
 from pymc4.distributions import distribution
-from pymc4.distributions.distribution import Deterministic
 
 
 ModelType = Union[types.GeneratorType, coroutine_model.Model]
 MODEL_TYPES = (types.GeneratorType, coroutine_model.Model)
-MODEL_AND_POTENTIAL_TYPES = (types.GeneratorType, coroutine_model.Model, distribution.Potential)
+MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES = (types.GeneratorType, coroutine_model.Model, distribution.Potential, distribution.Deterministic)
 
 
 class EvaluationError(RuntimeError):
@@ -67,6 +66,7 @@ class SamplingState:
         "all_unobserved_values",
         "distributions",
         "potentials",
+        "deterministics",
     )
 
     def __init__(
@@ -76,6 +76,7 @@ class SamplingState:
         observed_values: Dict[str, Any] = None,
         distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
+        deterministics: Dict[str, distribution.Deterministic] = None,
     ):
         # verbose __init__
         if transformed_values is None:
@@ -98,7 +99,10 @@ class SamplingState:
             potentials = list()
         else:
             potentials = potentials.copy()
-        self.deterministics = [d for d in self.distributions if isinstance(d, Deterministic)]
+        if deterministics is None:
+            deterministics = dict()
+        else:
+            deterministics = deterministics.copy()
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
@@ -110,26 +114,28 @@ class SamplingState:
         )
         self.distributions = distributions
         self.potentials = potentials
+        self.deterministics = deterministics
 
     def collect_log_prob(self):
         all_terms = itertools.chain(
             (
                 dist.log_prob(self.all_values[name])
                 for name, dist in self.distributions.items()
-                if not isinstance(dist, Deterministic)
+                if not isinstance(dist, distribution.Deterministic)
             ),
             (p.value for p in self.potentials),
         )
         return sum(map(tf.reduce_sum, all_terms))
 
-    def collect_log_prob_and_deterministic(self):
-        return (self.collect_log_prob(),) + tuple([d.value for d in self.deterministics])
+    def collect_log_prob_and_deterministics(self):
+        return (self.collect_log_prob(),) + tuple(self.deterministics.values())
 
     def __repr__(self):
         # display keys only
         untransformed_values = list(self.untransformed_values)
         transformed_values = list(self.transformed_values)
         observed_values = list(self.observed_values)
+        deterministics = list(self.deterministics)
         # format like dist:name
         distributions = [
             "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
@@ -148,7 +154,9 @@ class SamplingState:
             + indent
             + "distributions: {}\n"
             + indent
-            + "num_potentials={})"
+            + "num_potentials={}\n"
+            + indent
+            + "deterministics: {})"
         ).format(
             self.__class__.__name__,
             untransformed_values,
@@ -156,12 +164,14 @@ class SamplingState:
             observed_values,
             distributions,
             num_potentials,
+            deterministics,
         )
 
     @classmethod
-    def from_values(cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None):
+    def from_values(cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None,
+                    deterministics: Dict[str, Any] = None):
         if values is None:
-            return cls(observed_values=observed_values)
+            return cls(observed_values=observed_values, deterministics=deterministics)
         transformed_values = dict()
         untransformed_values = dict()
         # split by `nest/name` or `nest/__transform_name`
@@ -171,7 +181,7 @@ class SamplingState:
                 transformed_values[fullname] = values[fullname]
             else:
                 untransformed_values[fullname] = values[fullname]
-        return cls(transformed_values, untransformed_values, observed_values)
+        return cls(transformed_values, untransformed_values, observed_values, deterministics=deterministics)
 
     def clone(self):
         return self.__class__(
@@ -180,6 +190,7 @@ class SamplingState:
             observed_values=self.observed_values,
             distributions=self.distributions,
             potentials=self.potentials,
+            deterministics=self.deterministics,
         )
 
     def as_sampling_state(self) -> "SamplingState":
@@ -190,7 +201,7 @@ class SamplingState:
             1. Check there is at least one distribution
             2. Check all transformed distributions are autotransformed
             3. Remove untransformed values if transformed are present
-            4. Remove all other irrelevant values
+            4. Remove all other irrelevant values except for deterministics
         """
         if not self.distributions:
             raise TypeError(
@@ -231,6 +242,7 @@ class SamplingState:
             transformed_values=transformed_values,
             untransformed_values=untransformed_values,
             observed_values=observed_values,
+            deterministics=self.deterministics,
         )
 
 
@@ -246,7 +258,7 @@ class SamplingExecutor:
     """
 
     def validate_return_object(self, return_object: Any):
-        if isinstance(return_object, MODEL_AND_POTENTIAL_TYPES):
+        if isinstance(return_object, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
             raise EvaluationError(
                 "Return values should not contain instances of "
                 "apm.coroutine_model.Model`, "
@@ -268,6 +280,7 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
+        deterministics: Dict[str, Any] = None,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -285,9 +298,9 @@ class SamplingExecutor:
         # as general as possible, just to restrict the imagination and reduce complexity.
 
         if state is None:
-            state = self.new_state(values=values, observed=observed)
+            state = self.new_state(values=values, observed=observed, deterministics=deterministics)
         else:
-            if values or observed:
+            if values or observed or deterministics:
                 raise ValueError("Provided arguments along with not empty state")
         if _validate_state:
             self.validate_state(state)
@@ -395,7 +408,7 @@ class SamplingExecutor:
             try:
                 with model_info["scope"]:
                     dist = control_flow.send(return_value)
-                    if not isinstance(dist, MODEL_AND_POTENTIAL_TYPES):
+                    if not isinstance(dist, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
                         # prohibit any unknown type
                         error = EvaluationError(
                             "Type {} can't be processed in evaluation".format(type(dist))
@@ -411,6 +424,12 @@ class SamplingExecutor:
                     if isinstance(dist, distribution.Potential):
                         state.potentials.append(dist)
                         return_value = dist
+                    elif isinstance(dist, distribution.Deterministic):
+                        try:
+                            return_value, state = self.proceed_deterministic(dist, state)
+                        except EvaluationError as error:
+                            control_flow.throw(error)
+                            raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(dist, state)
@@ -458,9 +477,9 @@ class SamplingExecutor:
     __call__ = evaluate_model
 
     def new_state(
-        self, values: Dict[str, Any] = None, observed: Dict[str, Any] = None
+        self, values: Dict[str, Any] = None, observed: Dict[str, Any] = None, deterministics: Dict[str, Any] = None,
     ) -> SamplingState:
-        return SamplingState.from_values(values=values, observed_values=observed)
+        return SamplingState.from_values(values=values, observed_values=observed, deterministics=deterministics)
 
     def validate_state(self, state):
         if state.transformed_values:
@@ -516,6 +535,26 @@ class SamplingExecutor:
         else:
             return_value = state.untransformed_values[scoped_name] = dist.sample()
         state.distributions[scoped_name] = dist
+        return return_value, state
+
+    def proceed_deterministic(
+        self, deterministic: distribution.Deterministic, state: SamplingState
+    ) -> Tuple[Any, SamplingState]:
+        # TODO: docs
+        if deterministic.is_anonymous:
+            raise EvaluationError("Attempting to create an anonymous Deterministic")
+        scoped_name = scopes.variable_name(deterministic.name)
+        if scoped_name in state.deterministics:
+            raise EvaluationError(
+                "Attempting to create a duplicate deterministic {!r}, "
+                "this may happen if you forget to use `pm.name_scope()` when calling same "
+                "model/function twice without providing explicit names. If you see this "
+                "error message and the function being called is not wrapped with "
+                "`pm.model`, you should better wrap it to provide explicit name for this model".format(
+                    scoped_name
+                )
+            )
+        state.deterministics[scoped_name] = return_value = deterministic.value
         return return_value, state
 
     def prepare_model_control_flow(

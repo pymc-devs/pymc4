@@ -3,6 +3,7 @@ import pymc4 as pm
 import math
 import numpy as np
 from pymc4 import distributions as dist
+import tensorflow as tf
 
 
 @pytest.fixture("module")
@@ -75,6 +76,24 @@ def class_model():
             return norm
 
     return ClassModel()
+
+
+@pytest.fixture("module")
+def model_with_deterministics():
+    expected_deterministics = ["model/abs_norm", "model/sine_norm", "model/norm_copy"]
+    expected_ops = [np.abs, np.sin, lambda x: x]
+    expected_ops_inputs = [["model/norm"], ["model/norm"], ["model/norm"]]
+
+    @pm.model
+    def model():
+        norm = yield dist.Normal("norm", 0, 1)
+        abs_norm = yield dist.Deterministic("abs_norm", tf.abs(norm))
+        sine_norm = yield dist.Deterministic("sine_norm", tf.sin(norm))
+        norm_copy = yield dist.Deterministic("norm_copy", norm)
+        obs = yield dist.Normal("obs", 0, abs_norm)
+        return obs
+
+    return model, expected_deterministics, expected_ops, expected_ops_inputs
 
 
 def test_class_model(class_model):
@@ -442,3 +461,42 @@ def test_differently_shaped_logp():
 
     _, state = pm.evaluate_model(model())
     state.collect_log_prob()  # this should work
+
+
+def test_deterministics(model_with_deterministics):
+    model, expected_deterministics, expected_ops, expected_ops_inputs = model_with_deterministics
+    _, state = pm.evaluate_model(model())
+
+    assert len(state.deterministics) == len(expected_deterministics)
+    assert set(expected_deterministics) <= set(state.deterministics)
+    for expected_deterministic, op, op_inputs in zip(
+        expected_deterministics, expected_ops, expected_ops_inputs
+    ):
+        inputs = [v for k, v in state.all_values.items() if k in op_inputs]
+        out = op(*inputs)
+        np.testing.assert_allclose(state.deterministics[expected_deterministic], out)
+
+
+def test_collect_log_prob_and_deterministics(model_with_deterministics):
+    model, expected_deterministics, expected_ops, expected_ops_inputs = model_with_deterministics
+    _, state = pm.evaluate_model(model())
+    vals = state.collect_log_prob_and_deterministics()
+    log_prob = vals[0]
+    deterministics = vals[1:]
+    for expected_deterministic, deterministic in zip(expected_deterministics, deterministics):
+        assert state.deterministics[expected_deterministic] == deterministic
+    assert log_prob == state.collect_log_prob()
+
+
+def test_collect_log_prob_and_deterministics_without_deterministics(simple_model):
+    model = simple_model
+    _, state = pm.evaluate_model(model())
+    vals = state.collect_log_prob_and_deterministics()
+    log_prob = vals[0]
+    deterministics = vals[1:]
+    assert len(deterministics) == 0
+    assert log_prob == state.collect_log_prob()
+
+
+def test_vectorize_log_prob_det_function(model_with_deterministics):
+    pass

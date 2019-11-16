@@ -201,7 +201,7 @@ class SamplingState:
             1. Check there is at least one distribution
             2. Check all transformed distributions are autotransformed
             3. Remove untransformed values if transformed are present
-            4. Remove all other irrelevant values except for deterministics
+            4. Remove all other irrelevant values
         """
         if not self.distributions:
             raise TypeError(
@@ -242,7 +242,6 @@ class SamplingState:
             transformed_values=transformed_values,
             untransformed_values=untransformed_values,
             observed_values=observed_values,
-            deterministics=self.deterministics,
         )
 
 

@@ -163,9 +163,7 @@ class Deterministic(Model):
 
     def __init__(self, name: Optional[NameType], value: Any):
         self.value = tf.identity(value)
-        super().__init__(
-            self.get_value, name=name, keep_return=True, keep_auxiliary=False
-        )
+        super().__init__(self.get_value, name=name, keep_return=True, keep_auxiliary=False)
 
     def get_value(self):
         return self.value

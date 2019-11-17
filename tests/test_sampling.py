@@ -11,6 +11,7 @@ def simple_model():
     def simple_model():
         norm = yield pm.Normal("norm", 0, 1)
         return norm
+
     return simple_model
 
 
@@ -21,17 +22,17 @@ def simple_model_with_deterministic(simple_model):
         norm = yield simple_model()
         determ = yield pm.Deterministic("determ", norm * 2)
         return determ
+
     return simple_model_with_deterministic
 
 
 def test_sample_deterministics(simple_model_with_deterministic):
     model = simple_model_with_deterministic()
     trace, stats = pm.inference.sampling.sample(
-        model=model,
-        num_samples=1000,
-        num_chains=10,
-        burn_in=100,
-        step_size=0.1,
+        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1
     )
-    print(trace)
-    print(stats)
+    norm = "simple_model_with_deterministic/simple_model/norm"
+    determ = "simple_model_with_deterministic/determ"
+    print(trace[norm])
+    print(trace[determ])
+    assert trace[norm] * 2 == trace[determ]

@@ -14,7 +14,12 @@ from pymc4.distributions import distribution
 
 ModelType = Union[types.GeneratorType, coroutine_model.Model]
 MODEL_TYPES = (types.GeneratorType, coroutine_model.Model)
-MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES = (types.GeneratorType, coroutine_model.Model, distribution.Potential, distribution.Deterministic)
+MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES = (
+    types.GeneratorType,
+    coroutine_model.Model,
+    distribution.Potential,
+    distribution.Deterministic,
+)
 
 
 class EvaluationError(RuntimeError):
@@ -168,8 +173,12 @@ class SamplingState:
         )
 
     @classmethod
-    def from_values(cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None,
-                    deterministics: Dict[str, Any] = None):
+    def from_values(
+        cls,
+        values: Dict[str, Any] = None,
+        observed_values: Dict[str, Any] = None,
+        deterministics: Dict[str, Any] = None,
+    ):
         if values is None:
             return cls(observed_values=observed_values, deterministics=deterministics)
         transformed_values = dict()
@@ -181,7 +190,9 @@ class SamplingState:
                 transformed_values[fullname] = values[fullname]
             else:
                 untransformed_values[fullname] = values[fullname]
-        return cls(transformed_values, untransformed_values, observed_values, deterministics=deterministics)
+        return cls(
+            transformed_values, untransformed_values, observed_values, deterministics=deterministics
+        )
 
     def clone(self):
         return self.__class__(
@@ -476,9 +487,14 @@ class SamplingExecutor:
     __call__ = evaluate_model
 
     def new_state(
-        self, values: Dict[str, Any] = None, observed: Dict[str, Any] = None, deterministics: Dict[str, Any] = None,
+        self,
+        values: Dict[str, Any] = None,
+        observed: Dict[str, Any] = None,
+        deterministics: Dict[str, Any] = None,
     ) -> SamplingState:
-        return SamplingState.from_values(values=values, observed_values=observed, deterministics=deterministics)
+        return SamplingState.from_values(
+            values=values, observed_values=observed, deterministics=deterministics
+        )
 
     def validate_state(self, state):
         if state.transformed_values:

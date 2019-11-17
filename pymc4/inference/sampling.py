@@ -90,7 +90,9 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
-    logpfn = LogProbDeterministicWrapper(model, state=state, observed=observed)
+    logpfn = LogProbDeterministicWrapper(
+        model, state=state, observed=observed, num_chains=num_chains
+    )
     init = logpfn.all_unobserved
     init_state = list(init.values())
     init_keys = list(init.keys())
@@ -103,7 +105,7 @@ def sample(
             pkr.inner_results.has_divergence,
             pkr.inner_results.energy,
             pkr.inner_results.log_accept_ratio,
-        ) + logpfn.deterministic_values
+        ) + logpfn.get_deterministic_values()
 
     @tf.function(autograph=False)
     def run_chains(init, step_size):
@@ -140,12 +142,13 @@ def sample(
     posterior = dict(zip(init_keys, results))
     # Keep in sync with pymc3 naming convention
     deterministic_names = logpfn.deterministic_names
-    sampler_stats = dict(
-        zip(
-            ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"] + deterministic_names,
-            sample_stats,
-        )
-    )
+    stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
+    if len(sample_stats) > len(stat_names):
+        deterministic_values = sample_stats[len(stat_names) :]
+        sample_stats = sample_stats[: len(stat_names)]
+    sampler_stats = dict(zip(stat_names, sample_stats))
+    if len(deterministic_names) > 0:
+        posterior.update(dict(zip(deterministic_names, deterministic_values)))
     return posterior, sampler_stats
 
 
@@ -153,24 +156,42 @@ class LogProbDeterministicWrapper:
     __slots__ = ("_func", "_state", "all_unobserved", "deterministic_names", "deterministic_values")
 
     def __init__(
-        self, model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+        self,
+        model,
+        observed: Optional[dict] = None,
+        state: Optional[flow.SamplingState] = None,
+        num_chains: Optional[int] = 1,
     ):
-        state = self.prepare_state(model=model, observed=observed, state=state)
-        
-        logp_det_fn, self.all_unobserved = self.build_logp_and_deterministics_function(model=model, state=state)
+        state = self.prepare_state(
+            model=model, observed=observed, state=state, num_chains=num_chains
+        )
+
+        logp_det_fn, self.all_unobserved = self.build_logp_and_deterministics_function(
+            model=model, state=state
+        )
         self._func = self.vectorize_logp_det_function(logp_det_fn)
 
     def __call__(self, *args, **kwargs):
+        # Func returns the log_prob but also returns the deterministics. We
+        # Need to return log_prob only, and store the deterministics in a
+        # stateful variable
         output = self._func(*args, **kwargs)
         log_prob = output[0]
-        self.deterministic_values = output[1:]
+        for i, deterministic_value in enumerate(output[1:]):
+            self.deterministic_values[i].assign(deterministic_value)
         return log_prob
 
     @property
     def state(self):
         return self._state
 
-    def prepare_state(self, model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None):
+    def prepare_state(
+        self,
+        model,
+        observed: Optional[dict] = None,
+        state: Optional[flow.SamplingState] = None,
+        num_chains: int = 1,
+    ):
         if not isinstance(model, Model):
             raise TypeError(
                 "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
@@ -180,16 +201,23 @@ class LogProbDeterministicWrapper:
         if state is not None and observed is not None:
             raise ValueError("Can't use both `state` and `observed` arguments")
         if state is None:
-            state = initialize_state(model, observed=observed)
-        else:
-            state = state.as_sampling_state()
-        self._state = state
-        self.deterministic_names = list(state.deterministics)
+            _, state = flow.evaluate_model_transformed(model, observed=observed)
+        self.init_deterministic_variables(state.deterministics, num_chains=num_chains)
+        state = self._state = state.as_sampling_state()
         return state
 
-    def build_logp_and_deterministics_function(
-        self, model, state
-    ):
+    def init_deterministic_variables(self, deterministics, num_chains=0):
+        self.deterministic_names = list(deterministics)
+        values = deterministics.values()
+        if num_chains > 0:
+            self.deterministic_values = [
+                tf.Variable(tf.tile(tf.expand_dims(value, 0), [num_chains] + [1] * value.ndim))
+                for value in values
+            ]
+        else:
+            self.deterministic_values = [tf.Variable(value) for value in values]
+
+    def build_logp_and_deterministics_function(self, model, state):
         observed = state.observed_values
         deterministics = state.deterministics
         unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
@@ -200,16 +228,22 @@ class LogProbDeterministicWrapper:
                 raise TypeError("Either list state should be passed or a dict one")
             elif values:
                 kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs, observed_values=observed, deterministics=deterministics)
+            st = flow.SamplingState.from_values(
+                kwargs, observed_values=observed, deterministics=deterministics
+            )
             _, st = flow.evaluate_model_transformed(model, state=st)
             return st.collect_log_prob_and_deterministics()
-    
+
         return logp_det_fn, dict(state.all_unobserved_values)
 
     def vectorize_logp_det_function(self, logp_det_fn):
         def parallel_logp_det_function(*state):
-             return tf.vectorized_map(lambda mini_state: logp_det_fn(*mini_state), state)
+            return tf.vectorized_map(lambda mini_state: logp_det_fn(*mini_state), state)
+
         return parallel_logp_det_function
+
+    def get_deterministic_values(self):
+        return tuple([value.read_value() for value in self.deterministic_values])
 
 
 def tile_init(init, num_repeats):

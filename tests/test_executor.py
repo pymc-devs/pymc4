@@ -275,7 +275,7 @@ def test_observed_do_not_produce_transformed_values_case_override(transformed_mo
 
 
 def test_observed_do_not_produce_transformed_values_case_override_with_set_value(
-    transformed_model_with_observed
+    transformed_model_with_observed,
 ):
     _, state = pm.evaluate_model_transformed(
         transformed_model_with_observed(), values=dict(n=1.0), observed=dict(n=None)
@@ -295,7 +295,7 @@ def test_observed_do_not_produce_transformed_values_case_override_with_set_value
 
 
 def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_transformed_executor(
-    transformed_model_with_observed
+    transformed_model_with_observed,
 ):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         _, state = pm.evaluate_model_transformed(
@@ -306,7 +306,7 @@ def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_transform
 
 
 def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_untransformed_executor(
-    transformed_model_with_observed
+    transformed_model_with_observed,
 ):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         _, state = pm.evaluate_model(transformed_model_with_observed(), values=dict(n=0.0))

@@ -2,7 +2,6 @@ import abc
 import copy
 from typing import Optional, Union, Any
 
-import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
 from . import transforms
@@ -162,7 +161,7 @@ class Deterministic(Model):
     __slots__ = ("value",)
 
     def __init__(self, name: Optional[NameType], value: Any):
-        self.value = tf.identity(value)
+        self.value = value
         super().__init__(self.get_value, name=name, keep_return=True, keep_auxiliary=False)
 
     def get_value(self):

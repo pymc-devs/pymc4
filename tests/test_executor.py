@@ -477,26 +477,5 @@ def test_deterministics(model_with_deterministics):
         np.testing.assert_allclose(state.deterministics[expected_deterministic], out)
 
 
-def test_collect_log_prob_and_deterministics(model_with_deterministics):
-    model, expected_deterministics, expected_ops, expected_ops_inputs = model_with_deterministics
-    _, state = pm.evaluate_model(model())
-    vals = state.collect_log_prob_and_deterministics()
-    log_prob = vals[0]
-    deterministics = vals[1:]
-    for expected_deterministic, deterministic in zip(expected_deterministics, deterministics):
-        assert state.deterministics[expected_deterministic] == deterministic
-    assert log_prob == state.collect_log_prob()
-
-
-def test_collect_log_prob_and_deterministics_without_deterministics(simple_model):
-    model = simple_model
-    _, state = pm.evaluate_model(model())
-    vals = state.collect_log_prob_and_deterministics()
-    log_prob = vals[0]
-    deterministics = vals[1:]
-    assert len(deterministics) == 0
-    assert log_prob == state.collect_log_prob()
-
-
 def test_vectorize_log_prob_det_function(model_with_deterministics):
     pass

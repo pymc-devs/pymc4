@@ -132,8 +132,8 @@ class SamplingState:
         )
         return sum(map(tf.reduce_sum, all_terms))
 
-    def collect_log_prob_and_deterministics(self):
-        return (self.collect_log_prob(),) + tuple(self.deterministics.values())
+    def collect_deterministics(self):
+        return tuple(self.deterministics.values())
 
     def __repr__(self):
         # display keys only

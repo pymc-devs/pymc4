@@ -26,13 +26,18 @@ def simple_model_with_deterministic(simple_model):
     return simple_model_with_deterministic
 
 
-def test_sample_deterministics(simple_model_with_deterministic):
+@pytest.fixture(scope="module", params=[True, False], ids=str)
+def xla_fixture(request):
+    return request.param
+
+
+def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
+    if xla_fixture:
+        pytest.skip("XLA in sampling is still not fully supported")
     model = simple_model_with_deterministic()
     trace, stats = pm.inference.sampling.sample(
-        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1
+        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
     )
     norm = "simple_model_with_deterministic/simple_model/norm"
     determ = "simple_model_with_deterministic/determ"
-    print(trace[norm])
-    print(trace[determ])
-    assert trace[norm] * 2 == trace[determ]
+    np.testing.assert_allclose(trace[determ], trace[norm] * 2)

@@ -61,9 +61,9 @@ def sample(
     >>> import pymc4 as pm
     >>> from pymc4 import distributions as dist
     >>> import numpy as np
-
+    
     This particular model has a latent variable `sd`
-
+    
     >>> @pm.model
     ... def nested_model(cond):
     ...     sd = yield dist.HalfNormal("sd", 1., transform=dist.transforms.Log())  #TODO: Auto-transform
@@ -90,27 +90,29 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
-    logpfn = LogProbDeterministicWrapper(
-        model, state=state, observed=observed, num_chains=num_chains
+    logpfn, init = build_logp_function(model, state=state, observed=observed)
+    _deterministics_callback, deterministic_names = build_deterministic_function(
+        model, observed=observed, state=state
     )
-    init = logpfn.all_unobserved
     init_state = list(init.values())
     init_keys = list(init.keys())
+    parallel_logpfn = vectorize_logp_function(logpfn)
+    deterministics_callback = vectorize_logp_function(_deterministics_callback)
     init_state = tile_init(init_state, num_chains)
 
-    def trace_fn(_, pkr):
+    def trace_fn(current_state, pkr):
         return (
             pkr.inner_results.target_log_prob,
             pkr.inner_results.leapfrogs_taken,
             pkr.inner_results.has_divergence,
             pkr.inner_results.energy,
             pkr.inner_results.log_accept_ratio,
-        ) + logpfn.get_deterministic_values()
+        ) + tuple(deterministics_callback(*current_state))
 
     @tf.function(autograph=False)
     def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
-            target_log_prob_fn=logpfn, step_size=step_size, **(nuts_kwargs or dict())
+            target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
         )
         adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
             inner_kernel=nuts_kernel,
@@ -141,7 +143,6 @@ def sample(
 
     posterior = dict(zip(init_keys, results))
     # Keep in sync with pymc3 naming convention
-    deterministic_names = logpfn.deterministic_names
     stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
     if len(sample_stats) > len(stat_names):
         deterministic_values = sample_stats[len(stat_names) :]
@@ -152,98 +153,78 @@ def sample(
     return posterior, sampler_stats
 
 
-class LogProbDeterministicWrapper:
-    __slots__ = ("_func", "_state", "all_unobserved", "deterministic_names", "deterministic_values")
-
-    def __init__(
-        self,
-        model,
-        observed: Optional[dict] = None,
-        state: Optional[flow.SamplingState] = None,
-        num_chains: Optional[int] = 1,
-    ):
-        state = self.prepare_state(
-            model=model, observed=observed, state=state, num_chains=num_chains
-        )
-
-        logp_det_fn, self.all_unobserved = self.build_logp_and_deterministics_function(
-            model=model, state=state
-        )
-        self._func = self.vectorize_logp_det_function(logp_det_fn)
-
-    def __call__(self, *args, **kwargs):
-        # Func returns the log_prob but also returns the deterministics. We
-        # Need to return log_prob only, and store the deterministics in a
-        # stateful variable
-        output = self._func(*args, **kwargs)
-        log_prob = output[0]
-        for i, deterministic_value in enumerate(output[1:]):
-            self.deterministic_values[i].assign(deterministic_value)
-        return log_prob
-
-    @property
-    def state(self):
-        return self._state
-
-    def prepare_state(
-        self,
-        model,
-        observed: Optional[dict] = None,
-        state: Optional[flow.SamplingState] = None,
-        num_chains: int = 1,
-    ):
-        if not isinstance(model, Model):
-            raise TypeError(
-                "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
-                    type(model)
-                )
+def build_logp_function(
+    model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+):
+    if not isinstance(model, Model):
+        raise TypeError(
+            "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
+                type(model)
             )
-        if state is not None and observed is not None:
-            raise ValueError("Can't use both `state` and `observed` arguments")
-        if state is None:
-            _, state = flow.evaluate_model_transformed(model, observed=observed)
-        self.init_deterministic_variables(state.deterministics, num_chains=num_chains)
-        state = self._state = state.as_sampling_state()
-        return state
+        )
+    if state is not None and observed is not None:
+        raise ValueError("Can't use both `state` and `observed` arguments")
+    if state is None:
+        state = initialize_state(model, observed=observed)
+    else:
+        state = state.as_sampling_state()
 
-    def init_deterministic_variables(self, deterministics, num_chains=0):
-        self.deterministic_names = list(deterministics)
-        values = deterministics.values()
-        if num_chains > 0:
-            self.deterministic_values = [
-                tf.Variable(tf.tile(tf.expand_dims(value, 0), [num_chains] + [1] * value.ndim))
-                for value in values
-            ]
-        else:
-            self.deterministic_values = [tf.Variable(value) for value in values]
+    observed = state.observed_values
+    unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
-    def build_logp_and_deterministics_function(self, model, state):
-        observed = state.observed_values
-        deterministics = state.deterministics
-        unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
+    @tf.function(autograph=False)
+    def logpfn(*values, **kwargs):
+        if kwargs and values:
+            raise TypeError("Either list state should be passed or a dict one")
+        elif values:
+            kwargs = dict(zip(unobserved_keys, values))
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        _, st = flow.evaluate_model_transformed(model, state=st)
+        return st.collect_log_prob()
 
-        @tf.function(autograph=False)
-        def logp_det_fn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(
-                kwargs, observed_values=observed, deterministics=deterministics
+    return logpfn, dict(state.all_unobserved_values)
+
+
+def build_deterministic_function(
+    model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+):
+    if not isinstance(model, Model):
+        raise TypeError(
+            "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
+                type(model)
             )
-            _, st = flow.evaluate_model_transformed(model, state=st)
-            return st.collect_log_prob_and_deterministics()
+        )
+    if state is not None and observed is not None:
+        raise ValueError("Can't use both `state` and `observed` arguments")
+    if state is None:
+        state = initialize_state(model, observed=observed)
+    else:
+        state = state.as_sampling_state()
 
-        return logp_det_fn, dict(state.all_unobserved_values)
+    observed = state.observed_values
+    unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
+    _, st = flow.evaluate_model_transformed(model, state=state)
+    deterministics = st.deterministics
 
-    def vectorize_logp_det_function(self, logp_det_fn):
-        def parallel_logp_det_function(*state):
-            return tf.vectorized_map(lambda mini_state: logp_det_fn(*mini_state), state)
+    @tf.function(autograph=False)
+    def deterministics_callback(*values, **kwargs):
+        if kwargs and values:
+            raise TypeError("Either list state should be passed or a dict one")
+        elif values:
+            kwargs = dict(zip(unobserved_keys, values))
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        _, st = flow.evaluate_model_transformed(model, state=st)
+        return st.deterministics.values()
 
-        return parallel_logp_det_function
+    return deterministics_callback, list(deterministics)
 
-    def get_deterministic_values(self):
-        return tuple([value.read_value() for value in self.deterministic_values])
+
+def vectorize_logp_function(logpfn):
+    # TODO: vectorize with dict
+    def vectorized_logpfn(*state):
+        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+
+    return vectorized_logpfn
 
 
 def tile_init(init, num_repeats):

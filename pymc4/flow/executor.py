@@ -123,11 +123,7 @@ class SamplingState:
 
     def collect_log_prob(self):
         all_terms = itertools.chain(
-            (
-                dist.log_prob(self.all_values[name])
-                for name, dist in self.distributions.items()
-                if not isinstance(dist, distribution.Deterministic)
-            ),
+            (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
             (p.value for p in self.potentials),
         )
         return sum(map(tf.reduce_sum, all_terms))
@@ -173,14 +169,9 @@ class SamplingState:
         )
 
     @classmethod
-    def from_values(
-        cls,
-        values: Dict[str, Any] = None,
-        observed_values: Dict[str, Any] = None,
-        deterministics: Dict[str, Any] = None,
-    ):
+    def from_values(cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None):
         if values is None:
-            return cls(observed_values=observed_values, deterministics=deterministics)
+            return cls(observed_values=observed_values)
         transformed_values = dict()
         untransformed_values = dict()
         # split by `nest/name` or `nest/__transform_name`
@@ -190,9 +181,7 @@ class SamplingState:
                 transformed_values[fullname] = values[fullname]
             else:
                 untransformed_values[fullname] = values[fullname]
-        return cls(
-            transformed_values, untransformed_values, observed_values, deterministics=deterministics
-        )
+        return cls(transformed_values, untransformed_values, observed_values)
 
     def clone(self):
         return self.__class__(
@@ -290,7 +279,6 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
-        deterministics: Dict[str, Any] = None,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -308,9 +296,9 @@ class SamplingExecutor:
         # as general as possible, just to restrict the imagination and reduce complexity.
 
         if state is None:
-            state = self.new_state(values=values, observed=observed, deterministics=deterministics)
+            state = self.new_state(values=values, observed=observed)
         else:
-            if values or observed or deterministics:
+            if values or observed:
                 raise ValueError("Provided arguments along with not empty state")
         if _validate_state:
             self.validate_state(state)
@@ -487,14 +475,9 @@ class SamplingExecutor:
     __call__ = evaluate_model
 
     def new_state(
-        self,
-        values: Dict[str, Any] = None,
-        observed: Dict[str, Any] = None,
-        deterministics: Dict[str, Any] = None,
+        self, values: Dict[str, Any] = None, observed: Dict[str, Any] = None
     ) -> SamplingState:
-        return SamplingState.from_values(
-            values=values, observed_values=observed, deterministics=deterministics
-        )
+        return SamplingState.from_values(values=values, observed_values=observed)
 
     def validate_state(self, state):
         if state.transformed_values:

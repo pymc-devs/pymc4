@@ -61,9 +61,9 @@ def sample(
     >>> import pymc4 as pm
     >>> from pymc4 import distributions as dist
     >>> import numpy as np
-    
+
     This particular model has a latent variable `sd`
-    
+
     >>> @pm.model
     ... def nested_model(cond):
     ...     sd = yield dist.HalfNormal("sd", 1., transform=dist.transforms.Log())  #TODO: Auto-transform
@@ -90,9 +90,8 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
-    logpfn, init = build_logp_function(model, state=state, observed=observed)
-    _deterministics_callback, deterministic_names = build_deterministic_function(
-        model, observed=observed, state=state
+    logpfn, init, _deterministics_callback, deterministic_names = build_logp_and_deterministic_functions(
+        model, state=state, observed=observed
     )
     init_state = list(init.values())
     init_keys = list(init.keys())
@@ -153,7 +152,7 @@ def sample(
     return posterior, sampler_stats
 
 
-def build_logp_function(
+def build_logp_and_deterministic_functions(
     model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
 ):
     if not isinstance(model, Model):
@@ -165,9 +164,12 @@ def build_logp_function(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
     if state is None:
-        state = initialize_state(model, observed=observed)
+        _, state = flow.evaluate_model_transformed(model, observed=observed)
+        deterministic_names = list(state.deterministics)
     else:
-        state = state.as_sampling_state()
+        _, st = flow.evaluate_model_transformed(model, state=state)
+        deterministic_names = list(st.deterministics)
+    state = state.as_sampling_state()
 
     observed = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
@@ -182,30 +184,6 @@ def build_logp_function(
         _, st = flow.evaluate_model_transformed(model, state=st)
         return st.collect_log_prob()
 
-    return logpfn, dict(state.all_unobserved_values)
-
-
-def build_deterministic_function(
-    model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
-):
-    if not isinstance(model, Model):
-        raise TypeError(
-            "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
-                type(model)
-            )
-        )
-    if state is not None and observed is not None:
-        raise ValueError("Can't use both `state` and `observed` arguments")
-    if state is None:
-        state = initialize_state(model, observed=observed)
-    else:
-        state = state.as_sampling_state()
-
-    observed = state.observed_values
-    unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
-    _, st = flow.evaluate_model_transformed(model, state=state)
-    deterministics = st.deterministics
-
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):
         if kwargs and values:
@@ -216,7 +194,7 @@ def build_deterministic_function(
         _, st = flow.evaluate_model_transformed(model, state=st)
         return st.deterministics.values()
 
-    return deterministics_callback, list(deterministics)
+    return logpfn, dict(state.all_unobserved_values), deterministics_callback, deterministic_names
 
 
 def vectorize_logp_function(logpfn):

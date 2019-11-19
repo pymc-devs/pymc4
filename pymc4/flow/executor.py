@@ -82,7 +82,7 @@ class SamplingState:
         distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
         deterministics: Dict[str, distribution.Deterministic] = None,
-    ):
+    ) -> None:
         # verbose __init__
         if transformed_values is None:
             transformed_values = dict()
@@ -169,7 +169,9 @@ class SamplingState:
         )
 
     @classmethod
-    def from_values(cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None):
+    def from_values(
+        cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None
+    ) -> "SamplingState":
         if values is None:
             return cls(observed_values=observed_values)
         transformed_values = dict()
@@ -183,7 +185,7 @@ class SamplingState:
                 untransformed_values[fullname] = values[fullname]
         return cls(transformed_values, untransformed_values, observed_values)
 
-    def clone(self):
+    def clone(self) -> "SamplingState":
         return self.__class__(
             transformed_values=self.transformed_values,
             untransformed_values=self.untransformed_values,

@@ -1,9 +1,9 @@
 from typing import Optional
 import tensorflow as tf
 from tensorflow_probability import mcmc
-from pymc4.inference.utils import initialize_state
 from pymc4.coroutine_model import Model
 from pymc4 import flow
+from pymc4.inference.utils import initialize_state
 
 
 def sample(
@@ -167,11 +167,10 @@ def build_logp_and_deterministic_functions(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
     if state is None:
-        _, state = flow.evaluate_model_transformed(model, observed=observed)
-        deterministic_names = list(state.deterministics)
+        st = state = initialize_state(model, observed=observed)
     else:
         _, st = flow.evaluate_model_transformed(model, state=state)
-        deterministic_names = list(st.deterministics)
+    deterministic_names = list(st.deterministics)
     state = state.as_sampling_state()
 
     observed = state.observed_values

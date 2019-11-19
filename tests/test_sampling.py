@@ -26,9 +26,9 @@ def simple_model_with_deterministic(simple_model):
     return simple_model_with_deterministic
 
 
-@pytest.fixture(scope="module", params=[True, False], ids=str)
+@pytest.fixture(scope="module", params=["XLA", "noXLA"], ids=str)
 def xla_fixture(request):
-    return request.param
+    return request.param == "XLA"
 
 
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):

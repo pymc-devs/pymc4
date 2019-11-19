@@ -18,7 +18,7 @@ def initialize_state(model: Model, observed: Optional[dict] = None) -> flow.Samp
     pymc4.flow.SamplingState
     """
     _, state = flow.evaluate_model_transformed(model, observed=observed)
-    return state.as_sampling_state()
+    return state
 
 
 def trace_to_arviz(pm4_trace, pm4_sample_stats):

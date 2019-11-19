@@ -87,7 +87,7 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
     assert set(deterministic_names) <= {"unvectorized_model/determ"}
 
     # Setup inputs to vectorized functions
-    inputs = (np.random.normal(size=batch_size + norm_shape).astype("float32"),)
+    inputs = np.random.normal(size=batch_size + norm_shape).astype("float32")
 
     # Test deterministic part
     expected_deterministic = np.max(np.reshape(inputs, batch_size + (-1,)), axis=-1)

@@ -28,11 +28,17 @@ def simple_model_with_deterministic(simple_model):
     return simple_model_with_deterministic
 
 
-@pytest.fixture(scope="function", params=
-        itertools.product([(), (3,), (3, 2)], [(), (2,), (4,), (5, 4)], [(), (1,), (10,), (10, 10)]), ids=str)
+@pytest.fixture(
+    scope="function",
+    params=itertools.product(
+        [(), (3,), (3, 2)], [(), (2,), (4,), (5, 4)], [(), (1,), (10,), (10, 10)]
+    ),
+    ids=str,
+)
 def unvectorized_model(request):
     norm_shape, observed_shape, batch_size = request.param
     observed = np.ones(observed_shape)
+
     @pm.model()
     def unvectorized_model():
         norm = yield pm.Normal("norm", 0, 1, plate=norm_shape)
@@ -63,10 +69,17 @@ def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
 def test_vectorize_log_prob_det_function(unvectorized_model):
     model, norm_shape, observed, batch_size = unvectorized_model
     model = model()
-    logpfn, all_unobserved_values, deterministics_callback, deterministic_names = pm.inference.sampling.build_logp_and_deterministic_functions(model)
+    (
+        logpfn,
+        all_unobserved_values,
+        deterministics_callback,
+        deterministic_names,
+    ) = pm.inference.sampling.build_logp_and_deterministic_functions(model)
     for _ in range(len(batch_size)):
         logpfn = pm.inference.sampling.vectorize_logp_function(logpfn)
-        deterministics_callback = pm.inference.sampling.vectorize_logp_function(deterministics_callback)
+        deterministics_callback = pm.inference.sampling.vectorize_logp_function(
+            deterministics_callback
+        )
 
     # Test function inputs and initial values are as expected
     assert set(all_unobserved_values) <= {"unvectorized_model/norm"}
@@ -83,10 +96,12 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
     np.testing.assert_allclose(deterministics_callback_output, expected_deterministic, rtol=1e-5)
 
     # Test log_prob part
-    expected_log_prob = (
-        np.sum(np.reshape(stats.norm.logpdf(inputs), batch_size + (-1,)), axis=-1) +  # norm.log_prob
-        np.sum(stats.norm.logpdf(observed.flatten(), loc=expected_deterministic[..., None], scale=1), axis=-1)  # output.log_prob
-    )
+    expected_log_prob = np.sum(
+        np.reshape(stats.norm.logpdf(inputs), batch_size + (-1,)), axis=-1
+    ) + np.sum(  # norm.log_prob
+        stats.norm.logpdf(observed.flatten(), loc=expected_deterministic[..., None], scale=1),
+        axis=-1,
+    )  # output.log_prob
     logpfn_output = logpfn(inputs).numpy()
     assert logpfn_output.shape == batch_size
     np.testing.assert_allclose(logpfn_output, expected_log_prob, rtol=1e-5)

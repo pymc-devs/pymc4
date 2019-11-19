@@ -32,8 +32,8 @@ def xla_fixture(request):
 
 
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
-    #    if xla_fixture:
-    #        pytest.skip("XLA in sampling is still not fully supported")
+    if xla_fixture:
+        pytest.skip("XLA in sampling is still not fully supported")
     model = simple_model_with_deterministic()
     trace, stats = pm.inference.sampling.sample(
         model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture

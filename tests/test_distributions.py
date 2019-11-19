@@ -3,10 +3,8 @@ Tests for PyMC4 random variables
 """
 import pytest
 import numpy as np
-from numpy import testing as npt
 
 import pymc4 as pm
-import tensorflow as tf
 
 
 def random_variable_args():
@@ -107,20 +105,3 @@ def test_rvs_backend_arithmetic(tf_seed):
     assert x % y is not None
     assert x ** y is not None
     assert -x is not None
-
-
-def test_deterministic():
-    @pm.model
-    def half_normal(loc, scale):
-        normal = yield pm.Normal(name="normal", loc=loc, scale=scale, plate=20)
-        yield pm.Deterministic(name="abs_normal", value=tf.math.abs(normal))
-
-    _, state = pm.evaluate_model(half_normal(0, 1))
-    normal = state.untransformed_values["half_normal/normal"].numpy()
-    abs_normal = state.deterministics["half_normal/abs_normal"].numpy()
-
-    # There were some entries less than 0
-    assert np.any(normal < 0)
-
-    # The deterministic variable is all positive
-    npt.assert_allclose(np.abs(normal), abs_normal)

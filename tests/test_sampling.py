@@ -88,10 +88,11 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
 
     # Setup inputs to vectorized functions
     inputs = np.random.normal(size=batch_size + norm_shape).astype("float32")
+    input_tensor = tf.convert_to_tensor(inputs)
 
     # Test deterministic part
     expected_deterministic = np.max(np.reshape(inputs, batch_size + (-1,)), axis=-1)
-    deterministics_callback_output = deterministics_callback(inputs)[0].numpy()
+    deterministics_callback_output = deterministics_callback(input_tensor)[0].numpy()
     assert deterministics_callback_output.shape == batch_size
     np.testing.assert_allclose(deterministics_callback_output, expected_deterministic, rtol=1e-5)
 
@@ -102,6 +103,6 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
         stats.norm.logpdf(observed.flatten(), loc=expected_deterministic[..., None], scale=1),
         axis=-1,
     )  # output.log_prob
-    logpfn_output = logpfn(inputs).numpy()
+    logpfn_output = logpfn(input_tensor).numpy()
     assert logpfn_output.shape == batch_size
     np.testing.assert_allclose(logpfn_output, expected_log_prob, rtol=1e-5)

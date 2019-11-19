@@ -90,9 +90,12 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
-    logpfn, init, _deterministics_callback, deterministic_names = build_logp_and_deterministic_functions(
-        model, state=state, observed=observed
-    )
+    (
+        logpfn,
+        init,
+        _deterministics_callback,
+        deterministic_names,
+    ) = build_logp_and_deterministic_functions(model, state=state, observed=observed)
     init_state = list(init.values())
     init_keys = list(init.keys())
     parallel_logpfn = vectorize_logp_function(logpfn)

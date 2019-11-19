@@ -475,7 +475,3 @@ def test_deterministics(model_with_deterministics):
         inputs = [v for k, v in state.all_values.items() if k in op_inputs]
         out = op(*inputs)
         np.testing.assert_allclose(state.deterministics[expected_deterministic], out)
-
-
-def test_vectorize_log_prob_det_function(model_with_deterministics):
-    pass

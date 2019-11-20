@@ -475,3 +475,26 @@ def test_deterministics(model_with_deterministics):
         inputs = [v for k, v in state.all_values.items() if k in op_inputs]
         out = op(*inputs)
         np.testing.assert_allclose(state.deterministics[expected_deterministic], out)
+
+
+def test_deterministic_with_distribution_name_fails():
+    @pm.model
+    def model():
+        x = yield pm.Normal("x", 0, 1)
+        det = yield pm.Deterministic("x", x)
+        return det
+
+    with pytest.raises(pm.flow.executor.EvaluationError):
+        pm.evaluate_model(model())
+
+
+def test_distribution_with_deterministic_name_fails():
+    @pm.model
+    def model():
+        x = yield pm.Normal("x", 0, 1)
+        det = yield pm.Deterministic("det", x)
+        y = yield pm.Normal("det", det, 1)
+        return y
+
+    with pytest.raises(pm.flow.executor.EvaluationError):
+        pm.evaluate_model(model())

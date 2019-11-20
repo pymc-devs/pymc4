@@ -49,7 +49,7 @@ def unvectorized_model(request):
     return unvectorized_model, norm_shape, observed, batch_size
 
 
-@pytest.fixture(scope="module", params=["XLA", "noXLA"], ids=str)
+@pytest.fixture(scope="module", params=[pytest.param("XLA", marks=pytest.mark.xfail(reason="XLA compilation in sample is not fully supported yet")), "noXLA"], ids=str)
 def xla_fixture(request):
     return request.param == "XLA"
 
@@ -98,8 +98,6 @@ def deterministics_in_nested_models():
 
 
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
-    if xla_fixture:
-        pytest.skip("XLA in sampling is still not fully supported")
     model = simple_model_with_deterministic()
     trace, stats = pm.inference.sampling.sample(
         model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
@@ -154,8 +152,6 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
 def test_sampling_with_deterministics_in_nested_models(
     deterministics_in_nested_models, xla_fixture
 ):
-    if xla_fixture:
-        pytest.skip("XLA in sampling is still not fully supported")
     (
         model,
         expected_untransformed,

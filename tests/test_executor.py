@@ -498,3 +498,17 @@ def test_distribution_with_deterministic_name_fails():
 
     with pytest.raises(pm.flow.executor.EvaluationError):
         pm.evaluate_model(model())
+
+
+def test_deterministic_of_callable():
+    def deterministic_callable(x):
+        return x * 2
+
+    @pm.model
+    def model():
+        x = yield pm.Normal("x", 0, 1)
+        det = yield pm.Deterministic("det", lambda : deterministic_callable(x))
+        return det
+
+    _, state = pm.evaluate_model(model())
+    assert state.untransformed_values["model/x"] * 2 == state.deterministics["model/det"]

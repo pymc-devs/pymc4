@@ -554,7 +554,7 @@ class SamplingExecutor:
                     scoped_name
                 )
             )
-        state.deterministics[scoped_name] = return_value = deterministic.value
+        state.deterministics[scoped_name] = return_value = deterministic.get_value()
         return return_value, state
 
     def prepare_model_control_flow(

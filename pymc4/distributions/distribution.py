@@ -165,10 +165,7 @@ class Deterministic(Model):
         super().__init__(self.get_value, name=name, keep_return=True, keep_auxiliary=False)
 
     def get_value(self):
-        if callable(self.value):
-            return self.value()
-        else:
-            return self.value
+        return self.value
 
     @property
     def value_numpy(self):

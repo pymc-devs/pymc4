@@ -96,6 +96,49 @@ def model_with_deterministics():
     return model, expected_deterministics, expected_ops, expected_ops_inputs
 
 
+@pytest.fixture(scope="function")
+def deterministics_in_nested_models():
+    @pm.model
+    def nested_model(cond):
+        x = yield pm.Normal("x", cond, 1)
+        dx = yield pm.Deterministic("dx", x + 1)
+        return dx
+
+    @pm.model
+    def outer_model():
+        cond = yield pm.HalfNormal("cond", 1)
+        dcond = yield pm.Deterministic("dcond", cond * 2)
+        dx = yield nested_model(dcond)
+        ddx = yield pm.Deterministic("ddx", dx)
+        return ddx
+
+    expected_untransformed = {
+        "outer_model",
+        "outer_model/cond",
+        "outer_model/nested_model",
+        "outer_model/nested_model/x",
+    }
+    expected_transformed = {"outer_model/__log_cond"}
+    expected_deterministics = {
+        "outer_model/dcond",
+        "outer_model/ddx",
+        "outer_model/nested_model/dx",
+    }
+    deterministic_mapping = {
+        "outer_model/dcond": (["outer_model/cond"], lambda x: x * 2),
+        "outer_model/ddx": (["outer_model/nested_model"], lambda x: x),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+    }
+
+    return (
+        outer_model,
+        expected_untransformed,
+        expected_transformed,
+        expected_deterministics,
+        deterministic_mapping,
+    )
+
+
 def test_class_model(class_model):
     """Test that model can be defined as method in an object definition"""
     _, state = pm.evaluate_model(class_model.class_model_method())
@@ -500,15 +543,20 @@ def test_distribution_with_deterministic_name_fails():
         pm.evaluate_model(model())
 
 
-def test_deterministic_of_callable():
-    def deterministic_callable(x):
-        return x * 2
-
-    @pm.model
-    def model():
-        x = yield pm.Normal("x", 0, 1)
-        det = yield pm.Deterministic("det", lambda : deterministic_callable(x))
-        return det
-
-    _, state = pm.evaluate_model(model())
-    assert state.untransformed_values["model/x"] * 2 == state.deterministics["model/det"]
+def test_deterministics_in_nested_model(deterministics_in_nested_models):
+    (
+        model,
+        expected_untransformed,
+        expected_transformed,
+        expected_deterministics,
+        deterministic_mapping,
+    ) = deterministics_in_nested_models
+    _, state = pm.evaluate_model_transformed(model())
+    assert set(state.untransformed_values) == expected_untransformed
+    assert set(state.transformed_values) == expected_transformed
+    assert set(state.deterministics) == expected_deterministics
+    for deterministic, (inputs, op) in deterministic_mapping.items():
+        np.testing.assert_allclose(
+            state.deterministics[deterministic],
+            op(*[state.untransformed_values[i] for i in inputs]),
+        )

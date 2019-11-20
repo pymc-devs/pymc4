@@ -54,6 +54,49 @@ def xla_fixture(request):
     return request.param == "XLA"
 
 
+@pytest.fixture(scope="function")
+def deterministics_in_nested_models():
+    @pm.model
+    def nested_model(cond):
+        x = yield pm.Normal("x", cond, 1)
+        dx = yield pm.Deterministic("dx", x + 1)
+        return dx
+
+    @pm.model
+    def outer_model():
+        cond = yield pm.HalfNormal("cond", 1)
+        dcond = yield pm.Deterministic("dcond", cond * 2)
+        dx = yield nested_model(dcond)
+        ddx = yield pm.Deterministic("ddx", dx)
+        return ddx
+
+    expected_untransformed = {
+        "outer_model",
+        "outer_model/cond",
+        "outer_model/nested_model",
+        "outer_model/nested_model/x",
+    }
+    expected_transformed = {"outer_model/__log_cond"}
+    expected_deterministics = {
+        "outer_model/dcond",
+        "outer_model/ddx",
+        "outer_model/nested_model/dx",
+    }
+    deterministic_mapping = {
+        "outer_model/dcond": (["outer_model/__log_cond"], lambda x: np.exp(x) * 2),
+        "outer_model/ddx": (["outer_model/nested_model/dx"], lambda x: x),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+    }
+
+    return (
+        outer_model,
+        expected_untransformed,
+        expected_transformed,
+        expected_deterministics,
+        deterministic_mapping,
+    )
+
+
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
     if xla_fixture:
         pytest.skip("XLA in sampling is still not fully supported")
@@ -106,3 +149,24 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
     logpfn_output = logpfn(input_tensor).numpy()
     assert logpfn_output.shape == batch_size
     np.testing.assert_allclose(logpfn_output, expected_log_prob, rtol=1e-5)
+
+
+def test_sampling_with_deterministics_in_nested_models(
+    deterministics_in_nested_models, xla_fixture
+):
+    if xla_fixture:
+        pytest.skip("XLA in sampling is still not fully supported")
+    (
+        model,
+        expected_untransformed,
+        expected_transformed,
+        expected_deterministics,
+        deterministic_mapping,
+    ) = deterministics_in_nested_models
+    trace, stats = pm.inference.sampling.sample(
+        model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+    )
+    for deterministic, (inputs, op) in deterministic_mapping.items():
+        np.testing.assert_allclose(
+            trace[deterministic], op(*[trace[i] for i in inputs]),
+        )

@@ -38,15 +38,22 @@ def sample_prior_predictive(
         with a single entry: ``(sample_shape,)``
     sample_from_observed: bool
         If ``False``, the distributions that were assigned observed values wont
-        be resampled, and the observed values will be returned as they are.
+        be resampled, and the observed values will used for computations
+        downstream.
         If ``True``, the distributions that were assigned observed values will
         be resampled. This means that their observed value will be completely
         ignored (including its implied shape), and a new sample will be drawn
         from the prior distribution.
+        Observed variables are only returned in the ``Samples`` dictionary if
+        ``sample_from_observed`` is ``True`` or the name of the observed
+        variable is explicitly provided in ``var_names``.
     var_names: Optional[List[str]]
         The list of variable names that will be included in the returned
         samples. If ``None``, the samples drawn for all untransformed
-        distributions and deterministics will be returned.
+        distributions and deterministics will be returned in the ``Samples``
+        dictionary. Furthermore, if ``sample_from_observed=True``, then the
+        observed variable names will be added to the untransformed
+        distributions.
     state : Optional[pymc4.flow.SamplingState]
         A ``SamplingState`` that can be used to specify distributions fixed
         values and change observed values.
@@ -67,22 +74,24 @@ def sample_prior_predictive(
     ...     sd = yield pm.HalfNormal("sd", 1.)
     ...     norm = yield pm.Normal("n", 0, sd, observed=np.random.randn(10))
 
-    Now, we may want to perform sampling from this model. We already observed some variables and we now need to fix
-    the condition.
+    Now, we may want to draw samples from the model's prior, ignoring the
+    observed values.
 
     >>> prior_samples = sample_prior_predictive(model(), sample_shape=(20, 3))
 
-    The resulting keys will be
+    The samples are returned as a dictionary with the variable names as keys
 
     >>> sorted(list(prior_samples))
     ['model/n', 'model/sd']
 
-    The resulting shapes will be
+    The drawn values are the dictionary's values, and their shape will depend
+    on the supplied ``sample_shape``
 
     >>> [v.shape for v in prior_samples.values()]
     [(20, 3), (20, 3)]
 
-    If we only wanted to draw samples from unobserved variables we would have done the following
+    If we only wanted to draw samples from unobserved variables we would
+    have done the following
 
     >>> prior_samples = sample_prior_predictive(model(), sample_from_observed=False)
     >>> sorted(list(prior_samples))
@@ -90,8 +99,8 @@ def sample_prior_predictive(
 
     Notes
     -----
-    If ``sample_from_observed=False``, inside the model's evaluation, their
-    observed value will be used for later stages of the model's computation.
+    If ``sample_from_observed=False``, the observed value passed to the
+    variables will be used in the later stages of the model's computation.
 
     >>> import pymc4 as pm
     >>> @pm.model
@@ -130,12 +139,18 @@ def sample_prior_predictive(
     distributions_names = list(state.untransformed_values)
     deterministic_names = list(state.deterministics)
     observed = None
+    traced_observeds = set()
     if sample_from_observed:
         state.observed_values = observed = {k: None for k in state.observed_values}
         distributions_names = distributions_names + list(state.observed_values)
     if var_names is None:
         var_names = distributions_names + deterministic_names
-    elif not set(var_names) <= set(distributions_names + deterministic_names):
+    else:
+        # We can trace the observed values if their names are explicitly requested in var_names
+        traced_observeds = set(
+            [var_name for var_name in var_names if var_name in state.observed_values]
+        )
+    if not set(var_names) <= (set(distributions_names + deterministic_names) | traced_observeds):
         raise ValueError(
             "Some of the supplied var_names are not defined in the supplied "
             "model {}.\nList of unknown var_names: {}".format(
@@ -143,16 +158,24 @@ def sample_prior_predictive(
             )
         )
 
+    # Setup the function that makes a single draw
     def single_draw(index):
         _, st = evaluate_model(model, observed=observed)
         return tuple(
             [
-                st.untransformed_values[k] if k in st.untransformed_values else st.deterministics[k]
+                (
+                    st.untransformed_values[k]
+                    if k in st.untransformed_values
+                    else (st.observed_values[k] if k in traced_observeds else st.deterministics[k])
+                )
                 for k in var_names
             ]
         )
 
+    # Make draws in parallel with tf.vectorized_map
     samples = tf.vectorized_map(single_draw, tf.range(int(np.prod(sample_shape))))
+
+    # Convert the samples to ndarrays and make a dictionary with the desired sample_shape
     output = dict()
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()

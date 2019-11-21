@@ -1,5 +1,5 @@
 import types
-from typing import Optional, Union, Tuple, List, Dict
+from typing import Optional, Union, Tuple, List, Dict, Set
 import numpy as np
 import tensorflow as tf
 from pymc4.coroutine_model import Model
@@ -139,7 +139,7 @@ def sample_prior_predictive(
     distributions_names = list(state.untransformed_values)
     deterministic_names = list(state.deterministics)
     observed = None
-    traced_observeds = set()
+    traced_observeds: Set[str] = set()
     if sample_from_observed:
         state.observed_values = observed = {k: None for k in state.observed_values}
         distributions_names = distributions_names + list(state.observed_values)

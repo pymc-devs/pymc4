@@ -173,6 +173,4 @@ def test_sampling_with_deterministics_in_nested_models(
         model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
-        np.testing.assert_allclose(
-            trace[deterministic], op(*[trace[i] for i in inputs]),
-        )
+        np.testing.assert_allclose(trace[deterministic], op(*[trace[i] for i in inputs]))

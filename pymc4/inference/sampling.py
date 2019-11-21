@@ -167,11 +167,11 @@ def build_logp_and_deterministic_functions(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
     if state is None:
-        st = state = initialize_state(model, observed=observed)
+        state, deterministic_names = initialize_state(model, observed=observed)
     else:
         _, st = flow.evaluate_model_transformed(model, state=state)
-    deterministic_names = list(st.deterministics)
-    state = state.as_sampling_state()
+        deterministic_names = list(st.deterministics)
+        state = state.as_sampling_state()
 
     observed = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())

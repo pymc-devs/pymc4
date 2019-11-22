@@ -585,7 +585,7 @@ class SamplingExecutor:
             # we should filter out allowed return types, but this is totally backend
             # specific and should be determined at import time.
             return_name = scopes.variable_name(model_info["name"])
-            state.untransformed_values[return_name] = return_value
+            state.deterministics[return_name] = return_value
         return return_value, state
 
 

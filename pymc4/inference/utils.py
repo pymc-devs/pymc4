@@ -19,8 +19,8 @@ def initialize_state(
     -------
     state: pymc4.flow.SamplingState
         The model's sampling state
-    deterministic_names: set
-        The set of names of the model's deterministics
+    deterministic_names: List[str]
+        The list of names of the model's deterministics
     """
     _, state = flow.evaluate_model_transformed(model, observed=observed)
     deterministic_names = list(state.deterministics)

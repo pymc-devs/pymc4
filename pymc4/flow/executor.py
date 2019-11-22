@@ -316,7 +316,7 @@ class SamplingExecutor:
         #       mainly developer feature that allows to implement compositional distributions like Horseshoe and
         #       at posterior predictive sampling omit some redundant parts of computational graph
         #   - keep_return
-        #       the return value of generator will be saved in state.untransformed_values if this set to True.
+        #       the return value of generator will be saved in state.deterministics if this set to True.
         #   - observed
         #       the observed variable(s) for the given model. There are some restrictions on how do we provide
         #       observed variables.

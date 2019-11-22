@@ -44,7 +44,6 @@ def unvectorized_model(request):
         norm = yield pm.Normal("norm", 0, 1, plate=norm_shape)
         determ = yield pm.Deterministic("determ", tf.reduce_max(norm))
         output = yield pm.Normal("output", determ, 1, observed=observed)
-        return output
 
     return unvectorized_model, norm_shape, observed, batch_size
 

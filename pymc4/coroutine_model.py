@@ -126,9 +126,15 @@ class ModelTemplate:
         ...     return result
         >>> ret, state = pm.evaluate_model(main_model())
         >>> print(sorted(state.untransformed_values))
-        ['main_model', 'main_model/a', 'main_model/a/n', 'main_model/n']
+        ['main_model/a/n', 'main_model/n']
 
-        Setting :code`keep_return=False` for the nested model we can remove ``'main_model/a'`` from output state
+        The model return values are stored in ``state.deterministics``
+
+        >>> print(sorted(list(state.deterministics)))
+        ['main_model', 'main_model/a']
+
+        Setting :code`keep_return=False` for the nested model we can remove
+        ``'main_model/a'`` from output state's deterministics
 
         >>> @pm.model
         ... def main_model():
@@ -136,8 +142,8 @@ class ModelTemplate:
         ...     result = yield nested_model(norm, name="a", keep_return=False)
         ...     return result
         >>> ret, state = pm.evaluate_model(main_model())
-        >>> print(sorted(state.untransformed_values))
-        ['main_model', 'main_model/a/n', 'main_model/n']
+        >>> print(sorted(state.deterministics))
+        ['main_model']
 
         We can also observe some variables setting :code:`observed=True` in a distribution
 
@@ -148,7 +154,7 @@ class ModelTemplate:
         ...     return result
         >>> ret, state = pm.evaluate_model(main_model())
         >>> print(sorted(state.untransformed_values))
-        ['main_model', 'main_model/a', 'main_model/a/n']
+        ['main_model/a/n']
         >>> print(sorted(state.observed_values))
         ['main_model/n']
         """

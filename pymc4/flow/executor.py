@@ -316,7 +316,7 @@ class SamplingExecutor:
         #       mainly developer feature that allows to implement compositional distributions like Horseshoe and
         #       at posterior predictive sampling omit some redundant parts of computational graph
         #   - keep_return
-        #       the return value of generator will be saved in state.untransformed_values if this set to True.
+        #       the return value of generator will be saved in state.deterministics if this set to True.
         #   - observed
         #       the observed variable(s) for the given model. There are some restrictions on how do we provide
         #       observed variables.
@@ -585,7 +585,7 @@ class SamplingExecutor:
             # we should filter out allowed return types, but this is totally backend
             # specific and should be determined at import time.
             return_name = scopes.variable_name(model_info["name"])
-            state.untransformed_values[return_name] = return_value
+            state.deterministics[return_name] = return_value
         return return_value, state
 
 

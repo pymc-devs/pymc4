@@ -91,7 +91,6 @@ def model_with_deterministics():
         sine_norm = yield dist.Deterministic("sine_norm", tf.sin(norm))
         norm_copy = yield dist.Deterministic("norm_copy", norm)
         obs = yield dist.Normal("obs", 0, abs_norm)
-        return obs
 
     return model, expected_deterministics, expected_ops, expected_ops_inputs
 
@@ -113,9 +112,7 @@ def deterministics_in_nested_models():
         return ddx
 
     expected_untransformed = {
-        "outer_model",
         "outer_model/cond",
-        "outer_model/nested_model",
         "outer_model/nested_model/x",
     }
     expected_transformed = {"outer_model/__log_cond"}
@@ -123,11 +120,16 @@ def deterministics_in_nested_models():
         "outer_model/dcond",
         "outer_model/ddx",
         "outer_model/nested_model/dx",
+        "outer_model/nested_model",
+        "outer_model",
     }
     deterministic_mapping = {
         "outer_model/dcond": (["outer_model/cond"], lambda x: x * 2),
-        "outer_model/ddx": (["outer_model/nested_model"], lambda x: x),
+        "outer_model/ddx": (["outer_model/nested_model/x"], lambda x: x + 1),
         "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model": (["outer_model/nested_model/x"], lambda x: x + 1),
     }
 
     return (
@@ -168,11 +170,10 @@ def test_complex_model_keep_return():
 
     _, state = pm.evaluate_model(complex_model())
 
-    assert set(state.untransformed_values) == {
-        "complex_model/n",
-        "complex_model/a",
-        "complex_model/a/n",
+    assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
+    assert set(state.deterministics) == {
         "complex_model",
+        "complex_model/a",
     }
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
@@ -183,9 +184,9 @@ def test_complex_model_no_keep_return(complex_model):
 
     assert set(state.untransformed_values) == {
         "complex_model/n",
-        "complex_model/a",
         "complex_model/a/n",
     }
+    assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
 
@@ -273,7 +274,8 @@ def test_raise_if_return_distribution():
 def test_observed_are_passed_correctly(complex_model_with_observed):
     _, state = pm.evaluate_model(complex_model_with_observed())
 
-    assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a"}
+    assert set(state.untransformed_values) == {"complex_model/n"}
+    assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert set(state.observed_values) == {"complex_model/a/n"}
     assert np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
@@ -286,9 +288,9 @@ def test_observed_are_set_to_none_for_posterior_predictive_correctly(complex_mod
 
     assert set(state.untransformed_values) == {
         "complex_model/n",
-        "complex_model/a",
         "complex_model/a/n",
     }
+    assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
     assert not np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
@@ -439,7 +441,7 @@ def test_unnamed_return():
         )
 
     _, state = pm.evaluate_model(a_model())
-    assert "a_model" in state.all_values
+    assert "a_model" in state.deterministics
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model(name=None))
@@ -458,7 +460,7 @@ def test_unnamed_return_2():
         )
 
     _, state = pm.evaluate_model(a_model(name="b_model"))
-    assert "b_model" in state.all_values
+    assert "b_model" in state.deterministics
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model())

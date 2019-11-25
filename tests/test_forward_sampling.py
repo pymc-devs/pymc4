@@ -1,5 +1,6 @@
 import pytest
 import re
+import collections
 import numpy as np
 import tensorflow as tf
 import pymc4 as pm
@@ -11,6 +12,11 @@ def sample_shape_fixture(request):
     return request.param
 
 
+@pytest.fixture(scope="module", params=[1, 10, 100], ids=str)
+def n_draws_fixture(request):
+    return request.param
+
+
 @pytest.fixture(scope="module", params=["NoResampleObserved", "ResampleObserveds"], ids=str)
 def sample_from_observed_fixture(request):
     return request.param == "ResampleObserveds"
@@ -18,7 +24,7 @@ def sample_from_observed_fixture(request):
 
 @pytest.fixture(scope="function")
 def model_fixture():
-    observed = np.random.randn(10) + 1
+    observed = np.random.randn(10).astype("float32") + 1
 
     @pm.model
     def model():
@@ -29,6 +35,35 @@ def model_fixture():
         dy = yield pm.Deterministic("dy", 2 * y)
 
     return model, observed
+
+
+@pytest.fixture(scope="function", params=["observed_in_RV", "observed_in_eval"])
+def model_with_observed_fixture(request):
+    observed_in_RV = request.param == "observed_in_RV"
+    observed = {
+        "model/x": np.ones(10, dtype="float32"),
+        "model/y": np.ones(1, dtype="float32"),
+        "model/z": np.ones((10, 10), dtype="float32"),
+    }
+    observed_kwargs = {k: v if observed_in_RV else None for k, v in observed.items()}
+    core_ppc_shapes = {
+        "model/sd": (),
+        "model/x": (10,),
+        "model/y": (1,),
+        "model/d": (10,),
+        "model/z": (10, 10),
+    }
+
+    @pm.model
+    def model():
+        sd = yield pm.Exponential("sd", 1)
+        x = yield pm.Normal("x", 0, 1, observed=observed_kwargs["model/x"])
+        y = yield pm.HalfNormal("y", 1, observed=observed_kwargs["model/y"])
+        d = yield pm.Deterministic("d", x + y)
+        z = yield pm.Normal("z", d, sd, observed=observed_kwargs["model/z"])
+        return z
+
+    return model, observed, core_ppc_shapes
 
 
 def test_sample_prior_predictive(model_fixture, sample_shape_fixture, sample_from_observed_fixture):
@@ -90,3 +125,36 @@ def test_sample_prior_predictive_var_names(model_fixture):
         prior = forward_sampling.sample_prior_predictive(
             model_func, var_names=["X", "model/y"], sample_shape=(),
         )
+
+
+def test_sample_prior_predictive_int_sample_shape(model_fixture, n_draws_fixture):
+    model, observed = model_fixture
+
+    prior_int = forward_sampling.sample_prior_predictive(model(), sample_shape=n_draws_fixture)
+
+    prior_tuple = forward_sampling.sample_prior_predictive(model(), sample_shape=(n_draws_fixture,))
+
+    assert all((prior_int[k].shape == v.shape for k, v in prior_tuple.items()))
+
+
+def test_posterior_predictive_executor(model_with_observed_fixture):
+    model, observed, core_ppc_shapes = model_with_observed_fixture
+    _, prior_state = pm.evaluate_model_transformed(model(), observed=observed)
+    _, ppc_state = pm.evaluate_model_posterior_predictive(model(), observed=observed)
+
+    # Assert that a normal evaluation has all observeds and the values match
+    # to the observations
+    assert len(prior_state.observed_values) == 3
+    for var, val in observed.items():
+        assert np.all(prior_state.all_values[var] == val)
+
+    # Assert that a posterior predictive evaluation has no observed values
+    # but the shapes of the samples match the supplied observed shapes
+    assert len(ppc_state.observed_values) == 0
+    for var, shape in core_ppc_shapes.items():
+        assert (
+            collections.ChainMap(ppc_state.all_values, ppc_state.deterministics)[var].numpy().shape
+            == shape
+        )
+        if var in observed:
+            assert np.any(ppc_state.all_values[var] != val)

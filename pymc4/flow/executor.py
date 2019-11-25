@@ -1,5 +1,6 @@
 import types
 from typing import Any, Tuple, Dict, Union, List
+import numpy as np
 import collections
 import itertools
 
@@ -37,6 +38,21 @@ class EvaluationError(RuntimeError):
         "what requires to choose what value to actually yield. "
         "To remove this error you either need to add `observed={{{0!r}: None}}` "
         "or remove {1!r} from transformed values."
+    )
+    INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE = (
+        "The value supplied to the distribution {0!r} is not consistent "
+        "with the distribution's shape (dist_shape).\n"
+        "dist_shape = batch_shape + event_shape = {1!r}\n"
+        "supplied value's shape = {2!r}.\n"
+        "A value is considered to have a consistent shape with the "
+        "distribution if two conditions are met.\n"
+        "1) It has a greater or equal number of dimensions when compared to the "
+        "distribution (len(value.shape) >= len(dist_shape))\n"
+        "2) The observed value's shape is compatible with the "
+        "distribution's shape: "
+        "dist_shape.is_compatible_with("
+        "    observed_shape[(len(observed_shape) - len(dist_shape)):]"
+        ")"
     )
     ...
 
@@ -529,6 +545,9 @@ class SamplingExecutor:
                             scoped_name
                         )
                     )
+                assert_observations_compatible_with_distribution_shape(
+                    scoped_name, observed_variable, dist
+                )
                 return_value = state.observed_values[scoped_name] = observed_variable
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
@@ -593,3 +612,79 @@ def observed_value_in_evaluation(
     scoped_name: str, dist: distribution.Distribution, state: SamplingState
 ):
     return state.observed_values.get(scoped_name, dist.model_info["observed"])
+
+
+def assert_observations_compatible_with_distribution_shape(
+    scoped_name: str, observed_value: Any, dist: distribution.Distribution
+) -> None:
+    """Assert if the Distribution's shape is compatible with the supplied observed_value.
+
+    A value is considered to have a consistent shape with the distribution if
+    two conditions are met.
+    1) It has a greater or equal number of dimensions when compared to the
+    distribution (len(value.shape) >= len(dist_shape))
+    2) The observed value's shape is compatible with the distribution's shape:
+    dist_shape.is_compatible_with(observed_shape[(len(observed_shape) - len(dist_shape)):])
+
+    Parameters
+    ----------
+    scoped_name: str
+        The variable's scoped name
+    observed_value: Any
+        The supplied observed values
+    dist: distribution.Distribution
+        The ``Distribution`` instance.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    TypeError
+        When the shape of the ``observed_value`` cannot be extracted
+    EvaluationError
+        When the ``observed_value`` shape is not compatible with the
+        ``Distribution``'s shape.
+    """
+    observed_shape = get_observed_tensor_shape(observed_value)
+    event_shape = dist._distribution.event_shape
+    batch_shape = dist._distribution.batch_shape
+    dist_shape = batch_shape + event_shape
+    if observed_shape.rank < dist_shape.rank or not dist_shape.is_compatible_with(
+        observed_shape[(len(observed_shape) - len(dist_shape)) :]
+    ):
+        raise EvaluationError(
+            EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(
+                scoped_name, dist_shape, observed_shape
+            )
+        )
+
+
+def get_observed_tensor_shape(arr: Union[np.ndarray, tf.Tensor, tf.TensorArray]) -> tf.TensorShape:
+    """Extract the supplied arr's shape and return it as a ``tf.TensorShape``.
+
+    Parameters
+    ----------
+    arr: Union[np.ndarray, tf.Tensor, tf.TensorArray]
+        The array or tensor from which to extract the shape
+
+    Returns
+    -------
+    output: tf.TensorShape
+        The array's shape converted to a ``tf.TensorShape`` instance
+
+    Raises
+    ------
+    TypeError
+        When ``arr`` does not have a ``shape`` attribute.
+    """
+    try:
+        return tf.TensorShape(arr.shape)
+    except AttributeError:
+        raise TypeError(
+            "Unhandled type. Cannot get the observed arr's shape as a "
+            "TensorShape.\n"
+            "Supplied arrs type={}\n"
+            "Supplied arrs={}".format(type(arr), arr)
+        )

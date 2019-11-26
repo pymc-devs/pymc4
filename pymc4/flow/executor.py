@@ -1,5 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, List
+from typing import Any, Tuple, Dict, Union, List, Optional, Set
 import collections
 import itertools
 
@@ -38,6 +38,21 @@ class EvaluationError(RuntimeError):
         "To remove this error you either need to add `observed={{{0!r}: None}}` "
         "or remove {1!r} from transformed values."
     )
+    INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE = (
+        "The value supplied to the distribution {0!r} is not consistent "
+        "with the distribution's shape (dist_shape).\n"
+        "dist_shape = batch_shape + event_shape = {1!r}\n"
+        "supplied value's shape = {2!r}.\n"
+        "A value is considered to have a consistent shape with the "
+        "distribution if two conditions are met.\n"
+        "1) It has a greater or equal number of dimensions when compared to the "
+        "distribution (len(value.shape) >= len(dist_shape))\n"
+        "2) The observed value's shape is compatible with the "
+        "distribution's shape: "
+        "dist_shape.is_compatible_with("
+        "    observed_shape[(len(observed_shape) - len(dist_shape)):]"
+        ")"
+    )
     ...
 
 
@@ -67,6 +82,7 @@ class SamplingState:
         "transformed_values",
         "untransformed_values",
         "observed_values",
+        "posterior_predictives",
         "all_values",
         "all_unobserved_values",
         "distributions",
@@ -81,7 +97,8 @@ class SamplingState:
         observed_values: Dict[str, Any] = None,
         distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
-        deterministics: Dict[str, distribution.Deterministic] = None,
+        deterministics: Dict[str, Any] = None,
+        posterior_predictives: Optional[Set[str]] = None,
     ) -> None:
         # verbose __init__
         if transformed_values is None:
@@ -108,6 +125,10 @@ class SamplingState:
             deterministics = dict()
         else:
             deterministics = deterministics.copy()
+        if posterior_predictives is None:
+            posterior_predictives = set()
+        else:
+            posterior_predictives = posterior_predictives.copy()
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
@@ -120,6 +141,7 @@ class SamplingState:
         self.distributions = distributions
         self.potentials = potentials
         self.deterministics = deterministics
+        self.posterior_predictives = posterior_predictives
 
     def collect_log_prob(self):
         all_terms = itertools.chain(
@@ -137,6 +159,7 @@ class SamplingState:
         transformed_values = list(self.transformed_values)
         observed_values = list(self.observed_values)
         deterministics = list(self.deterministics)
+        posterior_predictives = list(self.posterior_predictives)
         # format like dist:name
         distributions = [
             "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
@@ -157,7 +180,9 @@ class SamplingState:
             + indent
             + "num_potentials={}\n"
             + indent
-            + "deterministics: {})"
+            + "deterministics: {}\n"
+            + indent
+            + "posterior_predictives: {})"
         ).format(
             self.__class__.__name__,
             untransformed_values,
@@ -166,6 +191,7 @@ class SamplingState:
             distributions,
             num_potentials,
             deterministics,
+            posterior_predictives,
         )
 
     @classmethod
@@ -193,6 +219,7 @@ class SamplingState:
             distributions=self.distributions,
             potentials=self.potentials,
             deterministics=self.deterministics,
+            posterior_predictives=self.posterior_predictives,
         )
 
     def as_sampling_state(self) -> "SamplingState":
@@ -521,6 +548,9 @@ class SamplingExecutor:
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
+                # We also store the name in posterior_predictives just to keep
+                # track of the variables used in posterior predictive sampling
+                state.posterior_predictives.add(scoped_name)
                 state.observed_values.pop(scoped_name)
             else:
                 if scoped_name in state.untransformed_values:
@@ -529,6 +559,9 @@ class SamplingExecutor:
                             scoped_name
                         )
                     )
+                assert_observations_compatible_with_distribution_shape(
+                    scoped_name, observed_variable, dist
+                )
                 return_value = state.observed_values[scoped_name] = observed_variable
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
@@ -593,3 +626,70 @@ def observed_value_in_evaluation(
     scoped_name: str, dist: distribution.Distribution, state: SamplingState
 ):
     return state.observed_values.get(scoped_name, dist.model_info["observed"])
+
+
+def assert_observations_compatible_with_distribution_shape(
+    scoped_name: str, observed_value: Any, dist: distribution.Distribution
+) -> None:
+    """Assert if the Distribution's shape is compatible with the supplied observed_value.
+
+    A value is considered to have a consistent shape with the distribution if
+    two conditions are met.
+    1) It has a greater or equal number of dimensions when compared to the
+    distribution (len(value.shape) >= len(dist_shape))
+    2) The observed value's shape is compatible with the distribution's shape:
+    dist_shape.is_compatible_with(observed_shape[(len(observed_shape) - len(dist_shape)):])
+
+    Parameters
+    ----------
+    scoped_name: str
+        The variable's scoped name
+    observed_value: Any
+        The supplied observed values
+    dist: distribution.Distribution
+        The ``Distribution`` instance.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    EvaluationError
+        When the ``observed_value`` shape is not compatible with the
+        ``Distribution``'s shape.
+    """
+    observed_shape = get_observed_tensor_shape(observed_value)
+    event_shape = dist._distribution.event_shape
+    batch_shape = dist._distribution.batch_shape
+    dist_shape = batch_shape + event_shape
+    if observed_shape.rank < dist_shape.rank or not dist_shape.is_compatible_with(
+        observed_shape[(len(observed_shape) - len(dist_shape)) :]
+    ):
+        raise EvaluationError(
+            EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(
+                scoped_name, dist_shape, observed_shape
+            )
+        )
+
+
+def get_observed_tensor_shape(arr: Any) -> tf.TensorShape:
+    """Extract the supplied arr's shape and return it as a ``tf.TensorShape``.
+
+    Parameters
+    ----------
+    arr: Any
+        Will be tf.convert_to_tensor and the resulting tensor's shape will be
+        returned
+
+    Returns
+    -------
+    output: tf.TensorShape
+        The array's shape converted to a ``tf.TensorShape`` instance
+
+    Raises
+    ------
+    TypeError
+        When ``arr`` does not have a ``shape`` attribute.
+    """
+    return tf.convert_to_tensor(arr).shape

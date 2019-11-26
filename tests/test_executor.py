@@ -4,6 +4,7 @@ import math
 import numpy as np
 from pymc4 import distributions as dist
 import tensorflow as tf
+from pymc4.flow.executor import get_observed_tensor_shape, EvaluationError
 
 
 @pytest.fixture("module")
@@ -562,3 +563,17 @@ def test_deterministics_in_nested_model(deterministics_in_nested_models):
             state.deterministics[deterministic],
             op(*[state.untransformed_values[i] for i in inputs]),
         )
+
+
+def test_incompatible_observed_shape():
+    @pm.model
+    def model(observed):
+        a = yield pm.Normal("a", 0, [1, 2], observed=observed)
+
+    observed_value = np.arange(3, dtype="float32")
+
+    with pytest.raises(EvaluationError):
+        pm.evaluate_model(model(None), observed={"model/a": observed_value})
+
+    with pytest.raises(EvaluationError):
+        pm.evaluate_model(model(observed_value))

@@ -565,11 +565,6 @@ def test_deterministics_in_nested_model(deterministics_in_nested_models):
         )
 
 
-def test_get_observed_tensor_shape_failure():
-    with pytest.raises(TypeError):
-        get_observed_tensor_shape({"ab": 1})
-
-
 def test_incompatible_observed_shape():
     @pm.model
     def model(observed):

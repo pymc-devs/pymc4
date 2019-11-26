@@ -84,9 +84,11 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
         if observed_value is None:
             return dist
 
-        # If the observed value was passed through the state, we drop it to
-        # avoid entering a recurrence
-        state.observed_values.pop(scoped_name, None)
+        # We set the state's observed value to None to explicitly override
+        # any previously given observed and at the same time, have the
+        # scope_name added to the posterior_predictives set in
+        # self.proceed_distribution
+        state.observed_values[scoped_name] = None
 
         # We first check the TFP distribution's shape and compare it with the
         # observed_value's shape
@@ -95,8 +97,8 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
         # Now we get the broadcasted shape between the observed value and the distribution
         observed_shape = get_observed_tensor_shape(observed_value)
         dist_shape = dist._distribution.batch_shape + dist._distribution.event_shape
-        new_dist_shape = tf.TensorShape(tf.broadcast_dynamic_shape(observed_shape, dist_shape))
-        plate = new_dist_shape[: len(new_dist_shape) - dist_shape]
+        new_dist_shape = tf.broadcast_static_shape(observed_shape, dist_shape)
+        plate = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
 
         # Now we construct and return the same distribution but setting
         # observed to None and setting a batch_size that matches the result of

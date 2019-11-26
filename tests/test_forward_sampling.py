@@ -1,5 +1,6 @@
 import pytest
 import re
+import itertools
 import collections
 import numpy as np
 import tensorflow as tf
@@ -37,7 +38,7 @@ def model_fixture():
     return model, observed
 
 
-@pytest.fixture(scope="function", params=["observed_in_RV", "observed_in_eval"])
+@pytest.fixture(scope="module", params=["observed_in_RV", "observed_in_eval"])
 def model_with_observed_fixture(request):
     observed_in_RV = request.param == "observed_in_RV"
     observed = {
@@ -52,6 +53,7 @@ def model_with_observed_fixture(request):
         "model/y": (1,),
         "model/d": (10,),
         "model/z": (10, 10),
+        "model/u": (10, 10),
     }
 
     @pm.model
@@ -61,9 +63,29 @@ def model_with_observed_fixture(request):
         y = yield pm.HalfNormal("y", 1, observed=observed_kwargs["model/y"])
         d = yield pm.Deterministic("d", x + y)
         z = yield pm.Normal("z", d, sd, observed=observed_kwargs["model/z"])
-        return z
+        u = yield pm.Exponential("u", z)
+        return u
 
-    return model, observed, core_ppc_shapes
+    return model, observed, core_ppc_shapes, observed_in_RV
+
+
+@pytest.fixture(scope="module")
+def posterior_predictive_fixture(model_with_observed_fixture):
+    num_samples = 40
+    num_chains = 3
+    (model, observed, core_ppc_shapes, observed_in_RV,) = model_with_observed_fixture
+    trace, _ = pm.inference.sampling.sample(
+        model(), num_samples=num_samples, num_chains=num_chains, observed=observed,
+    )
+    return (
+        model,
+        observed,
+        core_ppc_shapes,
+        observed_in_RV,
+        trace,
+        num_samples,
+        num_chains,
+    )
 
 
 def test_sample_prior_predictive(model_fixture, sample_shape_fixture, sample_from_observed_fixture):
@@ -138,7 +160,7 @@ def test_sample_prior_predictive_int_sample_shape(model_fixture, n_draws_fixture
 
 
 def test_posterior_predictive_executor(model_with_observed_fixture):
-    model, observed, core_ppc_shapes = model_with_observed_fixture
+    model, observed, core_ppc_shapes, _ = model_with_observed_fixture
     _, prior_state = pm.evaluate_model_transformed(model(), observed=observed)
     _, ppc_state = pm.evaluate_model_posterior_predictive(model(), observed=observed)
 
@@ -158,3 +180,50 @@ def test_posterior_predictive_executor(model_with_observed_fixture):
         )
         if var in observed:
             assert np.any(ppc_state.all_values[var] != val)
+
+
+def test_sample_posterior_predictive(posterior_predictive_fixture):
+    (
+        model,
+        observed,
+        core_ppc_shapes,
+        observed_in_RV,
+        trace,
+        num_samples,
+        num_chains,
+    ) = posterior_predictive_fixture
+
+    if observed_in_RV:
+        observed_kwarg = None
+    else:
+        observed_kwarg = observed
+    ppc = pm.sample_posterior_predictive(model(), trace, observed=observed_kwarg)
+    assert set(sorted(list(ppc))) == set(observed)
+    assert np.all(
+        [v.shape == (num_samples, num_chains) + observed[k].shape for k, v in ppc.items()]
+    )
+
+
+def test_sample_ppc_var_names(model_fixture):
+    model, observed = model_fixture
+    trace = {
+        "model/sd": tf.convert_to_tensor(np.array(1.0, dtype="float32")),
+        "model/y": tf.convert_to_tensor(observed),
+    }
+
+    with pytest.raises(ValueError):
+        pm.sample_posterior_predictive(model(), trace, var_names=[])
+
+    with pytest.raises(KeyError):
+        pm.sample_posterior_predictive(model(), trace, var_names=["name not in model!"])
+
+    with pytest.raises(TypeError):
+        bad_trace = trace.copy()
+        bad_trace["name not in model!"] = tf.constant(1.0)
+        pm.sample_posterior_predictive(model(), bad_trace)
+
+    var_names = ["model/sd", "model/x", "model/dy"]
+    ppc = pm.sample_posterior_predictive(model(), trace, var_names=var_names)
+    assert set(var_names) == set(ppc)
+    assert ppc["model/sd"].shape == trace["model/sd"].shape
+    assert np.all([v.shape == observed.shape for k, v in ppc.items() if k != "model/sd"])

@@ -1,6 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, List
-import numpy as np
+from typing import Any, Tuple, Dict, Union, List, Optional, Set
 import collections
 import itertools
 
@@ -83,6 +82,7 @@ class SamplingState:
         "transformed_values",
         "untransformed_values",
         "observed_values",
+        "posterior_predictives",
         "all_values",
         "all_unobserved_values",
         "distributions",
@@ -97,7 +97,8 @@ class SamplingState:
         observed_values: Dict[str, Any] = None,
         distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
-        deterministics: Dict[str, distribution.Deterministic] = None,
+        deterministics: Dict[str, Any] = None,
+        posterior_predictives: Optional[Set[str]] = None,
     ) -> None:
         # verbose __init__
         if transformed_values is None:
@@ -124,6 +125,10 @@ class SamplingState:
             deterministics = dict()
         else:
             deterministics = deterministics.copy()
+        if posterior_predictives is None:
+            posterior_predictives = set()
+        else:
+            posterior_predictives = posterior_predictives.copy()
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
@@ -136,6 +141,7 @@ class SamplingState:
         self.distributions = distributions
         self.potentials = potentials
         self.deterministics = deterministics
+        self.posterior_predictives = posterior_predictives
 
     def collect_log_prob(self):
         all_terms = itertools.chain(
@@ -153,6 +159,7 @@ class SamplingState:
         transformed_values = list(self.transformed_values)
         observed_values = list(self.observed_values)
         deterministics = list(self.deterministics)
+        posterior_predictives = list(self.posterior_predictives)
         # format like dist:name
         distributions = [
             "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
@@ -173,7 +180,9 @@ class SamplingState:
             + indent
             + "num_potentials={}\n"
             + indent
-            + "deterministics: {})"
+            + "deterministics: {}\n"
+            + indent
+            + "posterior_predictives: {})"
         ).format(
             self.__class__.__name__,
             untransformed_values,
@@ -182,6 +191,7 @@ class SamplingState:
             distributions,
             num_potentials,
             deterministics,
+            posterior_predictives,
         )
 
     @classmethod
@@ -209,6 +219,7 @@ class SamplingState:
             distributions=self.distributions,
             potentials=self.potentials,
             deterministics=self.deterministics,
+            posterior_predictives=self.posterior_predictives,
         )
 
     def as_sampling_state(self) -> "SamplingState":
@@ -537,6 +548,9 @@ class SamplingExecutor:
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
+                # We also store the name in posterior_predictives just to keep
+                # track of the variables used in posterior predictive sampling
+                state.posterior_predictives.add(scoped_name)
                 state.observed_values.pop(scoped_name)
             else:
                 if scoped_name in state.untransformed_values:
@@ -641,8 +655,6 @@ def assert_observations_compatible_with_distribution_shape(
 
     Raises
     ------
-    TypeError
-        When the shape of the ``observed_value`` cannot be extracted
     EvaluationError
         When the ``observed_value`` shape is not compatible with the
         ``Distribution``'s shape.
@@ -661,13 +673,14 @@ def assert_observations_compatible_with_distribution_shape(
         )
 
 
-def get_observed_tensor_shape(arr: Union[np.ndarray, tf.Tensor, tf.TensorArray]) -> tf.TensorShape:
+def get_observed_tensor_shape(arr: Any) -> tf.TensorShape:
     """Extract the supplied arr's shape and return it as a ``tf.TensorShape``.
 
     Parameters
     ----------
-    arr: Union[np.ndarray, tf.Tensor, tf.TensorArray]
-        The array or tensor from which to extract the shape
+    arr: Any
+        Will be tf.convert_to_tensor and the resulting tensor's shape will be
+        returned
 
     Returns
     -------
@@ -679,12 +692,4 @@ def get_observed_tensor_shape(arr: Union[np.ndarray, tf.Tensor, tf.TensorArray])
     TypeError
         When ``arr`` does not have a ``shape`` attribute.
     """
-    try:
-        return tf.TensorShape(arr.shape)
-    except AttributeError:
-        raise TypeError(
-            "Unhandled type. Cannot get the observed arr's shape as a "
-            "TensorShape.\n"
-            "Supplied arrs type={}\n"
-            "Supplied arrs={}".format(type(arr), arr)
-        )
+    return tf.convert_to_tensor(arr).shape

@@ -1,5 +1,4 @@
 import types
-import collections
 from typing import Optional, Union, Tuple, List, Dict, Set, Any
 import numpy as np
 import tensorflow as tf
@@ -7,7 +6,6 @@ from pymc4.coroutine_model import Model
 from pymc4.flow import (
     evaluate_model,
     SamplingState,
-    evaluate_model_transformed,
     evaluate_model_posterior_predictive,
 )
 from pymc4.flow.executor import EvaluationError
@@ -166,6 +164,7 @@ def sample_prior_predictive(
         )
 
     # Setup the function that makes a single draw
+    @tf.function(autograph=False)
     def single_draw(index):
         _, st = evaluate_model(model, observed=observed)
         return tuple(
@@ -194,7 +193,7 @@ def sample_posterior_predictive(
     model: ModelType,
     trace: Dict[str, Any],
     var_names: Optional[List[str]] = None,
-    state: Optional[SamplingState] = None,
+    observed: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, np.ndarray]:
     """
     Draw ``sample_shape`` values from the model for the desired ``var_names``.
@@ -210,9 +209,9 @@ def sample_posterior_predictive(
         The list of variable names that will be included in the returned
         samples. If ``None``, the samples drawn for all observed
         distributions will be returned in the ``Samples`` dictionary.
-    state : Optional[pymc4.flow.SamplingState]
-        A ``SamplingState`` that can be used to specify distributions fixed
-        values and change observed values.
+    observed : Optional[Dict[str, Any]]
+        A dictionary that can be used to override the distribution observed
+        values defined in the model.
 
     Returns
     -------
@@ -244,55 +243,110 @@ def sample_posterior_predictive(
     The drawn values are the dictionary's values, and their shape will depend
     on the supplied ``trace``
 
-    >>> ppc["model/n"]
+    >>> ppc["model/n"].shape
     (1000, 10, 100)
 
     """
-    # Ideally, our model should be vectorized so it would be enough to simply
-    # do pm.evaluate_model_posterior_predictive(model, values=trace)
-    # However, we cannot safely assume this, so we must infer the trace's batch
-    # shape, to vectorize across them
+    # Get a copy of trace because we may manipulate the dictionary later in this
+    # function
+    trace = trace.copy()
+    if var_names is not None and len(var_names) == 0:
+        raise ValueError("Supplied an empty var_names list to sample from")
 
-    # Do a single forward pass to infer the distributions core shapes
-    state = evaluate_model_transformed(model, state=state)[1]
+    # We cannot assume that the model is vectorized, so we have batch the
+    # pm.evaluate_model_posterior_predictive calls across the trace entries
+    # This brings one big problem: we need to infer the batch dimensions from
+    # the trace. To do this, we will do
+    # 1) A regular single forward pass to determine the variable's shapes
+    #    (we'll call these the core shapes)
+    # 2) Go through the supplied trace to get each variable's batch shapes
+    #    (the shapes to the left of the core shapes)
+    # 3) Broadcast the encountered batch shapes between each other as a sanity
+    #    check to get the global trace's batch_shape
+    # 4) Broadcast the values in the trace to the global batch_shape to get
+    #    each variable's broadcasted value.
+    # 5) As tf.vectorized_map only iterates across the first dimension, we want
+    #    to flatten the batch dimensions. To do this, we reshape the broadcasted
+    #    values to (-1,) + core_shape. This way, tf.vectorized_map will be able
+    #    to vectorize across the entire batch
+    # 6) Collect the samples from, reshape them to batch_shape + core_shape and
+    #    return them
 
+    # Do a single forward pass to infer the distributions core shapes and
+    # default observeds
+    state = evaluate_model_posterior_predictive(model, observed=observed)[1]
+    if var_names is None:
+        var_names = list(state.posterior_predictives)
+    else:
+        defined_variables = set(state.all_values) | set(state.deterministics)
+        if not set(var_names) <= defined_variables:
+            raise KeyError(
+                "The supplied var_names = {} are not defined in the model.\n"
+                "Defined variables are = {}".format(
+                    list(set(var_names) - defined_variables), list(defined_variables),
+                )
+            )
+
+    # Get the global batch_shape
     batch_shape = tf.TensorShape([])
-    for var_name, values in trace.items():
+    trace_names = list(trace)
+    for var_name in trace_names:
+        values = tf.convert_to_tensor(trace[var_name])
         try:
             core_shape = state.all_values[var_name].shape
         except KeyError:
-            raise TypeError(
-                "Supplied the variable {} in the trace, yet this variable is "
-                "not defined in the model: {!r}".format(var_name, state)
-            )
+            if var_name in state.deterministics:
+                # Remove the deterministics from the trace
+                del trace[var_name]
+                continue
+            else:
+                raise TypeError(
+                    "Supplied the variable {} in the trace, yet this variable is "
+                    "not defined in the model: {!r}".format(var_name, state)
+                )
         if len(values.shape) < len(core_shape):
             raise EvaluationError(
                 EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(
                     var_name, core_shape, values.shape
                 )
             )
-        batch_shape = tf.broadcast_dynamic_shape(
-            values.shape[: len(values.shape) - len(core_shape)], batch_shape,
+        batch_shape = tf.TensorShape(
+            tf.broadcast_static_shape(
+                values.shape[: len(values.shape) - len(core_shape)], batch_shape,
+            )
         )
 
-    flattened_trace = dict()
+    # Flatten the batch axis
+    flattened_trace = []
     for k, v in trace.items():
         core_shape = tf.TensorShape(state.all_values[k].shape)
-        flattened_trace[k] = tf.reshape(
-            tf.broadcast_to(v, batch_shape + core_shape), shape=tf.TensorShape([-1]) + core_shape,
-        )
-        assert flattened_trace[k].shape is None
+        batched_val = tf.broadcast_to(v, batch_shape + core_shape)
+        flattened_trace.append(tf.reshape(batched_val, shape=[-1] + core_shape.as_list()))
+    trace_vars = list(trace)
 
     # Setup the function that makes a single draw
-    def single_draw(index):
-        values = {k: v[index] for k, v in flattened_trace.items()}
-        _, st = evaluate_model_posterior_predictive(model, values=values)
-        return tuple([collections.ChainMap(st.all_values, st.deterministics)[k] for k in var_names])
+    @tf.function(autograph=False)
+    def single_draw(elems):
+        values = dict(zip(trace_vars, elems))
+        _, st = evaluate_model_posterior_predictive(model, values=values, observed=observed)
+        return tuple(
+            [
+                (
+                    st.untransformed_values[k]
+                    if k in st.untransformed_values
+                    else (
+                        st.deterministics[k] if k in st.deterministics else st.transformed_values[k]
+                    )
+                )
+                for k in var_names
+            ]
+        )
 
-    # Make draws in parallel with tf.vectorized_map
-    samples = tf.vectorized_map(single_draw, tf.range(int(np.prod(batch_shape))))
+    # Make draws in parallel across the batch elements with tf.vectorized_map
+    samples = tf.vectorized_map(single_draw, flattened_trace)
 
-    # Convert the samples to ndarrays and make a dictionary with the desired sample_shape
+    # Convert the samples to ndarrays and make a dictionary with the correct
+    # batch_shape + core_shape
     output = dict()
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()

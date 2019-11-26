@@ -574,6 +574,7 @@ def test_incompatible_observed_shape():
     @pm.model
     def model(observed):
         a = yield pm.Normal("a", 0, [1, 2], observed=observed)
+
     observed_value = np.arange(3, dtype="float32")
 
     with pytest.raises(EvaluationError):

@@ -4,7 +4,12 @@ from typing import Optional, Union, Tuple, List, Dict, Set, Any
 import numpy as np
 import tensorflow as tf
 from pymc4.coroutine_model import Model
-from pymc4.flow import evaluate_model, SamplingState, evaluate_model_transformed, evaluate_model_posterior_predictive
+from pymc4.flow import (
+    evaluate_model,
+    SamplingState,
+    evaluate_model_transformed,
+    evaluate_model_posterior_predictive,
+)
 from pymc4.flow.executor import EvaluationError
 
 
@@ -267,16 +272,14 @@ def sample_posterior_predictive(
                 )
             )
         batch_shape = tf.broadcast_dynamic_shape(
-            values.shape[:len(values.shape) - len(core_shape)],
-            batch_shape,
+            values.shape[: len(values.shape) - len(core_shape)], batch_shape,
         )
 
     flattened_trace = dict()
     for k, v in trace.items():
         core_shape = tf.TensorShape(state.all_values[k].shape)
         flattened_trace[k] = tf.reshape(
-            tf.broadcast_to(v, batch_shape + core_shape),
-            shape=tf.TensorShape([-1]) + core_shape,
+            tf.broadcast_to(v, batch_shape + core_shape), shape=tf.TensorShape([-1]) + core_shape,
         )
         assert flattened_trace[k].shape is None
 

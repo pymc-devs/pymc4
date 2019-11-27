@@ -402,6 +402,58 @@ def test_as_sampling_state_does_not_works_if_untransformed_exec(complex_model):
     e.match("'complex_model/a/__log_n' is not found")
 
 
+def test_sampling_state_clone(deterministics_in_nested_models):
+    model = deterministics_in_nested_models[0]
+    observed = {"model/nested_model/x": 0.0}
+    _, state = pm.evaluate_model(model(), observed=observed)
+    clone = state.clone()
+    assert set(state.all_values) == set(clone.all_values)
+    assert all((state.all_values[k] == v for k, v in clone.all_values.items()))
+    assert set(state.deterministics) == set(clone.deterministics)
+    assert all((state.deterministics[k] == v for k, v in clone.deterministics.items()))
+    assert state.posterior_predictives == clone.posterior_predictives
+
+
+def test_as_sampling_state_failure_on_empty():
+    st = pm.flow.executor.SamplingState()
+    with pytest.raises(TypeError):
+        st.as_sampling_state()
+
+
+def test_as_sampling_state_failure_on_dangling_distribution():
+    st = pm.flow.executor.SamplingState(distributions={"bla": pm.Normal("bla", 0, 1)})
+    with pytest.raises(TypeError):
+        st.as_sampling_state()
+
+
+def test_evaluate_model_failure_on_state_and_values():
+    values = {"model/x": 1}
+    st = pm.flow.executor.SamplingState(observed_values=values)
+
+    @pm.model
+    def model():
+        yield pm.Normal("x", 0, 1)
+
+    with pytest.raises(ValueError):
+        pm.evaluate_model(model(), state=st, values=values)
+
+
+def test_executor_failure_on_invalid_state():
+    st = pm.flow.executor.SamplingState(transformed_values={"bla": 0})
+    with pytest.raises(ValueError):
+        pm.evaluate_model.validate_state(st)
+
+
+def test_proceed_deterministic_failure_on_unnamed_deterministic():
+    @pm.model
+    def model():
+        x = yield pm.Normal("x", 0, 1)
+        yield pm.Deterministic(None, x)
+
+    with pytest.raises(EvaluationError):
+        pm.evaluate_model(model())
+
+
 def test_unnamed_distribution():
     f = lambda: (yield pm.distributions.Normal.dist(0, 1))
     with pytest.raises(pm.flow.executor.EvaluationError) as e:

@@ -6,6 +6,7 @@ import numpy as np
 import tensorflow as tf
 import pymc4 as pm
 from pymc4 import forward_sampling
+from pymc4.flow.executor import EvaluationError
 
 
 @pytest.fixture(scope="module", params=[(), (1,), (2,), (1, 1), (7, 3)], ids=str)
@@ -227,3 +228,21 @@ def test_sample_ppc_var_names(model_fixture):
     assert set(var_names) == set(ppc)
     assert ppc["model/sd"].shape == trace["model/sd"].shape
     assert np.all([v.shape == observed.shape for k, v in ppc.items() if k != "model/sd"])
+
+
+def test_sample_ppc_corrupt_trace():
+    @pm.model
+    def model():
+        x = yield pm.Normal("x", tf.ones(5), 1)
+        y = yield pm.Normal("y", x, 1)
+
+    trace1 = {"model/x": np.ones(7, dtype="float32")}
+
+    trace2 = {
+        "model/x": np.ones(5, dtype="float32"),
+        "model/y": np.array(0, dtype="float32"),
+    }
+    with pytest.raises(EvaluationError):
+        pm.sample_posterior_predictive(model(), trace1)
+    with pytest.raises(EvaluationError):
+        pm.sample_posterior_predictive(model(), trace2)

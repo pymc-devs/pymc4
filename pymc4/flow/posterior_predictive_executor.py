@@ -13,7 +13,7 @@ from pymc4.flow.executor import (
     SamplingState,
     observed_value_in_evaluation,
     get_observed_tensor_shape,
-    assert_observations_compatible_with_distribution_shape,
+    assert_values_compatible_with_distribution,
 )
 from pymc4.flow.transformed_executor import TransformedSamplingExecutor
 
@@ -92,7 +92,7 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
 
         # We first check the TFP distribution's shape and compare it with the
         # observed_value's shape
-        assert_observations_compatible_with_distribution_shape(scoped_name, observed_value, dist)
+        assert_values_compatible_with_distribution(scoped_name, observed_value, dist)
 
         # Now we get the broadcasted shape between the observed value and the distribution
         observed_shape = get_observed_tensor_shape(observed_value)

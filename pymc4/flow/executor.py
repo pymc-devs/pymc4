@@ -143,12 +143,17 @@ class SamplingState:
         self.deterministics = deterministics
         self.posterior_predictives = posterior_predictives
 
-    def collect_log_prob(self):
-        all_terms = itertools.chain(
+    def collect_log_prob_elemwise(self):
+        return itertools.chain(
             (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
             (p.value for p in self.potentials),
         )
-        return sum(map(tf.reduce_sum, all_terms))
+
+    def collect_log_prob(self):
+        return sum(map(tf.reduce_sum, self.collect_log_prob_elemwise()))
+
+    def collect_unreduced_log_prob(self):
+        return sum(self.collect_log_prob_elemwise())
 
     def __repr__(self):
         # display keys only

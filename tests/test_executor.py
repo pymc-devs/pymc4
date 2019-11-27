@@ -622,8 +622,6 @@ def test_log_prob_elemwise(fixture_model_with_plates):
     log_prob = state.collect_log_prob()
     assert len(log_prob_elemwise) == len(expected_rv_shapes)
     assert all(rv in log_prob_elemwise for rv in expected_rv_shapes)
-    print({k: v.shape for k, v in log_prob_elemwise.items()})
-    print(expected_rv_shapes)
     assert all(log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items())
     assert log_prob.numpy() == sum(map(tf.reduce_sum, log_prob_elemwise.values())).numpy()
 

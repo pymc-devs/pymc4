@@ -27,7 +27,7 @@ class Distribution(Model):
     """Statistical distribution."""
 
     def __init__(
-        self, name: Optional[NameType], *, transform=None, observed=None, plate=None, **kwargs
+        self, name: Optional[NameType], *, transform=None, observed=None, plate=None, conditionally_independent=False, **kwargs
     ):
         self.conditions = self.unpack_conditions(**kwargs)
         self._distribution = self._init_distribution(self.conditions)
@@ -41,6 +41,7 @@ class Distribution(Model):
             )
         self.model_info.update(observed=observed)
         self.transform = self._init_transform(transform)
+        self.conditionally_independent = conditionally_independent
         if self.plate is not None:
             self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
 
@@ -64,18 +65,18 @@ class Distribution(Model):
         """
         return kwargs
 
-    def sample(self, shape=(), seed=None):
+    def sample(self, sample_shape=(), seed=None):
         """
         Forward sampling implementation.
 
         Parameters
         ----------
-        shape : tuple
+        sample_shape : tuple
             sample shape
         seed : int|None
             random seed
         """
-        return self._distribution.sample(shape, seed)
+        return self._distribution.sample(sample_shape, seed)
 
     def sample_numpy(self, shape=(), seed=None):
         """
@@ -134,6 +135,10 @@ class Distribution(Model):
     @property
     def is_observed(self):
         return self.model_info["observed"] is not None
+
+    @property
+    def is_root(self):
+        return self.conditionally_independent
 
 
 class Potential:

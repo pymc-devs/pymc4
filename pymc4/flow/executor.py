@@ -305,6 +305,7 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
+        sample_shape: Optional[Union[int, Tuple[int], tf.TensorShape]] = None,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -456,13 +457,13 @@ class SamplingExecutor:
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, distribution.Distribution):
                         try:
-                            return_value, state = self.proceed_distribution(dist, state)
+                            return_value, state = self.proceed_distribution(dist, state, sample_shape=sample_shape)
                         except EvaluationError as error:
                             control_flow.throw(error)
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
-                            dist, state=state, _validate_state=False
+                            dist, state=state, _validate_state=False, sample_shape=sample_shape
                         )
                     else:
                         err = EvaluationError(
@@ -518,7 +519,7 @@ class SamplingExecutor:
         return dist
 
     def proceed_distribution(
-        self, dist: distribution.Distribution, state: SamplingState
+        self, dist: distribution.Distribution, state: SamplingState, sample_shape: Optional[Union[int, Tuple[int], tf.TensorShape]] = None,
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         if dist.is_anonymous:
@@ -541,7 +542,10 @@ class SamplingExecutor:
                 # might be posterior predictive or programmatically override to exchange observed variable to latent
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
-                    return_value = state.untransformed_values[scoped_name] = dist.sample()
+                    if dist.is_root:
+                        return_value = state.untransformed_values[scoped_name] = dist.sample(sample_shape=sample_shape)
+                    else:
+                        return_value = state.untransformed_values[scoped_name] = dist.sample()
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -561,7 +565,10 @@ class SamplingExecutor:
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
         else:
-            return_value = state.untransformed_values[scoped_name] = dist.sample()
+            if dist.is_root:
+                return_value = state.untransformed_values[scoped_name] = dist.sample(sample_shape=sample_shape)
+            else:
+                return_value = state.untransformed_values[scoped_name] = dist.sample()
         state.distributions[scoped_name] = dist
         return return_value, state
 

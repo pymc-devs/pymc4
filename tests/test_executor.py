@@ -27,9 +27,9 @@ def fixture_distribution_parameters(fixture_batch_shapes, fixture_sample_shapes)
     return fixture_batch_shapes, observed
 
 
-@pytest.fixture(scope="module", params=[False, True], ids=str)
+@pytest.fixture(scope="module", params=["decorate_model", "use_plain_function"], ids=str)
 def fixture_pm_model_decorate(request):
-    return request.param
+    return request.param == "decorate_model"
 
 
 @pytest.fixture("module")
@@ -105,19 +105,24 @@ def class_model():
 
 
 @pytest.fixture(scope="module")
-def fixture_model_with_tiles(fixture_distribution_parameters, fixture_pm_model_decorate):
+def fixture_model_with_plates(fixture_distribution_parameters, fixture_pm_model_decorate):
     batch_shape, observed = fixture_distribution_parameters
+    expected_obs_shape = (
+        ()
+        if isinstance(observed, float)
+        else observed.shape[: len(observed.shape) - len(batch_shape)]
+    )
     if fixture_pm_model_decorate:
         expected_rv_shapes = {
             "model/loc": (),
-            "model/obs": np.broadcast(observed, np.empty(batch_shape)).shape,
+            "model/obs": expected_obs_shape,
         }
     else:
-        expected_rv_shapes = {"loc": (), "obs": np.broadcast(observed, np.empty(batch_shape)).shape}
+        expected_rv_shapes = {"loc": (), "obs": expected_obs_shape}
 
     def model():
         loc = yield pm.Normal("loc", 0, 1)
-        obs = yield pm.Normal("obs", loc, 1, batch_shape=batch_shape, observed=observed)
+        obs = yield pm.Normal("obs", loc, 1, plate=batch_shape, observed=observed)
         return obs
 
     if fixture_pm_model_decorate:
@@ -556,13 +561,17 @@ def test_differently_shaped_logp():
     state.collect_log_prob()  # this should work
 
 
-def test_log_prob_elemwise(fixture_model_with_tiles):
-    model, expected_rv_shapes = fixture_model_with_tiles
+def test_log_prob_elemwise(fixture_model_with_plates):
+    model, expected_rv_shapes = fixture_model_with_plates
     _, state = pm.evaluate_model(model())
-    log_prob_elemwise = state.collect_log_prob_elemwise()
+    log_prob_elemwise = dict(
+        zip(state.distributions, state.collect_log_prob_elemwise())
+    )  # This will discard potentials in log_prob_elemwise
     log_prob = state.collect_log_prob()
     assert len(log_prob_elemwise) == len(expected_rv_shapes)
     assert all(rv in log_prob_elemwise for rv in expected_rv_shapes)
+    print({k: v.shape for k, v in log_prob_elemwise.items()})
+    print(expected_rv_shapes)
     assert all(log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items())
     assert log_prob.numpy() == sum(map(tf.reduce_sum, log_prob_elemwise.values())).numpy()
 
@@ -639,6 +648,7 @@ def test_incompatible_observed_shape():
 
 def test_unreduced_log_prob(fixture_batch_shapes):
     observed_value = np.ones(10, dtype="float32")
+
     @pm.model
     def model():
         a = yield pm.Normal("a", 0, 1)

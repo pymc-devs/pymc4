@@ -39,18 +39,18 @@ class EvaluationError(RuntimeError):
         "or remove {1!r} from transformed values."
     )
     INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE = (
-        "The value supplied to the distribution {0!r} is not consistent "
+        "The values supplied to the distribution {0!r} are not consistent "
         "with the distribution's shape (dist_shape).\n"
         "dist_shape = batch_shape + event_shape = {1!r}\n"
-        "supplied value's shape = {2!r}.\n"
-        "A value is considered to have a consistent shape with the "
+        "Supplied values shape = {2!r}.\n"
+        "A values array is considered to have a consistent shape with the "
         "distribution if two conditions are met.\n"
         "1) It has a greater or equal number of dimensions when compared to the "
         "distribution (len(value.shape) >= len(dist_shape))\n"
-        "2) The observed value's shape is compatible with the "
+        "2) The values shape is compatible with the "
         "distribution's shape: "
         "dist_shape.is_compatible_with("
-        "    observed_shape[(len(observed_shape) - len(dist_shape)):]"
+        "    value_shape[(len(values.shape) - len(dist_shape)):]"
         ")"
     )
     ...
@@ -154,9 +154,6 @@ class SamplingState:
 
     def collect_unreduced_log_prob(self):
         return sum(self.collect_log_prob_elemwise())
-
-    def collect_deterministics(self):
-        return tuple(self.deterministics.values())
 
     def __repr__(self):
         # display keys only
@@ -564,9 +561,7 @@ class SamplingExecutor:
                             scoped_name
                         )
                     )
-                assert_observations_compatible_with_distribution_shape(
-                    scoped_name, observed_variable, dist
-                )
+                assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
                 return_value = state.observed_values[scoped_name] = observed_variable
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
@@ -633,24 +628,24 @@ def observed_value_in_evaluation(
     return state.observed_values.get(scoped_name, dist.model_info["observed"])
 
 
-def assert_observations_compatible_with_distribution_shape(
-    scoped_name: str, observed_value: Any, dist: distribution.Distribution
+def assert_values_compatible_with_distribution(
+    scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
-    """Assert if the Distribution's shape is compatible with the supplied observed_value.
+    """Assert if the Distribution's shape is compatible with the supplied values.
 
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
-    distribution (len(value.shape) >= len(dist_shape))
-    2) The observed value's shape is compatible with the distribution's shape:
-    dist_shape.is_compatible_with(observed_shape[(len(observed_shape) - len(dist_shape)):])
+    distribution: len(values.shape) >= len(dist_shape)
+    2) The supplied values' shape is compatible with the distribution's shape:
+    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
 
     Parameters
     ----------
     scoped_name: str
         The variable's scoped name
-    observed_value: Any
-        The supplied observed values
+    values: Any
+        The supplied values
     dist: distribution.Distribution
         The ``Distribution`` instance.
 
@@ -661,19 +656,52 @@ def assert_observations_compatible_with_distribution_shape(
     Raises
     ------
     EvaluationError
-        When the ``observed_value`` shape is not compatible with the
-        ``Distribution``'s shape.
+        When the ``values`` shape is not compatible with the ``Distribution``'s
+        shape.
     """
-    observed_shape = get_observed_tensor_shape(observed_value)
     event_shape = dist._distribution.event_shape
     batch_shape = dist._distribution.batch_shape
     dist_shape = batch_shape + event_shape
-    if observed_shape.rank < dist_shape.rank or not dist_shape.is_compatible_with(
-        observed_shape[(len(observed_shape) - len(dist_shape)) :]
+    assert_values_compatible_with_distribution_shape(scoped_name, values, dist_shape)
+
+
+def assert_values_compatible_with_distribution_shape(
+    scoped_name: str, values: Any, dist_shape: tf.TensorShape
+) -> None:
+    """Assert if a supplied values are compatible with a distribution's TensorShape.
+
+    A value is considered to have a consistent shape with the distribution if
+    two conditions are met.
+    1) It has a greater or equal number of dimensions when compared to the
+    distribution: len(values.shape) >= len(dist_shape)
+    2) The supplied values' shape is compatible with the distribution's shape:
+    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
+
+    Parameters
+    ----------
+    scoped_name: str
+        The variable's scoped name
+    values: Any
+        The supplied values
+    dist_shape: tf.TensorShape
+        The ``tf.TensorShape`` instance.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    EvaluationError
+        When the ``values`` shape is not compatible with the ``dist_shape``.
+    """
+    value_shape = get_observed_tensor_shape(values)
+    if value_shape.rank < dist_shape.rank or not dist_shape.is_compatible_with(
+        value_shape[(len(value_shape) - len(dist_shape)) :]
     ):
         raise EvaluationError(
             EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(
-                scoped_name, dist_shape, observed_shape
+                scoped_name, dist_shape, value_shape
             )
         )
 

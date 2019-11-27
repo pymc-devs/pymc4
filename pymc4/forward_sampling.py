@@ -8,7 +8,7 @@ from pymc4.flow import (
     SamplingState,
     evaluate_model_posterior_predictive,
 )
-from pymc4.flow.executor import EvaluationError
+from pymc4.flow.executor import assert_values_compatible_with_distribution_shape
 
 
 __all__ = ["sample_prior_predictive", "sample_posterior_predictive"]
@@ -304,12 +304,7 @@ def sample_posterior_predictive(
                     "Supplied the variable {} in the trace, yet this variable is "
                     "not defined in the model: {!r}".format(var_name, state)
                 )
-        if len(values.shape) < len(core_shape):
-            raise EvaluationError(
-                EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(
-                    var_name, core_shape, values.shape
-                )
-            )
+        assert_values_compatible_with_distribution_shape(var_name, values, core_shape)
         batch_shape = tf.TensorShape(
             tf.broadcast_static_shape(
                 values.shape[: len(values.shape) - len(core_shape)], batch_shape,

@@ -4,6 +4,8 @@ import math
 import numpy as np
 from pymc4 import distributions as dist
 import tensorflow as tf
+from tensorflow_probability import distributions as tfd
+from pymc4.flow.executor import get_observed_tensor_shape, EvaluationError, SamplingState
 
 
 TEST_SHAPES = [(), (1,), (3,), (1, 1), (1, 3), (5, 3)]
@@ -124,6 +126,69 @@ def fixture_model_with_tiles(fixture_distribution_parameters, fixture_pm_model_d
     return model, expected_rv_shapes
 
 
+@pytest.fixture("module")
+def model_with_deterministics():
+    expected_deterministics = ["model/abs_norm", "model/sine_norm", "model/norm_copy"]
+    expected_ops = [np.abs, np.sin, lambda x: x]
+    expected_ops_inputs = [["model/norm"], ["model/norm"], ["model/norm"]]
+
+    @pm.model
+    def model():
+        norm = yield dist.Normal("norm", 0, 1)
+        abs_norm = yield dist.Deterministic("abs_norm", tf.abs(norm))
+        sine_norm = yield dist.Deterministic("sine_norm", tf.sin(norm))
+        norm_copy = yield dist.Deterministic("norm_copy", norm)
+        obs = yield dist.Normal("obs", 0, abs_norm)
+
+    return model, expected_deterministics, expected_ops, expected_ops_inputs
+
+
+@pytest.fixture(scope="function")
+def deterministics_in_nested_models():
+    @pm.model
+    def nested_model(cond):
+        x = yield pm.Normal("x", cond, 1)
+        dx = yield pm.Deterministic("dx", x + 1)
+        return dx
+
+    @pm.model
+    def outer_model():
+        cond = yield pm.HalfNormal("cond", 1)
+        dcond = yield pm.Deterministic("dcond", cond * 2)
+        dx = yield nested_model(dcond)
+        ddx = yield pm.Deterministic("ddx", dx)
+        return ddx
+
+    expected_untransformed = {
+        "outer_model/cond",
+        "outer_model/nested_model/x",
+    }
+    expected_transformed = {"outer_model/__log_cond"}
+    expected_deterministics = {
+        "outer_model/dcond",
+        "outer_model/ddx",
+        "outer_model/nested_model/dx",
+        "outer_model/nested_model",
+        "outer_model",
+    }
+    deterministic_mapping = {
+        "outer_model/dcond": (["outer_model/cond"], lambda x: x * 2),
+        "outer_model/ddx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model": (["outer_model/nested_model/x"], lambda x: x + 1),
+    }
+
+    return (
+        outer_model,
+        expected_untransformed,
+        expected_transformed,
+        expected_deterministics,
+        deterministic_mapping,
+    )
+
+
 def test_class_model(class_model):
     """Test that model can be defined as method in an object definition"""
     _, state = pm.evaluate_model(class_model.class_model_method())
@@ -153,11 +218,10 @@ def test_complex_model_keep_return():
 
     _, state = pm.evaluate_model(complex_model())
 
-    assert set(state.untransformed_values) == {
-        "complex_model/n",
-        "complex_model/a",
-        "complex_model/a/n",
+    assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
+    assert set(state.deterministics) == {
         "complex_model",
+        "complex_model/a",
     }
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
@@ -168,9 +232,9 @@ def test_complex_model_no_keep_return(complex_model):
 
     assert set(state.untransformed_values) == {
         "complex_model/n",
-        "complex_model/a",
         "complex_model/a/n",
     }
+    assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
 
@@ -258,7 +322,8 @@ def test_raise_if_return_distribution():
 def test_observed_are_passed_correctly(complex_model_with_observed):
     _, state = pm.evaluate_model(complex_model_with_observed())
 
-    assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a"}
+    assert set(state.untransformed_values) == {"complex_model/n"}
+    assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert set(state.observed_values) == {"complex_model/a/n"}
     assert np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
@@ -271,9 +336,9 @@ def test_observed_are_set_to_none_for_posterior_predictive_correctly(complex_mod
 
     assert set(state.untransformed_values) == {
         "complex_model/n",
-        "complex_model/a",
         "complex_model/a/n",
     }
+    assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
     assert not np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
@@ -303,7 +368,7 @@ def test_observed_do_not_produce_transformed_values_case_override(transformed_mo
 
 
 def test_observed_do_not_produce_transformed_values_case_override_with_set_value(
-    transformed_model_with_observed
+    transformed_model_with_observed,
 ):
     _, state = pm.evaluate_model_transformed(
         transformed_model_with_observed(), values=dict(n=1.0), observed=dict(n=None)
@@ -323,7 +388,7 @@ def test_observed_do_not_produce_transformed_values_case_override_with_set_value
 
 
 def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_transformed_executor(
-    transformed_model_with_observed
+    transformed_model_with_observed,
 ):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         _, state = pm.evaluate_model_transformed(
@@ -334,7 +399,7 @@ def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_transform
 
 
 def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_untransformed_executor(
-    transformed_model_with_observed
+    transformed_model_with_observed,
 ):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         _, state = pm.evaluate_model(transformed_model_with_observed(), values=dict(n=0.0))
@@ -424,7 +489,7 @@ def test_unnamed_return():
         )
 
     _, state = pm.evaluate_model(a_model())
-    assert "a_model" in state.all_values
+    assert "a_model" in state.deterministics
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model(name=None))
@@ -443,7 +508,7 @@ def test_unnamed_return_2():
         )
 
     _, state = pm.evaluate_model(a_model(name="b_model"))
-    assert "b_model" in state.all_values
+    assert "b_model" in state.deterministics
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model())
@@ -502,9 +567,92 @@ def test_log_prob_elemwise(fixture_model_with_tiles):
     assert log_prob.numpy() == sum(map(tf.reduce_sum, log_prob_elemwise.values())).numpy()
 
 
-def test_log_prob_elemwise_api(fixture_model_with_tiles):
-    model, expected_rv_shapes = fixture_model_with_tiles
-    log_prob_elemwise = pm.model_log_prob_elemwise(model())
-    assert len(log_prob_elemwise) == len(expected_rv_shapes)
-    assert all(rv in log_prob_elemwise for rv in expected_rv_shapes)
-    assert all(log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items())
+def test_deterministics(model_with_deterministics):
+    model, expected_deterministics, expected_ops, expected_ops_inputs = model_with_deterministics
+    _, state = pm.evaluate_model(model())
+
+    assert len(state.deterministics) == len(expected_deterministics)
+    assert set(expected_deterministics) <= set(state.deterministics)
+    for expected_deterministic, op, op_inputs in zip(
+        expected_deterministics, expected_ops, expected_ops_inputs
+    ):
+        inputs = [v for k, v in state.all_values.items() if k in op_inputs]
+        out = op(*inputs)
+        np.testing.assert_allclose(state.deterministics[expected_deterministic], out)
+
+
+def test_deterministic_with_distribution_name_fails():
+    @pm.model
+    def model():
+        x = yield pm.Normal("x", 0, 1)
+        det = yield pm.Deterministic("x", x)
+        return det
+
+    with pytest.raises(pm.flow.executor.EvaluationError):
+        pm.evaluate_model(model())
+
+
+def test_distribution_with_deterministic_name_fails():
+    @pm.model
+    def model():
+        x = yield pm.Normal("x", 0, 1)
+        det = yield pm.Deterministic("det", x)
+        y = yield pm.Normal("det", det, 1)
+        return y
+
+    with pytest.raises(pm.flow.executor.EvaluationError):
+        pm.evaluate_model(model())
+
+
+def test_deterministics_in_nested_model(deterministics_in_nested_models):
+    (
+        model,
+        expected_untransformed,
+        expected_transformed,
+        expected_deterministics,
+        deterministic_mapping,
+    ) = deterministics_in_nested_models
+    _, state = pm.evaluate_model_transformed(model())
+    assert set(state.untransformed_values) == expected_untransformed
+    assert set(state.transformed_values) == expected_transformed
+    assert set(state.deterministics) == expected_deterministics
+    for deterministic, (inputs, op) in deterministic_mapping.items():
+        np.testing.assert_allclose(
+            state.deterministics[deterministic],
+            op(*[state.untransformed_values[i] for i in inputs]),
+        )
+
+
+def test_incompatible_observed_shape():
+    @pm.model
+    def model(observed):
+        a = yield pm.Normal("a", 0, [1, 2], observed=observed)
+
+    observed_value = np.arange(3, dtype="float32")
+
+    with pytest.raises(EvaluationError):
+        pm.evaluate_model(model(None), observed={"model/a": observed_value})
+
+    with pytest.raises(EvaluationError):
+        pm.evaluate_model(model(observed_value))
+
+
+def test_unreduced_log_prob(fixture_batch_shapes):
+    observed_value = np.ones(10, dtype="float32")
+    @pm.model
+    def model():
+        a = yield pm.Normal("a", 0, 1)
+        b = yield pm.HalfNormal("b", 1)
+        c = yield pm.Normal("c", loc=a, scale=b, plate=len(observed_value))
+
+    values = {
+        "model/a": np.zeros(fixture_batch_shapes, dtype="float32"),
+        "model/b": np.ones(fixture_batch_shapes, dtype="float32"),
+    }
+    observed = {
+        "model/c": np.broadcast_to(observed_value, fixture_batch_shapes + observed_value.shape)
+    }
+    state = pm.evaluate_model(model(), values=values, observed=observed)[1]
+    unreduced_log_prob = state.collect_unreduced_log_prob()
+    assert unreduced_log_prob.numpy().shape == fixture_batch_shapes
+    np.testing.assert_allclose(tf.reduce_sum(unreduced_log_prob), state.collect_log_prob())

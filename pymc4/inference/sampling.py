@@ -1,9 +1,9 @@
 from typing import Optional
 import tensorflow as tf
 from tensorflow_probability import mcmc
-from pymc4.inference.utils import initialize_state
 from pymc4.coroutine_model import Model
 from pymc4 import flow
+from pymc4.inference.utils import initialize_state
 
 
 def sample(
@@ -90,20 +90,26 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
-    logpfn, init = build_logp_function(model, state=state, observed=observed)
+    (
+        logpfn,
+        init,
+        _deterministics_callback,
+        deterministic_names,
+    ) = build_logp_and_deterministic_functions(model, state=state, observed=observed)
     init_state = list(init.values())
     init_keys = list(init.keys())
     parallel_logpfn = vectorize_logp_function(logpfn)
+    deterministics_callback = vectorize_logp_function(_deterministics_callback)
     init_state = tile_init(init_state, num_chains)
 
-    def trace_fn(_, pkr):
+    def trace_fn(current_state, pkr):
         return (
             pkr.inner_results.target_log_prob,
             pkr.inner_results.leapfrogs_taken,
             pkr.inner_results.has_divergence,
             pkr.inner_results.energy,
             pkr.inner_results.log_accept_ratio,
-        )
+        ) + tuple(deterministics_callback(*current_state))
 
     @tf.function(autograph=False)
     def run_chains(init, step_size):
@@ -139,13 +145,17 @@ def sample(
 
     posterior = dict(zip(init_keys, results))
     # Keep in sync with pymc3 naming convention
-    sampler_stats = dict(
-        zip(["lp", "tree_size", "diverging", "energy", "mean_tree_accept"], sample_stats)
-    )
+    stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
+    if len(sample_stats) > len(stat_names):
+        deterministic_values = sample_stats[len(stat_names) :]
+        sample_stats = sample_stats[: len(stat_names)]
+    sampler_stats = dict(zip(stat_names, sample_stats))
+    if len(deterministic_names) > 0:
+        posterior.update(dict(zip(deterministic_names, deterministic_values)))
     return posterior, sampler_stats
 
 
-def build_logp_function(
+def build_logp_and_deterministic_functions(
     model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
 ):
     if not isinstance(model, Model):
@@ -157,8 +167,10 @@ def build_logp_function(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
     if state is None:
-        state = initialize_state(model, observed=observed)
+        state, deterministic_names = initialize_state(model, observed=observed)
     else:
+        _, st = flow.evaluate_model_transformed(model, state=state)
+        deterministic_names = list(st.deterministics)
         state = state.as_sampling_state()
 
     observed = state.observed_values
@@ -174,7 +186,17 @@ def build_logp_function(
         _, st = flow.evaluate_model_transformed(model, state=st)
         return st.collect_log_prob()
 
-    return logpfn, dict(state.all_unobserved_values)
+    @tf.function(autograph=False)
+    def deterministics_callback(*values, **kwargs):
+        if kwargs and values:
+            raise TypeError("Either list state should be passed or a dict one")
+        elif values:
+            kwargs = dict(zip(unobserved_keys, values))
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        _, st = flow.evaluate_model_transformed(model, state=st)
+        return st.deterministics.values()
+
+    return logpfn, dict(state.all_unobserved_values), deterministics_callback, deterministic_names
 
 
 def vectorize_logp_function(logpfn):

@@ -1,4 +1,4 @@
-.PHONY: help venv conda docker docstyle format style black test lint check
+.PHONY: help venv conda docker docstyle format style types black test lint check
 .DEFAULT_GOAL = help
 
 PYTHON = python
@@ -54,12 +54,17 @@ style:
 	pylint pymc4/
 	@printf "\033[1;34mPylint passes!\033[0m\n\n"
 
+types:
+	@printf "Checking code type signatures with mypy...\n"
+	python -m mypy --ignore-missing-imports pymc4/
+	@printf "\033[1;34mMypy passes!\033[0m\n\n"
+
 black:  # Format code in-place using black.
 	black pymc4/ tests/
 
 test:  # Test code using pytest.
 	pytest -v pymc4 tests --doctest-modules --html=testing-report.html --self-contained-html
 
-lint: docstyle format style  # Lint code using pydocstyle, black and pylint.
+lint: docstyle format style types  # Lint code using pydocstyle, black, pylint and mypy.
 
 check: lint test  # Both lint and test code. Runs `make lint` followed by `make test`.

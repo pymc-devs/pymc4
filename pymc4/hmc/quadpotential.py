@@ -54,7 +54,7 @@ def partial_check_positive_definite(C):
         d = C
     else:
         d = np.diag(C)
-    i, = np.nonzero(np.logical_or(np.isnan(d), d <= 0))
+    (i,) = np.nonzero(np.logical_or(np.isnan(d), d <= 0))
 
     if len(i):
         raise PositiveDefiniteError("Simple check failed. Diagonal contains negatives", i)

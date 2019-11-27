@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
@@ -153,6 +153,27 @@ class Potential:
     @property
     def value_numpy(self):
         return self.value.numpy()
+
+
+class Deterministic(Model):
+    """An object that can be sampled, but has no log probability."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, name: Optional[NameType], value: Any):
+        self.value = value
+        super().__init__(self.get_value, name=name, keep_return=True, keep_auxiliary=False)
+
+    def get_value(self):
+        return self.value
+
+    @property
+    def value_numpy(self):
+        return self.value.numpy()
+
+    @property
+    def is_anonymous(self):
+        return self.name is None
 
 
 class ContinuousDistribution(Distribution):

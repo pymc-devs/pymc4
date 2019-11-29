@@ -235,58 +235,58 @@ def sample_posterior_predictive(
     var_names: Optional[List[str]] = None,
     observed: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, np.ndarray]:
-#    """
-#    Draw ``sample_shape`` values from the model for the desired ``var_names``.
-#
-#    Parameters
-#    ----------
-#    model : types.GeneratorType, pymc4.Model
-#        Model to draw samples from
-#    trace: Dict[str, Any]
-#        The samples drawn from the model's posterior distribution that should
-#        be used for sampling from the posterior predictive
-#    var_names: Optional[List[str]]
-#        The list of variable names that will be included in the returned
-#        samples. If ``None``, the samples drawn for all observed
-#        distributions will be returned in the ``Samples`` dictionary.
-#    observed : Optional[Dict[str, Any]]
-#        A dictionary that can be used to override the distribution observed
-#        values defined in the model.
-#
-#    Returns
-#    -------
-#    Samples: Dict[str, np.ndarray]
-#        A dictionary of ``var_names`` keys and their corresponding drawn
-#        samples.
-#
-#    Examples
-#    --------
-#    Lets define a simple model to sample from
-#
-#    >>> import pymc4 as pm
-#    >>> @pm.model
-#    ... def model():
-#    ...     sd = yield pm.HalfNormal("sd", 5.)
-#    ...     norm = yield pm.Normal("n", 0, sd, observed=np.random.randn(100))
-#
-#    Now, we may want to draw samples from the model's posterior to then sample
-#    from the posterior predictive.
-#
-#    >>> trace, stats = pm.inference.sampling.sample(model())
-#    >>> ppc = pm.sample_posterior_predictive(model(), trace)
-#
-#    The samples are returned as a dictionary with the variable names as keys
-#
-#    >>> sorted(list(ppc))
-#    ['model/n']
-#
-#    The drawn values are the dictionary's values, and their shape will depend
-#    on the supplied ``trace``
-#
-#    >>> ppc["model/n"].shape
-#    (1000, 10, 100)
-#
-#    """
+    #    """
+    #    Draw ``sample_shape`` values from the model for the desired ``var_names``.
+    #
+    #    Parameters
+    #    ----------
+    #    model : types.GeneratorType, pymc4.Model
+    #        Model to draw samples from
+    #    trace: Dict[str, Any]
+    #        The samples drawn from the model's posterior distribution that should
+    #        be used for sampling from the posterior predictive
+    #    var_names: Optional[List[str]]
+    #        The list of variable names that will be included in the returned
+    #        samples. If ``None``, the samples drawn for all observed
+    #        distributions will be returned in the ``Samples`` dictionary.
+    #    observed : Optional[Dict[str, Any]]
+    #        A dictionary that can be used to override the distribution observed
+    #        values defined in the model.
+    #
+    #    Returns
+    #    -------
+    #    Samples: Dict[str, np.ndarray]
+    #        A dictionary of ``var_names`` keys and their corresponding drawn
+    #        samples.
+    #
+    #    Examples
+    #    --------
+    #    Lets define a simple model to sample from
+    #
+    #    >>> import pymc4 as pm
+    #    >>> @pm.model
+    #    ... def model():
+    #    ...     sd = yield pm.HalfNormal("sd", 5.)
+    #    ...     norm = yield pm.Normal("n", 0, sd, observed=np.random.randn(100))
+    #
+    #    Now, we may want to draw samples from the model's posterior to then sample
+    #    from the posterior predictive.
+    #
+    #    >>> trace, stats = pm.inference.sampling.sample(model())
+    #    >>> ppc = pm.sample_posterior_predictive(model(), trace)
+    #
+    #    The samples are returned as a dictionary with the variable names as keys
+    #
+    #    >>> sorted(list(ppc))
+    #    ['model/n']
+    #
+    #    The drawn values are the dictionary's values, and their shape will depend
+    #    on the supplied ``trace``
+    #
+    #    >>> ppc["model/n"].shape
+    #    (1000, 10, 100)
+    #
+    #    """
     # Get a copy of trace because we may manipulate the dictionary later in this
     # function
     trace = trace.copy()

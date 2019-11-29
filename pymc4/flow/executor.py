@@ -305,7 +305,7 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
-        sample_shape: Optional[Union[int, Tuple[int], tf.TensorShape]] = None,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -457,7 +457,9 @@ class SamplingExecutor:
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, distribution.Distribution):
                         try:
-                            return_value, state = self.proceed_distribution(dist, state, sample_shape=sample_shape)
+                            return_value, state = self.proceed_distribution(
+                                dist, state, sample_shape=sample_shape
+                            )
                         except EvaluationError as error:
                             control_flow.throw(error)
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
@@ -519,7 +521,10 @@ class SamplingExecutor:
         return dist
 
     def proceed_distribution(
-        self, dist: distribution.Distribution, state: SamplingState, sample_shape: Optional[Union[int, Tuple[int], tf.TensorShape]] = None,
+        self,
+        dist: distribution.Distribution,
+        state: SamplingState,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         if dist.is_anonymous:
@@ -543,7 +548,9 @@ class SamplingExecutor:
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
                     if dist.is_root:
-                        return_value = state.untransformed_values[scoped_name] = dist.sample(sample_shape=sample_shape)
+                        return_value = state.untransformed_values[scoped_name] = dist.sample(
+                            sample_shape=sample_shape
+                        )
                     else:
                         return_value = state.untransformed_values[scoped_name] = dist.sample()
                 else:
@@ -566,7 +573,9 @@ class SamplingExecutor:
             return_value = state.untransformed_values[scoped_name]
         else:
             if dist.is_root:
-                return_value = state.untransformed_values[scoped_name] = dist.sample(sample_shape=sample_shape)
+                return_value = state.untransformed_values[scoped_name] = dist.sample(
+                    sample_shape=sample_shape
+                )
             else:
                 return_value = state.untransformed_values[scoped_name] = dist.sample()
         state.distributions[scoped_name] = dist
@@ -661,8 +670,8 @@ def assert_values_compatible_with_distribution(
         When the ``values`` shape is not compatible with the ``Distribution``'s
         shape.
     """
-    event_shape = dist._distribution.event_shape
-    batch_shape = dist._distribution.batch_shape
+    event_shape = dist.event_shape
+    batch_shape = dist.batch_shape
     dist_shape = batch_shape + event_shape
     assert_values_compatible_with_distribution_shape(scoped_name, values, dist_shape)
 

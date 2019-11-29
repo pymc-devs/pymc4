@@ -70,6 +70,39 @@ def model_with_observed_fixture(request):
     return model, observed, core_ppc_shapes, observed_in_RV
 
 
+@pytest.fixture(scope="module", params=["auto_batch", "trust_manual_batching"], ids=str)
+def use_auto_batching_fixture(request):
+    return request.param == "auto_batch"
+
+
+@pytest.fixture(scope="module", params=["unvectorized_model", "vectorized_model"], ids=str)
+def vectorized_model_fixture(request):
+    is_vectorized_model = request.param == "vectorized_model"
+    observed = np.zeros((5, 4), dtype="float32")
+    core_shapes = {
+        "model/mu": (4,),
+        "model/scale": (),
+        "model/x": (5, 4),
+    }
+    if not is_vectorized_model:
+
+        @pm.model
+        def model():
+            mu = yield pm.Normal("mu", tf.zeros(4), 1)
+            scale = yield pm.HalfNormal("scale", 1)
+            x = yield pm.Normal("x", mu, scale, plate=5, observed=observed)
+
+    else:
+
+        @pm.model
+        def model():
+            mu = yield pm.Normal("mu", tf.zeros(4), 1)
+            scale = yield pm.HalfNormal("scale", 1)
+            x = yield pm.Normal("x", mu, scale, plate=5, observed=observed)
+
+    return model, is_vectorized_model, core_shapes
+
+
 @pytest.fixture(scope="module")
 def posterior_predictive_fixture(model_with_observed_fixture):
     num_samples = 40
@@ -198,7 +231,7 @@ def test_sample_posterior_predictive(posterior_predictive_fixture):
         observed_kwarg = None
     else:
         observed_kwarg = observed
-    ppc = pm.sample_posterior_predictive(model(), trace, observed=observed_kwarg)
+    ppc = forward_sampling.sample_posterior_predictive(model(), trace, observed=observed_kwarg)
     assert set(sorted(list(ppc))) == set(observed)
     assert np.all(
         [v.shape == (num_samples, num_chains) + observed[k].shape for k, v in ppc.items()]
@@ -213,18 +246,20 @@ def test_sample_ppc_var_names(model_fixture):
     }
 
     with pytest.raises(ValueError):
-        pm.sample_posterior_predictive(model(), trace, var_names=[])
+        forward_sampling.sample_posterior_predictive(model(), trace, var_names=[])
 
     with pytest.raises(KeyError):
-        pm.sample_posterior_predictive(model(), trace, var_names=["name not in model!"])
+        forward_sampling.sample_posterior_predictive(
+            model(), trace, var_names=["name not in model!"]
+        )
 
     with pytest.raises(TypeError):
         bad_trace = trace.copy()
         bad_trace["name not in model!"] = tf.constant(1.0)
-        pm.sample_posterior_predictive(model(), bad_trace)
+        forward_sampling.sample_posterior_predictive(model(), bad_trace)
 
     var_names = ["model/sd", "model/x", "model/dy"]
-    ppc = pm.sample_posterior_predictive(model(), trace, var_names=var_names)
+    ppc = forward_sampling.sample_posterior_predictive(model(), trace, var_names=var_names)
     assert set(var_names) == set(ppc)
     assert ppc["model/sd"].shape == trace["model/sd"].shape
     assert np.all([v.shape == observed.shape for k, v in ppc.items() if k != "model/sd"])
@@ -243,6 +278,24 @@ def test_sample_ppc_corrupt_trace():
         "model/y": np.array(0, dtype="float32"),
     }
     with pytest.raises(EvaluationError):
-        pm.sample_posterior_predictive(model(), trace1)
+        forward_sampling.sample_posterior_predictive(model(), trace1)
     with pytest.raises(EvaluationError):
-        pm.sample_posterior_predictive(model(), trace2)
+        forward_sampling.sample_posterior_predictive(model(), trace2)
+
+
+def test_vectorized_sample_prior_predictive(
+    vectorized_model_fixture, use_auto_batching_fixture, sample_shape_fixture
+):
+    model, is_vectorized_model, core_shapes = vectorized_model_fixture
+    if not is_vectorized_model and not use_auto_batching_fixture:
+        with pytest.raises(EvaluationError):
+            prior = forward_sampling.sample_prior_predictive(
+                model(),
+                sample_shape=sample_shape_fixture,
+                use_auto_batching=use_auto_batching_fixture,
+            )
+    else:
+        prior = forward_sampling.sample_prior_predictive(
+            model(), sample_shape=sample_shape_fixture, use_auto_batching=use_auto_batching_fixture
+        )
+        assert all(prior[k].shape == sample_shape_fixture + v for k, v in core_shapes.items())

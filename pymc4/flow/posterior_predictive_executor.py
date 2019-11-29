@@ -96,7 +96,7 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
 
         # Now we get the broadcasted shape between the observed value and the distribution
         observed_shape = get_observed_tensor_shape(observed_value)
-        dist_shape = dist._distribution.batch_shape + dist._distribution.event_shape
+        dist_shape = dist.batch_shape + dist.event_shape
         new_dist_shape = tf.broadcast_static_shape(observed_shape, dist_shape)
         plate = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
 

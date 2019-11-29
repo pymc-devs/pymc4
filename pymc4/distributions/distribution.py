@@ -4,6 +4,7 @@ from typing import Optional, Union, Any
 
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
+from pymc4.distributions.tensorflow.plate import Plate
 from . import transforms
 
 NameType = Union[str, int]
@@ -27,7 +28,14 @@ class Distribution(Model):
     """Statistical distribution."""
 
     def __init__(
-        self, name: Optional[NameType], *, transform=None, observed=None, plate=None, conditionally_independent=False, **kwargs
+        self,
+        name: Optional[NameType],
+        *,
+        transform=None,
+        observed=None,
+        plate=None,
+        conditionally_independent=False,
+        **kwargs,
     ):
         self.conditions = self.unpack_conditions(**kwargs)
         self._distribution = self._init_distribution(self.conditions)
@@ -43,7 +51,7 @@ class Distribution(Model):
         self.transform = self._init_transform(transform)
         self.conditionally_independent = conditionally_independent
         if self.plate is not None:
-            self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
+            self._distribution = Plate(self._distribution, plate_shape=self.plate)
 
     @staticmethod
     def _init_distribution(conditions: dict) -> tfd.Distribution:
@@ -78,13 +86,13 @@ class Distribution(Model):
         """
         return self._distribution.sample(sample_shape, seed)
 
-    def sample_numpy(self, shape=(), seed=None):
+    def sample_numpy(self, sample_shape=(), seed=None):
         """
         Forward sampling implementation returning raw numpy arrays.
 
         Parameters
         ----------
-        shape : tuple
+        sample_shape : tuple
             sample shape
         seed : int|None
             random seed
@@ -92,7 +100,7 @@ class Distribution(Model):
         ----------
         array of given shape
         """
-        return self.sample(shape, seed).numpy()
+        return self.sample(sample_shape, seed).numpy()
 
     def log_prob(self, value):
         """Return log probability as tensor."""
@@ -139,6 +147,14 @@ class Distribution(Model):
     @property
     def is_root(self):
         return self.conditionally_independent
+
+    @property
+    def batch_shape(self):
+        return self._distribution.batch_shape
+
+    @property
+    def event_shape(self):
+        return self._distribution.event_shape
 
 
 class Potential:

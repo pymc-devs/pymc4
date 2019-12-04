@@ -2,10 +2,12 @@ import pytest
 import pymc4 as pm
 import math
 import numpy as np
-from pymc4 import distributions as dist
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
-from pymc4.flow.executor import get_observed_tensor_shape, EvaluationError, SamplingState
+from tensorflow_probability import bijectors as bij
+
+from pymc4 import distributions as dist
+from pymc4.flow.executor import EvaluationError
 
 
 TEST_SHAPES = [(), (1,), (3,), (1, 1), (1, 3), (5, 3)]
@@ -32,7 +34,7 @@ def fixture_pm_model_decorate(request):
     return request.param == "decorate_model"
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def complex_model():
     @pm.model
     def nested_model(cond):
@@ -48,7 +50,7 @@ def complex_model():
     return complex_model
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def complex_model_with_observed():
     @pm.model
     def nested_model(cond):
@@ -66,7 +68,7 @@ def complex_model_with_observed():
     return complex_model
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def simple_model():
     def simple_model():
         norm = yield dist.Normal("n", 0, 1)
@@ -75,7 +77,7 @@ def simple_model():
     return simple_model
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def transformed_model():
     def transformed_model():
         norm = yield dist.HalfNormal("n", 1, transform=dist.transforms.Log())
@@ -84,7 +86,7 @@ def transformed_model():
     return transformed_model
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def transformed_model_with_observed():
     def transformed_model_with_observed():
         norm = yield dist.HalfNormal("n", 1, transform=dist.transforms.Log(), observed=1.0)
@@ -93,7 +95,7 @@ def transformed_model_with_observed():
     return transformed_model_with_observed
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def class_model():
     class ClassModel:
         @pm.model(method=True)
@@ -113,10 +115,7 @@ def fixture_model_with_plates(fixture_distribution_parameters, fixture_pm_model_
         else observed.shape[: len(observed.shape) - len(batch_shape)]
     )
     if fixture_pm_model_decorate:
-        expected_rv_shapes = {
-            "model/loc": (),
-            "model/obs": expected_obs_shape,
-        }
+        expected_rv_shapes = {"model/loc": (), "model/obs": expected_obs_shape}
     else:
         expected_rv_shapes = {"loc": (), "obs": expected_obs_shape}
 
@@ -131,7 +130,7 @@ def fixture_model_with_plates(fixture_distribution_parameters, fixture_pm_model_
     return model, expected_rv_shapes
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def model_with_deterministics():
     expected_deterministics = ["model/abs_norm", "model/sine_norm", "model/norm_copy"]
     expected_ops = [np.abs, np.sin, lambda x: x]
@@ -164,10 +163,7 @@ def deterministics_in_nested_models():
         ddx = yield pm.Deterministic("ddx", dx)
         return ddx
 
-    expected_untransformed = {
-        "outer_model/cond",
-        "outer_model/nested_model/x",
-    }
+    expected_untransformed = {"outer_model/cond", "outer_model/nested_model/x"}
     expected_transformed = {"outer_model/__log_cond"}
     expected_deterministics = {
         "outer_model/dcond",
@@ -224,10 +220,7 @@ def test_complex_model_keep_return():
     _, state = pm.evaluate_model(complex_model())
 
     assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
-    assert set(state.deterministics) == {
-        "complex_model",
-        "complex_model/a",
-    }
+    assert set(state.deterministics) == {"complex_model", "complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
 
@@ -235,10 +228,7 @@ def test_complex_model_keep_return():
 def test_complex_model_no_keep_return(complex_model):
     _, state = pm.evaluate_model(complex_model())
 
-    assert set(state.untransformed_values) == {
-        "complex_model/n",
-        "complex_model/a/n",
-    }
+    assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
     assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
@@ -281,10 +271,6 @@ def test_transformed_model_transformed_executor_with_passed_value(transformed_mo
 
 
 def test_transformed_executor_logp_tensorflow(transformed_model):
-    tfp = pytest.importorskip("tensorflow_probability")
-    bij = tfp.bijectors
-    tfd = tfp.distributions
-
     norm_log = tfd.TransformedDistribution(tfd.HalfNormal(1), bij.Invert(bij.Exp()))
 
     _, state = pm.evaluate_model_transformed(transformed_model(), values=dict(__log_n=-math.pi))
@@ -299,9 +285,6 @@ def test_transformed_executor_logp_tensorflow(transformed_model):
 
 
 def test_executor_logp_tensorflow(transformed_model):
-    tfp = pytest.importorskip("tensorflow_probability")
-    tfd = tfp.distributions
-
     norm = tfd.HalfNormal(1)
 
     _, state = pm.evaluate_model(transformed_model(), values=dict(n=math.pi))
@@ -339,10 +322,7 @@ def test_observed_are_set_to_none_for_posterior_predictive_correctly(complex_mod
         complex_model_with_observed(), observed={"complex_model/a/n": None}
     )
 
-    assert set(state.untransformed_values) == {
-        "complex_model/n",
-        "complex_model/a/n",
-    }
+    assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
     assert set(state.deterministics) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values

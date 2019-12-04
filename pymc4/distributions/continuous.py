@@ -1,7 +1,8 @@
 """PyMC4 continuous random variables for tensorflow."""
 import math
 
-import tensorflow_probability as tfp
+from tensorflow_probability import distributions as tfd
+from tensorflow_probability import bijectors as bij
 from pymc4.distributions.distribution import (
     ContinuousDistribution,
     PositiveContinuousDistribution,
@@ -9,8 +10,6 @@ from pymc4.distributions.distribution import (
     BoundedContinuousDistribution,
 )
 
-
-tfd = tfp.distributions
 
 __all__ = [
     "Beta",
@@ -784,7 +783,7 @@ class LogitNormal(UnitContinuousDistribution):
         loc, scale = conditions["loc"], conditions["scale"]
         return tfd.TransformedDistribution(
             distribution=tfd.Normal(loc=loc, scale=scale),
-            bijector=tfp.bijectors.Sigmoid(),
+            bijector=bij.Sigmoid(),
             name="LogitNormal",
         )
 

@@ -3,11 +3,7 @@ from typing import Optional, Union, Tuple, List, Dict, Set, Any
 import numpy as np
 import tensorflow as tf
 from pymc4.coroutine_model import Model
-from pymc4.flow import (
-    evaluate_model,
-    SamplingState,
-    evaluate_model_posterior_predictive,
-)
+from pymc4.flow import evaluate_model, SamplingState, evaluate_model_posterior_predictive
 from pymc4.flow.executor import assert_values_compatible_with_distribution_shape
 
 
@@ -283,7 +279,7 @@ def sample_posterior_predictive(
             raise KeyError(
                 "The supplied var_names = {} are not defined in the model.\n"
                 "Defined variables are = {}".format(
-                    list(set(var_names) - defined_variables), list(defined_variables),
+                    list(set(var_names) - defined_variables), list(defined_variables)
                 )
             )
 
@@ -307,7 +303,7 @@ def sample_posterior_predictive(
         assert_values_compatible_with_distribution_shape(var_name, values, core_shape)
         batch_shape = tf.TensorShape(
             tf.broadcast_static_shape(
-                values.shape[: len(values.shape) - len(core_shape)], batch_shape,
+                values.shape[: len(values.shape) - len(core_shape)], batch_shape
             )
         )
 

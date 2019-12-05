@@ -5,7 +5,7 @@ from .. import Model, flow
 
 
 def initialize_state(
-    model: Model, observed: Optional[dict] = None
+    model: Model, observed: Optional[dict] = None, state=None
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initilize the model provided state and/or observed variables.

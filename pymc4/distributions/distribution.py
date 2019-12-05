@@ -31,7 +31,6 @@ class Distribution(Model):
     ):
         self.conditions = self.unpack_conditions(**kwargs)
         self._distribution = self._init_distribution(self.conditions)
-        self.dtype = self._distribution.dtype
         self.plate = plate
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
@@ -44,6 +43,10 @@ class Distribution(Model):
         self.transform = self._init_transform(transform)
         if self.plate is not None:
             self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
+
+    @property
+    def dtype(self):
+        return self._distribution.dtype
 
     @staticmethod
     def _init_distribution(conditions: dict) -> tfd.Distribution:

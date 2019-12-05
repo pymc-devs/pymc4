@@ -170,7 +170,9 @@ def build_logp_and_deterministic_functions(
     state, deterministic_names = initialize_sampling_state(model, observed=observed, state=state)
 
     if not state.all_unobserved_values:
-        raise ValueError("The `state` does not contain any `unobserved` values")
+        raise ValueError(
+            f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
+        )
 
     observed = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())

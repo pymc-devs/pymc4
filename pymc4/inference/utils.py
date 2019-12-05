@@ -4,7 +4,7 @@ import numpy as np
 from .. import Model, flow
 
 
-def initialize_state(
+def initialize_sampling_state(
     model: Model, observed: Optional[dict] = None, state=None
 ) -> Tuple[flow.SamplingState, List[str]]:
     """

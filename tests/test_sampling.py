@@ -186,7 +186,7 @@ def test_sampling_with_deterministics_in_nested_models(
 
 def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
     model = simple_model_no_free_rvs()
-    with pytest.raises(ValueError) as error:
+    with pytest.raises(ValueError):
         trace, stats = pm.inference.sampling.sample(
             model=model, num_samples=1, num_chains=1, burn_in=1
         )

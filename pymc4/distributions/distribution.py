@@ -44,6 +44,10 @@ class Distribution(Model):
         if self.plate is not None:
             self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
 
+    @property
+    def dtype(self):
+        return self._distribution.dtype
+
     @staticmethod
     def _init_distribution(conditions: dict) -> tfd.Distribution:
         ...

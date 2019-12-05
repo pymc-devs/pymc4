@@ -5,7 +5,7 @@ from .. import Model, flow
 
 
 def initialize_sampling_state(
-    model: Model, observed: Optional[dict] = None, state=None
+    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initilize the model provided state and/or observed variables.
@@ -14,6 +14,7 @@ def initialize_sampling_state(
     ----------
     model : pymc4.Model
     observed : Optional[dict]
+    state : Optional[flow.SamplingState]
 
     Returns
     -------
@@ -22,7 +23,7 @@ def initialize_sampling_state(
     deterministic_names: List[str]
         The list of names of the model's deterministics
     """
-    _, state = flow.evaluate_model_transformed(model, observed=observed)
+    _, state = flow.evaluate_model_transformed(model, observed=observed, state=state)
     deterministic_names = list(state.deterministics)
     return state.as_sampling_state(), deterministic_names
 

@@ -24,4 +24,3 @@ def test_sample_no_xla():
     tf_trace = pm4.inference.sampling.sample(
         schools_pm4(), step_size=0.28, num_chains=4, num_samples=100, burn_in=50, xla=False
     )
-    print(tf_trace)

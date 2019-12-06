@@ -1,6 +1,6 @@
 arviz>=0.4.1
 gast==0.2.2
-tensorflow>=2.0
-tensorflow-probability>=0.8
+tf-nightly
+tfp-nightly
 pymc3
 scipy>=0.18.1

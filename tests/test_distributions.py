@@ -26,7 +26,7 @@ def random_variable_args():
         ("Gumbel", {"loc": 0, "scale": 1}),
         ("HalfCauchy", {"scale": 1}),
         ("HalfNormal", {"scale": 3.0}),
-        # ("HalfStudentT", {"scale": 1, "nu": 10}),
+        ("HalfStudentT", {"scale": 1, "df": 10}),
         ("InverseGamma", {"concentration": 3, "scale": 2}),
         ("InverseGaussian", {"loc": 1, "concentration": 1}),
         ("Kumaraswamy", {"concentration0": 0.5, "concentration1": 0.5}),

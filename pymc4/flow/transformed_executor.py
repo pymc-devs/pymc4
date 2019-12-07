@@ -55,17 +55,17 @@ class TransformedSamplingExecutor(SamplingExecutor):
         if transformed_scoped_name in state.transformed_values:
             # We do not sample in this if branch
 
-            # 0. do not allow ambiguity in state, make sure only one value is provided to compute logp
-            if (
-                transformed_scoped_name in state.transformed_values
-                and scoped_name in state.untransformed_values
-            ):
-                raise EvaluationError(
-                    "Found both transformed and untransformed variables in the state: "
-                    "'{} and '{}', but need exactly one".format(
-                        scoped_name, transformed_scoped_name
-                    )
-                )
+            # # 0. do not allow ambiguity in state, make sure only one value is provided to compute logp
+            # if (
+            #     transformed_scoped_name in state.transformed_values
+            #     and scoped_name in state.untransformed_values
+            # ):
+            #     raise EvaluationError(
+            #         "Found both transformed and untransformed variables in the state: "
+            #         "'{} and '{}', but need exactly one".format(
+            #             scoped_name, transformed_scoped_name
+            #         )
+            #     )
 
             def model():
                 # 1. now compute all the variables: in the transformed and untransformed space

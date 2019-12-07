@@ -26,7 +26,9 @@ def initialize_sampling_state(
     """
     _, state = flow.evaluate_model_transformed(model, observed=observed, state=state)
     deterministic_names = list(state.deterministics)
-    return state.as_sampling_state(), deterministic_names
+
+    state, transform_after = state.as_sampling_state()
+    return state, deterministic_names + transform_after
 
 
 def trace_to_arviz(pm4_trace, pm4_sample_stats):

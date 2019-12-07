@@ -224,7 +224,7 @@ class SamplingState:
             posterior_predictives=self.posterior_predictives,
         )
 
-    def as_sampling_state(self) -> "SamplingState":
+    def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":
         """Create a sampling state that should be used within MCMC sampling.
 
         There are some principles that hold for the state.
@@ -241,7 +241,9 @@ class SamplingState:
             )
         untransformed_values = dict()
         transformed_values = dict()
+        need_to_transform_after = list()
         observed_values = dict()
+
         for name, dist in self.distributions.items():
             namespec = utils.NameParts.from_name(name)
             if dist.transform is not None and name not in self.observed_values:
@@ -258,6 +260,7 @@ class SamplingState:
                     transformed_values[
                         transformed_namespec.full_original_name
                     ] = self.transformed_values[transformed_namespec.full_original_name]
+                    need_to_transform_after.append(transformed_namespec.full_untransformed_name)
             else:
                 if name in self.observed_values:
                     observed_values[name] = self.observed_values[name]
@@ -269,10 +272,13 @@ class SamplingState:
                         "in the state. This may happen if the current "
                         "state was modified in the wrong way."
                     )
-        return self.__class__(
-            transformed_values=transformed_values,
-            untransformed_values=untransformed_values,
-            observed_values=observed_values,
+        return (
+            self.__class__(
+                transformed_values=transformed_values,
+                untransformed_values=untransformed_values,
+                observed_values=observed_values,
+            ),
+            need_to_transform_after,
         )
 
 

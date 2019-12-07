@@ -9,6 +9,7 @@ from pymc4.distributions.distribution import (
     UnitContinuousDistribution,
     BoundedContinuousDistribution,
 )
+from .half_student_t import HalfStudentT as TFPHalfStudentT
 
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "Triangular",
     "Uniform",
     "VonMises",
+    "HalfStudentT",
 ]
 
 
@@ -166,6 +168,68 @@ class HalfNormal(PositiveContinuousDistribution):
     def _init_distribution(conditions):
         scale = conditions["scale"]
         return tfd.HalfNormal(scale=scale)
+
+
+class HalfStudentT(PositiveContinuousDistribution):
+    r"""Half Student's T random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+        f(x \mid \sigma,\nu) =
+            \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
+            {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\sigma^2}}
+            \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 5, 200)
+        scales = [1., 1., 2., 1.]
+        nus = [.5, 1., 1., 30.]
+        for scale, df in zip(scales, nus):
+            pdf = st.t.pdf(x, df=df, loc=0, scale=scale)
+            plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(scale, df))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ========================
+    Support   :math:`x \in \mathbb{R}`
+    ========  ========================
+
+    Parameters
+    ----------
+    df : float
+        Degrees of freedom, also known as normality parameter (df > 0).
+    scale : float
+        Scale parameter (scale > 0). Converges to the standard deviation as df
+        increases. (only required if lam is not specified)
+
+    Examples
+    --------
+    .. code-block:: python
+
+        @pm.model
+        def model():
+            x = pm.HalfStudentT('x', scale=10, df=10)
+
+    In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
+    """
+
+    def __init__(self, name, df, scale, **kwargs):
+        super().__init__(name, df=df, scale=scale, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        scale = conditions["scale"]
+        df = conditions["df"]
+        return TFPHalfStudentT(df=df, loc=0, scale=scale)
 
 
 class Beta(UnitContinuousDistribution):
@@ -908,69 +972,6 @@ class Pareto(BoundedContinuousDistribution):
 
     def lower_limit(self):
         return self.conditions["scale"]
-
-
-# TODO: Implement this
-# class HalfStudentT(PositiveContinuousDistribution):
-#     r"""Half Student's T random variable.
-
-#     The pdf of this distribution is
-
-#     .. math::
-
-#         f(x \mid \sigma,\nu) =
-#             \frac{2\;\Gamma\left(\frac{\nu+1}{2}\right)}
-#             {\Gamma\left(\frac{\nu}{2}\right)\sqrt{\nu\pi\sigma^2}}
-#             \left(1+\frac{1}{\nu}\frac{x^2}{\sigma^2}\right)^{-\frac{\nu+1}{2}}
-
-#     .. plot::
-
-#         import matplotlib.pyplot as plt
-#         import numpy as np
-#         import scipy.stats as st
-#         plt.style.use('seaborn-darkgrid')
-#         x = np.linspace(0, 5, 200)
-#         scales = [1., 1., 2., 1.]
-#         nus = [.5, 1., 1., 30.]
-#         for scale, df in zip(scales, nus):
-#             pdf = st.t.pdf(x, df=df, loc=0, scale=scale)
-#             plt.plot(x, pdf, label=r'$\sigma$ = {}, $\nu$ = {}'.format(scale, df))
-#         plt.xlabel('x', fontsize=12)
-#         plt.ylabel('f(x)', fontsize=12)
-#         plt.legend(loc=1)
-#         plt.show()
-
-#     ========  ========================
-#     Support   :math:`x \in [0, \infty)`
-#     ========  ========================
-
-#     Parameters
-#     ----------
-#     df : float
-#         Degrees of freedom, also known as normality parameter (df > 0).
-#     scale : float
-#         Scale parameter (scale > 0). Converges to the standard deviation as df
-#         increases. (only required if lam is not specified)
-
-#     Examples
-#     --------
-#     .. code-block:: python
-
-#         # Only pass in one of lam or scale, but not both.
-#         @pm.model
-#         def model():
-#             x = pm.HalfStudentT('x', scale=10, df=10)
-
-#     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
-#     """
-
-#     def __init__(self, name, df, scale, **kwargs):
-#         super().__init__(name, df=df, scale=scale, **kwargs)
-
-#     @staticmethod
-#     def _init_distribution(conditions):
-#         df, scale = conditions["df"], conditions["scale"]
-#         return tfd.HalfStudentT(df=df, scale=scale)
 
 
 class StudentT(ContinuousDistribution):

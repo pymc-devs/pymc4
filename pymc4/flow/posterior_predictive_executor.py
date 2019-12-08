@@ -48,32 +48,31 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
         Distribution instance with no observations.
         4) This distribution will be yielded instead of the original incoming
         dist, and it will be used for posterior predictive sampling
-
+    
         Parameters
         ----------
         dist: Union[types.GeneratorType, pymc4.coroutine_model.Model]
-            The
+            The 
         model_info: Mapping[str, Any]
-            Either ``dist.model_info`` or
+            Either ``dist.model_info`` or 
             ``pymc4.coroutine_model.Model.default_model_info`` if ``dist`` is not a
             ``pymc4.courutine_model.Model`` instance.
         state: SamplingState
             The model's evaluation state.
-
+    
         Returns
         -------
         model: Union[types.GeneratorType, pymc4.coroutine_model.Model]
             The original ``dist`` if it was not an observed ``Distribution`` or
             the ``Distribution`` with the changed ``batch_shape`` and observations
             set to ``None``.
-
+    
         Raises
         ------
         EvaluationError
             When ``dist`` and its passed observed value don't have a consistent
             shape
         """
-        transformed = state.transformed_values
         dist = super().modify_distribution(dist, model_info, state)
         # We only modify the shape of Distribution instances that have observed
         # values

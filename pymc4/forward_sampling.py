@@ -4,11 +4,7 @@ import collections
 import numpy as np
 import tensorflow as tf
 from pymc4.coroutine_model import Model
-from pymc4.flow import (
-    evaluate_model,
-    SamplingState,
-    evaluate_model_posterior_predictive,
-)
+from pymc4.flow import evaluate_model, SamplingState, evaluate_model_posterior_predictive
 from pymc4.flow.executor import assert_values_compatible_with_distribution_shape
 
 
@@ -176,7 +172,7 @@ def sample_prior_predictive(
         sample_shape = (sample_shape,)
 
     # Do a single forward pass to establish the distributions, deterministics and observeds
-    state = evaluate_model(model, state=state)[1]
+    _, state = evaluate_model(model, state=state)
     distributions_names = list(state.untransformed_values)
     deterministic_names = list(state.deterministics)
     observed = None
@@ -206,16 +202,12 @@ def sample_prior_predictive(
     # Setup the function that makes a single draw
     @tf.function(autograph=False)
     def single_draw(index):
-        _, st = evaluate_model(model, observed=observed)
+        _, state = evaluate_model(model, observed=observed)
         return tuple(
-            [
-                (
-                    st.untransformed_values[k]
-                    if k in st.untransformed_values
-                    else (st.observed_values[k] if k in traced_observeds else st.deterministics[k])
-                )
-                for k in var_names
-            ]
+            state.untransformed_values[k]
+            if k in state.untransformed_values
+            else (state.observed_values[k] if k in traced_observeds else state.deterministics[k])
+            for k in var_names
         )
 
     # Make draws in parallel with tf.vectorized_map
@@ -323,7 +315,7 @@ def sample_posterior_predictive(
             raise KeyError(
                 "The supplied var_names = {} are not defined in the model.\n"
                 "Defined variables are = {}".format(
-                    list(set(var_names) - defined_variables), list(defined_variables),
+                    list(set(var_names) - defined_variables), list(defined_variables)
                 )
             )
 
@@ -347,7 +339,7 @@ def sample_posterior_predictive(
         assert_values_compatible_with_distribution_shape(var_name, values, core_shape)
         batch_shape = tf.TensorShape(
             tf.broadcast_static_shape(
-                values.shape[: len(values.shape) - len(core_shape)], batch_shape,
+                values.shape[: len(values.shape) - len(core_shape)], batch_shape
             )
         )
 

@@ -1,6 +1,6 @@
-arviz
+arviz>=0.4.1
 gast==0.2.2
-tf-nightly-2.0-preview
+tf-nightly
 tfp-nightly
 pymc3
-scipy
+scipy>=0.18.1

@@ -90,7 +90,7 @@ def biwrap(wrapper) -> Callable:
     return enhanced
 
 
-class NameParts(object):
+class NameParts:
     NAME_RE = re.compile(r"^(?:__(?P<transform>[^_]+)_)?(?P<name>[^_].*)$")
     NAME_ERROR_MESSAGE = (
         "Invalid name: `{}`, the correct one should look like: `__transform_name` or `name`, "
@@ -111,9 +111,9 @@ class NameParts(object):
         match = cls.NAME_RE.match(name)
         return match is not None
 
-    def __init__(self, path, transform_name, untransfomred_name):
+    def __init__(self, path, transform_name, untransformed_name):
         self.path = tuple(path)
-        self.untransformed_name = untransfomred_name
+        self.untransformed_name = untransformed_name
         self.transform_name = transform_name
 
     @classmethod

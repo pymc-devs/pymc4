@@ -3,7 +3,6 @@ import itertools
 import pymc4 as pm
 import numpy as np
 from scipy import stats
-from pymc4 import distributions as dist
 import tensorflow as tf
 
 
@@ -26,6 +25,16 @@ def simple_model_with_deterministic(simple_model):
         return determ
 
     return simple_model_with_deterministic
+
+
+@pytest.fixture(scope="function")
+def simple_model_no_free_rvs():
+    @pm.model()
+    def simple_model_no_free_rvs():
+        norm = yield pm.Normal("norm", 0, 1, observed=1)
+        return norm
+
+    return simple_model_no_free_rvs
 
 
 @pytest.fixture(
@@ -172,4 +181,12 @@ def test_sampling_with_deterministics_in_nested_models(
         model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
-        np.testing.assert_allclose(trace[deterministic], op(*[trace[i] for i in inputs]))
+        np.testing.assert_allclose(trace[deterministic], op(*[trace[i] for i in inputs]), rtol=1e-6)
+
+
+def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
+    model = simple_model_no_free_rvs()
+    with pytest.raises(ValueError):
+        trace, stats = pm.inference.sampling.sample(
+            model=model, num_samples=1, num_chains=1, burn_in=1
+        )

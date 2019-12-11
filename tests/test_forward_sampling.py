@@ -1,6 +1,5 @@
 import pytest
 import re
-import itertools
 import collections
 import numpy as np
 import tensorflow as tf
@@ -107,19 +106,11 @@ def vectorized_model_fixture(request):
 def posterior_predictive_fixture(model_with_observed_fixture):
     num_samples = 40
     num_chains = 3
-    (model, observed, core_ppc_shapes, observed_in_RV,) = model_with_observed_fixture
+    (model, observed, core_ppc_shapes, observed_in_RV) = model_with_observed_fixture
     trace, _ = pm.inference.sampling.sample(
-        model(), num_samples=num_samples, num_chains=num_chains, observed=observed,
+        model(), num_samples=num_samples, num_chains=num_chains, observed=observed
     )
-    return (
-        model,
-        observed,
-        core_ppc_shapes,
-        observed_in_RV,
-        trace,
-        num_samples,
-        num_chains,
-    )
+    return (model, observed, core_ppc_shapes, observed_in_RV, trace, num_samples, num_chains)
 
 
 def test_sample_prior_predictive(model_fixture, sample_shape_fixture, sample_from_observed_fixture):
@@ -155,12 +146,12 @@ def test_sample_prior_predictive_var_names(model_fixture):
     model, observed = model_fixture
 
     prior = forward_sampling.sample_prior_predictive(
-        model(), var_names=["model/sd"], sample_shape=(),
+        model(), var_names=["model/sd"], sample_shape=()
     )
     assert set(prior) == set(["model/sd"])
 
     prior = forward_sampling.sample_prior_predictive(
-        model(), var_names=["model/x", "model/y"], sample_shape=(),
+        model(), var_names=["model/x", "model/y"], sample_shape=()
     )
     assert set(prior) == set(["model/x", "model/y"])
 
@@ -179,7 +170,7 @@ def test_sample_prior_predictive_var_names(model_fixture):
     )
     with pytest.raises(ValueError, match=re.escape(expected_message)):
         prior = forward_sampling.sample_prior_predictive(
-            model_func, var_names=["X", "model/y"], sample_shape=(),
+            model_func, var_names=["X", "model/y"], sample_shape=()
         )
 
 
@@ -213,7 +204,7 @@ def test_posterior_predictive_executor(model_with_observed_fixture):
             == shape
         )
         if var in observed:
-            assert np.any(ppc_state.all_values[var] != val)
+            assert np.any(ppc_state.all_values[var] != val for val in observed.values())
 
 
 def test_sample_posterior_predictive(posterior_predictive_fixture):
@@ -273,10 +264,7 @@ def test_sample_ppc_corrupt_trace():
 
     trace1 = {"model/x": np.ones(7, dtype="float32")}
 
-    trace2 = {
-        "model/x": np.ones(5, dtype="float32"),
-        "model/y": np.array(0, dtype="float32"),
-    }
+    trace2 = {"model/x": np.ones(5, dtype="float32"), "model/y": np.array(0, dtype="float32")}
     with pytest.raises(EvaluationError):
         forward_sampling.sample_posterior_predictive(model(), trace1)
     with pytest.raises(EvaluationError):

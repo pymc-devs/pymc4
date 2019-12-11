@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import initialize_state
+from pymc4.inference.utils import initialize_sampling_state
 
 
 def sample(
@@ -166,12 +166,13 @@ def build_logp_and_deterministic_functions(
         )
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
-    if state is None:
-        state, deterministic_names = initialize_state(model, observed=observed)
-    else:
-        _, st = flow.evaluate_model_transformed(model, state=state)
-        deterministic_names = list(st.deterministics)
-        state = state.as_sampling_state()
+
+    state, deterministic_names = initialize_sampling_state(model, observed=observed, state=state)
+
+    if not state.all_unobserved_values:
+        raise ValueError(
+            f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
+        )
 
     observed = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())

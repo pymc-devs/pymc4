@@ -53,6 +53,10 @@ class Distribution(Model):
         if self.plate is not None:
             self._distribution = Plate(self._distribution, plate_shape=self.plate)
 
+    @property
+    def dtype(self):
+        return self._distribution.dtype
+
     @staticmethod
     def _init_distribution(conditions: dict) -> tfd.Distribution:
         ...

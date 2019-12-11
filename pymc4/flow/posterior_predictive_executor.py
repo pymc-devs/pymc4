@@ -104,6 +104,6 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
         # observed to None and setting a batch_size that matches the result of
         # broadcasting the observed and distribution shape
         new_dist = type(dist)(
-            name=dist.name, transform=dist.transform, observed=None, plate=plate, **dist.conditions,
+            name=dist.name, transform=dist.transform, observed=None, plate=plate, **dist.conditions
         )
         return new_dist

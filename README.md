@@ -11,7 +11,7 @@ What works?
  * Sample using NUTS, all in TF, fully vectorized across chains (multiple chains basically become free)
  * Automatic transforms of model to the real line
  * Prior and posterior predictive sampling
- * Determinstic variables
+ * Deterministic variables
  * Trace that can be passed to ArviZ
 
 However, expect things to break or change without warning.

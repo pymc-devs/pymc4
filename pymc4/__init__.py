@@ -11,4 +11,4 @@ from . import inference
 from .distributions import *
 from .forward_sampling import sample_prior_predictive, sample_posterior_predictive
 
-__version__ = "0.0.1"
+__version__ = "4.0a1"

@@ -267,4 +267,4 @@ class Wishart(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         df, scale = conditions["df"], conditions["scale"]
-        return tfd.WishartTriL(df=df, scale=scale)
+        return tfd.WishartTriL(df=df, scale_tril=scale)

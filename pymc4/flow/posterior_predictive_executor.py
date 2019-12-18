@@ -98,12 +98,35 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
         observed_shape = get_observed_tensor_shape(observed_value)
         dist_shape = dist.batch_shape + dist.event_shape
         new_dist_shape = tf.broadcast_static_shape(observed_shape, dist_shape)
-        plate = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
+        extra_plate = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
 
         # Now we construct and return the same distribution but setting
         # observed to None and setting a batch_size that matches the result of
         # broadcasting the observed and distribution shape
-        new_dist = type(dist)(
-            name=dist.name, transform=dist.transform, observed=None, plate=plate, **dist.conditions
-        )
+        plate = extra_plate + (dist.plate if dist.plate is not None else ())
+        if len(plate) > 0:
+            reinterpreted_batch_ndims = dist.reinterpreted_batch_ndims
+            if dist.plate_events:
+                reinterpreted_batch_ndims += len(extra_plate)
+            new_dist = type(dist)(
+                name=dist.name,
+                transform=dist.transform,
+                observed=None,
+                plate=plate,
+                conditionally_independent=dist.conditionally_independent,
+                plate_events=dist.plate_events,
+                reinterpreted_batch_ndims=reinterpreted_batch_ndims,
+                **dist.conditions,
+            )
+        else:
+            new_dist = type(dist)(
+                name=dist.name,
+                transform=dist.transform,
+                observed=None,
+                plate=None,
+                conditionally_independent=dist.conditionally_independent,
+                plate_events=dist.plate_events,
+                reinterpreted_batch_ndims=dist.reinterpreted_batch_ndims,
+                **dist.conditions,
+            )
         return new_dist

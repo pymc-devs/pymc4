@@ -121,7 +121,9 @@ def fixture_model_with_plates(fixture_distribution_parameters, fixture_pm_model_
 
     def model():
         loc = yield pm.Normal("loc", 0, 1)
-        obs = yield pm.Normal("obs", loc, 1, plate=batch_shape, observed=observed)
+        obs = yield pm.Normal(
+            "obs", loc, 1, plate=batch_shape, observed=observed, plate_events=True
+        )
         return obs
 
     if fixture_pm_model_decorate:
@@ -683,7 +685,7 @@ def test_unreduced_log_prob(fixture_batch_shapes):
     def model():
         a = yield pm.Normal("a", 0, 1)
         b = yield pm.HalfNormal("b", 1)
-        c = yield pm.Normal("c", loc=a, scale=b, plate=len(observed_value))
+        c = yield pm.Normal("c", loc=a, scale=b, plate=len(observed_value), plate_events=True)
 
     values = {
         "model/a": np.zeros(fixture_batch_shapes, dtype="float32"),
@@ -696,3 +698,14 @@ def test_unreduced_log_prob(fixture_batch_shapes):
     unreduced_log_prob = state.collect_unreduced_log_prob()
     assert unreduced_log_prob.numpy().shape == fixture_batch_shapes
     np.testing.assert_allclose(tf.reduce_sum(unreduced_log_prob), state.collect_log_prob())
+
+
+def test_executor_on_conditionally_independent(fixture_batch_shapes):
+    @pm.model
+    def model():
+        a = yield pm.Normal("a", 0, 1, conditionally_independent=True)
+        b = yield pm.Normal("b", a, 1)
+
+    _, state = pm.evaluate_model(model(), sample_shape=fixture_batch_shapes)
+    assert state.untransformed_values["model/a"].shape == fixture_batch_shapes
+    assert state.untransformed_values["model/b"].shape == fixture_batch_shapes

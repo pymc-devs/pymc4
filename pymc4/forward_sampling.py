@@ -150,7 +150,9 @@ def sample_prior_predictive(
     ... def vect_model():
     ...     mu = yield pm.Normal("mu", 0, 1, conditionally_independent=True)
     ...     scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
-    ...     obs = yield pm.Normal("obs", mu, scale, plate=len(observed), observed=observed)
+    ...     obs = yield pm.Normal(
+    ...         "obs", mu, scale, plate=len(observed), observed=observed, plate_events=True
+    ...     )
     >>> st1 = time()
     >>> prior_samples1 = sample_prior_predictive(
     ...     vect_model(), sample_shape=(30, 20), use_auto_batching=False
@@ -194,10 +196,12 @@ def sample_prior_predictive(
                 model, list(set(var_names) - set(distributions_names + deterministic_names))
             )
         )
+
+    # If we don't have to auto-batch, then we can simply evaluate the model
     if not use_auto_batching:
         _, state = evaluate_model(model, observed=observed, sample_shape=sample_shape)
         all_values = collections.ChainMap(state.all_values, state.deterministics)
-        return {k: all_values[k] for k in var_names}
+        return {k: all_values[k].numpy() for k in var_names}
 
     # Setup the function that makes a single draw
     @tf.function(autograph=False)
@@ -226,64 +230,82 @@ def sample_posterior_predictive(
     trace: Dict[str, Any],
     var_names: Optional[List[str]] = None,
     observed: Optional[Dict[str, Any]] = None,
+    use_auto_batching: bool = True,
 ) -> Dict[str, np.ndarray]:
-    #    """
-    #    Draw ``sample_shape`` values from the model for the desired ``var_names``.
-    #
-    #    Parameters
-    #    ----------
-    #    model : types.GeneratorType, pymc4.Model
-    #        Model to draw samples from
-    #    trace: Dict[str, Any]
-    #        The samples drawn from the model's posterior distribution that should
-    #        be used for sampling from the posterior predictive
-    #    var_names: Optional[List[str]]
-    #        The list of variable names that will be included in the returned
-    #        samples. If ``None``, the samples drawn for all observed
-    #        distributions will be returned in the ``Samples`` dictionary.
-    #    observed : Optional[Dict[str, Any]]
-    #        A dictionary that can be used to override the distribution observed
-    #        values defined in the model.
-    #
-    #    Returns
-    #    -------
-    #    Samples: Dict[str, np.ndarray]
-    #        A dictionary of ``var_names`` keys and their corresponding drawn
-    #        samples.
-    #
-    #    Examples
-    #    --------
-    #    Lets define a simple model to sample from
-    #
-    #    >>> import pymc4 as pm
-    #    >>> @pm.model
-    #    ... def model():
-    #    ...     sd = yield pm.HalfNormal("sd", 5.)
-    #    ...     norm = yield pm.Normal("n", 0, sd, observed=np.random.randn(100))
-    #
-    #    Now, we may want to draw samples from the model's posterior to then sample
-    #    from the posterior predictive.
-    #
-    #    >>> trace, stats = pm.inference.sampling.sample(model())
-    #    >>> ppc = pm.sample_posterior_predictive(model(), trace)
-    #
-    #    The samples are returned as a dictionary with the variable names as keys
-    #
-    #    >>> sorted(list(ppc))
-    #    ['model/n']
-    #
-    #    The drawn values are the dictionary's values, and their shape will depend
-    #    on the supplied ``trace``
-    #
-    #    >>> ppc["model/n"].shape
-    #    (1000, 10, 100)
-    #
-    #    """
+    """
+    Draw ``sample_shape`` values from the model for the desired ``var_names``.
+
+    Parameters
+    ----------
+    model : types.GeneratorType, pymc4.Model
+        Model to draw samples from
+    trace: Dict[str, Any]
+        The samples drawn from the model's posterior distribution that should
+        be used for sampling from the posterior predictive
+    var_names: Optional[List[str]]
+        The list of variable names that will be included in the returned
+        samples. If ``None``, the samples drawn for all observed
+        distributions will be returned in the ``Samples`` dictionary.
+    observed : Optional[Dict[str, Any]]
+        A dictionary that can be used to override the distribution observed
+        values defined in the model.
+    use_auto_batching: bool
+        A bool value that indicates whether ``sample_posterior_predictive``
+        should automatically batch the draws or not. If you are sure you have
+        manually tuned your model to be fully vectorized, then you can set this
+        to ``False``, and your sampling should be faster than the auto batched
+        counterpart. If you are not sure if your model is vectorized, then
+        auto batching will safely sample from it but with some additional
+        overhead.
+
+    Returns
+    -------
+    Samples: Dict[str, np.ndarray]
+        A dictionary of ``var_names`` keys and their corresponding drawn
+        samples.
+
+    Examples
+    --------
+    Lets define a simple model to sample from
+
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     sd = yield pm.HalfNormal("sd", 5.)
+    ...     norm = yield pm.Normal("n", 0, sd, observed=np.random.randn(100))
+
+    Now, we may want to draw samples from the model's posterior to then sample
+    from the posterior predictive.
+
+    >>> trace, stats = pm.inference.sampling.sample(model())
+    >>> ppc = pm.sample_posterior_predictive(model(), trace)
+
+    The samples are returned as a dictionary with the variable names as keys
+
+    >>> sorted(list(ppc))
+    ['model/n']
+
+    The drawn values are the dictionary's values, and their shape will depend
+    on the supplied ``trace``
+
+    >>> ppc["model/n"].shape
+    (1000, 10, 100)
+
+    """
     # Get a copy of trace because we may manipulate the dictionary later in this
     # function
     trace = trace.copy()
     if var_names is not None and len(var_names) == 0:
         raise ValueError("Supplied an empty var_names list to sample from")
+
+    # If we don't have to deal with auto-batching we can simply evaluate_model
+    # passing the trace as values
+    if not use_auto_batching:
+        _, state = evaluate_model_posterior_predictive(model, values=trace, observed=observed)
+        all_values = collections.ChainMap(state.all_values, state.deterministics)
+        if var_names is None:
+            var_names = state.posterior_predictives
+        return {k: all_values[k] for k in var_names}
 
     # We cannot assume that the model is vectorized, so we have batch the
     # pm.evaluate_model_posterior_predictive calls across the trace entries
@@ -336,7 +358,9 @@ def sample_posterior_predictive(
                     "Supplied the variable {} in the trace, yet this variable is "
                     "not defined in the model: {!r}".format(var_name, state)
                 )
-        assert_values_compatible_with_distribution_shape(var_name, values, core_shape)
+        assert_values_compatible_with_distribution_shape(
+            var_name, values, batch_shape=tf.TensorShape([]), event_shape=core_shape
+        )
         batch_shape = tf.TensorShape(
             tf.broadcast_static_shape(
                 values.shape[: len(values.shape) - len(core_shape)], batch_shape

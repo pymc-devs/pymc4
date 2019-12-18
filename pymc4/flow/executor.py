@@ -648,13 +648,18 @@ def assert_values_compatible_with_distribution(
     scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
+    
+    A distribution's shape, ``dist_shape``, is made up by the sum of
+    the ``batch_shape`` and the ``event_shape``.
 
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
-    distribution: len(values.shape) >= len(dist_shape)
-    2) The supplied values' shape is compatible with the distribution's shape:
-    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
+    distribution's event_shape: ``len(values.shape) >= len(dist.event_shape)``
+    2) The supplied values' shape is compatible with the distribution's shape
+    this means that we check if the righymost ``K`` axes of the values' shape
+    match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
+    the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
 
     Parameters
     ----------
@@ -677,21 +682,25 @@ def assert_values_compatible_with_distribution(
     """
     event_shape = dist.event_shape
     batch_shape = dist.batch_shape
-    dist_shape = batch_shape + event_shape
-    assert_values_compatible_with_distribution_shape(scoped_name, values, dist_shape)
+    assert_values_compatible_with_distribution_shape(scoped_name, values, batch_shape, event_shape)
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str, values: Any, dist_shape: tf.TensorShape
+    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
+
+    A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of
+    the ``batch_shape`` and the ``event_shape``.
 
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
-    distribution: len(values.shape) >= len(dist_shape)
-    2) The supplied values' shape is compatible with the distribution's shape:
-    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
+    distribution's event_shape: ``len(values.shape) >= len(dist.event_shape)``
+    2) The supplied values' shape is compatible with the distribution's shape
+    this means that we check if the righymost ``K`` axes of the values' shape
+    match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
+    the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
 
     Parameters
     ----------
@@ -699,8 +708,10 @@ def assert_values_compatible_with_distribution_shape(
         The variable's scoped name
     values: Any
         The supplied values
-    dist_shape: tf.TensorShape
-        The ``tf.TensorShape`` instance.
+    batch_shape: tf.TensorShape
+        The ``tf.TensorShape`` batch_shape instance.
+    event_shape: tf.TensorShape
+        The ``tf.TensorShape`` event_shape instance.
 
     Returns
     -------
@@ -712,8 +723,22 @@ def assert_values_compatible_with_distribution_shape(
         When the ``values`` shape is not compatible with the ``dist_shape``.
     """
     value_shape = get_observed_tensor_shape(values)
-    if value_shape.rank < dist_shape.rank or not dist_shape.is_compatible_with(
-        value_shape[(len(value_shape) - len(dist_shape)) :]
+    dist_shape = batch_shape + event_shape
+    value_rank = value_shape.rank
+    dist_rank = dist_shape.rank
+    # TODO: Make the or condition less ugly but at the same time compatible with
+    # tf.function. tf.math.maximum makes things kind of weird and raises errors
+    if (
+        value_rank < event_shape.rank
+        or (
+            dist_rank < value_rank
+            and not dist_shape.is_compatible_with(value_shape[value_rank - dist_rank :])
+        )
+        or (
+            value_rank < dist_rank
+            and not value_shape.is_compatible_with(dist_shape[dist_rank - value_rank :])
+        )
+        or (value_rank == dist_rank and not value_shape.is_compatible_with(dist_shape))
     ):
         raise EvaluationError(
             EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(

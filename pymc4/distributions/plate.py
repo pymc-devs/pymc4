@@ -7,7 +7,8 @@ from __future__ import print_function
 # Dependency imports
 import numpy as np
 
-import tensorflow.compat.v2 as tf
+# import tensorflow.compat.v2 as tf
+import tensorflow as tf
 
 from tensorflow_probability.python.distributions import distribution as distribution_lib
 from tensorflow_probability.python.distributions import kullback_leibler

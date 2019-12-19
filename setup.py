@@ -15,7 +15,7 @@ NAME = "pymc4"
 DESCRIPTION = "A Python probabilistic programming interface to TensorFlow, for Bayesian modelling and machine learning."
 AUTHOR = "PyMC Developers"
 AUTHOR_EMAIL = "pymc.devs@gmail.com"
-URL = ("https://github.com/pymc-devs/pymc4",)
+URL = "https://github.com/pymc-devs/pymc4"
 LICENSE = "Apache License, Version 2.0"
 
 CLASSIFIERS = [

@@ -109,7 +109,9 @@ def sample(
         init,
         _deterministics_callback,
         deterministic_names,
-    ) = build_logp_and_deterministic_functions(model, state=state, observed=observed)
+    ) = build_logp_and_deterministic_functions(
+        model, state=state, observed=observed, collect_reduced_log_prob=use_auto_batching
+    )
     init_state = list(init.values())
     init_keys = list(init.keys())
     if use_auto_batching:
@@ -175,7 +177,10 @@ def sample(
 
 
 def build_logp_and_deterministic_functions(
-    model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+    model,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
+    collect_reduced_log_prob: bool = True,
 ):
     if not isinstance(model, Model):
         raise TypeError(
@@ -196,15 +201,29 @@ def build_logp_and_deterministic_functions(
     observed = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
-    @tf.function(autograph=False)
-    def logpfn(*values, **kwargs):
-        if kwargs and values:
-            raise TypeError("Either list state should be passed or a dict one")
-        elif values:
-            kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(model, state=st)
-        return st.collect_log_prob()
+    if collect_reduced_log_prob:
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+            _, st = flow.evaluate_model_transformed(model, state=st)
+            return st.collect_log_prob()
+
+    else:
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+            _, st = flow.evaluate_model_transformed(model, state=st)
+            return st.collect_unreduced_log_prob()
 
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):

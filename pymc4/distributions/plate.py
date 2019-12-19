@@ -50,50 +50,50 @@ def _make_summary_statistic(attr):
 
 class Plate(distribution_lib.Distribution):
     """Plate distribution via independent draws.
-  This distribution is useful for stacking collections of independent,
-  identical draws. It is otherwise identical to the input distribution.
-  #### Mathematical Details
-  The probability function is,
-  ```none
-  p(x) = prod{ p(x[i]) : i = 0, ..., (n - 1) }
-  ```
-  #### Examples
-  ```python
-  tfd = tfp.distributions
-  # Example 1: Five scalar draws.
-  s = tfd.Plate(
-      tfd.Normal(loc=0, scale=1),
-      plate_shape=5)
-  x = s.sample()
-  # ==> x.shape: [5]
-  lp = s.log_prob(x)
-  # ==> lp.shape: [5]
-  #
-  # Example 2: `[5, 4]`-draws of a bivariate Normal.
-  s = tfd.Plate(
-      tfd.Independent(tfd.Normal(loc=tf.zeros([3, 2]), scale=1),
-                      reinterpreted_batch_ndims=1),
-      plate_shape=[5, 4])
-  x = s.sample([6, 1])
-  # ==> x.shape: [6, 1, 5, 4, 3, 2]
-  lp = s.log_prob(x)
-  # ==> lp.shape: [6, 1, 5, 4, 3]
-  ```
-  """
+    This distribution is useful for stacking collections of independent,
+    identical draws. It is otherwise identical to the input distribution.
+    #### Mathematical Details
+    The probability function is,
+    ```none
+    p(x) = prod{ p(x[i]) : i = 0, ..., (n - 1) }
+    ```
+    #### Examples
+    ```python
+    tfd = tfp.distributions
+    # Example 1: Five scalar draws.
+    s = tfd.Plate(
+        tfd.Normal(loc=0, scale=1),
+        plate_shape=5)
+    x = s.sample()
+    # ==> x.shape: [5]
+    lp = s.log_prob(x)
+    # ==> lp.shape: [5]
+    #
+    # Example 2: `[5, 4]`-draws of a bivariate Normal.
+    s = tfd.Plate(
+        tfd.Independent(tfd.Normal(loc=tf.zeros([3, 2]), scale=1),
+                        reinterpreted_batch_ndims=1),
+        plate_shape=[5, 4])
+    x = s.sample([6, 1])
+    # ==> x.shape: [6, 1, 5, 4, 3, 2]
+    lp = s.log_prob(x)
+    # ==> lp.shape: [6, 1, 5, 4, 3]
+    ```
+    """
 
     def __init__(self, distribution, plate_shape=(), validate_args=False, name=None):
         """Construct the `Plate` distribution.
-    Args:
-      distribution: The base distribution instance to transform. Typically an
-        instance of `Distribution`.
-      plate_shape: `int` scalar or vector `Tensor` representing the shape of a
-        single sample.
-      validate_args: Python `bool`.  Whether to validate input with asserts.
-        If `validate_args` is `False`, and the inputs are invalid,
-        correct behavior is not guaranteed.
-      name: The name for ops managed by the distribution.
-        Default value: `None` (i.e., `'Plate' + distribution.name`).
-    """
+        Args:
+        distribution: The base distribution instance to transform. Typically an
+            instance of `Distribution`.
+        plate_shape: `int` scalar or vector `Tensor` representing the shape of a
+            single sample.
+        validate_args: Python `bool`.  Whether to validate input with asserts.
+            If `validate_args` is `False`, and the inputs are invalid,
+            correct behavior is not guaranteed.
+        name: The name for ops managed by the distribution.
+            Default value: `None` (i.e., `'Plate' + distribution.name`).
+        """
         parameters = dict(locals())
         name = name or "Plate" + distribution.name
         self._distribution = distribution
@@ -176,21 +176,21 @@ class Plate(distribution_lib.Distribution):
 @kullback_leibler.RegisterKL(Plate, Plate)
 def _kl_sample(a, b, name="kl_sample"):
     """Batched KL divergence `KL(a || b)` for Plate distributions.
-  We can leverage the fact that:
-  ```
-  KL(Plate(a) || Plate(b)) = sum(KL(a || b))
-  ```
-  where the sum is over the `plate_shape` dims.
-  Args:
-    a: Instance of `Plate` distribution.
-    b: Instance of `Plate` distribution.
-    name: (optional) name to use for created ops.
-      Default value: `"kl_sample"`'.
-  Returns:
-    kldiv: Batchwise `KL(a || b)`.
-  Raises:
-    ValueError: If the `plate_shape` of `a` and `b` don't match.
-  """
+    We can leverage the fact that:
+    ```
+    KL(Plate(a) || Plate(b)) = sum(KL(a || b))
+    ```
+    where the sum is over the `plate_shape` dims.
+    Args:
+        a: Instance of `Plate` distribution.
+        b: Instance of `Plate` distribution.
+        name: (optional) name to use for created ops.
+        Default value: `"kl_sample"`'.
+    Returns:
+        kldiv: Batchwise `KL(a || b)`.
+    Raises:
+        ValueError: If the `plate_shape` of `a` and `b` don't match.
+    """
     assertions = []
     a_ss = tf.get_static_value(a.plate_shape)
     b_ss = tf.get_static_value(b.plate_shape)

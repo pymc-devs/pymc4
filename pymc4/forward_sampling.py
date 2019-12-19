@@ -304,7 +304,7 @@ def sample_posterior_predictive(
         _, state = evaluate_model_posterior_predictive(model, values=trace, observed=observed)
         all_values = collections.ChainMap(state.all_values, state.deterministics)
         if var_names is None:
-            var_names = state.posterior_predictives
+            var_names = list(state.posterior_predictives)
         return {k: all_values[k] for k in var_names}
 
     # We cannot assume that the model is vectorized, so we have batch the

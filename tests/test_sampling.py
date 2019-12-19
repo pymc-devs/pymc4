@@ -115,6 +115,57 @@ def deterministics_in_nested_models():
     )
 
 
+@pytest.fixture(scope="module", params=["auto_batch", "trust_manual_batching"], ids=str)
+def use_auto_batching_fixture(request):
+    return request.param == "auto_batch"
+
+
+@pytest.fixture(scope="function", params=["unvectorized_model", "vectorized_model"], ids=str)
+def vectorized_model_fixture(request):
+    is_vectorized_model = request.param == "vectorized_model"
+    observed = np.zeros((5, 4), dtype="float32")
+    core_shapes = {
+        "model/mu": (4,),
+        "model/__log_scale": (),
+    }
+    if is_vectorized_model:
+        # A model where we pay great attention to making each distribution
+        # have exactly the right event_shape, and assure that when we sample
+        # from its prior, the requested `sample_shape` gets sent to the
+        # conditionally independent variables, and expect that shape to go
+        # through the conditionally dependent variables as batch_shapes
+        @pm.model
+        def model():
+            mu = yield pm.Normal(
+                "mu",
+                tf.zeros(4),
+                1,
+                conditionally_independent=True,
+                reinterpreted_batch_ndims=1,
+                plate_events=True,
+            )
+            scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
+            x = yield pm.Normal(
+                "x",
+                mu,
+                scale[..., None],
+                plate=5,
+                observed=observed,
+                reinterpreted_batch_ndims=1,
+                plate_events=True,
+            )
+
+    else:
+
+        @pm.model
+        def model():
+            mu = yield pm.Normal("mu", tf.zeros(4), 1)
+            scale = yield pm.HalfNormal("scale", 1)
+            x = yield pm.Normal("x", mu, scale, plate=5, observed=observed)
+
+    return model, is_vectorized_model, core_shapes
+
+
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
     model = simple_model_with_deterministic()
     trace, stats = pm.inference.sampling.sample(
@@ -190,3 +241,32 @@ def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
         trace, stats = pm.inference.sampling.sample(
             model=model, num_samples=1, num_chains=1, burn_in=1
         )
+
+
+def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_batching_fixture):
+    model, is_vectorized_model, core_shapes = vectorized_model_fixture
+    num_samples = 10
+    num_chains = 4
+    if not is_vectorized_model and not use_auto_batching_fixture:
+        with pytest.raises(Exception):
+            pm.inference.sampling.sample(
+                model=model(),
+                num_samples=num_samples,
+                num_chains=num_chains,
+                burn_in=1,
+                step_size=0.1,
+                xla=xla_fixture,
+                use_auto_batching=use_auto_batching_fixture,
+            )
+    else:
+        trace, stats = pm.inference.sampling.sample(
+            model=model(),
+            num_samples=num_samples,
+            num_chains=num_chains,
+            burn_in=1,
+            step_size=0.1,
+            xla=xla_fixture,
+            use_auto_batching=use_auto_batching_fixture,
+        )
+        for rv_name, core_shape in core_shapes.items():
+            assert trace[rv_name].numpy().shape == (num_samples, num_chains) + core_shape

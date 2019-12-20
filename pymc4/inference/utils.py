@@ -1,5 +1,6 @@
 from typing import Optional, Tuple, List
 import numpy as np
+import arviz as az
 
 from .. import Model, flow
 
@@ -38,13 +39,13 @@ def trace_to_arviz(pm4_trace, pm4_sample_stats):
     Parameters
     ----------
     pm4_trace : dict
+    pm4_sample_stats : dict
 
     Returns
     -------
     arviz.data.inference_data.InferenceData
     """
-    import arviz as az
 
-    posterior = {k: np.swapaxes(v.numpy(), 1, 0) for k, v in pm4_trace.items()}
+    posterior = {k: np.swapaxes(v.numpy(), 1, 0) for k, v in pm4_trace.items() if "/" in k}
     sample_stats = {k: v.numpy().T for k, v in pm4_sample_stats.items()}
     return az.from_dict(posterior=posterior, sample_stats=sample_stats)

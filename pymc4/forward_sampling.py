@@ -297,7 +297,7 @@ def sample_posterior_predictive(
         except KeyError:
             if var_name in state.deterministics:
                 # Remove the deterministics from the trace
-                del trace[var_name]
+                del posterior[var_name]
                 continue
             else:
                 raise TypeError(

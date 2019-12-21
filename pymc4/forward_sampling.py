@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from pymc4.coroutine_model import Model
 from pymc4.flow import evaluate_model, SamplingState, evaluate_model_posterior_predictive
+from pymc4.inference.utils import trace_to_arviz
 from pymc4.flow.executor import assert_values_compatible_with_distribution_shape
 
 
@@ -144,6 +145,10 @@ def sample_prior_predictive(
     if sample_from_observed:
         state.observed_values = observed = {k: None for k in state.observed_values}
         distributions_names = distributions_names + list(state.observed_values)
+
+    if isinstance(var_names, str):
+        var_names = [var_names]
+
     if var_names is None:
         var_names = distributions_names + deterministic_names
     else:
@@ -178,7 +183,7 @@ def sample_prior_predictive(
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()
         output[name] = np.reshape(sample, sample_shape + sample.shape[1:])
-    return output
+    return trace_to_arviz(prior_predictive=output)
 
 
 def sample_posterior_predictive(
@@ -239,11 +244,11 @@ def sample_posterior_predictive(
     (1000, 10, 100)
 
     """
-    # Get a copy of trace because we may manipulate the dictionary later in this
-    # function
-    trace = trace.copy()
     if var_names is not None and len(var_names) == 0:
         raise ValueError("Supplied an empty var_names list to sample from")
+
+    if isinstance(var_names, str):
+        var_names = [var_names]
 
     # We cannot assume that the model is vectorized, so we have batch the
     # pm.evaluate_model_posterior_predictive calls across the trace entries
@@ -281,9 +286,12 @@ def sample_posterior_predictive(
 
     # Get the global batch_shape
     batch_shape = tf.TensorShape([])
-    trace_names = list(trace)
-    for var_name in trace_names:
-        values = tf.convert_to_tensor(trace[var_name])
+    # Get a copy of trace because we may manipulate the dictionary later in this
+    # function
+    posterior = trace.posterior.copy()
+    posterior_names = list(posterior)
+    for var_name in posterior_names:
+        values = tf.convert_to_tensor(posterior[var_name].values)
         try:
             core_shape = state.all_values[var_name].shape
         except KeyError:
@@ -304,17 +312,16 @@ def sample_posterior_predictive(
         )
 
     # Flatten the batch axis
-    flattened_trace = []
-    for k, v in trace.items():
+    flattened_posterior = []
+    for k, v in posterior.items():
         core_shape = tf.TensorShape(state.all_values[k].shape)
-        batched_val = tf.broadcast_to(v, batch_shape + core_shape)
-        flattened_trace.append(tf.reshape(batched_val, shape=[-1] + core_shape.as_list()))
-    trace_vars = list(trace)
-
+        batched_val = tf.broadcast_to(v.values, batch_shape + core_shape)
+        flattened_posterior.append(tf.reshape(batched_val, shape=[-1] + core_shape.as_list()))
+    posterior_vars = list(posterior)
     # Setup the function that makes a single draw
     @tf.function(autograph=False)
     def single_draw(elems):
-        values = dict(zip(trace_vars, elems))
+        values = dict(zip(posterior_vars, elems))
         _, st = evaluate_model_posterior_predictive(model, values=values, observed=observed)
         return tuple(
             [
@@ -330,12 +337,11 @@ def sample_posterior_predictive(
         )
 
     # Make draws in parallel across the batch elements with tf.vectorized_map
-    samples = tf.vectorized_map(single_draw, flattened_trace)
-
+    samples = tf.vectorized_map(single_draw, flattened_posterior)
     # Convert the samples to ndarrays and make a dictionary with the correct
     # batch_shape + core_shape
     output = dict()
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()
         output[name] = np.reshape(sample, batch_shape + sample.shape[1:])
-    return output
+    return trace_to_arviz(posterior_predictive=output)

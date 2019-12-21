@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import initialize_sampling_state
+from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz
 
 
 def sample(
@@ -95,6 +95,7 @@ def sample(
         init,
         _deterministics_callback,
         deterministic_names,
+        state,
     ) = build_logp_and_deterministic_functions(model, state=state, observed=observed)
     init_state = list(init.values())
     init_keys = list(init.keys())
@@ -152,7 +153,8 @@ def sample(
     sampler_stats = dict(zip(stat_names, sample_stats))
     if len(deterministic_names) > 0:
         posterior.update(dict(zip(deterministic_names, deterministic_values)))
-    return posterior, sampler_stats
+
+    return trace_to_arviz(posterior, sampler_stats, observed_data=state.observed_values)
 
 
 def build_logp_and_deterministic_functions(
@@ -174,7 +176,7 @@ def build_logp_and_deterministic_functions(
             f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
         )
 
-    observed = state.observed_values
+    observed_var = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
     @tf.function(autograph=False)
@@ -193,11 +195,17 @@ def build_logp_and_deterministic_functions(
             raise TypeError("Either list state should be passed or a dict one")
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed_var)
         _, st = flow.evaluate_model_transformed(model, state=st)
         return st.deterministics.values()
 
-    return logpfn, dict(state.all_unobserved_values), deterministics_callback, deterministic_names
+    return (
+        logpfn,
+        dict(state.all_unobserved_values),
+        deterministics_callback,
+        deterministic_names,
+        state,
+    )
 
 
 def vectorize_logp_function(logpfn):

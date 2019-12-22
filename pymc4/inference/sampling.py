@@ -53,7 +53,7 @@ def sample(
     Returns
     -------
     Trace : InferenceDataType
-        An ArviZ's InferenceData object with a posterior_predictive and a observed_data group
+        An ArviZ's InferenceData object with the groups: posterior, sample_stats and observed_data
 
     Examples
     --------

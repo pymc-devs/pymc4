@@ -52,37 +52,39 @@ def sample(
 
     Returns
     -------
-    Trace
+    Trace : InferenceDataType
+        An ArviZ's InferenceData object with a posterior_predictive and a observed_data group
 
     Examples
     --------
     Let's start with a simple model. We'll need some imports to experiment with it.
 
     >>> import pymc4 as pm
-    >>> from pymc4 import distributions as dist
     >>> import numpy as np
 
     This particular model has a latent variable `sd`
 
     >>> @pm.model
     ... def nested_model(cond):
-    ...     sd = yield dist.HalfNormal("sd", 1., transform=dist.transforms.Log())  #TODO: Auto-transform
-    ...     norm = yield dist.Normal("n", cond, sd, observed=np.random.randn(10))
+    ...     sd = yield pm.HalfNormal("sd", 1.)
+    ...     norm = yield pm.Normal("n", cond, sd, observed=np.random.randn(10))
     ...     return norm
 
-    Now, we may want to perform sampling from this model. We already observed some variables and we now need to fix
-    the condition.
+    Now, we may want to perform sampling from this model. We already observed some variables and we
+    now need to fix the condition.
 
     >>> conditioned = nested_model(cond=2.)
 
-    Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling. Nothing special is required
-    but passing the model to ``pm.sample``, the rest configuration is held by PyMC4.
+    Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling.
+    Nothing special is required but passing the model to ``pm.sample``, the rest configuration is
+    held by PyMC4.
 
     >>> trace = sample(conditioned)
 
     Notes
     -----
-    Things that are considered to be under discussion are overriding observed variables. The API for that may look like
+    Things that are considered to be under discussion are overriding observed variables. The API
+    for that may look like
 
     >>> new_observed = {"nested_model/n": np.random.randn(10) + 1}
     >>> trace = sample(conditioned, observed=new_observed)

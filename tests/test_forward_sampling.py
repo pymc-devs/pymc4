@@ -8,8 +8,7 @@ from pymc4 import forward_sampling
 from pymc4.flow.executor import EvaluationError
 
 
-@pytest.fixture(scope="module", params=[(1, 10), (1, 1), (1, 2), (1, 1), (7, 3)], ids=str)
-# @pytest.fixture(scope="module", params=[(), (1,), (2,), (1, 1), (7, 3)], ids=str)
+@pytest.fixture(scope="module", params=[(1, 10), (1, 1), (1, 2), (1, 1), (3, 7)], ids=str)
 def sample_shape_fixture(request):
     return request.param
 
@@ -206,7 +205,7 @@ def test_sample_ppc_var_names(model_fixture):
     model, observed = model_fixture
     trace = pm.inference.utils.trace_to_arviz(
         {
-            "model/sd": tf.ones((1, 10), dtype="float32"),
+            "model/sd": tf.ones((10, 1), dtype="float32"),
             "model/y": tf.convert_to_tensor(observed[:, None]),
         }
     )
@@ -220,7 +219,7 @@ def test_sample_ppc_var_names(model_fixture):
     with pytest.raises(TypeError):
         trace.posterior["name not in model!"] = tf.constant(1.0)
         pm.sample_posterior_predictive(model(), trace)
-        del trace.posterior["name not in model!"]
+    del trace.posterior["name not in model!"]
 
     var_names = ["model/sd", "model/x", "model/dy"]
     ppc = pm.sample_posterior_predictive(model(), trace, var_names=var_names).posterior_predictive
@@ -234,7 +233,7 @@ def test_sample_ppc_corrupt_trace():
         x = yield pm.Normal("x", tf.ones(5), 1)
         y = yield pm.Normal("y", x, 1)
 
-    trace1 = pm.inference.utils.trace_to_arviz({"model/x": tf.ones((1, 7), dtype="float32")})
+    trace1 = pm.inference.utils.trace_to_arviz({"model/x": tf.ones((7, 1), dtype="float32")})
 
     trace2 = pm.inference.utils.trace_to_arviz(
         {"model/x": tf.ones((1, 5), dtype="float32"), "model/y": tf.zeros((1, 1), dtype="float32")}

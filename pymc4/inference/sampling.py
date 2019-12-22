@@ -97,7 +97,7 @@ def sample(
         init,
         _deterministics_callback,
         deterministic_names,
-        state,
+        state_,
     ) = build_logp_and_deterministic_functions(model, state=state, observed=observed)
     init_state = list(init.values())
     init_keys = list(init.keys())
@@ -156,7 +156,7 @@ def sample(
     if len(deterministic_names) > 0:
         posterior.update(dict(zip(deterministic_names, deterministic_values)))
 
-    return trace_to_arviz(posterior, sampler_stats, observed_data=state.observed_values)
+    return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
 
 
 def build_logp_and_deterministic_functions(

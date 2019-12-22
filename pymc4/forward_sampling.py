@@ -24,7 +24,7 @@ def sample_prior_predictive(
     sample_from_observed: bool = True,
     var_names: Optional[Union[str, List[str]]] = None,
     state: Optional[SamplingState] = None,
-) -> Dict[str, np.ndarray]:
+) -> InferenceDataType:
     """
     Draw ``sample_shape`` values from the model for the desired ``var_names``.
 
@@ -283,7 +283,7 @@ def sample_posterior_predictive(
     batch_shape = tf.TensorShape([])
     # Get a copy of trace because we may manipulate the dictionary later in this
     # function
-    posterior = trace.posterior.copy()
+    posterior = trace.posterior.copy() # type: ignore
     posterior_names = list(posterior)
     for var_name in posterior_names:
         values = tf.convert_to_tensor(posterior[var_name].values)

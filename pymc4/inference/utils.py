@@ -2,7 +2,7 @@ from typing import Optional, Tuple, List
 import numpy as np
 import arviz as az
 
-from .. import Model, flow
+from pymc4 import Model, flow
 
 
 def initialize_sampling_state(

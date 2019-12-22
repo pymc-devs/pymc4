@@ -182,12 +182,12 @@ def test_sampling_with_deterministics_in_nested_models(
         model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
-        np.testing.assert_allclose(trace.posterior[deterministic], op(*[trace.posterior[i] for i in inputs]), rtol=1e-6)
+        np.testing.assert_allclose(
+            trace.posterior[deterministic], op(*[trace.posterior[i] for i in inputs]), rtol=1e-6
+        )
 
 
 def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
     model = simple_model_no_free_rvs()
     with pytest.raises(ValueError):
-        trace = pm.sample(
-            model=model, num_samples=1, num_chains=1, burn_in=1
-        )
+        trace = pm.sample(model=model, num_samples=1, num_chains=1, burn_in=1)

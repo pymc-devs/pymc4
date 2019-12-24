@@ -7,7 +7,7 @@ from .. import Model, flow
 
 def initialize_sampling_state(
     model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
-) -> Tuple[flow.SamplingState, List[str], List[str]]:
+) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initilize the model provided state and/or observed variables.
 
@@ -28,7 +28,7 @@ def initialize_sampling_state(
     deterministic_names = list(state.deterministics)
 
     state, transformed_names = state.as_sampling_state()
-    return state, deterministic_names, transformed_names
+    return state, deterministic_names + transformed_names
 
 
 def trace_to_arviz(pm4_trace, pm4_sample_stats):

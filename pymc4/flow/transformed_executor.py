@@ -131,11 +131,7 @@ def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransfor
 
     if transformed_scoped_name in state.transformed_values:
         if (not allow_transformed_and_untransformed) and scoped_name in state.untransformed_values:
-            raise EvaluationError(
-                "Found both transformed and untransformed variables in the state: "
-                "'{} and '{}', but need exactly one".format(scoped_name, transformed_scoped_name)
-            )
-        else:
-            return make_transformed_model(dist, transform, state)
+            state.untransformed_values.pop(scoped_name)
+        return make_transformed_model(dist, transform, state)
     else:
         return make_untransformed_model(dist, transform, state)

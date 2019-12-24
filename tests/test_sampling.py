@@ -57,17 +57,7 @@ def unvectorized_model(request):
     return unvectorized_model, norm_shape, observed, batch_size
 
 
-@pytest.fixture(
-    scope="module",
-    params=[
-        pytest.param(
-            "XLA",
-            marks=pytest.mark.xfail(reason="XLA compilation in sample is not fully supported yet"),
-        ),
-        "noXLA",
-    ],
-    ids=str,
-)
+@pytest.fixture(scope="module", params=["XLA", "noXLA"], ids=str)
 def xla_fixture(request):
     return request.param == "XLA"
 

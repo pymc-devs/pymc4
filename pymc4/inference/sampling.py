@@ -168,7 +168,9 @@ def build_logp_and_deterministic_functions(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
 
-    state, deterministic_names = initialize_sampling_state(model, observed=observed, state=state)
+    state, deterministic_names, transformed_names = initialize_sampling_state(
+        model, observed=observed, state=state
+    )
 
     if not state.all_unobserved_values:
         raise ValueError(

@@ -1,5 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, List, Optional, Set
+from typing import Any, Tuple, Dict, Union, List, Optional, Set, Mapping
 import collections
 import itertools
 
@@ -524,8 +524,8 @@ class SamplingExecutor:
             )
 
     def modify_distribution(
-        self, dist: distribution.Distribution, model_info: Dict[str, Any], state: SamplingState
-    ):
+        self, dist: ModelType, model_info: Mapping[str, Any], state: SamplingState
+    ) -> ModelType:
         return dist
 
     def proceed_distribution(
@@ -535,6 +535,9 @@ class SamplingExecutor:
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")
         scoped_name = scopes.variable_name(dist.name)
+        if scoped_name is None:
+            raise EvaluationError("Attempting to create an anonymous Distribution")
+
         if scoped_name in state.distributions or scoped_name in state.deterministics:
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
@@ -583,6 +586,8 @@ class SamplingExecutor:
         if deterministic.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
         scoped_name = scopes.variable_name(deterministic.name)
+        if scoped_name is None:
+            raise EvaluationError("Attempting to create an anonymous Deterministic")
         if scoped_name in state.distributions or scoped_name in state.deterministics:
             raise EvaluationError(
                 "Attempting to create a duplicate deterministic {!r}, "
@@ -621,9 +626,12 @@ class SamplingExecutor:
         else:
             return_value = None
         if return_value is not None and model_info["keep_return"]:
-            # we should filter out allowed return types, but this is totally backend
-            # specific and should be determined at import time.
             return_name = scopes.variable_name(model_info["name"])
+            if return_name is None:
+                raise AssertionError(
+                    "Attempting to create unnamed return variable *after* making a check"
+                )
+
             state.deterministics[return_name] = return_value
         return return_value, state
 

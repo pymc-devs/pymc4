@@ -266,7 +266,7 @@ def sample_posterior_predictive(
 
     # Do a single forward pass to infer the distributions core shapes and
     # default observeds
-    state = evaluate_model_posterior_predictive(model, observed=observed)[1]
+    _, state = evaluate_model_posterior_predictive(model, observed=observed)
     if var_names is None:
         var_names = list(state.posterior_predictives)
     else:

@@ -1,6 +1,6 @@
 import types
 from typing import Any, Tuple, Dict, Union, List, Optional, Set, Mapping
-import collections
+from collections import ChainMap
 import itertools
 
 import tensorflow as tf
@@ -20,6 +20,22 @@ MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES = (
     distribution.Potential,
     distribution.Deterministic,
 )
+
+
+def _chain_map_iter(self):
+    """Keep ordering of maps on Python3.6.
+
+    See https://bugs.python.org/issue32792
+
+    Once Python3.6 is not supported, this can be deleted.
+    """
+    d = {}
+    for mapping in reversed(self.maps):
+        d.update(mapping)  # reuses stored hash values if possible
+    return iter(d)
+
+
+ChainMap.__iter__ = _chain_map_iter  # type: ignore
 
 
 class EvaluationError(RuntimeError):
@@ -132,12 +148,10 @@ class SamplingState:
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
-        self.all_values = collections.ChainMap(
+        self.all_values = ChainMap(
             self.untransformed_values, self.transformed_values, self.observed_values
         )
-        self.all_unobserved_values = collections.ChainMap(
-            self.transformed_values, self.untransformed_values
-        )
+        self.all_unobserved_values = ChainMap(self.transformed_values, self.untransformed_values)
         self.distributions = distributions
         self.potentials = potentials
         self.deterministics = deterministics

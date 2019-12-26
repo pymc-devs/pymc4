@@ -22,7 +22,8 @@ def schools_pm4():
 
 
 def test_model_logp():
-    """
+    """Make sure log probability matches standard.
+
     Recreate this with
 
     ```python

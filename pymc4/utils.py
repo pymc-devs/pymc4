@@ -1,7 +1,9 @@
 import functools
 import re
 from typing import Callable
-
+import io
+import pkgutil
+import os
 
 def map_nested(fn, structure, cond=lambda obj: True):
     r"""
@@ -149,3 +151,17 @@ class NameParts:
 
     def replace_transform(self, transform_name):
         return self.__class__(self.path, transform_name, self.untransformed_name)
+
+def get_data(filename):
+    """Returns a BytesIO object for a package data file.
+
+    Parameters
+    ----------
+    filename : str
+        file to load
+    Returns
+    -------
+    BytesIO of the data
+    """
+    data_pkg = 'notebooks'
+    return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join('data', filename)))

@@ -50,7 +50,7 @@ steps:
       make notebooks
     displayName: "notebooks"
 
-    - script: |
-      bash <(curl -s https://codecov.io/bash)
-    displayName: "Publish test results to codecov for Python $(python.version)"
-    condition: succeededOrFailed()
+  - script: |
+    bash <(curl -s https://codecov.io/bash)
+  displayName: "Publish test results to codecov for Python $(python.version)"
+  condition: succeededOrFailed()

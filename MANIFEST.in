@@ -1,0 +1,13 @@
+exclude *.md
+exclude *.toml
+exclude *.txt
+exclude *.yml
+exclude Makefile
+recursive-exclude notebooks *.ipynb
+recursive-exclude scripts *
+recursive-exclude tests *
+recursive-exclude notebooks/context_design *
+
+
+recursive-include notebooks *.tsv
+recursive-include notebooks *.csv

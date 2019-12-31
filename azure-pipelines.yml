@@ -45,7 +45,7 @@ steps:
     displayName: "pytest"
 
   - script: |
-      python -m pip install ipykernel
+      python -m pip install ipykernel nbconvert
       python -m ipykernel install --name pymc4-dev --user
       make notebooks
     displayName: "notebooks"

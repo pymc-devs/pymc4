@@ -65,8 +65,8 @@ def test_sample_no_xla():
     # TODO: better test, compare to a golden standard chain from pymc3,
     #   for now it is only to verify it is runnable
     chains, samples = 4, 100
-    trace, stats = pm4.inference.sampling.sample(
+    trace = pm4.inference.sampling.sample(
         schools_pm4(), step_size=0.28, num_chains=chains, num_samples=samples, burn_in=50, xla=False
-    )
+    ).posterior
     for var_name in ("eta", "mu", "tau", "__log_tau"):
         assert f"schools_pm4/{var_name}" in trace.keys()

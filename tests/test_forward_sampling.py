@@ -8,7 +8,7 @@ from pymc4 import forward_sampling
 from pymc4.flow.executor import EvaluationError
 
 
-@pytest.fixture(scope="module", params=[(1, 10), (1, 1), (1, 2), (1, 1), (3, 7)], ids=str)
+@pytest.fixture(scope="module", params=[(1, 0), (1, 1), (1, 2), (1, 1, 1), (1, 3, 7)], ids=str)
 def sample_shape_fixture(request):
     return request.param
 
@@ -82,7 +82,7 @@ def test_sample_prior_predictive(model_fixture, sample_shape_fixture, sample_fro
     model, observed = model_fixture
 
     prior = pm.sample_prior_predictive(
-        model(), sample_shape_fixture, sample_from_observed_fixture
+        model(), sample_shape_fixture[1:], sample_from_observed_fixture
     ).prior_predictive
     if sample_from_observed_fixture:
         assert set(["model/sd", "model/x", "model/y", "model/mu", "model/dy"]) == set(

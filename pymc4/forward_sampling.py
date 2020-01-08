@@ -113,8 +113,8 @@ def sample_prior_predictive(
     True
 
     Furthermore, this has consequences at the shape level of the drawn samples
-    >>> prior_samples["model2/y"].shape
-    (20, 20)
+    >>> prior_samples.prior_predictive["model2/y"].shape
+    (1, 20, 10)
 
     If ``sample_from_observed=True`` the value of the ``x`` random variable will be drawn from its
     prior distribution, which will have consequences both at the value and shape levels of
@@ -179,6 +179,7 @@ def sample_prior_predictive(
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()
         output[name] = np.reshape(sample, sample_shape + sample.shape[1:])
+
     return trace_to_arviz(prior_predictive=output)
 
 
@@ -187,6 +188,7 @@ def sample_posterior_predictive(
     trace: InferenceDataType,
     var_names: Optional[Union[str, List[str]]] = None,
     observed: Optional[Dict[str, Any]] = None,
+    inplace: bool = True,
 ) -> InferenceDataType:
     """
     Draw ``sample_shape`` values from the model for the desired ``var_names``.
@@ -205,6 +207,9 @@ def sample_posterior_predictive(
     observed : Optional[Dict[str, Any]]
         A dictionary that can be used to override the distribution observed values defined in the
         model.
+    inplace: If True (default) it will add a posterior_predictive group to the provided ``trace``,
+        instead of returning a new InferenceData object. If a posterior_predictive group is already
+        present in ``trace`` it will be overwrited.
 
     Returns
     -------
@@ -339,4 +344,4 @@ def sample_posterior_predictive(
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()
         output[name] = np.reshape(sample, batch_shape + sample.shape[1:])
-    return trace_to_arviz(posterior_predictive=output)
+    return trace_to_arviz(trace=trace, posterior_predictive=output, inplace=inplace)

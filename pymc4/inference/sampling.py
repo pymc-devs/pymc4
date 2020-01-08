@@ -4,6 +4,7 @@ from tensorflow_probability import mcmc
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz
+from pymc4.utils import NameParts
 
 
 def sample(

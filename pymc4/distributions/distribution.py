@@ -2,6 +2,7 @@ import abc
 import copy
 from typing import Optional, Union, Any
 
+import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
 from . import transforms
@@ -25,6 +26,8 @@ __all__ = (
 
 class Distribution(Model):
     """Statistical distribution."""
+
+    _test_value = 0.0
 
     def __init__(
         self, name: Optional[NameType], *, transform=None, observed=None, plate=None, **kwargs
@@ -67,6 +70,10 @@ class Distribution(Model):
         one may desire to have different parametrizations, this all should be done there
         """
         return kwargs
+
+    @property
+    def test_value(self):
+        return tf.fill(self.batch_shape + self.event_shape, self._test_value)
 
     def sample(self, shape=(), seed=None):
         """
@@ -181,11 +188,11 @@ class Deterministic(Model):
 
 
 class ContinuousDistribution(Distribution):
-    ...
+    _test_value = 0.0
 
 
 class DiscreteDistribution(Distribution):
-    ...
+    _test_value = 0
 
 
 class BoundedDistribution(Distribution):
@@ -199,11 +206,15 @@ class BoundedDistribution(Distribution):
 
 
 class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
-    ...
+    @property
+    def _test_value(self):
+        return tf.cast(tf.round(0.5 * (self.upper_limit + self.lower_limit)), self.dtype)
 
 
 class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution):
-    ...
+    @property
+    def _test_value(self):
+        return 0.5 * (self.upper_limit + self.lower_limit)
 
 
 class UnitContinuousDistribution(BoundedContinuousDistribution):
@@ -215,6 +226,8 @@ class UnitContinuousDistribution(BoundedContinuousDistribution):
 
 
 class PositiveContinuousDistribution(BoundedContinuousDistribution):
+    _test_value = 1.0
+
     def _init_transform(self, transform):
         if transform is None:
             return transforms.Log()
@@ -229,6 +242,8 @@ class PositiveContinuousDistribution(BoundedContinuousDistribution):
 
 
 class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
+    _test_value = 1
+
     def lower_limit(self):
         return 0
 
@@ -237,4 +252,8 @@ class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
 
 
 class SimplexContinuousDistribution(ContinuousDistribution):
-    ...
+    @property
+    def test_value(self):
+        output = tf.zeros(self.batch_shape + self.event_shape)
+        output[..., 0] = 1.0
+        return output

@@ -4,6 +4,24 @@ import numpy as np
 import tensorflow as tf
 
 
+def array(*args, **kwargs):
+    # TODO: add support for float64, and add tests
+    kwargs.setdefault("dtype", np.float32)
+    return np.array(*args, **kwargs)
+
+
+@pytest.fixture("function", autouse=True, params=range(10, 11))
+def nm_params(request):
+    seed = request.param
+    np.random.seed(seed)
+    # TODO: add support for random input
+    N = 1000
+    w = array([0.35, 0.4, 0.25])
+    mu = array([0.0, 2.0, 5.0])
+    sigma = array([0.5, 0.5, 1.0])
+    return (N, w, mu, sigma)
+
+
 @pytest.fixture(scope="function", params=range(13, 15))
 def mixture_distribution(request):
     if request.param == 13:
@@ -43,16 +61,24 @@ def mixture_model_conditioned():
 
 
 @pytest.fixture(scope="function")
-def normal_mixture():
+def normal_mixture(nm_params):
+    N, w, mu, sigma = nm_params
+    component = np.random.choice(mu.size, size=N, p=w)
+    x = np.random.normal(mu[component], sigma[component], size=N)
+
     @pm.model
     def normal_mixture():
-        w = yield pm.Dirichlet("w", concentration=[0, 1])
-        loc = yield pm.Normal("mu", 0.0, [10.0, 5.0])
-        scale = yield pm.Gamma("tau", 1.0, [1.0, 2.0])
-        x_obs = yield pm.NormalMixture("x_obs", w=w, loc=loc, scale=scale)
+        w = yield pm.Dirichlet(
+            "w",
+            concentration=[1, 1, 1],
+            transform=pm.transforms.Invert(pm.transforms.SoftmaxCentered()),
+        )
+        loc = yield pm.Normal("mu", [0, 0, 0], 10.0)  # TODO: fix after `#193`
+        scale = yield pm.Normal("tau", [1, 1, 1], 1.0)
+        x_obs = yield pm.NormalMixture("x_obs", w=w, loc=loc, scale=scale, observed=x)
         return x_obs
 
-    return normal_mixture
+    return normal_mixture, nm_params, x
 
 
 @pytest.fixture(
@@ -107,9 +133,17 @@ def test_mixture_conditioned(mixture_model_conditioned, xla_fixture):
 
 
 def test_normal_mixture(normal_mixture, xla_fixture):
-    model = normal_mixture()
+    model, nm_params, x = normal_mixture
+    model = model()
+    N, w, mu, sigma = nm_params
     trace, stats = pm.sample(
-        model=model, num_samples=10, num_chains=2, burn_in=2, step_size=0.1, xla=xla_fixture
+        model=model, num_samples=2000, num_chains=2, burn_in=300, step_size=0.1, xla=True
     )
-    scope_obs = "normal_mixture/x_obs"
-    np.testing.assert_equal((10, 2), tuple(trace[scope_obs].shape))
+    np.testing.assert_allclose(
+        mu,
+        tf.reduce_mean(
+            tf.sort(tf.reduce_mean(trace["normal_mixture/mu"], axis=0), axis=-1), axis=0
+        ),
+        rtol=0.1,
+        atol=0.1,
+    )

@@ -3,7 +3,7 @@ from typing import Optional
 
 from tensorflow_probability import bijectors as tfb
 
-__all__ = ["Log"]
+__all__ = ["Log", "SoftmaxCentered"]
 
 
 class JacobianPreference(enum.Enum):
@@ -93,6 +93,8 @@ class Transform:
 
 
 class Invert(Transform):
+    name = "Invert"
+
     def __init__(self, transform):
         if transform.jacobian_preference == JacobianPreference.Forward:
             self.jacobian_preference = JacobianPreference.Backward
@@ -132,3 +134,22 @@ class Log(Transform):
 
     def inverse_log_det_jacobian(self, z):
         return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)
+
+
+class SoftmaxCentered(Transform):
+    name = "SoftmaxCentered"
+
+    def __init__(self):
+        self._transform = tfb.SoftmaxCentered()
+
+    def forward(self, x):
+        return self._transform.forward(x)
+
+    def inverse(self, z):
+        return self._transform.inverse(z)
+
+    def forward_log_det_jacobian(self, x):
+        return self._transform.forward_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
+
+    def inverse_log_det_jacobian(self, z):
+        return self._transform.inverse_log_det_jacobian(z, self._transform.forward_min_event_ndims)

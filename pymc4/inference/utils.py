@@ -63,7 +63,7 @@ def trace_to_arviz(
     if sample_stats is not None and isinstance(sample_stats, dict):
         sample_stats = {k: v.numpy().T for k, v in sample_stats.items()}
     if prior_predictive is not None and isinstance(prior_predictive, dict):
-        prior_predictive = {k: v[np.newaxis] for k, v in prior_predictive.items() if "/" in k}
+        prior_predictive = {k: v[np.newaxis] for k, v in prior_predictive.items()}
     if posterior_predictive is not None and isinstance(posterior_predictive, dict):
         if isinstance(trace, az.InferenceData) and inplace == True:
             return trace + az.from_dict(posterior_predictive=posterior_predictive)

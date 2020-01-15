@@ -3,3 +3,4 @@ from .discrete import *
 from .multivariate import *
 from .distribution import Potential, Deterministic
 from . import transforms
+from .mixture import *

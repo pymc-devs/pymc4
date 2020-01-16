@@ -107,12 +107,12 @@ def deterministics_in_nested_models():
 
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
     model = simple_model_with_deterministic()
-    trace, stats = pm.inference.sampling.sample(
+    trace = pm.sample(
         model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
     )
     norm = "simple_model_with_deterministic/simple_model/norm"
     determ = "simple_model_with_deterministic/determ"
-    np.testing.assert_allclose(trace[determ], trace[norm] * 2)
+    np.testing.assert_allclose(trace.posterior[determ], trace.posterior[norm] * 2)
 
 
 def test_vectorize_log_prob_det_function(unvectorized_model):
@@ -123,6 +123,7 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
         all_unobserved_values,
         deterministics_callback,
         deterministic_names,
+        state,
     ) = pm.inference.sampling.build_logp_and_deterministic_functions(model)
     for _ in range(len(batch_size)):
         logpfn = pm.inference.sampling.vectorize_logp_function(logpfn)
@@ -167,16 +168,16 @@ def test_sampling_with_deterministics_in_nested_models(
         expected_deterministics,
         deterministic_mapping,
     ) = deterministics_in_nested_models
-    trace, stats = pm.inference.sampling.sample(
+    trace = pm.sample(
         model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
-        np.testing.assert_allclose(trace[deterministic], op(*[trace[i] for i in inputs]), rtol=1e-6)
+        np.testing.assert_allclose(
+            trace.posterior[deterministic], op(*[trace.posterior[i] for i in inputs]), rtol=1e-6
+        )
 
 
 def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
     model = simple_model_no_free_rvs()
     with pytest.raises(ValueError):
-        trace, stats = pm.inference.sampling.sample(
-            model=model, num_samples=1, num_chains=1, burn_in=1
-        )
+        trace = pm.sample(model=model, num_samples=1, num_chains=1, burn_in=1)

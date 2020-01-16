@@ -8,7 +8,7 @@ from pymc4 import forward_sampling
 from pymc4.flow.executor import EvaluationError
 
 
-@pytest.fixture(scope="module", params=[(), (1,), (2,), (1, 1), (7, 3)], ids=str)
+@pytest.fixture(scope="module", params=[(1, 0), (1, 1), (1, 2), (1, 1, 1), (1, 3, 7)], ids=str)
 def sample_shape_fixture(request):
     return request.param
 
@@ -74,23 +74,23 @@ def posterior_predictive_fixture(model_with_observed_fixture):
     num_samples = 40
     num_chains = 3
     (model, observed, core_ppc_shapes, observed_in_RV) = model_with_observed_fixture
-    trace, _ = pm.inference.sampling.sample(
-        model(), num_samples=num_samples, num_chains=num_chains, observed=observed
-    )
-    return (model, observed, core_ppc_shapes, observed_in_RV, trace, num_samples, num_chains)
+    trace = pm.sample(model(), num_samples=num_samples, num_chains=num_chains, observed=observed)
+    return model, observed, core_ppc_shapes, observed_in_RV, trace, num_samples, num_chains
 
 
 def test_sample_prior_predictive(model_fixture, sample_shape_fixture, sample_from_observed_fixture):
     model, observed = model_fixture
 
-    prior = forward_sampling.sample_prior_predictive(
-        model(), sample_shape_fixture, sample_from_observed_fixture
-    )
+    prior = pm.sample_prior_predictive(
+        model(), sample_shape_fixture[1:], sample_from_observed_fixture
+    ).prior_predictive
     if sample_from_observed_fixture:
-        assert set(["model/sd", "model/x", "model/y", "model/mu", "model/dy"]) == set(prior)
+        assert set(["model/sd", "model/x", "model/y", "model/mu", "model/dy"]) == set(
+            prior.data_vars
+        )
         assert all((value.shape == sample_shape_fixture for value in prior.values()))
     else:
-        assert set(["model/sd", "model/y", "model/mu", "model/dy"]) == set(prior)
+        assert set(["model/sd", "model/y", "model/mu", "model/dy"]) == set(prior.data_vars)
         assert all(
             (
                 value.shape == sample_shape_fixture
@@ -112,21 +112,21 @@ def test_sample_prior_predictive(model_fixture, sample_shape_fixture, sample_fro
 def test_sample_prior_predictive_var_names(model_fixture):
     model, observed = model_fixture
 
-    prior = forward_sampling.sample_prior_predictive(
+    prior = pm.sample_prior_predictive(
         model(), var_names=["model/sd"], sample_shape=()
-    )
+    ).prior_predictive
     assert set(prior) == set(["model/sd"])
 
-    prior = forward_sampling.sample_prior_predictive(
+    prior = pm.sample_prior_predictive(
         model(), var_names=["model/x", "model/y"], sample_shape=()
-    )
+    ).prior_predictive
     assert set(prior) == set(["model/x", "model/y"])
 
     # Assert we can get the values of observeds if we ask for them explicitly
     # even if sample_from_observed_fixture is False
-    prior = forward_sampling.sample_prior_predictive(
+    prior = pm.sample_prior_predictive(
         model(), var_names=["model/x", "model/y"], sample_shape=(), sample_from_observed=False
-    )
+    ).prior_predictive
     assert set(prior) == set(["model/x", "model/y"])
     assert np.all(prior["model/x"] == observed)
 
@@ -136,9 +136,7 @@ def test_sample_prior_predictive_var_names(model_fixture):
         model_func, ["X"]
     )
     with pytest.raises(ValueError, match=re.escape(expected_message)):
-        prior = forward_sampling.sample_prior_predictive(
-            model_func, var_names=["X", "model/y"], sample_shape=()
-        )
+        prior = pm.sample_prior_predictive(model_func, var_names=["X", "model/y"], sample_shape=())
 
 
 def test_sample_prior_predictive_int_sample_shape(model_fixture, n_draws_fixture):
@@ -148,7 +146,12 @@ def test_sample_prior_predictive_int_sample_shape(model_fixture, n_draws_fixture
 
     prior_tuple = forward_sampling.sample_prior_predictive(model(), sample_shape=(n_draws_fixture,))
 
-    assert all((prior_int[k].shape == v.shape for k, v in prior_tuple.items()))
+    assert all(
+        (
+            prior_int.prior_predictive[k].shape == v.shape
+            for k, v in prior_tuple.prior_predictive.items()
+        )
+    )
 
 
 def test_posterior_predictive_executor(model_with_observed_fixture):
@@ -189,19 +192,23 @@ def test_sample_posterior_predictive(posterior_predictive_fixture):
         observed_kwarg = None
     else:
         observed_kwarg = observed
-    ppc = pm.sample_posterior_predictive(model(), trace, observed=observed_kwarg)
+    ppc = pm.sample_posterior_predictive(
+        model(), trace, observed=observed_kwarg
+    ).posterior_predictive
     assert set(sorted(list(ppc))) == set(observed)
     assert np.all(
-        [v.shape == (num_samples, num_chains) + observed[k].shape for k, v in ppc.items()]
+        [v.shape == (num_chains, num_samples) + observed[k].shape for k, v in ppc.items()]
     )
 
 
 def test_sample_ppc_var_names(model_fixture):
     model, observed = model_fixture
-    trace = {
-        "model/sd": tf.convert_to_tensor(np.array(1.0, dtype="float32")),
-        "model/y": tf.convert_to_tensor(observed),
-    }
+    trace = pm.inference.utils.trace_to_arviz(
+        {
+            "model/sd": tf.ones((10, 1), dtype="float32"),
+            "model/y": tf.convert_to_tensor(observed[:, None]),
+        }
+    )
 
     with pytest.raises(ValueError):
         pm.sample_posterior_predictive(model(), trace, var_names=[])
@@ -210,15 +217,14 @@ def test_sample_ppc_var_names(model_fixture):
         pm.sample_posterior_predictive(model(), trace, var_names=["name not in model!"])
 
     with pytest.raises(TypeError):
-        bad_trace = trace.copy()
-        bad_trace["name not in model!"] = tf.constant(1.0)
-        pm.sample_posterior_predictive(model(), bad_trace)
+        trace.posterior["name not in model!"] = tf.constant(1.0)
+        pm.sample_posterior_predictive(model(), trace)
+    del trace.posterior["name not in model!"]
 
     var_names = ["model/sd", "model/x", "model/dy"]
-    ppc = pm.sample_posterior_predictive(model(), trace, var_names=var_names)
+    ppc = pm.sample_posterior_predictive(model(), trace, var_names=var_names).posterior_predictive
     assert set(var_names) == set(ppc)
-    assert ppc["model/sd"].shape == trace["model/sd"].shape
-    assert np.all([v.shape == observed.shape for k, v in ppc.items() if k != "model/sd"])
+    assert ppc["model/sd"].shape == trace.posterior["model/sd"].shape
 
 
 def test_sample_ppc_corrupt_trace():
@@ -227,9 +233,11 @@ def test_sample_ppc_corrupt_trace():
         x = yield pm.Normal("x", tf.ones(5), 1)
         y = yield pm.Normal("y", x, 1)
 
-    trace1 = {"model/x": np.ones(7, dtype="float32")}
+    trace1 = pm.inference.utils.trace_to_arviz({"model/x": tf.ones((7, 1), dtype="float32")})
 
-    trace2 = {"model/x": np.ones(5, dtype="float32"), "model/y": np.array(0, dtype="float32")}
+    trace2 = pm.inference.utils.trace_to_arviz(
+        {"model/x": tf.ones((1, 5), dtype="float32"), "model/y": tf.zeros((1, 1), dtype="float32")}
+    )
     with pytest.raises(EvaluationError):
         pm.sample_posterior_predictive(model(), trace1)
     with pytest.raises(EvaluationError):

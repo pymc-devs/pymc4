@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import initialize_sampling_state
+from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz
 from pymc4.utils import NameParts
 
 
@@ -53,37 +53,39 @@ def sample(
 
     Returns
     -------
-    Trace
+    Trace : InferenceDataType
+        An ArviZ's InferenceData object with the groups: posterior, sample_stats and observed_data
 
     Examples
     --------
     Let's start with a simple model. We'll need some imports to experiment with it.
 
     >>> import pymc4 as pm
-    >>> from pymc4 import distributions as dist
     >>> import numpy as np
 
     This particular model has a latent variable `sd`
 
     >>> @pm.model
     ... def nested_model(cond):
-    ...     sd = yield dist.HalfNormal("sd", 1., transform=dist.transforms.Log())  #TODO: Auto-transform
-    ...     norm = yield dist.Normal("n", cond, sd, observed=np.random.randn(10))
+    ...     sd = yield pm.HalfNormal("sd", 1.)
+    ...     norm = yield pm.Normal("n", cond, sd, observed=np.random.randn(10))
     ...     return norm
 
-    Now, we may want to perform sampling from this model. We already observed some variables and we now need to fix
-    the condition.
+    Now, we may want to perform sampling from this model. We already observed some variables and we
+    now need to fix the condition.
 
     >>> conditioned = nested_model(cond=2.)
 
-    Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling. Nothing special is required
-    but passing the model to ``pm.sample``, the rest configuration is held by PyMC4.
+    Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling.
+    Nothing special is required but passing the model to ``pm.sample``, the rest configuration is
+    held by PyMC4.
 
     >>> trace = sample(conditioned)
 
     Notes
     -----
-    Things that are considered to be under discussion are overriding observed variables. The API for that may look like
+    Things that are considered to be under discussion are overriding observed variables. The API
+    for that may look like
 
     >>> new_observed = {"nested_model/n": np.random.randn(10) + 1}
     >>> trace = sample(conditioned, observed=new_observed)
@@ -96,6 +98,7 @@ def sample(
         init,
         _deterministics_callback,
         deterministic_names,
+        state_,
     ) = build_logp_and_deterministic_functions(model, state=state, observed=observed)
     init_state = list(init.values())
     init_keys = list(init.keys())
@@ -153,7 +156,8 @@ def sample(
     sampler_stats = dict(zip(stat_names, sample_stats))
     if len(deterministic_names) > 0:
         posterior.update(dict(zip(deterministic_names, deterministic_values)))
-    return posterior, sampler_stats
+
+    return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
 
 
 def build_logp_and_deterministic_functions(
@@ -175,7 +179,7 @@ def build_logp_and_deterministic_functions(
             f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
         )
 
-    observed = state.observed_values
+    observed_var = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
     @tf.function(autograph=False)
@@ -194,14 +198,20 @@ def build_logp_and_deterministic_functions(
             raise TypeError("Either list state should be passed or a dict one")
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed_var)
         _, st = flow.evaluate_model_transformed(model, state=st)
         for transformed_name in st.transformed_values:
             untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
             st.deterministics[untransformed_name] = st.untransformed_values.pop(untransformed_name)
         return st.deterministics.values()
 
-    return logpfn, dict(state.all_unobserved_values), deterministics_callback, deterministic_names
+    return (
+        logpfn,
+        dict(state.all_unobserved_values),
+        deterministics_callback,
+        deterministic_names,
+        state,
+    )
 
 
 def vectorize_logp_function(logpfn):

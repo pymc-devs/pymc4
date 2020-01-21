@@ -405,7 +405,7 @@ def test_observed_cant_mix_with_transformed_and_raises_an_error(transformed_mode
 
 def test_as_sampling_state_works_observed_is_constrained(complex_model_with_observed):
     _, state = pm.evaluate_model(complex_model_with_observed())
-    sampling_state = state.as_sampling_state()
+    sampling_state, _ = state.as_sampling_state()
     assert not sampling_state.transformed_values
     assert set(sampling_state.observed_values) == {"complex_model/a/n"}
     assert set(sampling_state.untransformed_values) == {"complex_model/n"}
@@ -415,7 +415,7 @@ def test_as_sampling_state_works_observed_is_set_to_none(complex_model_with_obse
     _, state = pm.evaluate_model_transformed(
         complex_model_with_observed(), observed={"complex_model/a/n": None}
     )
-    sampling_state = state.as_sampling_state()
+    sampling_state, _ = state.as_sampling_state()
     assert set(sampling_state.transformed_values) == {"complex_model/a/__log_n"}
     assert not sampling_state.observed_values
     assert set(sampling_state.untransformed_values) == {"complex_model/n"}
@@ -423,7 +423,7 @@ def test_as_sampling_state_works_observed_is_set_to_none(complex_model_with_obse
 
 def test_as_sampling_state_works_if_transformed_exec(complex_model_with_observed):
     _, state = pm.evaluate_model_transformed(complex_model_with_observed())
-    sampling_state = state.as_sampling_state()
+    sampling_state, _ = state.as_sampling_state()
     assert not sampling_state.transformed_values
     assert set(sampling_state.observed_values) == {"complex_model/a/n"}
     assert set(sampling_state.untransformed_values) == {"complex_model/n"}

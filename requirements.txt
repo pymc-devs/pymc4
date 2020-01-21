@@ -1,6 +1,7 @@
-arviz>=0.4.1
-gast==0.2.2
+arviz>=0.5.1
+gast==0.3.2
 tf-nightly
 tfp-nightly
 pymc3
 scipy>=0.18.1
+seaborn

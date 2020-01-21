@@ -45,6 +45,12 @@ steps:
     displayName: "pytest"
 
   - script: |
+      python -m pip install ipykernel nbconvert
+      python -m ipykernel install --name pymc4-dev --user
+      make notebooks
+    displayName: "notebooks"
+
+  - script: |
       bash <(curl -s https://codecov.io/bash)
     displayName: "Publish test results to codecov for Python $(python.version)"
     condition: succeededOrFailed()

@@ -16,8 +16,6 @@ __all__ = ["sample_prior_predictive", "sample_posterior_predictive"]
 ModelType = Union[types.GeneratorType, Model]
 MODEL_TYPES = (types.GeneratorType, Model)
 
-InferenceDataType = Union[types.GeneratorType, InferenceData]
-
 
 def sample_prior_predictive(
     model: ModelType,
@@ -26,7 +24,7 @@ def sample_prior_predictive(
     var_names: Optional[Union[str, List[str]]] = None,
     state: Optional[SamplingState] = None,
     use_auto_batching: bool = True,
-) -> InferenceDataType:
+) -> InferenceData:
     """
     Draw ``sample_shape`` values from the model for the desired ``var_names``.
 
@@ -227,12 +225,12 @@ def sample_prior_predictive(
 
 def sample_posterior_predictive(
     model: ModelType,
-    trace: InferenceDataType,
+    trace: InferenceData,
     var_names: Optional[Union[str, List[str]]] = None,
     observed: Optional[Dict[str, Any]] = None,
     use_auto_batching: bool = True,
     inplace: bool = True,
-) -> InferenceDataType:
+) -> InferenceData:
     """
     Draw ``sample_shape`` values from the model for the desired ``var_names``.
 
@@ -370,7 +368,8 @@ def sample_posterior_predictive(
         )
         batch_shape = tf.TensorShape(
             tf.broadcast_static_shape(
-                values.shape[: len(values.shape) - len(core_shape)], batch_shape
+                values.shape[: len(values.shape) - len(core_shape)],  # type: ignore
+                batch_shape,
             )
         )
 

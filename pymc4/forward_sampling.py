@@ -302,7 +302,12 @@ def sample_posterior_predictive(
         values = {
             var_name: tf.convert_to_tensor(value) for var_name, value in trace.posterior.items()
         }
-        _, state = evaluate_model_posterior_predictive(model, values=values, observed=observed)
+        # We need to pass the number of chains and draws as sample_shape for
+        # observed conditionally independent variables
+        sample_shape = (trace.posterior.sizes["chain"], trace.posterior.sizes["draw"])
+        _, state = evaluate_model_posterior_predictive(
+            model, values=values, observed=observed, sample_shape=sample_shape
+        )
         all_values = collections.ChainMap(state.all_values, state.deterministics)
         if var_names is None:
             var_names = list(state.posterior_predictives)

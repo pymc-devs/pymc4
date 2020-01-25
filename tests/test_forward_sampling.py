@@ -457,3 +457,43 @@ def test_sample_posterior_predictive_on_glm(
         ).posterior_predictive
         for k, v in ppc.items():
             assert v.shape == sample_shape_fixture + core_shapes[k]
+
+
+def test_posterior_predictive_on_root_variable(use_auto_batching_fixture):
+    n_obs = 5
+    n_samples = 6
+    n_chains = 4
+
+    @pm.model
+    def model():
+        x = yield pm.Normal(
+            "x",
+            np.zeros(n_obs, dtype="float32"),
+            1,
+            observed=np.zeros(n_obs, dtype="float32"),
+            conditionally_independent=True,
+            reinterpreted_batch_ndims=1,
+        )
+        beta = yield pm.Normal("beta", 0, 1, conditionally_independent=True)
+        bias = yield pm.Normal("bias", 0, 1, conditionally_independent=True)
+        mu = beta[..., None] * x + bias[..., None]
+        yield pm.Normal(
+            "obs", mu, 1, observed=np.ones(n_obs, dtype="float32"), reinterpreted_batch_ndims=1
+        )
+
+    trace = pm.inference.utils.trace_to_arviz(
+        {
+            "model/beta": tf.zeros((n_samples, n_chains), dtype="float32"),
+            "model/bias": tf.zeros((n_samples, n_chains), dtype="float32"),
+        }
+    )
+    ppc = forward_sampling.sample_posterior_predictive(
+        model(), trace=trace, use_auto_batching=use_auto_batching_fixture
+    ).posterior_predictive
+    if not use_auto_batching_fixture:
+        _, state = pm.evaluate_model_posterior_predictive(
+            model(), sample_shape=(n_chains, n_samples)
+        )
+        assert state.untransformed_values["model/x"].numpy().shape == (n_chains, n_samples, n_obs)
+    assert ppc["model/obs"].shape == (n_chains, n_samples, n_obs)
+    assert ppc["model/x"].shape == (n_chains, n_samples, n_obs)

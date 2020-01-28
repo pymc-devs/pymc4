@@ -38,9 +38,10 @@ def get_name(default, base_fn, name) -> Optional[str]:
     Parameters
     ----------
     default : _no_name_provided, str, or None
-        Default to fall back to
+        Default to fall back to if it is not _no_name_provided
     base_fn : callable
-        In case the random variable has a name attribute, use that
+        In case the random variable has a name attribute
+        and defualt is _no_name_provided, use that
     name : _no_name_provided, str, or None
         Provided argument
 

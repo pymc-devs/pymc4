@@ -209,7 +209,7 @@ def sample_posterior_predictive(
         model.
     inplace: If True (default) it will add a posterior_predictive group to the provided ``trace``,
         instead of returning a new InferenceData object. If a posterior_predictive group is already
-        present in ``trace`` it will be overwrited.
+        present in ``trace`` it will be overwritten.
 
     Returns
     -------
@@ -250,7 +250,7 @@ def sample_posterior_predictive(
     if isinstance(var_names, str):
         var_names = [var_names]
 
-    # We cannot assume that the model is vectorized, so we have batch the
+    # We cannot assume that the model is vectorized, so we have to batch the
     # pm.evaluate_model_posterior_predictive calls across the trace entries
     # This brings one big problem: we need to infer the batch dimensions from
     # the trace. To do this, we will do

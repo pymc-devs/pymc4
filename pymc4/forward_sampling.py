@@ -256,7 +256,7 @@ def sample_posterior_predictive(
         batching will safely sample from it but with some additional overhead.
     inplace: If True (default) it will add a posterior_predictive group to the provided ``trace``,
         instead of returning a new InferenceData object. If a posterior_predictive group is already
-        present in ``trace`` it will be overwrited.
+        present in ``trace`` it will be overwritten.
 
     Returns
     -------

@@ -134,10 +134,9 @@ def vectorized_model_fixture(request):
                 "x",
                 mu,
                 scale[..., None],
-                plate=5,
                 observed=observed,
                 reinterpreted_batch_ndims=1,
-                plate_events=True,
+                plate_events=5,
             )
 
     else:

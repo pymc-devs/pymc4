@@ -92,22 +92,16 @@ def vectorized_model_fixture(request):
         @pm.model
         def model():
             mu = yield pm.Normal(
-                "mu",
-                tf.zeros(4),
-                1,
-                conditionally_independent=True,
-                reinterpreted_batch_ndims=1,
-                plate_events=True,
+                "mu", tf.zeros(4), 1, conditionally_independent=True, reinterpreted_batch_ndims=1,
             )
             scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
             x = yield pm.Normal(
                 "x",
                 mu,
                 scale[..., None],
-                plate=5,
                 observed=observed,
                 reinterpreted_batch_ndims=1,
-                plate_events=True,
+                plate_events=5,
             )
 
     else:

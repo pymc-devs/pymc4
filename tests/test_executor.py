@@ -121,9 +121,7 @@ def fixture_model_with_plates(fixture_distribution_parameters, fixture_pm_model_
 
     def model():
         loc = yield pm.Normal("loc", 0, 1)
-        obs = yield pm.Normal(
-            "obs", loc, 1, plate=batch_shape, observed=observed, plate_events=True
-        )
+        obs = yield pm.Normal("obs", loc, 1, plate_events=batch_shape, observed=observed)
         return obs
 
     if fixture_pm_model_decorate:
@@ -685,7 +683,7 @@ def test_unreduced_log_prob(fixture_batch_shapes):
     def model():
         a = yield pm.Normal("a", 0, 1)
         b = yield pm.HalfNormal("b", 1)
-        c = yield pm.Normal("c", loc=a, scale=b, plate=len(observed_value), plate_events=True)
+        c = yield pm.Normal("c", loc=a, scale=b, plate_events=len(observed_value))
 
     values = {
         "model/a": np.zeros(fixture_batch_shapes, dtype="float32"),

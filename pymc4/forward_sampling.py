@@ -144,7 +144,7 @@ def sample_prior_predictive(
     ...     mu = yield pm.Normal("mu", 0, 1, conditionally_independent=True)
     ...     scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
     ...     obs = yield pm.Normal(
-    ...         "obs", mu, scale, plate=len(observed), observed=observed, plate_events=True
+    ...         "obs", mu, scale, plate_events=len(observed), observed=observed
     ...     )
     >>> st1 = time()
     >>> prior_samples1 = sample_prior_predictive(

@@ -34,14 +34,13 @@ class Distribution(Model):
         transform=None,
         observed=None,
         plate=None,
+        plate_events=None,
         conditionally_independent=False,
         reinterpreted_batch_ndims=0,
-        plate_events=False,
         **kwargs,
     ):
         self.conditions = self.unpack_conditions(**kwargs)
         self._distribution = self._init_distribution(self.conditions)
-        self.plate = plate
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )
@@ -51,18 +50,18 @@ class Distribution(Model):
             )
         self.model_info.update(observed=observed)
         self.transform = self._init_transform(transform)
-        self.conditionally_independent = conditionally_independent
+        self.plate = plate
         self.plate_events = plate_events
+        self.conditionally_independent = conditionally_independent
         self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
         if reinterpreted_batch_ndims:
             self._distribution = tfd.Independent(
                 self._distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims
             )
-        if self.plate is not None:
-            if plate_events:
-                self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
-            else:
-                self._distribution = Plate(self._distribution, plate_shape=self.plate)
+        if plate is not None:
+            self._distribution = Plate(self._distribution, plate_shape=plate)
+        if plate_events is not None:
+            self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate_events)
 
     @property
     def dtype(self):

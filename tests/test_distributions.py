@@ -105,3 +105,17 @@ def test_rvs_backend_arithmetic(tf_seed):
     assert x % y is not None
     assert x ** y is not None
     assert -x is not None
+
+
+@pytest.mark.parametrize(**random_variable_args())
+def test_rvs_test_point_are_valid(tf_seed, distribution_name, kwargs):
+    dist_class = getattr(pm, distribution_name)
+    dist = dist_class(name=distribution_name, **kwargs)
+    test_value = dist.test_value
+    sample = dist.sample()
+    print(test_value)
+    print(sample)
+    print(dist.log_prob(sample))
+    logp = dist.log_prob(test_value).numpy()
+    assert tuple(test_value.shape.as_list()) == tuple((dist.batch_shape + dist.event_shape).as_list())
+    assert not (np.isinf(logp) or np.isnan(logp))

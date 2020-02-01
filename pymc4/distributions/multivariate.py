@@ -3,6 +3,7 @@
 Wraps selected tfp.distributions (listed in __all__) as pm.RandomVariables.
 Implements random variables not supported by tfp as distributions.
 """
+import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import (
     SimplexContinuousDistribution,
@@ -102,6 +103,13 @@ class LKJ(ContinuousDistribution):
         dimension, concentration = conditions["dimension"], conditions["concentration"]
         return tfd.LKJ(dimension=dimension, concentration=concentration)
 
+    @property
+    def test_value(self):
+        return tf.linalg.diag(
+            tf.ones((self.batch_shape + self.event_shape)[:-1])
+        )
+
+
 
 class Multinomial(DiscreteDistribution):
     r"""
@@ -134,6 +142,8 @@ class Multinomial(DiscreteDistribution):
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1 along the last axis.
     """
+    # For some ridiculous reason, tfp needs multinomial values to be floats...
+    _test_value = 0.
 
     def __init__(self, name, total_count, probs, **kwargs):
         super().__init__(name, total_count=total_count, probs=probs, **kwargs)

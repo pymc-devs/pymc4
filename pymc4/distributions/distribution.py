@@ -146,6 +146,14 @@ class Distribution(Model):
     def is_observed(self):
         return self.model_info["observed"] is not None
 
+    @property
+    def batch_shape(self):
+        return self._distribution.batch_shape
+
+    @property
+    def event_shape(self):
+        return self._distribution.event_shape
+
 
 class Potential:
     __slots__ = ("_value", "_coef")
@@ -208,13 +216,13 @@ class BoundedDistribution(Distribution):
 class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
     @property
     def _test_value(self):
-        return tf.cast(tf.round(0.5 * (self.upper_limit + self.lower_limit)), self.dtype)
+        return tf.cast(tf.round(0.5 * (self.upper_limit() + self.lower_limit())), self.dtype)
 
 
 class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution):
     @property
     def _test_value(self):
-        return 0.5 * (self.upper_limit + self.lower_limit)
+        return 0.5 * (self.upper_limit() + self.lower_limit())
 
 
 class UnitContinuousDistribution(BoundedContinuousDistribution):
@@ -254,6 +262,4 @@ class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
 class SimplexContinuousDistribution(ContinuousDistribution):
     @property
     def test_value(self):
-        output = tf.zeros(self.batch_shape + self.event_shape)
-        output[..., 0] = 1.0
-        return output
+        return tf.ones(self.batch_shape + self.event_shape) / self.event_shape[-1]

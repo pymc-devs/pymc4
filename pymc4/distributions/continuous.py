@@ -977,8 +977,9 @@ class Pareto(BoundedContinuousDistribution):
     @property
     def test_value(self):
         return (
-            tf.zeros(self.batch_shape + self.event_shape, dtype=self.dtype) +
-            self.conditions["scale"] + 1
+            tf.zeros(self.batch_shape + self.event_shape, dtype=self.dtype)
+            + self.conditions["scale"]
+            + 1
         )
 
 

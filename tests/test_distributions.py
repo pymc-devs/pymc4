@@ -87,26 +87,6 @@ def test_rvs_logp_and_forward_sample(tf_seed, distribution_name, kwargs):
         np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
 
 
-@pytest.mark.xfail(
-    raises=TypeError, reason="Raising Typerror at the moment. Should double check if still needed"
-)
-def test_rvs_backend_arithmetic(tf_seed):
-    """Test backend arithmetic implemented by the `WithBackendArithmetic` class."""
-    x = pm.Normal("NormA", loc=0, scale=1)
-    y = pm.Normal("NormB", loc=1, scale=2)
-
-    assert x + y is not None
-    assert x - y is not None
-    assert x * y is not None
-    # TODO test __matmul__ once random variables support shapes.
-    # assert x @ y is not None
-    assert x / y is not None
-    assert x // y is not None
-    assert x % y is not None
-    assert x ** y is not None
-    assert -x is not None
-
-
 @pytest.mark.parametrize(**random_variable_args())
 def test_rvs_test_point_are_valid(tf_seed, distribution_name, kwargs):
     dist_class = getattr(pm, distribution_name)

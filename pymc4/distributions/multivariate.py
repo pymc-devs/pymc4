@@ -278,3 +278,9 @@ class Wishart(ContinuousDistribution):
     def _init_distribution(conditions):
         df, scale = conditions["df"], conditions["scale"]
         return tfd.WishartTriL(df=df, scale_tril=scale)
+
+    @property
+    def test_value(self):
+        return tf.linalg.diag(
+            tf.ones((self.batch_shape + self.event_shape)[:-1])
+        )

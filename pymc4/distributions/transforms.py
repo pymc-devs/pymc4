@@ -98,19 +98,19 @@ class Invert(Transform):
             self.jacobian_preference = JacobianPreference.Backward
         else:
             self.jacobian_preference = JacobianPreference.Forward
-        self.transform = transform
+        self._transform = transform
 
     def forward(self, x):
-        return self.transform.inverse(x)
+        return self._transform.inverse(x)
 
     def inverse(self, z):
-        return self.transform.forward(z)
+        return self._transform.forward(z)
 
     def forward_log_det_jacobian(self, x):
-        return self.transform.inverse_log_det_jacobian(x)
+        return self._transform.inverse_log_det_jacobian(x)
 
     def inverse_log_det_jacobian(self, z):
-        return self.transform.forward_log_det_jacobian(z)
+        return self._transform.forward_log_det_jacobian(z)
 
 
 class Log(Transform):

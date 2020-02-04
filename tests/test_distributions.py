@@ -105,3 +105,13 @@ def test_rvs_backend_arithmetic(tf_seed):
     assert x % y is not None
     assert x ** y is not None
     assert -x is not None
+
+def test_uniform_sample():
+    @pm.model
+    def model():
+        dist = yield pm.Uniform('uniform', 0, 1)
+        return dist
+    
+    trace = pm.sample(model(), num_samples=1, burn_in=1)
+
+    assert trace['uniform_interval__'] is not None

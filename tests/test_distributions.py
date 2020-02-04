@@ -114,4 +114,4 @@ def test_uniform_sample():
     
     trace = pm.sample(model(), num_samples=1, burn_in=1)
 
-    assert trace['uniform_interval__'] is not None
+    assert trace.posterior['model/x'] is not None

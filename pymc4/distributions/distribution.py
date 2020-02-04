@@ -207,6 +207,12 @@ class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution)
 
 
 class UnitContinuousDistribution(BoundedContinuousDistribution):
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.Sigmoid()
+        else:
+            return transform
+
     def lower_limit(self):
         return 0.0
 

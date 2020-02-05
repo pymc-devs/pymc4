@@ -143,11 +143,12 @@ class BetaBinomial(BoundedDiscreteCompoundDistribution):
         import numpy as np
         import scipy.stats as st
         plt.style.use('seaborn-darkgrid')
-        lows = [1, -2]
-        highs = [6, 2]
-        for low, high in zip(lows, highs):
-            x = np.arange(low, high+1)
-            pmf = [1 / (high - low)] * len(x)
+        n = 10
+        x = np.arange(0, n)
+        alphas = [1, 2]
+        betas = [6, 2]
+        for a, b in zip(alphas, betas):
+            pmf = st.betabinom(n, a, b).pmf(x)
             plt.plot(x, pmf, '-o', label='low = {}, high = {}'.format(low, high))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)

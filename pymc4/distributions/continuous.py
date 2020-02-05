@@ -1108,7 +1108,7 @@ class Triangular(BoundedContinuousDistribution):
         return self.conditions["high"]
 
 
-class Uniform(UnitContinuousDistribution, BoundedContinuousDistribution):
+class Uniform(BoundedContinuousDistribution):
     r"""Continuous uniform random variable.
 
     The pdf of this distribution is

@@ -181,3 +181,15 @@ def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
     model = simple_model_no_free_rvs()
     with pytest.raises(ValueError):
         trace = pm.sample(model=model, num_samples=1, num_chains=1, burn_in=1)
+
+
+def test_beta_sample():
+    @pm.model
+    def model():
+        dist = yield pm.Beta("beta", 0, 1)
+        return dist
+
+    trace = pm.sample(model(), num_samples=1, burn_in=1)
+
+    assert trace.posterior["model/beta"] is not None
+    assert trace.posterior["model/__sigmoid_beta"] is not None

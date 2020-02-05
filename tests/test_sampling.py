@@ -192,3 +192,4 @@ def test_uniform_sample():
     trace = pm.sample(model(), num_samples=1, burn_in=1)
 
     assert trace.posterior["model/uniform"] is not None
+    assert trace.posterior["model/__sigmoid_uniform"] is not None

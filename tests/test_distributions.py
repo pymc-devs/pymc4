@@ -21,7 +21,7 @@ def random_variable_args():
                 "total_count": 10.0,
                 "concentration0": 1.0,
                 "concentration1": 2.0,
-                "sample": [1.0, 2.0],
+                "sample": [3.0, 7.0],
             },
         ),
         ("Categorical", {"probs": [0.1, 0.5, 0.4], "sample": 2.0}),

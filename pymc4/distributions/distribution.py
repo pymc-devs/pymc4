@@ -13,7 +13,6 @@ __all__ = (
     "Potential",
     "ContinuousDistribution",
     "DiscreteDistribution",
-    "BoundedDiscreteCompoundDistribution",
     "PositiveContinuousDistribution",
     "PositiveDiscreteDistribution",
     "BoundedDistribution",
@@ -200,10 +199,6 @@ class BoundedDistribution(Distribution):
 
 
 class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
-    ...
-
-
-class BoundedDiscreteCompoundDistribution(BoundedDiscreteDistribution):
     ...
 
 

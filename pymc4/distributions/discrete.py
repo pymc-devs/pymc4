@@ -4,7 +4,6 @@ from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
-    BoundedDiscreteCompoundDistribution,
 )
 
 __all__ = [
@@ -130,12 +129,16 @@ class Binomial(BoundedDiscreteDistribution):
         return self.conditions["total_count"]
 
 
-class BetaBinomial(BoundedDiscreteCompoundDistribution):
+class BetaBinomial(BoundedDiscreteDistribution):
     r"""Bounded Discrete compound Beta-Binomial Random Variable
 
     The pmf of this distribution is
 
     .. math:: f(x \mid n, \alpha, \beta) = n \choose x \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
+
+    where :math:`n` = ``total_count``
+          :math:`\alpha` = ``concentration0``
+          :math:`\beta` = ``concentration1``
 
     .. plot::
 
@@ -167,9 +170,9 @@ class BetaBinomial(BoundedDiscreteCompoundDistribution):
     total_count : int
         Number of trials `n` (total_count>=0)
     concentration0 : float
-        `alpha` parameter of the Beta Distribution (concentration0 > 0)
+        :math:`\alpha` parameter of the Beta Distribution (concentration0 > 0)
     concentration1 : float
-        `beta` parameter of the Beta Distribution (concentration1 > 0)
+        :math:`\beta` parameter of the Beta Distribution (concentration1 > 0)
     """
 
     def __init__(self, name, total_count, concentration0, concentration1, **kwargs):

@@ -1209,7 +1209,7 @@ class HalfFlat(PositiveContinuousDistribution):
 
     def sample(self, shape=(), seed=None):
         """Raises ValueError as it is not possible to sample
-        from flat distribution.
+        from half flat distribution.
         """
         raise ValueError("cannot sample from a half flat distribution")
 

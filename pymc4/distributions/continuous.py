@@ -1211,7 +1211,7 @@ class HalfFlat(PositiveContinuousDistribution):
         """Raises ValueError as it is not possible to sample
         from flat distribution.
         """
-        raise ValueError("cannot sample from a flat distribution")
+        raise ValueError("cannot sample from a half flat distribution")
 
 
 class VonMises(BoundedContinuousDistribution):

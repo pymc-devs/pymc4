@@ -1,6 +1,8 @@
 """PyMC4 continuous random variables for tensorflow."""
 import math
 
+import numpy as np
+import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import bijectors as bij
 from pymc4.distributions.distribution import (
@@ -33,6 +35,8 @@ __all__ = [
     "StudentT",
     "Triangular",
     "Uniform",
+    "Flat",
+    "HalfFlat",
     "VonMises",
     "HalfStudentT",
 ]
@@ -1163,6 +1167,51 @@ class Uniform(BoundedContinuousDistribution):
 
     def upper_limit(self):
         return self.conditions["high"]
+
+
+class Flat(ContinuousDistribution):
+    r"""A uniform distribution with support :math:`(-\inf, \inf)`.
+    Used as a uninformative log-likelihood that returns
+    zeros regardless of the passed values.
+    """
+
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        return tfd.Uniform(low=-np.inf, high=np.inf)
+
+    def log_prob(self, value):
+        return tf.zeros_like(value)
+
+    def sample(self, shape=(), seed=None):
+        """Raises ValueError as it is not possible to sample
+        from flat distribution.
+        """
+        raise ValueError("cannot sample from a flat distribution")
+
+
+class HalfFlat(PositiveContinuousDistribution):
+    r"""Improper flat priors over positive reals."""
+
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        return tfd.Uniform(low=0.0, high=np.inf)
+
+    def log_prob(self, value):
+        return tf.cond(
+            value > 0, lambda: tf.zeros_like(value), lambda: tf.convert_to_tensor(-np.inf)
+        )
+
+    def sample(self, shape=(), seed=None):
+        """Raises ValueError as it is not possible to sample
+        from flat distribution.
+        """
+        raise ValueError("cannot sample from a flat distribution")
 
 
 class VonMises(BoundedContinuousDistribution):

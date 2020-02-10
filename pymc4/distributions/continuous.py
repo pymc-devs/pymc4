@@ -1189,7 +1189,7 @@ class Flat(ContinuousDistribution):
         """Raises ValueError as it is not possible to sample
         from flat distribution.
         """
-        raise ValueError("cannot sample from a flat distribution")
+        raise TypeError("cannot sample from a flat distribution")
 
 
 class HalfFlat(PositiveContinuousDistribution):
@@ -1203,15 +1203,14 @@ class HalfFlat(PositiveContinuousDistribution):
         return tfd.Uniform(low=0.0, high=np.inf)
 
     def log_prob(self, value):
-        return tf.cond(
-            value > 0, lambda: tf.zeros_like(value), lambda: tf.convert_to_tensor(-np.inf)
-        )
+        # TODO: Add error handling for shape of values
+        return tf.where(value > 0, x=tf.zeros_like(value), y=tf.convert_to_tensor(-np.inf))
 
     def sample(self, shape=(), seed=None):
         """Raises ValueError as it is not possible to sample
         from half flat distribution.
         """
-        raise ValueError("cannot sample from a half flat distribution")
+        raise TypeError("cannot sample from a half flat distribution")
 
 
 class VonMises(BoundedContinuousDistribution):

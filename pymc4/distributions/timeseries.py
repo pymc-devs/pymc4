@@ -28,8 +28,14 @@ class AR(ContinuousDistribution):
     """
 
     def __init__(self, name, num_timesteps, coefficients, level_scale, initial_step=0, **kwargs):
-        super().__init__(name, num_timesteps=num_timesteps, coefficients=coefficients,
-                         level_scale=level_scale, initial_step=initial_step, **kwargs)
+        super().__init__(
+            name,
+            num_timesteps=num_timesteps,
+            coefficients=coefficients,
+            level_scale=level_scale,
+            initial_step=initial_step,
+            **kwargs,
+        )
 
     @staticmethod
     def _init_distribution(conditions: dict):
@@ -37,13 +43,13 @@ class AR(ContinuousDistribution):
         coefficients = conditions["coefficients"]
         level_scale = conditions["level_scale"]
         initial_step = conditions["initial_step"]
-        coefficients = tf.convert_to_tensor(value=coefficients, name='coefficients')
+        coefficients = tf.convert_to_tensor(value=coefficients, name="coefficients")
         order = tf.compat.dimension_value(coefficients.shape[-1])
         time_series_object = sts.Autoregressive(order=order)
         distribution = time_series_object.make_state_space_model(
             num_timesteps=num_timesteps,
-            param_vals={'coefficients': coefficients,
-                        'level_scale': level_scale},
+            param_vals={"coefficients": coefficients, "level_scale": level_scale},
             initial_state_prior=time_series_object.initial_state_prior,
-            initial_step=initial_step)
+            initial_step=initial_step,
+        )
         return distribution

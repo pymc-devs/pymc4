@@ -1204,7 +1204,7 @@ class HalfFlat(PositiveContinuousDistribution):
 
     def log_prob(self, value):
         # TODO: Add error handling for shape of values
-        return tf.where(value > 0, x=tf.zeros_like(value), y=tf.convert_to_tensor(-np.inf))
+        return tf.convert_to_tensor(-np.inf) * tf.where(value > 0)
 
     def sample(self, shape=(), seed=None):
         """Raises ValueError as it is not possible to sample

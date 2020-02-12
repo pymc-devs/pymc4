@@ -20,8 +20,6 @@ class AR(ContinuousDistribution):
     initial_state : (Optional) float Tensor
             Corresponding values of size `order` for
             imagined timesteps before the initial step.
-    observed_time_series : (Optional) float Tensor
-            Observed time series
     initial_step : (Optional) int Tensor
             Starting timestep (Default value: 0).
 
@@ -40,21 +38,15 @@ class AR(ContinuousDistribution):
         coefficients,
         level_scale,
         initial_state=None,
-        observed_time_series=None,
         initial_step=0,
         **kwargs,
     ):
-        if initial_state is not None and observed_time_series is None:
-            raise TypeError(
-                "Missing parameter 'observed_time_series' if 'initial_state' is specified"
-            )
         super().__init__(
             name,
             num_timesteps=num_timesteps,
             coefficients=coefficients,
             level_scale=level_scale,
             initial_state=initial_state,
-            observed_time_series=observed_time_series,
             initial_step=initial_step,
             **kwargs,
         )
@@ -64,25 +56,15 @@ class AR(ContinuousDistribution):
         num_timesteps = conditions["num_timesteps"]
         coefficients = conditions["coefficients"]
         level_scale = conditions["level_scale"]
-        initial_state = conditions["initial_state"]
-        observed_time_series = conditions["observed_time_series"]
         initial_step = conditions["initial_step"]
 
         coefficients = tf.convert_to_tensor(value=coefficients, name="coefficients")
         order = tf.compat.dimension_value(coefficients.shape[-1])
 
-        if initial_step is not None and observed_time_series is not None:
-            initial_state = tf.convert_to_tensor(value=initial_state)
-            observed_time_series = tf.convert_to_tensor(value=observed_time_series)
-            observed_time_series = tf.concat([initial_state, observed_time_series], axis=0)
-
-        time_series_object = sts.Autoregressive(
-            order=order, observed_time_series=observed_time_series
-        )
+        time_series_object = sts.Autoregressive(order=order)
         distribution = time_series_object.make_state_space_model(
             num_timesteps=num_timesteps,
             param_vals={"coefficients": coefficients, "level_scale": level_scale},
-            initial_state_prior=time_series_object.initial_state_prior,
             initial_step=initial_step,
         )
         return distribution

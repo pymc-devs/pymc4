@@ -12,157 +12,252 @@ _expected_log_prob = defaultdict(lambda: defaultdict(lambda: None))
 _distribution_conditions = {
     "Bernoulli": {
         "scalar_parameters": {"probs": 0.5, "sample": 1.0},
-        "multidim_parameters": {"probs": [0.25, 0.5, 0.75], "sample": [0.0, 0.0, 1.0]},
+        "multidim_parameters": {
+            "probs": np.array([0.25, 0.5, 0.75], dtype="float32"),
+            "sample": np.array([0.0, 0.0, 1.0], dtype="float32"),
+        },
     },
     "Beta": {
-        "scalar_parameters": {"concentration0": 1, "concentration1": 1},
-        "multidim_parameters": {"concentration0": [5, 2, 1], "concentration1": [1, 2, 1]},
+        "scalar_parameters": {"concentration0": 1.0, "concentration1": 1.0},
+        "multidim_parameters": {
+            "concentration0": np.array([5.0, 2.0, 1.0], dtype="float32"),
+            "concentration1": np.array([1.0, 2.0, 1.0], dtype="float32"),
+        },
     },
     "Binomial": {
         "scalar_parameters": {"total_count": 5.0, "probs": 0.5, "sample": 1.0},
         "multidim_parameters": {
-            "total_count": [20, 2, 5.0],
-            "probs": [0.1, 0.7, 0.5],
-            "sample": [2.0, 2.0, 1.0],
+            "total_count": np.array([20, 2, 5.0], dtype="float32"),
+            "probs": np.array([0.1, 0.7, 0.5], dtype="float32"),
+            "sample": np.array([2.0, 2.0, 1.0], dtype="float32"),
         },
     },
     "Categorical": {
-        "scalar_parameters": {"probs": [0.1, 0.5, 0.4], "sample": 2.0},
-        "multidim_parameters": {"probs": [[0.1, 0.5, 0.4], [0.1, 0.5, 0.4]], "sample": [2.0, 2.0]},
+        "scalar_parameters": {"probs": np.array([0.1, 0.5, 0.4], dtype="float32"), "sample": 2},
+        "multidim_parameters": {
+            "probs": np.array([[0.1, 0.5, 0.4], [0.1, 0.5, 0.4]], dtype="float32"),
+            "sample": np.array([2, 2], dtype="int32"),
+        },
     },
     "Cauchy": {
-        "scalar_parameters": {"loc": 0, "scale": 1},
-        "multidim_parameters": {"loc": [0, 0], "scale": [1, 1]},
-    },
-    "Chi2": {"scalar_parameters": {"df": 2}, "multidim_parameters": {"df": [4, 3, 2]},},
-    "Dirichlet": {
-        "scalar_parameters": {"concentration": [1, 2], "sample": [0.5, 0.5]},
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0},
         "multidim_parameters": {
-            "concentration": [[1, 2], [1, 2]],
-            "sample": [[0.5, 0.5], [0.5, 0.5]],
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
+    },
+    "Chi2": {
+        "scalar_parameters": {"df": 2.0},
+        "multidim_parameters": {"df": np.array([4.0, 3.0, 2.0], dtype="float32")},
+    },
+    "Dirichlet": {
+        "scalar_parameters": {
+            "concentration": np.array([1.0, 2.0], dtype="float32"),
+            "sample": np.array([0.5, 0.5], dtype="float32"),
+        },
+        "multidim_parameters": {
+            "concentration": np.array([[1.0, 2.0], [1.0, 2.0]], dtype="float32"),
+            "sample": np.array([[0.5, 0.5], [0.5, 0.5]], dtype="float32"),
         },
     },
     "DiscreteUniform": {
         "scalar_parameters": {"low": 2.0, "high": 10.0, "sample": 5.0},
-        "multidim_parameters": {"low": [1, 2.0], "high": [3, 10.0], "sample": [2, 5.0]},
+        "multidim_parameters": None,  # DiscreteUniform is derived from FiniteDiscrete, which can only have 1-D outcome tensors
     },
-    "Exponential": {"scalar_parameters": {"rate": 1}, "multidim_parameters": {"rate": [4, 10, 1]},},
+    "Exponential": {
+        "scalar_parameters": {"rate": 1.0},
+        "multidim_parameters": {"rate": np.array([4.0, 10.0, 1.0], dtype="float32")},
+    },
     "Gamma": {
         "scalar_parameters": {"concentration": 3.0, "rate": 2.0},
-        "multidim_parameters": {"concentration": [2, 6, 3.0], "rate": [1, 2, 2.0]},
+        "multidim_parameters": {
+            "concentration": np.array([2.0, 6.0, 3.0], dtype="float32"),
+            "rate": np.array([1.0, 2.0, 2.0], dtype="float32"),
+        },
     },
     "Geometric": {
         "scalar_parameters": {"probs": 0.5, "sample": 10.0},
-        "multidim_parameters": {"probs": [0.25, 0.5], "sample": [5, 10.0]},
+        "multidim_parameters": {
+            "probs": np.array([0.25, 0.5], dtype="float32"),
+            "sample": np.array([5.0, 10.0], dtype="float32"),
+        },
     },
     "Gumbel": {
-        "scalar_parameters": {"loc": 0, "scale": 1},
-        "multidim_parameters": {"loc": [0, 0], "scale": [1, 1]},
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
     },
-    "HalfCauchy": {"scalar_parameters": {"scale": 1}, "multidim_parameters": {"scale": [1, 3]},},
+    "HalfCauchy": {
+        "scalar_parameters": {"scale": 1.0},
+        "multidim_parameters": {"scale": np.array([1.0, 3.0], dtype="float32")},
+    },
     "HalfNormal": {
         "scalar_parameters": {"scale": 3.0},
-        "multidim_parameters": {"scale": [6, 3.0]},
+        "multidim_parameters": {"scale": np.array([6.0, 3.0], dtype="float32")},
     },
     "HalfStudentT": {
         "scalar_parameters": {"scale": 1, "df": 10},
-        "multidim_parameters": {"scale": [4, 1], "df": [80, 10]},
+        "multidim_parameters": {
+            "scale": np.array([4, 1], dtype="float32"),
+            "df": np.array([80, 10], dtype="float32"),
+        },
     },
     "InverseGamma": {
         "scalar_parameters": {"concentration": 3, "scale": 2},
-        "multidim_parameters": {"concentration": [4, 3], "scale": [2, 2]},
+        "multidim_parameters": {
+            "concentration": np.array([4, 3], dtype="float32"),
+            "scale": np.array([2, 2], dtype="float32"),
+        },
     },
     "InverseGaussian": {
         "scalar_parameters": {"loc": 1, "concentration": 1},
-        "multidim_parameters": {"loc": [1, 1], "concentration": [1, 1]},
+        "multidim_parameters": {
+            "loc": np.array([1, 1], dtype="float32"),
+            "concentration": np.array([1, 1], dtype="float32"),
+        },
     },
     "Kumaraswamy": {
         "scalar_parameters": {"concentration0": 0.5, "concentration1": 0.5},
-        "multidim_parameters": {"concentration0": [0.4, 0.5], "concentration1": [0.4, 0.5]},
+        "multidim_parameters": {
+            "concentration0": np.array([0.4, 0.5], dtype="float32"),
+            "concentration1": np.array([0.4, 0.5], dtype="float32"),
+        },
     },
     "LKJ": {
-        "scalar_parameters": {"dimension": 1, "concentration": 1.5, "sample": [[1.0]]},
+        "scalar_parameters": {
+            "dimension": 1,
+            "concentration": 1.5,
+            "sample": np.array([[1.0]], dtype="float32"),
+        },
         "multidim_parameters": {
             "dimension": 1,
-            "concentration": [3, 1.5],
-            "sample": [[[1.0]], [[1.0]]],
+            "concentration": np.array([3.0, 1.5], dtype="float32"),
+            "sample": np.array([[[1.0]], [[1.0]]], dtype="float32"),
         },
     },
     "Laplace": {
-        "scalar_parameters": {"loc": 0, "scale": 1},
-        "multidim_parameters": {"loc": [0, 0], "scale": [1, 1]},
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
     },
     "LogNormal": {
         "scalar_parameters": {"loc": 0, "scale": 1},
-        "multidim_parameters": {"loc": [0, 0], "scale": [1, 1]},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
     },
     "Logistic": {
-        "scalar_parameters": {"loc": 0, "scale": 3},
-        "multidim_parameters": {"loc": [0, 0], "scale": [3, 3]},
+        "scalar_parameters": {"loc": 0.0, "scale": 3.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([3.0, 3.0], dtype="float32"),
+        },
     },
     "Multinomial": {
         "scalar_parameters": {
             "total_count": 4,
-            "probs": [0.2, 0.3, 0.5],
-            "sample": [1.0, 1.0, 2.0],
+            "probs": np.array([0.2, 0.3, 0.5], dtype="float32"),
+            "sample": np.array([1.0, 1.0, 2.0], dtype="float32"),
         },
         "multidim_parameters": {
-            "total_count": [8, 4],
-            "probs": [[0.2, 0.3, 0.5], [0.2, 0.3, 0.5]],
-            "sample": [[3.0, 1.0, 4.0], [1.0, 1.0, 2.0]],
+            "total_count": np.array([8, 4], dtype="float32"),
+            "probs": np.array([[0.2, 0.3, 0.5], [0.2, 0.3, 0.5]], dtype="float32"),
+            "sample": np.array([[3.0, 1.0, 4.0], [1.0, 1.0, 2.0]], dtype="float32"),
         },
     },
     "LogitNormal": {
-        "scalar_parameters": {"loc": 0, "scale": 1},
-        "multidim_parameters": {"loc": [1, 0], "scale": [2, 1]},
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0},
+        "multidim_parameters": {
+            "loc": np.array([1.0, 0.0], dtype="float32"),
+            "scale": np.array([2.0, 1.0], dtype="float32"),
+        },
     },
     "MvNormal": {
         "scalar_parameters": {
-            "loc": [1, 2],
-            "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]],
-            "sample": [1.0, 2.0],
+            "loc": np.array([1.0, 2.0], dtype="float32"),
+            "covariance_matrix": np.array([[0.36, 0.12], [0.12, 0.36]], dtype="float32"),
+            "sample": np.array([1.0, 2.0], dtype="float32"),
         },
         "multidim_parameters": {
-            "loc": [[1, 2], [2, 3]],
-            "covariance_matrix": [[[0.36, 0.12], [0.12, 0.36]], [[0.36, 0.12], [0.12, 0.36]]],
-            "sample": [[1.0, 2.0], [2.0, 3.0]],
+            "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
+            "covariance_matrix": np.array(
+                [[[0.36, 0.12], [0.12, 0.36]], [[0.36, 0.12], [0.12, 0.36]]], dtype="float32",
+            ),
+            "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
         },
     },
     "NegativeBinomial": {
         "scalar_parameters": {"total_count": 3, "probs": 0.6, "sample": 5.0},
-        "multidim_parameters": {"total_count": [3, 4], "probs": [0.2, 0.6], "sample": [2.0, 5.0]},
+        "multidim_parameters": {
+            "total_count": np.array([3, 4], dtype="float32"),
+            "probs": np.array([0.2, 0.6], dtype="float32"),
+            "sample": np.array([2.0, 5.0], dtype="float32"),
+        },
     },
     "Normal": {
-        "scalar_parameters": {"loc": 0, "scale": 1},
-        "multidim_parameters": {"loc": [0, 0], "scale": [1, 1]},
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
     },
     "Pareto": {
-        "scalar_parameters": {"concentration": 1, "scale": 0.1, "sample": 5.0},
-        "multidim_parameters": {"concentration": [1, 1], "scale": [0.1, 0.1], "sample": [5.0, 5.0]},
+        "scalar_parameters": {"concentration": 1.0, "scale": 0.1, "sample": 5.0},
+        "multidim_parameters": {
+            "concentration": np.array([1.0, 1.0], dtype="float32"),
+            "scale": np.array([0.1, 0.1], dtype="float32"),
+            "sample": np.array([5.0, 5.0], dtype="float32"),
+        },
     },
-    "Poisson": {"scalar_parameters": {"rate": 2}, "multidim_parameters": {"rate": [2, 3]},},
+    "Poisson": {
+        "scalar_parameters": {"rate": 2.0},
+        "multidim_parameters": {"rate": np.array([2.0, 3.0], dtype="float32")},
+    },
     "StudentT": {
-        "scalar_parameters": {"loc": 0, "scale": 1, "df": 10},
-        "multidim_parameters": {"loc": [0, 0], "scale": [1, 1], "df": [10, 10]},
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0, "df": 10.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1, 1.0], dtype="float32"),
+            "df": np.array([10.0, 10.0], dtype="float32"),
+        },
     },
     "Triangular": {
         "scalar_parameters": {"low": 0.0, "high": 1.0, "peak": 0.5},
-        "multidim_parameters": {"low": [0.0, 0.0], "high": [1.0, 1.0], "peak": [0.5, 0.5]},
+        "multidim_parameters": {
+            "low": np.array([0.0, 0.0], dtype="float32"),
+            "high": np.array([1.0, 1.0], dtype="float32"),
+            "peak": np.array([0.5, 0.5], dtype="float32"),
+        },
     },
     "Uniform": {
-        "scalar_parameters": {"low": 0, "high": 1},
-        "multidim_parameters": {"low": [0, -10], "high": [1, 10]},
+        "scalar_parameters": {"low": 0.0, "high": 1.0},
+        "multidim_parameters": {
+            "low": np.array([0.0, -10.0], dtype="float32"),
+            "high": np.array([1.0, 10.0], dtype="float32"),
+        },
     },
     "VonMises": {
-        "scalar_parameters": {"loc": 0, "concentration": 1},
-        "multidim_parameters": {"loc": [0, 1], "concentration": [1, 2]},
+        "scalar_parameters": {"loc": 0.0, "concentration": 1.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 1.0], dtype="float32"),
+            "concentration": np.array([1.0, 2.0], dtype="float32"),
+        },
     },
     "VonMisesFisher": {
-        "scalar_parameters": {"mean_direction": [0, 1], "concentration": 1, "sample": [0.0, 1.0]},
+        "scalar_parameters": {
+            "mean_direction": np.array([0.0, 1.0], dtype="float32"),
+            "concentration": 1.0,
+            "sample": np.array([0.0, 1.0], dtype="float32"),
+        },
         "multidim_parameters": {
-            "mean_direction": [[1, 1], [0, 1]],
-            "concentration": [1, 1],
-            "sample": [[1, 1], [0.0, 1.0]],
+            "mean_direction": np.array([[1.0, 1.0], [0.0, 1.0]], dtype="float32"),
+            "concentration": np.array([1.0, 1.0], dtype="float32"),
+            "sample": np.array([[1.0, 1.0], [0.0, 1.0]], dtype="float32"),
         },
     },
     # "Weibull": {
@@ -170,89 +265,35 @@ _distribution_conditions = {
     #     "multidim_parameters": {"beta": 0.1, "alpha": 1.0},
     # },
     "Wishart": {
-        "scalar_parameters": {"df": 3, "scale": [[1]], "sample": [[1.0]]},
-        "multidim_parameters": {"df": 3, "scale": [[[3]], [[1]]], "sample": [[[1.0]], [[1.0]]]},
+        "scalar_parameters": {
+            "df": 3,
+            "scale": np.array([[1]], dtype="float32"),
+            "sample": np.array([[1.0]], dtype="float32"),
+        },
+        "multidim_parameters": {
+            "df": np.array([3, 5], dtype="float32"),
+            "scale": np.array([[[3]], [[1]]], dtype="float32"),
+            "sample": np.array([[[1.0]], [[1.0]]], dtype="float32"),
+        },
     },
     # "ZeroInflatedBinomial": {
     #     "scalar_parameters": {"psi": 0.2, "total_count": 10, "p": 0.5, "sample": 0.0},
-    #     "multidim_parameters": {"psi": 0.2, "total_count": 10, "p": 0.5, "sample": 0.0},
+    #     "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"), "total_count": np.array([10, 10], dtype="float32"), "p": np.array([0.5, 0.25], dtype="float32"), "sample": np.array([0.0, 0.0], dtype="float32")},
     # },
     #
     # "ZeroInflatedNegativeBinomial": {
     #     "scalar_parameters": {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
-    #     "multidim_parameters": {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
+    #     "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"), "mu": np.array([10, 10], dtype="float32"), "alpha": np.array([3, 3], dtype="float32"), "sample": np.array([0, 0], dtype="float32")},
     # },
     # "ZeroInflatedPoisson": {
     #     "scalar_parameters": {"psi": 0.2, "theta": 2, "sample": 0},
-    #     "multidim_parameters": {"psi": 0.2, "theta": 2, "sample": 0},
+    #     "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"), "theta": np.array([2, 2], dtype="float32"), "sample": np.array([0, 0], dtype="float32")},
     # },
-    "Zipf": {"scalar_parameters": {"power": 2.0}, "multidim_parameters": {"power": [3, 2.0]},},
+    "Zipf": {
+        "scalar_parameters": {"power": 2.0},
+        "multidim_parameters": {"power": np.array([3, 2.0], dtype="float32")},
+    },
 }
-
-
-def random_variable_args():
-    """Provide arguments for each random variable."""
-
-    # Commented out tests are currently failing and will be fixed
-    _random_variable_args = (
-        ("Bernoulli", {"probs": 0.5, "sample": 1.0}),
-        ("Beta", {"concentration0": 1, "concentration1": 1}),
-        ("Binomial", {"total_count": 5.0, "probs": 0.5, "sample": 1.0}),
-        ("Categorical", {"probs": [0.1, 0.5, 0.4], "sample": 2.0}),
-        ("Cauchy", {"loc": 0, "scale": 1}),
-        ("Chi2", {"df": 2}),
-        ("Dirichlet", {"concentration": [1, 2], "sample": [0.5, 0.5]}),
-        ("DiscreteUniform", {"low": 2.0, "high": 10.0, "sample": 5.0}),
-        ("Exponential", {"rate": 1}),
-        ("Gamma", {"concentration": 3.0, "rate": 2.0}),
-        ("Geometric", {"probs": 0.5, "sample": 10.0}),
-        ("Gumbel", {"loc": 0, "scale": 1}),
-        ("HalfCauchy", {"scale": 1}),
-        ("HalfNormal", {"scale": 3.0}),
-        ("HalfStudentT", {"scale": 1, "df": 10}),
-        ("InverseGamma", {"concentration": 3, "scale": 2}),
-        ("InverseGaussian", {"loc": 1, "concentration": 1}),
-        ("Kumaraswamy", {"concentration0": 0.5, "concentration1": 0.5}),
-        ("LKJ", {"dimension": 1, "concentration": 1.5, "sample": [[1.0]]}),
-        ("Laplace", {"loc": 0, "scale": 1}),
-        ("LogNormal", {"loc": 0, "scale": 1}),
-        ("Logistic", {"loc": 0, "scale": 3}),
-        ("Multinomial", {"total_count": 4, "probs": [0.2, 0.3, 0.5], "sample": [1.0, 1.0, 2.0]}),
-        ("LogitNormal", {"loc": 0, "scale": 1}),
-        (
-            "MvNormal",
-            {
-                "loc": [1, 2],
-                "covariance_matrix": [[0.36, 0.12], [0.12, 0.36]],
-                "sample": [1.0, 2.0],
-            },
-        ),
-        ("NegativeBinomial", {"total_count": 3, "probs": 0.6, "sample": 5.0}),
-        ("Normal", {"loc": 0, "scale": 1}),
-        ("Pareto", {"concentration": 1, "scale": 0.1, "sample": 5.0}),
-        ("Poisson", {"rate": 2}),
-        ("StudentT", {"loc": 0, "scale": 1, "df": 10}),
-        ("Triangular", {"low": 0.0, "high": 1.0, "peak": 0.5}),
-        ("Uniform", {"low": 0, "high": 1}),
-        ("VonMises", {"loc": 0, "concentration": 1}),
-        ("VonMisesFisher", {"mean_direction": [0, 1], "concentration": 1, "sample": [0.0, 1.0]}),
-        # ("Weibull", {"beta": 0.1, "alpha": 1.0}),
-        ("Wishart", {"df": 3, "scale": [[1]], "sample": [[1.0]]}),
-        # ("ZeroInflatedBinomial", {"psi": 0.2, "total_count": 10, "p": 0.5, "sample": 0.0}),
-        # (
-        #     "ZeroInflatedNegativeBinomial",
-        #     {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
-        # ),
-        # ("ZeroInflatedPoisson", {"psi": 0.2, "theta": 2, "sample": 0}),
-        ("Zipf", {"power": 2.0}),
-    )
-
-    ids = [dist[0] for dist in _random_variable_args]
-    return {
-        "argnames": ("distribution_name", "kwargs"),
-        "argvalues": _random_variable_args,
-        "ids": ids,
-    }
 
 
 @pytest.fixture(scope="function", params=list(_distribution_conditions), ids=str)
@@ -264,7 +305,11 @@ def distribution(request):
     scope="function", params=["scalar_parameters", "multidim_parameters"], ids=str,
 )
 def distribution_conditions(distribution, request):
-    conditions = _distribution_conditions[distribution][request.param].copy()
+    conditions = _distribution_conditions[distribution][request.param]
+    if conditions is None:
+        pytest.skip("Distribution does not support {}".format(request.param))
+    else:
+        conditions = conditions.copy()
     log_prob_test_sample = conditions.pop("sample", 0.1)
     expected_log_prob = conditions.pop("expected", None)
     return distribution, conditions, log_prob_test_sample, expected_log_prob
@@ -289,11 +334,10 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
     dist_class = getattr(pm, distribution_name)
     dist = dist_class(name=distribution_name, **conditions)
     test_value = dist.test_value
-    sample = dist.sample()
-    print(test_value)
-    print(sample)
-    print(dist.log_prob(sample))
+    test_sample = dist.sample()
+    print(test_value, test_sample)
     logp = dist.log_prob(test_value).numpy()
+    assert test_value.shape == test_sample.shape
     assert tuple(test_value.shape.as_list()) == tuple(
         (dist.batch_shape + dist.event_shape).as_list()
     )

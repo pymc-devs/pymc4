@@ -73,7 +73,7 @@ class Distribution(Model):
 
     @property
     def test_value(self):
-        return tf.fill(self.batch_shape + self.event_shape, self._test_value)
+        return tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape)
 
     def sample(self, shape=(), seed=None):
         """

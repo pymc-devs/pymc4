@@ -1183,6 +1183,33 @@ class Flat(ContinuousDistribution):
         return tfd.Uniform(low=-np.inf, high=np.inf)
 
     def log_prob(self, value):
+        # convert the value to tensor
+        value = tf.convert_to_tensor(value)
+        # if not tf.rank(value):
+        #     value = tf.convert_to_tensor([value])
+        # value_shape = value.shape
+        # # if the rank of the `value` is less than distribution's `event shape` raise an error
+        # if tf.rank(value) < tf.rank(self._distribution.event_shape):
+        #     raise ValueError("Rank of input tensor less than distribution's event shape")
+        # # if the rightmost axis of `value` doesn't match the distribution's `event_shape`, raise an error
+        # if (
+        #     len(self._distribution.event_shape)
+        #     and value_shape[-1] != self._distribution.event_shape[-1]
+        # ):
+        #     raise ValueError(
+        #         "Event shape of input tensor not consistent with the distribution's event shape"
+        #     )
+        # # if the shape of `value` doesn't match the distribution's `batch_shape`, raise an error
+        # if (
+        #     len(self._distribution.batch_shape)
+        #     and value_shape[-2] != self._distribution.batch_shape[-1]
+        # ):
+        #     raise ValueError(
+        #         "Batch shape of input tensor not consistent with the distributions's batch shape"
+        #     )
+        if tf.rank(value) > 2:
+            return tf.reduce_sum(tf.zeros_like(value), axis=-1)
+
         return tf.zeros_like(value)
 
     def sample(self, shape=(), seed=None):
@@ -1203,8 +1230,34 @@ class HalfFlat(PositiveContinuousDistribution):
         return tfd.Uniform(low=0.0, high=np.inf)
 
     def log_prob(self, value):
-        # TODO: Add error handling for shape of values
-        return tf.convert_to_tensor(-np.inf) * tf.where(value > 0)
+        # convert the value to tensor
+        # value = tf.convert_to_tensor(value)
+        # if not tf.rank(value):
+        #     value = tf.convert_to_tensor([value])
+        # value_shape = value.shape
+        # # if the rank of the `value` is less than distribution's `event shape` raise an error
+        # if tf.rank(value) < tf.rank(self._distribution.event_shape):
+        #     raise ValueError("Rank of input tensor less than distribution's event shape")
+        # # if the rightmost axis of `value` doesn't match the distribution's `event_shape`, raise an error
+        # if (
+        #     len(self._distribution.event_shape)
+        #     and value_shape[-1] != self._distribution.event_shape[-1]
+        # ):
+        #     raise ValueError(
+        #         "Event shape of input tensor not consistent with the distribution's event shape"
+        #     )
+        # # if the shape of `value` doesn't match the distribution's `batch_shape`, raise an error
+        # if (
+        #     len(self._distribution.batch_shape)
+        #     and value_shape[-2] != self._distribution.batch_shape[-1]
+        # ):
+        #     raise ValueError(
+        #         "Batch shape of input tensor not consistent with the distributions's batch shape"
+        #     )
+        if tf.rank(value) > 2:
+            return tf.reduce_sum(tf.where(value > 0, x=0.0, y=-np.inf), axis=-1)
+
+        return tf.where(value > 0, x=0.0, y=-np.inf)
 
     def sample(self, shape=(), seed=None):
         """Raises ValueError as it is not possible to sample

@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow_probability import sts
+from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import ContinuousDistribution
 
 
@@ -56,6 +57,7 @@ class AR(ContinuousDistribution):
         num_timesteps = conditions["num_timesteps"]
         coefficients = conditions["coefficients"]
         level_scale = conditions["level_scale"]
+        initial_state = conditions["initial_state"]
         initial_step = conditions["initial_step"]
 
         coefficients = tf.convert_to_tensor(value=coefficients, name="coefficients")
@@ -65,6 +67,9 @@ class AR(ContinuousDistribution):
         distribution = time_series_object.make_state_space_model(
             num_timesteps=num_timesteps,
             param_vals={"coefficients": coefficients, "level_scale": level_scale},
+            initial_state_prior=tfd.MultivariateNormalDiag(
+                loc=initial_state, scale_diag=[1e-6] * order
+            ),
             initial_step=initial_step,
         )
         return distribution

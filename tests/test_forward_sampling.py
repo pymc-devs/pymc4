@@ -101,7 +101,7 @@ def vectorized_model_fixture(request):
                 scale[..., None],
                 observed=observed,
                 reinterpreted_batch_ndims=1,
-                plate_events=5,
+                event_stack=5,
             )
 
     else:
@@ -110,7 +110,7 @@ def vectorized_model_fixture(request):
         def model():
             mu = yield pm.Normal("mu", tf.zeros(4), 1)
             scale = yield pm.HalfNormal("scale", 1)
-            x = yield pm.Normal("x", mu, scale, plate=5, observed=observed)
+            x = yield pm.Normal("x", mu, scale, batch_stack=5, observed=observed)
 
     return model, is_vectorized_model, core_shapes
 

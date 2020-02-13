@@ -4,7 +4,7 @@ from typing import Optional, Union, Any
 
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
-from pymc4.distributions.plate import Plate
+from pymc4.distributions.batchstack import BatchStacker
 from . import transforms
 
 NameType = Union[str, int]
@@ -33,8 +33,8 @@ class Distribution(Model):
         *,
         transform=None,
         observed=None,
-        plate=None,
-        plate_events=None,
+        batch_stack=None,
+        events_stack=None,
         conditionally_independent=False,
         reinterpreted_batch_ndims=0,
         **kwargs,
@@ -50,18 +50,18 @@ class Distribution(Model):
             )
         self.model_info.update(observed=observed)
         self.transform = self._init_transform(transform)
-        self.plate = plate
-        self.plate_events = plate_events
+        self.batch_stack = batch_stack
+        self.events_stack = events_stack
         self.conditionally_independent = conditionally_independent
         self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
         if reinterpreted_batch_ndims:
             self._distribution = tfd.Independent(
                 self._distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims
             )
-        if plate is not None:
-            self._distribution = Plate(self._distribution, plate_shape=plate)
-        if plate_events is not None:
-            self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate_events)
+        if batch_stack is not None:
+            self._distribution = BatchStacker(self._distribution, batch_stack=batch_stack)
+        if events_stack is not None:
+            self._distribution = tfd.Sample(self._distribution, sample_shape=self.events_stack)
 
     @property
     def dtype(self):

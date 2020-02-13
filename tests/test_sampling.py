@@ -256,3 +256,15 @@ def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_ba
         posterior = trace.posterior
         for rv_name, core_shape in core_shapes.items():
             assert posterior[rv_name].shape == (num_chains, num_samples) + core_shape
+
+
+def test_beta_sample():
+    @pm.model
+    def model():
+        dist = yield pm.Beta("beta", 0, 1)
+        return dist
+
+    trace = pm.sample(model(), num_samples=1, burn_in=1)
+
+    assert trace.posterior["model/beta"] is not None
+    assert trace.posterior["model/__sigmoid_beta"] is not None

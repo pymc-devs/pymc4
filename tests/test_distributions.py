@@ -15,6 +15,15 @@ def random_variable_args():
         ("Bernoulli", {"probs": 0.5, "sample": 1.0}),
         ("Beta", {"concentration0": 1, "concentration1": 1}),
         ("Binomial", {"total_count": 5.0, "probs": 0.5, "sample": 1.0}),
+        (
+            "BetaBinomial",
+            {
+                "total_count": 10.0,
+                "concentration0": 1.0,
+                "concentration1": 2.0,
+                "sample": [3.0, 7.0],
+            },
+        ),
         ("Categorical", {"probs": [0.1, 0.5, 0.4], "sample": 2.0}),
         ("Cauchy", {"loc": 0, "scale": 1}),
         ("Chi2", {"df": 2}),

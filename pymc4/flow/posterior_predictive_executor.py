@@ -107,23 +107,23 @@ class PosteriorPredictiveSamplingExecutor(SamplingExecutor):
         observed_shape = get_observed_tensor_shape(observed_value)
         dist_shape = dist.batch_shape + dist.event_shape
         new_dist_shape = tf.broadcast_static_shape(observed_shape, dist_shape)
-        extra_plate = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
+        extra_batch_stack = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
 
         # Now we construct and return the same distribution but setting
         # observed to None and setting a batch_size that matches the result of
         # broadcasting the observed and distribution shape
-        plate = extra_plate + (dist.plate if dist.plate is not None else ())
-        if len(plate) > 0:
+        batch_stack = extra_batch_stack + (dist.batch_stack if dist.batch_stack is not None else ())
+        if len(batch_stack) > 0:
             reinterpreted_batch_ndims = dist.reinterpreted_batch_ndims
-            if dist.plate_events:
-                reinterpreted_batch_ndims += len(extra_plate)
+            if dist.event_stack:
+                reinterpreted_batch_ndims += len(extra_batch_stack)
             new_dist = type(dist)(
                 name=dist.name,
                 transform=dist.transform,
                 observed=None,
-                plate=plate,
+                batch_stack=batch_stack,
                 conditionally_independent=dist.conditionally_independent,
-                plate_events=dist.plate_events,
+                event_stack=dist.event_stack,
                 reinterpreted_batch_ndims=reinterpreted_batch_ndims,
                 **dist.conditions,
             )
@@ -132,9 +132,9 @@ class PosteriorPredictiveSamplingExecutor(SamplingExecutor):
                 name=dist.name,
                 transform=dist.transform,
                 observed=None,
-                plate=None,
+                batch_stack=None,
                 conditionally_independent=dist.conditionally_independent,
-                plate_events=dist.plate_events,
+                event_stack=dist.event_stack,
                 reinterpreted_batch_ndims=dist.reinterpreted_batch_ndims,
                 **dist.conditions,
             )

@@ -34,7 +34,7 @@ class Distribution(Model):
         transform=None,
         observed=None,
         batch_stack=None,
-        events_stack=None,
+        event_stack=None,
         conditionally_independent=False,
         reinterpreted_batch_ndims=0,
         **kwargs,
@@ -51,7 +51,7 @@ class Distribution(Model):
         self.model_info.update(observed=observed)
         self.transform = self._init_transform(transform)
         self.batch_stack = batch_stack
-        self.events_stack = events_stack
+        self.event_stack = event_stack
         self.conditionally_independent = conditionally_independent
         self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
         if reinterpreted_batch_ndims:
@@ -60,8 +60,8 @@ class Distribution(Model):
             )
         if batch_stack is not None:
             self._distribution = BatchStacker(self._distribution, batch_stack=batch_stack)
-        if events_stack is not None:
-            self._distribution = tfd.Sample(self._distribution, sample_shape=self.events_stack)
+        if event_stack is not None:
+            self._distribution = tfd.Sample(self._distribution, sample_shape=self.event_stack)
 
     @property
     def dtype(self):

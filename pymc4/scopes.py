@@ -1,3 +1,4 @@
+from typing import Optional
 import threading
 
 
@@ -59,7 +60,7 @@ class Scope(object):
                 yield leaf
 
     @classmethod
-    def variable_name(cls, name):
+    def variable_name(cls, name: str) -> Optional[str]:
         """
         Generate PyMC4 variable name based on name scope we are currently in.
 
@@ -92,6 +93,10 @@ class Scope(object):
         else:
             return value
 
+    @classmethod
+    def transformed_variable_name(cls, transform_name: str, name: str) -> Optional[str]:
+        return cls.variable_name("__{}_{}".format(transform_name, name))
+
     def __repr__(self):
         return "Scope({})".format(self.__dict__)
 
@@ -101,3 +106,4 @@ def name_scope(name):
 
 
 variable_name = Scope.variable_name
+transformed_variable_name = Scope.transformed_variable_name

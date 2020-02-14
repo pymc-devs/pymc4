@@ -9,16 +9,18 @@ import tensorflow as tf
 from pymc4 import scopes
 from pymc4.distributions.distribution import Distribution
 from pymc4.flow.executor import (
+    EvaluationError,
     ModelType,
+    SamplingExecutor,
     SamplingState,
     observed_value_in_evaluation,
     get_observed_tensor_shape,
     assert_values_compatible_with_distribution,
 )
-from pymc4.flow.transformed_executor import TransformedSamplingExecutor
+from pymc4.flow.transformed_executor import transform_dist_if_necessary
 
 
-class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
+class PosteriorPredictiveSamplingExecutor(SamplingExecutor):
     """Execute the probabilistic model for posterior predictive sampling.
 
     This means that the model will be evaluated in the same way as the
@@ -34,6 +36,10 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
     used for posterior predictive sampling
     """
 
+    def validate_state(self, state: SamplingState):
+        """Validate that the model is not in a bad state."""
+        return
+
     def modify_distribution(
         self, dist: ModelType, model_info: Mapping[str, Any], state: SamplingState
     ) -> ModelType:
@@ -48,25 +54,25 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
         Distribution instance with no observations.
         4) This distribution will be yielded instead of the original incoming
         dist, and it will be used for posterior predictive sampling
-    
+
         Parameters
         ----------
         dist: Union[types.GeneratorType, pymc4.coroutine_model.Model]
-            The 
+            The
         model_info: Mapping[str, Any]
-            Either ``dist.model_info`` or 
+            Either ``dist.model_info`` or
             ``pymc4.coroutine_model.Model.default_model_info`` if ``dist`` is not a
             ``pymc4.courutine_model.Model`` instance.
         state: SamplingState
             The model's evaluation state.
-    
+
         Returns
         -------
         model: Union[types.GeneratorType, pymc4.coroutine_model.Model]
             The original ``dist`` if it was not an observed ``Distribution`` or
             the ``Distribution`` with the changed ``batch_shape`` and observations
             set to ``None``.
-    
+
         Raises
         ------
         EvaluationError
@@ -76,9 +82,12 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
         dist = super().modify_distribution(dist, model_info, state)
         # We only modify the shape of Distribution instances that have observed
         # values
+        dist = transform_dist_if_necessary(dist, state, allow_transformed_and_untransformed=False)
         if not isinstance(dist, Distribution):
             return dist
         scoped_name = scopes.variable_name(dist.name)
+        if scoped_name is None:
+            raise EvaluationError("Attempting to create an anonymous Distribution")
 
         observed_value = observed_value_in_evaluation(scoped_name, dist, state)
         if observed_value is None:
@@ -96,14 +105,37 @@ class PosteriorPredictiveSamplingExecutor(TransformedSamplingExecutor):
 
         # Now we get the broadcasted shape between the observed value and the distribution
         observed_shape = get_observed_tensor_shape(observed_value)
-        dist_shape = dist._distribution.batch_shape + dist._distribution.event_shape
+        dist_shape = dist.batch_shape + dist.event_shape
         new_dist_shape = tf.broadcast_static_shape(observed_shape, dist_shape)
-        plate = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
+        extra_batch_stack = new_dist_shape[: len(new_dist_shape) - len(dist_shape)]
 
         # Now we construct and return the same distribution but setting
         # observed to None and setting a batch_size that matches the result of
         # broadcasting the observed and distribution shape
-        new_dist = type(dist)(
-            name=dist.name, transform=dist.transform, observed=None, plate=plate, **dist.conditions
-        )
+        batch_stack = extra_batch_stack + (dist.batch_stack if dist.batch_stack is not None else ())
+        if len(batch_stack) > 0:
+            reinterpreted_batch_ndims = dist.reinterpreted_batch_ndims
+            if dist.event_stack:
+                reinterpreted_batch_ndims += len(extra_batch_stack)
+            new_dist = type(dist)(
+                name=dist.name,
+                transform=dist.transform,
+                observed=None,
+                batch_stack=batch_stack,
+                conditionally_independent=dist.conditionally_independent,
+                event_stack=dist.event_stack,
+                reinterpreted_batch_ndims=reinterpreted_batch_ndims,
+                **dist.conditions,
+            )
+        else:
+            new_dist = type(dist)(
+                name=dist.name,
+                transform=dist.transform,
+                observed=None,
+                batch_stack=None,
+                conditionally_independent=dist.conditionally_independent,
+                event_stack=dist.event_stack,
+                reinterpreted_batch_ndims=dist.reinterpreted_batch_ndims,
+                **dist.conditions,
+            )
         return new_dist

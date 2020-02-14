@@ -1,6 +1,6 @@
 import types
-from typing import Any, Tuple, Dict, Union, List, Optional, Set
-import collections
+from typing import Any, Tuple, Dict, Union, List, Optional, Set, Mapping
+from collections import ChainMap
 import itertools
 
 import tensorflow as tf
@@ -20,6 +20,22 @@ MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES = (
     distribution.Potential,
     distribution.Deterministic,
 )
+
+
+def _chain_map_iter(self):
+    """Keep ordering of maps on Python3.6.
+
+    See https://bugs.python.org/issue32792
+
+    Once Python3.6 is not supported, this can be deleted.
+    """
+    d = {}
+    for mapping in reversed(self.maps):
+        d.update(mapping)  # reuses stored hash values if possible
+    return iter(d)
+
+
+ChainMap.__iter__ = _chain_map_iter  # type: ignore
 
 
 class EvaluationError(RuntimeError):
@@ -132,12 +148,10 @@ class SamplingState:
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
-        self.all_values = collections.ChainMap(
+        self.all_values = ChainMap(
             self.untransformed_values, self.transformed_values, self.observed_values
         )
-        self.all_unobserved_values = collections.ChainMap(
-            self.transformed_values, self.untransformed_values
-        )
+        self.all_unobserved_values = ChainMap(self.transformed_values, self.untransformed_values)
         self.distributions = distributions
         self.potentials = potentials
         self.deterministics = deterministics
@@ -224,7 +238,7 @@ class SamplingState:
             posterior_predictives=self.posterior_predictives,
         )
 
-    def as_sampling_state(self) -> "SamplingState":
+    def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":
         """Create a sampling state that should be used within MCMC sampling.
 
         There are some principles that hold for the state.
@@ -241,7 +255,9 @@ class SamplingState:
             )
         untransformed_values = dict()
         transformed_values = dict()
+        need_to_transform_after = list()
         observed_values = dict()
+
         for name, dist in self.distributions.items():
             namespec = utils.NameParts.from_name(name)
             if dist.transform is not None and name not in self.observed_values:
@@ -258,6 +274,7 @@ class SamplingState:
                     transformed_values[
                         transformed_namespec.full_original_name
                     ] = self.transformed_values[transformed_namespec.full_original_name]
+                    need_to_transform_after.append(transformed_namespec.full_untransformed_name)
             else:
                 if name in self.observed_values:
                     observed_values[name] = self.observed_values[name]
@@ -269,10 +286,13 @@ class SamplingState:
                         "in the state. This may happen if the current "
                         "state was modified in the wrong way."
                     )
-        return self.__class__(
-            transformed_values=transformed_values,
-            untransformed_values=untransformed_values,
-            observed_values=observed_values,
+        return (
+            self.__class__(
+                transformed_values=transformed_values,
+                untransformed_values=untransformed_values,
+                observed_values=observed_values,
+            ),
+            need_to_transform_after,
         )
 
 
@@ -310,6 +330,7 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -461,13 +482,15 @@ class SamplingExecutor:
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, distribution.Distribution):
                         try:
-                            return_value, state = self.proceed_distribution(dist, state)
+                            return_value, state = self.proceed_distribution(
+                                dist, state, sample_shape=sample_shape
+                            )
                         except EvaluationError as error:
                             control_flow.throw(error)
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
-                            dist, state=state, _validate_state=False
+                            dist, state=state, _validate_state=False, sample_shape=sample_shape
                         )
                     else:
                         err = EvaluationError(
@@ -518,17 +541,23 @@ class SamplingExecutor:
             )
 
     def modify_distribution(
-        self, dist: distribution.Distribution, model_info: Dict[str, Any], state: SamplingState
-    ):
+        self, dist: ModelType, model_info: Mapping[str, Any], state: SamplingState
+    ) -> ModelType:
         return dist
 
     def proceed_distribution(
-        self, dist: distribution.Distribution, state: SamplingState
+        self,
+        dist: distribution.Distribution,
+        state: SamplingState,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")
         scoped_name = scopes.variable_name(dist.name)
+        if scoped_name is None:
+            raise EvaluationError("Attempting to create an anonymous Distribution")
+
         if scoped_name in state.distributions or scoped_name in state.deterministics:
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
@@ -546,7 +575,12 @@ class SamplingExecutor:
                 # might be posterior predictive or programmatically override to exchange observed variable to latent
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
-                    return_value = state.untransformed_values[scoped_name] = dist.sample()
+                    if dist.is_root:
+                        return_value = state.untransformed_values[scoped_name] = dist.sample(
+                            sample_shape=sample_shape
+                        )
+                    else:
+                        return_value = state.untransformed_values[scoped_name] = dist.sample()
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -566,7 +600,12 @@ class SamplingExecutor:
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
         else:
-            return_value = state.untransformed_values[scoped_name] = dist.sample()
+            if dist.is_root:
+                return_value = state.untransformed_values[scoped_name] = dist.sample(
+                    sample_shape=sample_shape
+                )
+            else:
+                return_value = state.untransformed_values[scoped_name] = dist.sample()
         state.distributions[scoped_name] = dist
         return return_value, state
 
@@ -577,6 +616,8 @@ class SamplingExecutor:
         if deterministic.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
         scoped_name = scopes.variable_name(deterministic.name)
+        if scoped_name is None:
+            raise EvaluationError("Attempting to create an anonymous Deterministic")
         if scoped_name in state.distributions or scoped_name in state.deterministics:
             raise EvaluationError(
                 "Attempting to create a duplicate deterministic {!r}, "
@@ -615,9 +656,12 @@ class SamplingExecutor:
         else:
             return_value = None
         if return_value is not None and model_info["keep_return"]:
-            # we should filter out allowed return types, but this is totally backend
-            # specific and should be determined at import time.
             return_name = scopes.variable_name(model_info["name"])
+            if return_name is None:
+                raise AssertionError(
+                    "Attempting to create unnamed return variable *after* making a check"
+                )
+
             state.deterministics[return_name] = return_value
         return return_value, state
 
@@ -632,13 +676,18 @@ def assert_values_compatible_with_distribution(
     scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
+    
+    A distribution's shape, ``dist_shape``, is made up by the sum of
+    the ``batch_shape`` and the ``event_shape``.
 
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
-    distribution: len(values.shape) >= len(dist_shape)
-    2) The supplied values' shape is compatible with the distribution's shape:
-    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
+    distribution's event_shape: ``len(values.shape) >= len(dist.event_shape)``
+    2) The supplied values' shape is compatible with the distribution's shape
+    this means that we check if the righymost ``K`` axes of the values' shape
+    match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
+    the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
 
     Parameters
     ----------
@@ -659,23 +708,27 @@ def assert_values_compatible_with_distribution(
         When the ``values`` shape is not compatible with the ``Distribution``'s
         shape.
     """
-    event_shape = dist._distribution.event_shape
-    batch_shape = dist._distribution.batch_shape
-    dist_shape = batch_shape + event_shape
-    assert_values_compatible_with_distribution_shape(scoped_name, values, dist_shape)
+    event_shape = dist.event_shape
+    batch_shape = dist.batch_shape
+    assert_values_compatible_with_distribution_shape(scoped_name, values, batch_shape, event_shape)
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str, values: Any, dist_shape: tf.TensorShape
+    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
+
+    A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of
+    the ``batch_shape`` and the ``event_shape``.
 
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
-    distribution: len(values.shape) >= len(dist_shape)
-    2) The supplied values' shape is compatible with the distribution's shape:
-    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
+    distribution's event_shape: ``len(values.shape) >= len(dist.event_shape)``
+    2) The supplied values' shape is compatible with the distribution's shape
+    this means that we check if the righymost ``K`` axes of the values' shape
+    match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
+    the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
 
     Parameters
     ----------
@@ -683,8 +736,10 @@ def assert_values_compatible_with_distribution_shape(
         The variable's scoped name
     values: Any
         The supplied values
-    dist_shape: tf.TensorShape
-        The ``tf.TensorShape`` instance.
+    batch_shape: tf.TensorShape
+        The ``tf.TensorShape`` batch_shape instance.
+    event_shape: tf.TensorShape
+        The ``tf.TensorShape`` event_shape instance.
 
     Returns
     -------
@@ -696,8 +751,22 @@ def assert_values_compatible_with_distribution_shape(
         When the ``values`` shape is not compatible with the ``dist_shape``.
     """
     value_shape = get_observed_tensor_shape(values)
-    if value_shape.rank < dist_shape.rank or not dist_shape.is_compatible_with(
-        value_shape[(len(value_shape) - len(dist_shape)) :]
+    dist_shape = batch_shape + event_shape
+    value_rank = value_shape.rank
+    dist_rank = dist_shape.rank
+    # TODO: Make the or condition less ugly but at the same time compatible with
+    # tf.function. tf.math.maximum makes things kind of weird and raises errors
+    if (
+        value_rank < event_shape.rank
+        or (
+            dist_rank < value_rank
+            and not dist_shape.is_compatible_with(value_shape[value_rank - dist_rank :])
+        )
+        or (
+            value_rank < dist_rank
+            and not value_shape.is_compatible_with(dist_shape[dist_rank - value_rank :])
+        )
+        or (value_rank == dist_rank and not value_shape.is_compatible_with(dist_shape))
     ):
         raise EvaluationError(
             EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(

@@ -9,6 +9,7 @@ from pymc4.distributions.distribution import (
 __all__ = [
     "Bernoulli",
     "Binomial",
+    "BetaBinomial",
     "DiscreteUniform",
     "Categorical",
     "Geometric",
@@ -126,6 +127,79 @@ class Binomial(BoundedDiscreteDistribution):
 
     def upper_limit(self):
         return self.conditions["total_count"]
+
+
+class BetaBinomial(BoundedDiscreteDistribution):
+    r"""Bounded Discrete compound Beta-Binomial Random Variable
+
+    The pmf of this distribution is
+
+    .. math:: f(x \mid n, \alpha, \beta) = n \choose x \frac{B(x + \alpha, n - x + \beta)}{B(\alpha, \beta)}
+
+    where :math:`n` = ``total_count``
+          :math:`\alpha` = ``concentration0``
+          :math:`\beta` = ``concentration1``
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        n = 10
+        x = np.arange(0, n)
+        alphas = [1, 2]
+        betas = [6, 2]
+        for a, b in zip(alphas, betas):
+            pmf = st.betabinom(n, a, b).pmf(x)
+            plt.plot(x, pmf, '-o', label='low = {}, high = {}'.format(low, high))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 0.4)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ===============================================
+    Support   :math:`x \in {0, 1 + 1, \ldots, n}`
+    Mean      :math:`\dfrac{n \alpha}{\alpha + \beta}`
+    Variance  :math:`\dfrac{n \alpha \beta (\alpha + \beta + n)}{(\alpha + \beta)^2 (\alpha + \beta + 1)}`
+    ========  ===============================================
+
+    Parameters
+    ----------
+    total_count : int
+        Number of trials `n` (total_count>=0)
+    concentration0 : float
+        :math:`\alpha` parameter of the Beta Distribution (concentration0 > 0)
+    concentration1 : float
+        :math:`\beta` parameter of the Beta Distribution (concentration1 > 0)
+    """
+
+    def __init__(self, name, total_count, concentration0, concentration1, **kwargs):
+        super().__init__(
+            name,
+            total_count=total_count,
+            concentration0=concentration0,
+            concentration1=concentration1,
+            **kwargs,
+        )
+
+    @staticmethod
+    def _init_distribution(conditions):
+        total_count, concentration0, concentration1 = (
+            conditions["total_count"],
+            conditions["concentration0"],
+            conditions["concentration1"],
+        )
+        return tfd.DirichletMultinomial(
+            total_count=total_count, concentration=[concentration0, concentration1]
+        )
+
+    def lower_limit(self):
+        return 0
+
+    def upper_limit(self):
+        return self.conditions["total_counts"]
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):

@@ -1,9 +1,12 @@
 import types
 from typing import Optional, Union, Tuple, List, Dict, Set, Any
+import collections
 import numpy as np
 import tensorflow as tf
+from arviz import InferenceData
 from pymc4.coroutine_model import Model
 from pymc4.flow import evaluate_model, SamplingState, evaluate_model_posterior_predictive
+from pymc4.inference.utils import trace_to_arviz
 from pymc4.flow.executor import assert_values_compatible_with_distribution_shape
 
 
@@ -18,9 +21,10 @@ def sample_prior_predictive(
     model: ModelType,
     sample_shape: Union[int, Tuple[int]] = 1000,
     sample_from_observed: bool = True,
-    var_names: Optional[List[str]] = None,
+    var_names: Optional[Union[str, List[str]]] = None,
     state: Optional[SamplingState] = None,
-) -> Dict[str, np.ndarray]:
+    use_auto_batching: bool = True,
+) -> InferenceData:
     """
     Draw ``sample_shape`` values from the model for the desired ``var_names``.
 
@@ -29,41 +33,41 @@ def sample_prior_predictive(
     model : types.GeneratorType, pymc4.Model
         Model to draw samples from
     sample_shape: Union[int, Tuple[int]]
-        The sample shape of the draw. Every distribution has its core
-        dimensions (e.g. ``pm.Normal("x", 0, tf.ones(2))`` has a single core
-        dimension with ``shape=(2,)``). The ``sample_shape`` controls the total
-        number of draws to make from a distribution, and the shape that will
-        be prepended to the core dimensions. In the above case, if
-        ``sample_shape=(3, 1)``, then the resulting draw will have
-        ``shape=(3, 1, 2)``. If an ``int`` is passed, it's converted to a tuple
-        with a single entry: ``(sample_shape,)``
+        The sample shape of the draw. Every distribution has its core dimensions
+        (e.g. ``pm.Normal("x", 0, tf.ones(2))`` has a single core dimension with ``shape=(2,)``).
+        The ``sample_shape`` controls the total number of draws to make from a distribution, and
+        the shape that will be prepended to the core dimensions. In the above case, if
+        ``sample_shape=(3, 1)``, then the resulting draw will have ``shape=(3, 1, 2)``. If an
+        ``int`` is passed, it's converted to a tuple with a single entry: ``(sample_shape,)``
     sample_from_observed: bool
-        If ``False``, the distributions that were assigned observed values wont
-        be resampled, and the observed values will used for computations
-        downstream.
-        If ``True``, the distributions that were assigned observed values will
-        be resampled. This means that their observed value will be completely
-        ignored (including its implied shape), and a new sample will be drawn
-        from the prior distribution.
+        If ``False``, the distributions that were assigned observed values wont be resampled, and
+        the observed values will used for computations downstream.
+        If ``True``, the distributions that were assigned observed values will be resampled. This
+        means that their observed value will be completely ignored (including its implied shape),
+        and a new sample will be drawn from the prior distribution.
         Observed variables are only returned in the ``Samples`` dictionary if
-        ``sample_from_observed`` is ``True`` or the name of the observed
-        variable is explicitly provided in ``var_names``.
-    var_names: Optional[List[str]]
-        The list of variable names that will be included in the returned
-        samples. If ``None``, the samples drawn for all untransformed
-        distributions and deterministics will be returned in the ``Samples``
-        dictionary. Furthermore, if ``sample_from_observed=True``, then the
-        observed variable names will be added to the untransformed
-        distributions.
+        ``sample_from_observed`` is ``True`` or the name of the observed variable is explicitly
+        provided in ``var_names``.
+    var_names: Optional[Union[str, List[str]]]
+        The list of variable names that will be included in the returned samples. Strings can be
+        used to specify a single variable. If ``None``, the samples drawn for all untransformed
+        distributions and deterministics will be returned in the ``Samples`` dictionary.
+        Furthermore, if ``sample_from_observed=True``, then the observed variable names will be
+        added to the untransformed distributions.
     state : Optional[pymc4.flow.SamplingState]
-        A ``SamplingState`` that can be used to specify distributions fixed
-        values and change observed values.
+        A ``SamplingState`` that can be used to specify distributions fixed values and change
+        observed values.
+    use_auto_batching: bool
+        A bool value that indicates whether ``sample_prior_predictive`` should automatically batch
+        the draws or not. If you are sure you have manually tuned your model to be fully
+        vectorized, then you can set this to ``False``, and your sampling should be faster than
+        the auto batched counterpart. If you are not sure if your model is vectorized, then auto
+        batching will safely sample from it but with some additional overhead.
 
     Returns
     -------
-    Samples: Dict[str, np.ndarray]
-        A dictionary of ``var_names`` keys and their corresponding drawn
-        samples.
+    Samples: InferenceDataType
+        An ArviZ's InferenceData object with a prior_predictive group
 
     Examples
     --------
@@ -80,28 +84,27 @@ def sample_prior_predictive(
 
     >>> prior_samples = sample_prior_predictive(model(), sample_shape=(20, 3))
 
-    The samples are returned as a dictionary with the variable names as keys
+    The samples are returned as an InferenceData object with a prior_predictive group
 
-    >>> sorted(list(prior_samples))
+    >>> sorted(list(prior_samples.prior_predictive))
     ['model/n', 'model/sd']
 
-    The drawn values are the dictionary's values, and their shape will depend
-    on the supplied ``sample_shape``
+    The drawn values are the xarray DataSet values, and their shape will depend on the supplied
+    ``sample_shape``
 
-    >>> [v.shape for v in prior_samples.values()]
-    [(20, 3), (20, 3)]
+    >>> [v.shape for v in prior_samples.prior_predictive.values()]
+    [(1, 20, 3), (1, 20, 3)]
 
-    If we only wanted to draw samples from unobserved variables we would
-    have done the following
+    If we only wanted to draw samples from unobserved variables we would have done the following
 
     >>> prior_samples = sample_prior_predictive(model(), sample_from_observed=False)
-    >>> sorted(list(prior_samples))
+    >>> sorted(list(prior_samples.prior_predictive))
     ['model/sd']
 
     Notes
     -----
-    If ``sample_from_observed=False``, the observed value passed to the
-    variables will be used in the later stages of the model's computation.
+    If ``sample_from_observed=False``, the observed value passed to the variables will be used in
+    the later stages of the model's computation.
 
     >>> import pymc4 as pm
     >>> @pm.model
@@ -112,24 +115,52 @@ def sample_prior_predictive(
     >>> prior_samples = sample_prior_predictive(
     ...     model2(), sample_shape=(20,), sample_from_observed=False
     ... )
-    >>> np.allclose(np.mean(prior_samples["model2/y"]), 1)
+    >>> np.allclose(np.mean(prior_samples.prior_predictive["model2/y"]), 1)
     True
 
     Furthermore, this has consequences at the shape level of the drawn samples
-    >>> prior_samples["model2/y"].shape
-    (20, 10)
+    >>> prior_samples.prior_predictive["model2/y"].shape
+    (1, 20, 10)
 
-    If ``sample_from_observed=True`` the value of the ``x`` random variable
-    will be drawn from its prior distribution, which will have consequences
-    both at the value and shape levels of downstream computations
+    If ``sample_from_observed=True`` the value of the ``x`` random variable will be drawn from its
+    prior distribution, which will have consequences both at the value and shape levels of
+    downstream computations
 
     >>> prior_samples = sample_prior_predictive(
     ...     model2(), sample_shape=(20,), sample_from_observed=True
-    ... )
+    ... ).prior_predictive
     >>> np.allclose(np.mean(prior_samples["model2/y"]), 1)
     False
     >>> prior_samples["model2/y"].shape
-    (20,)
+    (1, 20)
+
+    If you take special care to fully vectorize your model, you will be able
+    to sample from it when you set ``use_auto_batching=False``
+    >>> import numpy as np
+    >>> from time import time
+    >>> observed = np.ones(10, dtype="float32")
+    >>> @pm.model
+    ... def vect_model():
+    ...     mu = yield pm.Normal("mu", 0, 1, conditionally_independent=True)
+    ...     scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
+    ...     obs = yield pm.Normal(
+    ...         "obs", mu, scale, event_stack=len(observed), observed=observed
+    ...     )
+    >>> st1 = time()
+    >>> prior_samples1 = sample_prior_predictive(
+    ...     vect_model(), sample_shape=(30, 20), use_auto_batching=False
+    ... ).prior_predictive
+    >>> st2 = en1 = time()
+    >>> prior_samples2 = sample_prior_predictive(
+    ...     vect_model(), sample_shape=(30, 20), use_auto_batching=True
+    ... ).prior_predictive
+    >>> en2 = time()
+    >>> prior_samples2["vect_model/obs"].shape
+    (1, 30, 20, 10)
+    >>> prior_samples1["vect_model/obs"].shape
+    (1, 30, 20, 10)
+    >>> (en1 - st1) < (en2 - st2)
+    True
 
     """
     if isinstance(sample_shape, int):
@@ -144,6 +175,10 @@ def sample_prior_predictive(
     if sample_from_observed:
         state.observed_values = observed = {k: None for k in state.observed_values}
         distributions_names = distributions_names + list(state.observed_values)
+
+    if isinstance(var_names, str):
+        var_names = [var_names]
+
     if var_names is None:
         var_names = distributions_names + deterministic_names
     else:
@@ -158,6 +193,12 @@ def sample_prior_predictive(
                 model, list(set(var_names) - set(distributions_names + deterministic_names))
             )
         )
+
+    # If we don't have to auto-batch, then we can simply evaluate the model
+    if not use_auto_batching:
+        _, state = evaluate_model(model, observed=observed, sample_shape=sample_shape)
+        all_values = collections.ChainMap(state.all_values, state.deterministics)
+        return trace_to_arviz(prior_predictive={k: all_values[k].numpy() for k in var_names})
 
     # Setup the function that makes a single draw
     @tf.function(autograph=False)
@@ -178,15 +219,18 @@ def sample_prior_predictive(
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()
         output[name] = np.reshape(sample, sample_shape + sample.shape[1:])
-    return output
+
+    return trace_to_arviz(prior_predictive=output)
 
 
 def sample_posterior_predictive(
     model: ModelType,
-    trace: Dict[str, Any],
-    var_names: Optional[List[str]] = None,
+    trace: InferenceData,
+    var_names: Optional[Union[str, List[str]]] = None,
     observed: Optional[Dict[str, Any]] = None,
-) -> Dict[str, np.ndarray]:
+    use_auto_batching: bool = True,
+    inplace: bool = True,
+) -> InferenceData:
     """
     Draw ``sample_shape`` values from the model for the desired ``var_names``.
 
@@ -194,22 +238,30 @@ def sample_posterior_predictive(
     ----------
     model : types.GeneratorType, pymc4.Model
         Model to draw samples from
-    trace: Dict[str, Any]
-        The samples drawn from the model's posterior distribution that should
-        be used for sampling from the posterior predictive
-    var_names: Optional[List[str]]
-        The list of variable names that will be included in the returned
-        samples. If ``None``, the samples drawn for all observed
+    trace: ArviZ's InferenceData object
+        The samples drawn from the model's posterior distribution that should be used for sampling
+        from the posterior predictive
+    var_names: Optional[Union[str, List[str]]]
+        The list of variable names that will be included in the returned samples. Strings can be
+        used to specify a single variable. If ``None``, the samples drawn for all observed
         distributions will be returned in the ``Samples`` dictionary.
     observed : Optional[Dict[str, Any]]
-        A dictionary that can be used to override the distribution observed
-        values defined in the model.
+        A dictionary that can be used to override the distribution observed values defined in the
+        model.
+    use_auto_batching: bool
+        A bool value that indicates whether ``sample_posterior_predictive`` should automatically
+        batch the draws or not. If you are sure you have manually tuned your model to be fully
+        vectorized, then you can set this to ``False``, and your sampling should be faster than the
+        auto batched counterpart. If you are not sure if your model is vectorized, then auto
+        batching will safely sample from it but with some additional overhead.
+    inplace: If True (default) it will add a posterior_predictive group to the provided ``trace``,
+        instead of returning a new InferenceData object. If a posterior_predictive group is already
+        present in ``trace`` it will be overwritten.
 
     Returns
     -------
-    Samples: Dict[str, np.ndarray]
-        A dictionary of ``var_names`` keys and their corresponding drawn
-        samples.
+    Samples: InferenceDataType
+        An ArviZ's InferenceData object with a posterior_predictive group
 
     Examples
     --------
@@ -221,11 +273,11 @@ def sample_posterior_predictive(
     ...     sd = yield pm.HalfNormal("sd", 5.)
     ...     norm = yield pm.Normal("n", 0, sd, observed=np.random.randn(100))
 
-    Now, we may want to draw samples from the model's posterior to then sample
-    from the posterior predictive.
+    Now, we may want to draw samples from the model's posterior to then sample from the posterior
+    predictive.
 
-    >>> trace, stats = pm.inference.sampling.sample(model())
-    >>> ppc = pm.sample_posterior_predictive(model(), trace)
+    >>> trace = pm.inference.sampling.sample(model())
+    >>> ppc = pm.sample_posterior_predictive(model(), trace).posterior_predictive
 
     The samples are returned as a dictionary with the variable names as keys
 
@@ -236,14 +288,31 @@ def sample_posterior_predictive(
     on the supplied ``trace``
 
     >>> ppc["model/n"].shape
-    (1000, 10, 100)
+    (10, 1000, 100)
 
     """
-    # Get a copy of trace because we may manipulate the dictionary later in this
-    # function
-    trace = trace.copy()
     if var_names is not None and len(var_names) == 0:
         raise ValueError("Supplied an empty var_names list to sample from")
+    if isinstance(var_names, str):
+        var_names = [var_names]
+
+    # If we don't have to deal with auto-batching we can simply evaluate_model
+    # passing the trace as values
+    if not use_auto_batching:
+        values = {
+            var_name: tf.convert_to_tensor(value) for var_name, value in trace.posterior.items()
+        }
+        # We need to pass the number of chains and draws as sample_shape for
+        # observed conditionally independent variables
+        sample_shape = (trace.posterior.sizes["chain"], trace.posterior.sizes["draw"])
+        _, state = evaluate_model_posterior_predictive(
+            model, values=values, observed=observed, sample_shape=sample_shape
+        )
+        all_values = collections.ChainMap(state.all_values, state.deterministics)
+        if var_names is None:
+            var_names = list(state.posterior_predictives)
+        output = {k: all_values[k] for k in var_names}
+        return trace_to_arviz(trace=trace, posterior_predictive=output, inplace=inplace)
 
     # We cannot assume that the model is vectorized, so we have batch the
     # pm.evaluate_model_posterior_predictive calls across the trace entries
@@ -266,7 +335,7 @@ def sample_posterior_predictive(
 
     # Do a single forward pass to infer the distributions core shapes and
     # default observeds
-    state = evaluate_model_posterior_predictive(model, observed=observed)[1]
+    _, state = evaluate_model_posterior_predictive(model, observed=observed)
     if var_names is None:
         var_names = list(state.posterior_predictives)
     else:
@@ -281,40 +350,45 @@ def sample_posterior_predictive(
 
     # Get the global batch_shape
     batch_shape = tf.TensorShape([])
-    trace_names = list(trace)
-    for var_name in trace_names:
-        values = tf.convert_to_tensor(trace[var_name])
+    # Get a copy of trace because we may manipulate the dictionary later in this
+    # function
+    posterior = trace.posterior.copy()  # type: ignore
+    posterior_names = list(posterior)
+    for var_name in posterior_names:
+        values = tf.convert_to_tensor(posterior[var_name].values)
         try:
             core_shape = state.all_values[var_name].shape
         except KeyError:
             if var_name in state.deterministics:
                 # Remove the deterministics from the trace
-                del trace[var_name]
+                del posterior[var_name]
                 continue
             else:
                 raise TypeError(
                     "Supplied the variable {} in the trace, yet this variable is "
                     "not defined in the model: {!r}".format(var_name, state)
                 )
-        assert_values_compatible_with_distribution_shape(var_name, values, core_shape)
+        assert_values_compatible_with_distribution_shape(
+            var_name, values, batch_shape=tf.TensorShape([]), event_shape=core_shape
+        )
         batch_shape = tf.TensorShape(
             tf.broadcast_static_shape(
-                values.shape[: len(values.shape) - len(core_shape)], batch_shape
+                values.shape[: len(values.shape) - len(core_shape)],  # type: ignore
+                batch_shape,
             )
         )
 
     # Flatten the batch axis
-    flattened_trace = []
-    for k, v in trace.items():
+    flattened_posterior = []
+    for k, v in posterior.items():
         core_shape = tf.TensorShape(state.all_values[k].shape)
-        batched_val = tf.broadcast_to(v, batch_shape + core_shape)
-        flattened_trace.append(tf.reshape(batched_val, shape=[-1] + core_shape.as_list()))
-    trace_vars = list(trace)
-
+        batched_val = tf.broadcast_to(v.values, batch_shape + core_shape)
+        flattened_posterior.append(tf.reshape(batched_val, shape=[-1] + core_shape.as_list()))
+    posterior_vars = list(posterior)
     # Setup the function that makes a single draw
     @tf.function(autograph=False)
     def single_draw(elems):
-        values = dict(zip(trace_vars, elems))
+        values = dict(zip(posterior_vars, elems))
         _, st = evaluate_model_posterior_predictive(model, values=values, observed=observed)
         return tuple(
             [
@@ -330,12 +404,11 @@ def sample_posterior_predictive(
         )
 
     # Make draws in parallel across the batch elements with tf.vectorized_map
-    samples = tf.vectorized_map(single_draw, flattened_trace)
-
+    samples = tf.vectorized_map(single_draw, flattened_posterior)
     # Convert the samples to ndarrays and make a dictionary with the correct
     # batch_shape + core_shape
     output = dict()
     for name, sample in zip(var_names, samples):
         sample = sample.numpy()
         output[name] = np.reshape(sample, batch_shape + sample.shape[1:])
-    return output
+    return trace_to_arviz(trace=trace, posterior_predictive=output, inplace=inplace)

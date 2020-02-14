@@ -140,7 +140,7 @@ class Multinomial(DiscreteDistribution):
         be non-negative and sum to 1 along the last axis.
     """
     # For some ridiculous reason, tfp needs multinomial values to be floats...
-    _test_value = 0.0
+    _test_value = 0.0  # type: ignore
 
     def __init__(self, name, total_count, probs, **kwargs):
         super().__init__(name, total_count=total_count, probs=probs, **kwargs)

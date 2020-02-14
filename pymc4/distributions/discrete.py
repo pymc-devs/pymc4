@@ -342,7 +342,8 @@ class Geometric(BoundedDiscreteDistribution):
     probs : float
         Probability of success on an individual trial (0 < probs <= 1).
     """
-    _test_value = 2.0
+    # Another example for a wrong type used on the tensorflow side
+    _test_value = 2.0  # type: ignore
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
@@ -412,7 +413,7 @@ class NegativeBinomial(PositiveDiscreteDistribution):
         Probability of success on an individual trial (0 < probs <= 1).
     """
     # For some ridiculous reason, tfp needs negative binomial values to be floats...
-    _test_value = 0.0
+    _test_value = 0.0  # type: ignore
 
     def __init__(self, name, total_count, probs, **kwargs):
         super().__init__(name, total_count=total_count, probs=probs, **kwargs)
@@ -466,7 +467,7 @@ class Poisson(PositiveDiscreteDistribution):
     binomial distribution.
     """
     # For some ridiculous reason, tfp needs poisson values to be floats...
-    _test_value = 0.0
+    _test_value = 0.0  # type: ignore
 
     def __init__(self, name, rate, **kwargs):
         super().__init__(name, rate=rate, **kwargs)

@@ -4,6 +4,7 @@ from typing import Optional, Union, Any
 
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
+from pymc4.distributions.batchstack import BatchStacker
 from . import transforms
 
 NameType = Union[str, int]
@@ -27,11 +28,19 @@ class Distribution(Model):
     """Statistical distribution."""
 
     def __init__(
-        self, name: Optional[NameType], *, transform=None, observed=None, plate=None, **kwargs
+        self,
+        name: Optional[NameType],
+        *,
+        transform=None,
+        observed=None,
+        batch_stack=None,
+        event_stack=None,
+        conditionally_independent=False,
+        reinterpreted_batch_ndims=0,
+        **kwargs,
     ):
         self.conditions = self.unpack_conditions(**kwargs)
         self._distribution = self._init_distribution(self.conditions)
-        self.plate = plate
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )
@@ -41,8 +50,18 @@ class Distribution(Model):
             )
         self.model_info.update(observed=observed)
         self.transform = self._init_transform(transform)
-        if self.plate is not None:
-            self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
+        self.batch_stack = batch_stack
+        self.event_stack = event_stack
+        self.conditionally_independent = conditionally_independent
+        self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
+        if reinterpreted_batch_ndims:
+            self._distribution = tfd.Independent(
+                self._distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims
+            )
+        if batch_stack is not None:
+            self._distribution = BatchStacker(self._distribution, batch_stack=batch_stack)
+        if event_stack is not None:
+            self._distribution = tfd.Sample(self._distribution, sample_shape=self.event_stack)
 
     @property
     def dtype(self):
@@ -68,26 +87,26 @@ class Distribution(Model):
         """
         return kwargs
 
-    def sample(self, shape=(), seed=None):
+    def sample(self, sample_shape=(), seed=None):
         """
         Forward sampling implementation.
 
         Parameters
         ----------
-        shape : tuple
+        sample_shape : tuple
             sample shape
         seed : int|None
             random seed
         """
-        return self._distribution.sample(shape, seed)
+        return self._distribution.sample(sample_shape, seed)
 
-    def sample_numpy(self, shape=(), seed=None):
+    def sample_numpy(self, sample_shape=(), seed=None):
         """
         Forward sampling implementation returning raw numpy arrays.
 
         Parameters
         ----------
-        shape : tuple
+        sample_shape : tuple
             sample shape
         seed : int|None
             random seed
@@ -95,7 +114,7 @@ class Distribution(Model):
         ----------
         array of given shape
         """
-        return self.sample(shape, seed).numpy()
+        return self.sample(sample_shape, seed).numpy()
 
     def log_prob(self, value):
         """Return log probability as tensor."""
@@ -138,6 +157,18 @@ class Distribution(Model):
     @property
     def is_observed(self):
         return self.model_info["observed"] is not None
+
+    @property
+    def is_root(self):
+        return self.conditionally_independent
+
+    @property
+    def batch_shape(self):
+        return self._distribution.batch_shape
+
+    @property
+    def event_shape(self):
+        return self._distribution.event_shape
 
 
 class Potential:

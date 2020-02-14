@@ -330,6 +330,7 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -481,13 +482,15 @@ class SamplingExecutor:
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, distribution.Distribution):
                         try:
-                            return_value, state = self.proceed_distribution(dist, state)
+                            return_value, state = self.proceed_distribution(
+                                dist, state, sample_shape=sample_shape
+                            )
                         except EvaluationError as error:
                             control_flow.throw(error)
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
-                            dist, state=state, _validate_state=False
+                            dist, state=state, _validate_state=False, sample_shape=sample_shape
                         )
                     else:
                         err = EvaluationError(
@@ -543,7 +546,10 @@ class SamplingExecutor:
         return dist
 
     def proceed_distribution(
-        self, dist: distribution.Distribution, state: SamplingState
+        self,
+        dist: distribution.Distribution,
+        state: SamplingState,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         if dist.is_anonymous:
@@ -569,7 +575,12 @@ class SamplingExecutor:
                 # might be posterior predictive or programmatically override to exchange observed variable to latent
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
-                    return_value = state.untransformed_values[scoped_name] = dist.sample()
+                    if dist.is_root:
+                        return_value = state.untransformed_values[scoped_name] = dist.sample(
+                            sample_shape=sample_shape
+                        )
+                    else:
+                        return_value = state.untransformed_values[scoped_name] = dist.sample()
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -589,7 +600,12 @@ class SamplingExecutor:
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
         else:
-            return_value = state.untransformed_values[scoped_name] = dist.sample()
+            if dist.is_root:
+                return_value = state.untransformed_values[scoped_name] = dist.sample(
+                    sample_shape=sample_shape
+                )
+            else:
+                return_value = state.untransformed_values[scoped_name] = dist.sample()
         state.distributions[scoped_name] = dist
         return return_value, state
 
@@ -660,13 +676,18 @@ def assert_values_compatible_with_distribution(
     scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
+    
+    A distribution's shape, ``dist_shape``, is made up by the sum of
+    the ``batch_shape`` and the ``event_shape``.
 
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
-    distribution: len(values.shape) >= len(dist_shape)
-    2) The supplied values' shape is compatible with the distribution's shape:
-    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
+    distribution's event_shape: ``len(values.shape) >= len(dist.event_shape)``
+    2) The supplied values' shape is compatible with the distribution's shape
+    this means that we check if the righymost ``K`` axes of the values' shape
+    match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
+    the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
 
     Parameters
     ----------
@@ -687,23 +708,27 @@ def assert_values_compatible_with_distribution(
         When the ``values`` shape is not compatible with the ``Distribution``'s
         shape.
     """
-    event_shape = dist._distribution.event_shape
-    batch_shape = dist._distribution.batch_shape
-    dist_shape = batch_shape + event_shape
-    assert_values_compatible_with_distribution_shape(scoped_name, values, dist_shape)
+    event_shape = dist.event_shape
+    batch_shape = dist.batch_shape
+    assert_values_compatible_with_distribution_shape(scoped_name, values, batch_shape, event_shape)
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str, values: Any, dist_shape: tf.TensorShape
+    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
+
+    A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of
+    the ``batch_shape`` and the ``event_shape``.
 
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
-    distribution: len(values.shape) >= len(dist_shape)
-    2) The supplied values' shape is compatible with the distribution's shape:
-    dist_shape.is_compatible_with(values.shape[(len(values.shape) - len(dist_shape)):])
+    distribution's event_shape: ``len(values.shape) >= len(dist.event_shape)``
+    2) The supplied values' shape is compatible with the distribution's shape
+    this means that we check if the righymost ``K`` axes of the values' shape
+    match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
+    the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
 
     Parameters
     ----------
@@ -711,8 +736,10 @@ def assert_values_compatible_with_distribution_shape(
         The variable's scoped name
     values: Any
         The supplied values
-    dist_shape: tf.TensorShape
-        The ``tf.TensorShape`` instance.
+    batch_shape: tf.TensorShape
+        The ``tf.TensorShape`` batch_shape instance.
+    event_shape: tf.TensorShape
+        The ``tf.TensorShape`` event_shape instance.
 
     Returns
     -------
@@ -724,8 +751,22 @@ def assert_values_compatible_with_distribution_shape(
         When the ``values`` shape is not compatible with the ``dist_shape``.
     """
     value_shape = get_observed_tensor_shape(values)
-    if value_shape.rank < dist_shape.rank or not dist_shape.is_compatible_with(
-        value_shape[(len(value_shape) - len(dist_shape)) :]
+    dist_shape = batch_shape + event_shape
+    value_rank = value_shape.rank
+    dist_rank = dist_shape.rank
+    # TODO: Make the or condition less ugly but at the same time compatible with
+    # tf.function. tf.math.maximum makes things kind of weird and raises errors
+    if (
+        value_rank < event_shape.rank
+        or (
+            dist_rank < value_rank
+            and not dist_shape.is_compatible_with(value_shape[value_rank - dist_rank :])
+        )
+        or (
+            value_rank < dist_rank
+            and not value_shape.is_compatible_with(dist_shape[dist_rank - value_rank :])
+        )
+        or (value_rank == dist_rank and not value_shape.is_compatible_with(dist_shape))
     ):
         raise EvaluationError(
             EvaluationError.INCOMPATIBLE_VALUE_AND_DISTRIBUTION_SHAPE.format(

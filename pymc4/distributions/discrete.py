@@ -1,5 +1,6 @@
 """PyMC4 discrete random variables."""
 import tensorflow as tf
+import numpy as np
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
@@ -176,11 +177,13 @@ class BetaBinomial(BoundedDiscreteDistribution):
     """
 
     def __init__(self, name, total_count, concentration0, concentration1, **kwargs):
+        concentration0 = np.array(concentration0)
+        concentration1 = np.array(concentration1)
         super().__init__(
             name,
             total_count=total_count,
-            concentration0=concentration0,
-            concentration1=concentration1,
+            concentration0=concentration0.reshape(concentration0.shape + (1,)),
+            concentration1=concentration1.reshape(concentration1.shape + (1,)),
             **kwargs,
         )
 
@@ -192,14 +195,14 @@ class BetaBinomial(BoundedDiscreteDistribution):
             conditions["concentration1"],
         )
         return tfd.DirichletMultinomial(
-            total_count=total_count, concentration=[concentration0, concentration1]
+            total_count=total_count, concentration=np.concatenate((concentration0, concentration1), axis=-1)
         )
 
     def lower_limit(self):
         return 0
 
     def upper_limit(self):
-        return self.conditions["total_counts"]
+        return self.conditions["total_count"]
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):

@@ -33,11 +33,16 @@ _distribution_conditions = {
         },
     },
     "BetaBinomial": {
-        "scalar_parameters": {"total_count": 5.0, "concentration0": 1.0, "concentration1": 2.0, "sample": [3.0, 7.0]},
+        "scalar_parameters": {
+            "total_count": 5.0,
+            "concentration0": 1.0,
+            "concentration1": 2.0,
+            "sample": [3.0, 7.0],
+        },
         "multidim_parameters": {
             "total_count": np.array([20, 2, 5.0], dtype="float32").reshape(-1, 1),
-            "concentration0": np.array([1., 2., 3.], dtype="float32"),
-            "concentration1": np.array([3., 2., 1.], dtype="float32"),
+            "concentration0": np.array([1.0, 2.0, 3.0], dtype="float32"),
+            "concentration1": np.array([3.0, 2.0, 1.0], dtype="float32"),
             "sample": np.array([[1.0, 9.0], [5.0, 5.0], [9.0, 1.0]], dtype="float32"),
         },
     },

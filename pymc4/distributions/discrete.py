@@ -195,7 +195,8 @@ class BetaBinomial(BoundedDiscreteDistribution):
             conditions["concentration1"],
         )
         return tfd.DirichletMultinomial(
-            total_count=total_count, concentration=np.concatenate((concentration0, concentration1), axis=-1)
+            total_count=total_count,
+            concentration=np.concatenate((concentration0, concentration1), axis=-1),
         )
 
     def lower_limit(self):

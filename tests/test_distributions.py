@@ -10,6 +10,20 @@ import pymc4 as pm
 
 _expected_log_prob = defaultdict(lambda: defaultdict(lambda: None))
 _distribution_conditions = {
+    "AR": {
+        "scalar_parameters": {
+            "num_timesteps": 3,
+            "coefficients": [0.1],
+            "level_scale": 1,
+            "sample": np.array([[0.0], [0.1], [0.2]], dtype="float32"),
+        },
+        "multidim_parameters": {
+            "num_timesteps": 3,
+            "coefficients": np.array([[0.1], [-0.8]], dtype="float32"),
+            "level_scale": np.ones((2), dtype="float32"),
+            "sample": np.zeros((2, 3, 1), dtype="float32"),
+        },
+    },
     "Bernoulli": {
         "scalar_parameters": {"probs": 0.5, "sample": 1.0},
         "multidim_parameters": {

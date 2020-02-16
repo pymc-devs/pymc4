@@ -1223,54 +1223,57 @@ class VonMises(BoundedContinuousDistribution):
         return math.pi
 
 
-# TODO: Implement this
-# class Weibull(PositiveContinuousDistribution):
-#     r"""Weibull random variable.
+class Weibull(PositiveContinuousDistribution):
+    r"""Weibull random variable.
 
-#     The pdf of this distribution is
+    The pdf of this distribution is
 
-#     .. math::
+    .. math::
 
-#        f(x \mid \alpha, \beta) =
-#            \frac{\alpha x^{\alpha - 1}
-#            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+       f(x \mid \alpha, \beta) =
+           \frac{\alpha x^{\alpha - 1}
+           \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
-#     .. plot::
+    .. plot::
 
-#         import matplotlib.pyplot as plt
-#         import numpy as np
-#         import scipy.stats as st
-#         plt.style.use('seaborn-darkgrid')
-#         x = np.linspace(0, 3, 200)
-#         concentrations = [.5, 1., 1.5, 5., 5.]
-#         scales = [1., 1., 1., 1.,  2]
-#         for concentration, scale in zip(concentrations, scales):
-#             pdf = st.weibull_min.pdf(x, concentration, scale)
-#             plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(concentration, scale))
-#         plt.xlabel('x', fontsize=12)
-#         plt.ylabel('f(x)', fontsize=12)
-#         plt.ylim(0, 2.5)
-#         plt.legend(loc=1)
-#         plt.show()
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 200)
+        concentrations = [.5, 1., 1.5, 5., 5.]
+        scales = [1., 1., 1., 1.,  2]
+        for concentration, scale in zip(concentrations, scales):
+            pdf = st.weibull_min.pdf(x, concentration, scale)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(concentration, scale))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 2.5)
+        plt.legend(loc=1)
+        plt.show()
 
-#     ========  ====================================================
-#     Support   :math:`x \in [0, \infty)`
-#     Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
-#     Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
-#     ========  ====================================================
+    ========  ====================================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
+    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
+    ========  ====================================================
 
-#     Parameters
-#     ----------
-#     concentration : float|tensor
-#         Shape parameter (concentration > 0).
-#     scale : float|tensor
-#         Scale parameter (scale > 0).
-#     """
+    Parameters
+    ----------
+    concentration : float|tensor
+        Shape parameter (concentration > 0).
+    scale : float|tensor
+        Scale parameter (scale > 0).
+    """
 
-#     def __init__(self, name, concentration, scale, **kwargs):
-#         super().__init__(name, concentration=concentration, scale=scale, **kwargs)
+    def __init__(self, name, concentration, scale, **kwargs):
+        super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
-#     @staticmethod
-#     def _init_distribution(conditions):
-#         concentration, scale = conditions["concentration"], conditions["scale"]
-#         return tfd.Weibull(concentration=concentration, scale=scale)
+    @staticmethod
+    def _init_distribution(conditions):
+        concentration, scale = conditions["concentration"], conditions["scale"]
+        return tfd.TransformedDistribution(
+            distribution=tfd.Uniform(low=0, high=1),
+            bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
+            name="Weibull",
+        )

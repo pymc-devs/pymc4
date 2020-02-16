@@ -11,7 +11,7 @@ sigma = np.array([15, 10, 16, 11, 9, 11, 10, 18], dtype=np.float32)
 
 @pm4.model
 def schools_pm4():
-    eta = yield pm4.Normal("eta", 0, 1, plate=J)
+    eta = yield pm4.Normal("eta", 0, 1, batch_stack=J)
     mu = yield pm4.Normal("mu", 1, 10)
     tau = yield pm4.HalfNormal("tau", 1 * 2.0)
 

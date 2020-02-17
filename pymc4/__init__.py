@@ -10,6 +10,7 @@ from .flow import (
     evaluate_model,
     evaluate_model_posterior_predictive,
     evaluate_meta_model,
+    evaluate_meta_posterior_predictive_model,
 )
 from .coroutine_model import Model, model
 from . import inference

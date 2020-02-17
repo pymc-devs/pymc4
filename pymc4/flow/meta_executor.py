@@ -17,13 +17,14 @@ from pymc4.flow.executor import (
     assert_values_compatible_with_distribution,
 )
 from pymc4.flow.transformed_executor import TransformedSamplingExecutor
+from pymc4.flow.posterior_predictive_executor import PosteriorPredictiveSamplingExecutor
 
 
-__all__ = ["MetaSamplingExecutor"]
+__all__ = ["MetaSamplingExecutor", "MetaPosteriorPredictiveSamplingExecutor"]
 
 
 class MetaSamplingExecutor(TransformedSamplingExecutor):
-    """Perform inference in an unconstrained space."""
+    """Do a forward pass through the model only using distribution test values."""
 
     def proceed_distribution(
         self,
@@ -87,3 +88,15 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
                 return_value = state.untransformed_values[scoped_name] = dist.test_sample()
         state.distributions[scoped_name] = dist
         return return_value, state
+
+
+class MetaPosteriorPredictiveSamplingExecutor(
+    MetaSamplingExecutor, PosteriorPredictiveSamplingExecutor
+):
+    """Do a forward pass through the model only using distribution test values.
+    
+    Also modify the distributions to make them suitable for posterior predictive sampling.
+    """
+
+    # Everything is done in the parent classes
+    pass

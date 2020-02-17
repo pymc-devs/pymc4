@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.coroutine_model import Model
@@ -9,16 +9,17 @@ from pymc4.utils import NameParts
 
 def sample(
     model: Model,
-    num_samples=1000,
-    num_chains=10,
-    burn_in=100,
-    step_size=0.1,
-    observed: Optional[dict] = None,
+    num_samples: int = 1000,
+    num_chains: int = 10,
+    burn_in: int = 100,
+    step_size: float = 0.1,
+    observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
-    nuts_kwargs=None,
-    adaptation_kwargs=None,
-    sample_chain_kwargs=None,
-    xla=False,
+    nuts_kwargs: Optional[Dict[str, Any]] = None,
+    adaptation_kwargs: Optional[Dict[str, Any]] = None,
+    sample_chain_kwargs: Optional[Dict[str, Any]] = None,
+    xla: bool = False,
+    use_auto_batching: bool = True,
 ):
     """
     Perform MCMC sampling using NUTS (for now).
@@ -35,21 +36,33 @@ def sample(
         Length of burn-in period
     step_size : float
         Initial step size
-    observed : Optional[dict]
+    observed : Optional[Dict[str, Any]]
         New observed values (optional)
     state : Optional[pymc4.flow.SamplingState]
         Alternative way to pass specify initial values and observed values
-    nuts_kwargs : Optional[dict]
+    nuts_kwargs : Optional[Dict[str, Any]]
         Pass non-default values for nuts kernel, see
         ``tensorflow_probability.experimental.mcmc.NoUTurnSamplerUnrolled`` for options
-    adaptation_kwargs : Optional[dict]
+    adaptation_kwargs : Optional[Dict[str, Any]]
         Pass non-default values for nuts kernel, see
         ``tensorflow_probability.mcmc.dual_averaging_step_size_adaptation.DualAveragingStepSizeAdaptation`` for options
-    sample_chain_kwargs : dict
+    sample_chain_kwargs : Optional[Dict[str, Any]]
         Pass non-default values for nuts kernel, see
         ``tensorflow_probability.mcmc.sample_chain`` for options
     xla : bool
         Enable experimental XLA
+    use_auto_batching : bool
+        WARNING: This is an advanced user feature. If you are not sure how to use this, please use
+        the default ``True`` value.
+        If ``True``, the model's total ``log_prob`` will be automatically vectorized to work across
+        multiple indepedent chains using ``tf.vectorized_map``. If ``False``, the model is assumed
+        be defined in vectorized way. This means that every distribution has the proper
+        ``batch_shape`` and ``event_shape``s so that all the outputs from each distribution's
+        ``log_prob`` will broadcast with each other, and that the forward passes through the model
+        (prior and posterior predictive sampling) all work on values with any value of
+        ``batch_shape``. Achieving this is a hard task, but it enables the model to be safely
+        evaluated in parallel across all chains in MCMC, so sampling will be faster than in the
+        automatically batched scenario.
 
     Returns
     -------
@@ -99,12 +112,23 @@ def sample(
         _deterministics_callback,
         deterministic_names,
         state_,
-    ) = build_logp_and_deterministic_functions(model, state=state, observed=observed)
+    ) = build_logp_and_deterministic_functions(
+        model,
+        num_chains=num_chains,
+        state=state,
+        observed=observed,
+        collect_reduced_log_prob=use_auto_batching,
+    )
     init_state = list(init.values())
     init_keys = list(init.keys())
-    parallel_logpfn = vectorize_logp_function(logpfn)
-    deterministics_callback = vectorize_logp_function(_deterministics_callback)
-    init_state = tile_init(init_state, num_chains)
+    if use_auto_batching:
+        parallel_logpfn = vectorize_logp_function(logpfn)
+        deterministics_callback = vectorize_logp_function(_deterministics_callback)
+        init_state = tile_init(init_state, num_chains)
+    else:
+        parallel_logpfn = logpfn
+        deterministics_callback = _deterministics_callback
+        init_state = tile_init(init_state, num_chains)
 
     def trace_fn(current_state, pkr):
         return (
@@ -161,7 +185,11 @@ def sample(
 
 
 def build_logp_and_deterministic_functions(
-    model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+    model,
+    num_chains: Optional[int] = None,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
+    collect_reduced_log_prob: bool = True,
 ):
     if not isinstance(model, Model):
         raise TypeError(
@@ -182,15 +210,41 @@ def build_logp_and_deterministic_functions(
     observed_var = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
-    @tf.function(autograph=False)
-    def logpfn(*values, **kwargs):
-        if kwargs and values:
-            raise TypeError("Either list state should be passed or a dict one")
-        elif values:
-            kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(model, state=st)
-        return st.collect_log_prob()
+    if collect_reduced_log_prob:
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+            _, st = flow.evaluate_model_transformed(model, state=st)
+            return st.collect_log_prob()
+
+    else:
+        # When we use manual batching, we need to manually tile the chains axis
+        # to the left of the observed tensors
+        if num_chains is not None:
+            obs = state.observed_values
+            if observed is not None:
+                obs.update(observed)
+            else:
+                observed = obs
+            for k, o in obs.items():
+                o = tf.convert_to_tensor(o)
+                o = tf.tile(o[None, ...], [num_chains] + [1] * o.ndim)
+                observed[k] = o
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+            _, st = flow.evaluate_model_transformed(model, state=st)
+            return st.collect_unreduced_log_prob()
 
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):

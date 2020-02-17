@@ -1270,20 +1270,26 @@ class Weibull(PositiveContinuousDistribution):
 
     Parameters
     ----------
+    low : float|tensor
+        Lower limit of underlying uniform distribution.
+    high : float|tensor
+        Upper limit of underlying uniform distribution.
     concentration : float|tensor
         Shape parameter (concentration > 0).
     scale : float|tensor
         Scale parameter (scale > 0).
     """
 
-    def __init__(self, name, concentration, scale, **kwargs):
-        super().__init__(name, concentration=concentration, scale=scale, **kwargs)
+    def __init__(self, name, low=0.0, high=1.0, concentration, scale, **kwargs):
+        super().__init__(name, low=low, high=high, concentration=concentration, scale=scale, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        concentration, scale = conditions["concentration"], conditions["scale"]
+         
+        low, high, concentration, scale = conditions["low"], conditions["high"], 
+            conditions["concentration"], conditions["scale"]
         return tfd.TransformedDistribution(
-            distribution=tfd.Uniform(low=0, high=1),
+            distribution=tfd.Uniform(low=low, high=high),
             bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
             name="Weibull",
         )

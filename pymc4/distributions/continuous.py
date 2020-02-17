@@ -36,6 +36,7 @@ __all__ = [
     "Uniform",
     "VonMises",
     "HalfStudentT",
+    "Weibull"
 ]
 
 

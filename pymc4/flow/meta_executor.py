@@ -56,11 +56,13 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
                     if dist.is_root:
-                        return_value = state.untransformed_values[scoped_name] = dist.get_test_sample(
-                            sample_shape=sample_shape
-                        )
+                        return_value = state.untransformed_values[
+                            scoped_name
+                        ] = dist.get_test_sample(sample_shape=sample_shape)
                     else:
-                        return_value = state.untransformed_values[scoped_name] = dist.get_test_sample()
+                        return_value = state.untransformed_values[
+                            scoped_name
+                        ] = dist.get_test_sample()
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]

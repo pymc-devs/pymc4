@@ -261,10 +261,8 @@ _distribution_conditions = {
         },
     },
     "Weibull": {
-        "scalar_parameters": {"low": 0.0, "high": 1.0, "concentration": 1.0, "scale": 1.0},
+        "scalar_parameters": {"concentration": 1.0, "scale": 1.0},
         "multidim_parameters": {
-            "low": np.array([0.0, 0.0], dtype="float32"),
-            "high": np.array([1.0, 1.0], dtype="float32"),
             "concentration": np.array([1.0, 0.5], dtype="float32"),
             "scale": np.array([1.0, 1.0], dtype="float32"),
         },

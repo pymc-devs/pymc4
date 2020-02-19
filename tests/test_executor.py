@@ -157,7 +157,7 @@ def deterministics_in_nested_models():
 
     @pm.model
     def outer_model():
-        cond = yield pm.HalfNormal("cond", 1)
+        cond = yield pm.HalfNormal("cond", 1, conditionally_independent=True)
         dcond = yield pm.Deterministic("dcond", cond * 2)
         dx = yield nested_model(dcond)
         ddx = yield pm.Deterministic("ddx", dx)
@@ -707,3 +707,28 @@ def test_executor_on_conditionally_independent(fixture_batch_shapes):
     _, state = pm.evaluate_model(model(), sample_shape=fixture_batch_shapes)
     assert state.untransformed_values["model/a"].shape == fixture_batch_shapes
     assert state.untransformed_values["model/b"].shape == fixture_batch_shapes
+
+
+def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
+    (
+        model,
+        expected_untransformed,
+        expected_transformed,
+        expected_deterministics,
+        deterministic_mapping,
+    ) = deterministics_in_nested_models
+    _, state = pm.evaluate_meta_model(model(), sample_shape=fixture_batch_shapes)
+    assert set(state.untransformed_values) == set(expected_untransformed)
+    assert set(state.transformed_values) == set(expected_transformed)
+    assert set(state.deterministics) == set(expected_deterministics)
+    for deterministic, (inputs, op) in deterministic_mapping.items():
+        np.testing.assert_allclose(
+            state.deterministics[deterministic],
+            op(*[state.untransformed_values[i] for i in inputs]),
+        )
+    for rv_name, value in state.untransformed_values.items():
+        dist = state.distributions[rv_name]
+        sample_shape = fixture_batch_shapes if dist.is_root else ()
+        np.testing.assert_allclose(
+            value.numpy(), dist.get_test_sample(sample_shape=sample_shape).numpy()
+        )

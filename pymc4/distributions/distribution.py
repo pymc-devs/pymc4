@@ -123,6 +123,24 @@ class Distribution(Model):
         """
         return self.sample(sample_shape, seed).numpy()
 
+    def get_test_sample(self, sample_shape=(), seed=None):
+        """Get the test value using a function signature similar to meth:`~.sample`
+        
+        Parameters
+        ----------
+        sample_shape : tuple
+            sample shape
+        seed : int | None
+            ignored. Is only present to match the signature of meth:`~.sample`
+        
+        Returns
+        -------
+        The distribution's ``test_value`` broadcasted to
+        ``sample_shape + self.batch_shape + self.event_shape``
+        """
+        sample_shape = tf.TensorShape(sample_shape)
+        return tf.broadcast_to(self.test_value, sample_shape + self.batch_shape + self.event_shape)
+
     def log_prob(self, value):
         """Return log probability as tensor."""
         return self._distribution.log_prob(value)

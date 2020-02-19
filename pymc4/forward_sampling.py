@@ -5,7 +5,13 @@ import numpy as np
 import tensorflow as tf
 from arviz import InferenceData
 from pymc4.coroutine_model import Model
-from pymc4.flow import evaluate_model, SamplingState, evaluate_model_posterior_predictive
+from pymc4.flow import (
+    evaluate_model,
+    evaluate_meta_model,
+    SamplingState,
+    evaluate_model_posterior_predictive,
+    evaluate_meta_posterior_predictive_model,
+)
 from pymc4.inference.utils import trace_to_arviz
 from pymc4.flow.executor import assert_values_compatible_with_distribution_shape
 
@@ -167,7 +173,7 @@ def sample_prior_predictive(
         sample_shape = (sample_shape,)
 
     # Do a single forward pass to establish the distributions, deterministics and observeds
-    _, state = evaluate_model(model, state=state)
+    _, state = evaluate_meta_model(model, state=state)
     distributions_names = list(state.untransformed_values)
     deterministic_names = list(state.deterministics)
     observed = None
@@ -318,8 +324,8 @@ def sample_posterior_predictive(
     # pm.evaluate_model_posterior_predictive calls across the trace entries
     # This brings one big problem: we need to infer the batch dimensions from
     # the trace. To do this, we will do
-    # 1) A regular single forward pass to determine the variable's shapes
-    #    (we'll call these the core shapes)
+    # 1) A single forward pass with the meta executor to determine the
+    #    variable's shapes (we'll call these the core shapes)
     # 2) Go through the supplied trace to get each variable's batch shapes
     #    (the shapes to the left of the core shapes)
     # 3) Broadcast the encountered batch shapes between each other as a sanity
@@ -335,7 +341,7 @@ def sample_posterior_predictive(
 
     # Do a single forward pass to infer the distributions core shapes and
     # default observeds
-    _, state = evaluate_model_posterior_predictive(model, observed=observed)
+    _, state = evaluate_meta_posterior_predictive_model(model, observed=observed)
     if var_names is None:
         var_names = list(state.posterior_predictives)
     else:

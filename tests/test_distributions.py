@@ -349,7 +349,6 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
     dist = dist_class(name=distribution_name, **conditions)
     test_value = dist.test_value
     test_sample = dist.sample()
-    print(test_value, test_sample)
     logp = dist.log_prob(test_value).numpy()
     assert test_value.shape == test_sample.shape
     assert tuple(test_value.shape.as_list()) == tuple(

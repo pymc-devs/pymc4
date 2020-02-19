@@ -2,8 +2,10 @@ import abc
 import copy
 from typing import Optional, Union, Any
 
+from absl import logging
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
+from tensorflow_probability.python.mcmc.internal import util as mcmc_util
 from pymc4.coroutine_model import Model, unpack
 from pymc4.distributions.batchstack import BatchStacker
 from . import transforms
@@ -125,14 +127,14 @@ class Distribution(Model):
 
     def get_test_sample(self, sample_shape=(), seed=None):
         """Get the test value using a function signature similar to meth:`~.sample`
-        
+
         Parameters
         ----------
         sample_shape : tuple
             sample shape
         seed : int | None
             ignored. Is only present to match the signature of meth:`~.sample`
-        
+
         Returns
         -------
         The distribution's ``test_value`` broadcasted to
@@ -194,6 +196,19 @@ class Distribution(Model):
     @property
     def event_shape(self):
         return self._distribution.event_shape
+
+    @property
+    def grad_support(self, state=None):
+        if state is None:
+            state = self.sample()
+        try:
+            logging.set_verbosity(logging.ERROR)
+            mcmc_util.maybe_call_fn_and_grads(self.log_prob, state)
+        except ValueError:
+            return False
+        except Exception as e:
+            raise e
+        return True
 
 
 class Potential:

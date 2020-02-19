@@ -31,6 +31,29 @@ def initialize_sampling_state(
     return state, deterministic_names + transformed_names
 
 
+def initialize_state(model: Model) -> Tuple[List[str]]:
+    """
+    Get list of discrete/continuous distributions
+
+    Parameters
+    ----------
+    model : pymc4.Model
+
+    Returns
+    -------
+    discrete_names: List[str]
+        The list of discrete distributions
+    continuous_names: List[str]
+        The list of continuous distributions
+    """
+    _, state = flow.evaluate_model_transformed(model)
+    discrete_names, continuous_names = (
+        list(state.discrete_distributions),
+        list(state.continuous_distributions),
+    )
+    return state
+
+
 def trace_to_arviz(
     trace=None,
     sample_stats=None,

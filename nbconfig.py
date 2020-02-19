@@ -15,7 +15,6 @@ c.NbConvertApp.notebooks = [
     "notebooks/baseball.ipynb",
     "notebooks/basic-usage.ipynb",
     "notebooks/rugby_analytics.ipynb",
-# will reinstate in a later PR
-#     "notebooks/radon_hierarchical.ipynb",
+    # will reinstate in a later PR
+    #     "notebooks/radon_hierarchical.ipynb",
 ]
-

@@ -730,5 +730,5 @@ def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
         dist = state.distributions[rv_name]
         sample_shape = fixture_batch_shapes if dist.is_root else ()
         np.testing.assert_allclose(
-            value.numpy(), dist.test_sample(sample_shape=sample_shape).numpy()
+            value.numpy(), dist.get_test_sample(sample_shape=sample_shape).numpy()
         )

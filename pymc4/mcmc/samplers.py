@@ -71,40 +71,36 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             self.deterministics_callback = _deterministics_callback
             init_state = tile_init(init_state, num_chains)
 
+        # TODO: problem with tf.function when passing as argument to _run_chains
+        self._num_samples = num_samples
+
         if xla:
             results, sample_stats = tf.xla.experimental.compile(
-                self.run_chains,
+                self._run_chains,
                 inputs=[
                     init_state,
-                    self.kernel_kwargs,
-                    self.adaptation_kwargs,
-                    num_samples,
                     burn_in,
                 ],
             )
         else:
-            results, sample_stats = self.run_chains(
+            results, sample_stats = self._run_chains(
                 init_state,
-                kernel_kwargs=self.kernel_kwargs,
-                adaptation_kwargs=self.adaptation_kwargs,
-                num_samples=num_samples,
-                burn_in=burn_in,
+                burn_in,
             )
 
         posterior = dict(zip(init_keys, results))
         # Keep in sync with pymc3 naming convention
-        stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
-        if len(sample_stats) > len(stat_names):
-            deterministic_values = sample_stats[len(stat_names) :]
-            sample_stats = sample_stats[: len(stat_names)]
-        sampler_stats = dict(zip(stat_names, sample_stats))
+        if len(sample_stats) > len(self._stat_names):
+            deterministic_values = sample_stats[len(self._stat_names) :]
+            sample_stats = sample_stats[: len(self._stat_names)]
+        sampler_stats = dict(zip(self._stat_names, sample_stats))
         if len(deterministic_names) > 0:
             posterior.update(dict(zip(deterministic_names, deterministic_values)))
 
         return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
 
     @tf.function(autograph=False)
-    def run_chains(self, init, *, kernel_kwargs, adaptation_kwargs, num_samples, burn_in):
+    def _run_chains(self, init, burn_in):
         """
             Docs
         """
@@ -115,7 +111,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             adapt_kernel = kernel
 
         results, sample_stats = mcmc.sample_chain(
-            num_samples,
+            self._num_samples,
             current_state=init,
             kernel=adapt_kernel,
             num_burnin_steps=burn_in,
@@ -202,12 +198,20 @@ class NUTS(_BaseSampler, SamplerConstr):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        additional_adapter_kwargs = {
+        self._stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
+
+        default_adapter_kwargs = {
             "step_size_getter_fn": lambda pkr: pkr.step_size,
             "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
             "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
         }
-        self.adaptation_kwargs.update(additional_adapter_kwargs)
+        default_kernel_kwargs = {
+            "step_size": 0.1
+        }
+        for k, v in default_adapter_kwargs.items():
+            self.adaptation_kwargs.setdefault(k, v)
+        for k, v in default_kernel_kwargs.items():
+            self.kernel_kwargs.setdefault(k, v)
 
     def _trace_fn(self, current_state, pkr):
         return (
@@ -234,6 +238,7 @@ class RandomWalk(_BaseSampler, SamplerConstr):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._stat_names = ["mean_accept"]
 
     def _trace_fn(self, current_state, pkr):
         return (pkr.log_accept_ratio,) + tuple(self.deterministics_callback(*current_state))

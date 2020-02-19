@@ -47,7 +47,7 @@ def test_model_logp():
     print(eight_schools.logp({'eta': np.zeros(8), 'mu': 0, 'tau_log__': 1}).astype(np.float32))
     ```
     """
-    logp, *_ = pm4.inference.sampling.build_logp_and_deterministic_functions(
+    logp, *_ = pm4.mcmc.samplers.build_logp_and_deterministic_functions(
         schools_pm4(), observed={"obs": y}, state=None
     )
     init_value = logp(

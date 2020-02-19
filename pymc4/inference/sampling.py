@@ -7,11 +7,10 @@ from pymc4.mcmc.samplers import reg_samplers
 
 def sample(
     model: Model,
-    sampler: str = "nuts",  # TODO: to keep current progress, later, assigner should be added
+    sampler_type: str = "nuts",  # TODO: to keep current progress, later, assigner should be added
     num_samples: int = 1000,
     num_chains: int = 10,
     burn_in: int = 100,
-    step_size: float = 0.1,
     observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
     xla: bool = False,
@@ -31,14 +30,14 @@ def sample(
         Num chains to run
     burn_in : int
         Length of burn-in period
-    step_size : float
-        Initial step size
     observed : Optional[Dict[str, Any]]
         New observed values (optional)
     state : Optional[pymc4.flow.SamplingState]
         Alternative way to pass specify initial values and observed values
     xla : bool
         Enable experimental XLA
+    **kwargs: Dict[str, Any]
+        All kwargs for kernel, adaptive_step_kernel, chain_sample method
     use_auto_batching : bool
         WARNING: This is an advanced user feature. If you are not sure how to use this, please use
         the default ``True`` value.
@@ -95,10 +94,15 @@ def sample(
 
     """
     try:
-        sampler = reg_samplers[sampler]
+        sampler = reg_samplers[sampler_type]
     except KeyError:
         print("The given sampler doesn't exist")
-    sampler = sampler(model, **kwargs, step_size=step_size, num_adaptation_steps=burn_in)
+
+    #TODO: keep num_adaptation_steps for nuts/hmc with adaptive step but later should be removed because of ambiguity
+    if "nuts" in sampler_type or "hmc" in sampler_type:
+        kwargs["num_adaptation_steps"] = burn_in
+
+    sampler = sampler(model, **kwargs)
     return sampler(
         num_samples=num_samples,
         num_chains=num_chains,

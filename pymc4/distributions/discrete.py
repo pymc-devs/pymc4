@@ -247,7 +247,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     @staticmethod
     def _init_distribution(conditions):
         low, high = conditions["low"], conditions["high"]
-        outcomes = tf.range(low, high + 1)
+        outcomes = tf.range(low, high + 1, dtype=tf.float32)
         return tfd.FiniteDiscrete(outcomes, probs=outcomes / (high - low))
 
     def lower_limit(self):

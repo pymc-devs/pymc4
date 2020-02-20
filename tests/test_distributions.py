@@ -4,6 +4,7 @@ Tests for PyMC4 random variables
 from collections import defaultdict
 import pytest
 import numpy as np
+import tensorflow as tf
 
 import pymc4 as pm
 
@@ -363,7 +364,9 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
     dist = dist_class(name=distribution_name, **conditions)
     test_value = dist.test_value
     if distribution_name in ["Flat", "HalfFlat"]:
-        pytest.skip("Flat and HalfFlat distributions don't support sampling.")
+        # pytest.skip("Flat and HalfFlat distributions don't support sampling.")
+        assert test_value.shape == dist.batch_shape + dist.event_shape
+        return
     test_sample = dist.sample()
     logp = dist.log_prob(test_value).numpy()
     assert test_value.shape == test_sample.shape
@@ -371,3 +374,18 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
         (dist.batch_shape + dist.event_shape).as_list()
     )
     assert not (np.any(np.isinf(logp)) or np.any(np.isnan(logp)))
+
+@pytest.mark.parametrize("distribution_name", ["Flat", "HalfFlat"])
+@pytest.mark.parametrize(
+    "sample",
+    [
+        tf.zeros(1),
+        tf.zeros((1, 3, 4)),
+        tf.zeros((1, 5, 3, 4))
+    ]
+)
+def test_flat_halfflat_broadcast(distribution_name, sample):
+    dist_class = getattr(pm, distribution_name)
+    dist = dist_class(name=distribution_name, batch_stack=(1, 2), event_stack=(3, 4))
+    with pytest.raises(ValueError, match=r"not consistent"):
+        dist.log_prob(sample)

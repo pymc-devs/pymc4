@@ -76,17 +76,10 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
         if xla:
             results, sample_stats = tf.xla.experimental.compile(
-                self._run_chains,
-                inputs=[
-                    init_state,
-                    burn_in,
-                ],
+                self._run_chains, inputs=[init_state, burn_in,],
             )
         else:
-            results, sample_stats = self._run_chains(
-                init_state,
-                burn_in,
-            )
+            results, sample_stats = self._run_chains(init_state, burn_in,)
 
         posterior = dict(zip(init_keys, results))
         # Keep in sync with pymc3 naming convention
@@ -205,9 +198,7 @@ class NUTS(_BaseSampler, SamplerConstr):
             "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
             "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
         }
-        default_kernel_kwargs = {
-            "step_size": 0.1
-        }
+        default_kernel_kwargs = {"step_size": 0.1}
         for k, v in default_adapter_kwargs.items():
             self.adaptation_kwargs.setdefault(k, v)
         for k, v in default_kernel_kwargs.items():

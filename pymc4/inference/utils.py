@@ -41,18 +41,22 @@ def initialize_state(model: Model) -> Tuple[List[str]]:
 
     Returns
     -------
-    discrete_names: List[str]
-        The list of discrete distributions
-    continuous_names: List[str]
-        The list of continuous distributions
+    state: Model
+        Unsampled version of sample object
+    free_discrete_names: List[str]
+        The list of free discrete variables
+    free_continuous_names: List[str]
+        The list of free continuous variables
     """
     _, state = flow.evaluate_model_transformed(model)
-    #TODO: actually free RVs
-    discrete_names, continuous_names = (
+    free_discrete_names, free_continuous_names = (
         list(state.discrete_distributions),
         list(state.continuous_distributions),
     )
-    return state, discrete_names, continuous_names
+    observed_rvs = list(state.observed_values.keys())
+    free_discrete_names = list(filter(lambda x: x not in observed_rvs, free_discrete_names))
+    free_continuous_names = list(filter(lambda x: x not in observed_rvs, free_continuous_names))
+    return state, free_discrete_names, free_continuous_names
 
 
 def trace_to_arviz(

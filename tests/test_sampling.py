@@ -172,9 +172,7 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
     ) = pm.mcmc.samplers.build_logp_and_deterministic_functions(model)
     for _ in range(len(batch_size)):
         logpfn = pm.mcmc.samplers.vectorize_logp_function(logpfn)
-        deterministics_callback = pm.mcmc.samplers.vectorize_logp_function(
-            deterministics_callback
-        )
+        deterministics_callback = pm.mcmc.samplers.vectorize_logp_function(deterministics_callback)
 
     # Test function inputs and initial values are as expected
     assert set(all_unobserved_values) <= {"unvectorized_model/norm"}

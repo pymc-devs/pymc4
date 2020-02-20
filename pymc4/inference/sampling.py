@@ -109,11 +109,11 @@ def sample(
 
     _log.info("{} doesn't support discrete variables".format(sampler.__name__))
 
-    if sampler_type == "compound" step_methods is None:
+    if sampler_type == "compound" and step_methods is None:
         # TODO: should be removed if not able to implement
         step_methods = sampler._assign_step_methods()
 
-    #TODO: keep num_adaptation_steps for nuts/hmc with adaptive step but later should be removed because of ambiguity
+    # TODO: keep num_adaptation_steps for nuts/hmc with adaptive step but later should be removed because of ambiguity
     if "nuts" in sampler_type or "hmc" in sampler_type:
         kwargs["num_adaptation_steps"] = burn_in
 
@@ -128,15 +128,24 @@ def sample(
         xla=xla,
     )
 
-def _auto_assign_sampler(model: Model):
+
+def assign_sampler(model: Model):
     """
         The toy implementation of sampler assigner
-        Docs
+
+        Parameters
+        ----------
+        model : pymc4.Model
+            Model to sample posterior for
     """
-    _, disc_names, cont_names = initialize_state(model)
-    if not disc_names:
+    return _auto_assign_sampler(model)
+
+
+def _auto_assign_sampler(model: Model):
+    _, free_disc_names, free_cont_names = initialize_state(model)
+    if not free_disc_names:
         _log.info("Auto-assigning NUTS sampler")
         return "nuts"
     else:
+        # TODO: more complex logic here
         return "randomwalk"
-

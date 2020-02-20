@@ -24,5 +24,11 @@ def xla_fixture(request):
 def test_random_walk_sampling(simple_model, xla_fixture):
     model = simple_model()
     trace = pm.sample(
-        model=model, sampler_type="randomwalk", num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+        model=model,
+        sampler_type="randomwalk",
+        num_samples=10,
+        num_chains=4,
+        burn_in=100,
+        step_size=0.1,
+        xla=xla_fixture,
     )

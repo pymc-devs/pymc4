@@ -1,13 +1,18 @@
 from typing import Optional, Dict, Any
-import tensorflow as tf
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.mcmc.samplers import reg_samplers
+from pymc4.inference.utils import initialize_state
+
+import logging
+
+
+_log = logging.getLogger("pymc4")
 
 
 def sample(
     model: Model,
-    sampler_type: str = "nuts",  # TODO: to keep current progress, later, assigner should be added
+    sampler_type: str = None,  # TODO: to keep current progress, later, assigner should be added
     num_samples: int = 1000,
     num_chains: int = 10,
     burn_in: int = 100,
@@ -15,6 +20,7 @@ def sample(
     state: Optional[flow.SamplingState] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
+    step_methods: dict = None,
     **kwargs,
 ):
     """
@@ -93,10 +99,19 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
 
     """
+    if sampler_type is None:
+        sampler_type = _auto_assign_sampler(model)
+
     try:
         sampler = reg_samplers[sampler_type]
     except KeyError:
         print("The given sampler doesn't exist")
+
+    _log.info("{} doesn't support discrete variables".format(sampler.__name__))
+
+    if sampler_type == "compound" step_methods is None:
+        # TODO: should be removed if not able to implement
+        step_methods = sampler._assign_step_methods()
 
     #TODO: keep num_adaptation_steps for nuts/hmc with adaptive step but later should be removed because of ambiguity
     if "nuts" in sampler_type or "hmc" in sampler_type:
@@ -112,3 +127,16 @@ def sample(
         use_auto_batching=use_auto_batching,
         xla=xla,
     )
+
+def _auto_assign_sampler(model: Model):
+    """
+        The toy implementation of sampler assigner
+        Docs
+    """
+    _, disc_names, cont_names = initialize_state(model)
+    if not disc_names:
+        _log.info("Auto-assigning NUTS sampler")
+        return "nuts"
+    else:
+        return "randomwalk"
+

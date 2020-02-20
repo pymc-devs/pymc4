@@ -47,11 +47,12 @@ def initialize_state(model: Model) -> Tuple[List[str]]:
         The list of continuous distributions
     """
     _, state = flow.evaluate_model_transformed(model)
+    #TODO: actually free RVs
     discrete_names, continuous_names = (
         list(state.discrete_distributions),
         list(state.continuous_distributions),
     )
-    return state
+    return state, discrete_names, continuous_names
 
 
 def trace_to_arviz(

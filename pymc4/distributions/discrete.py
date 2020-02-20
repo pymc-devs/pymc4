@@ -296,7 +296,7 @@ class Categorical(BoundedDiscreteDistribution):
     @staticmethod
     def _init_distribution(conditions):
         probs = tf.convert_to_tensor(conditions["probs"])
-        outcomes = tf.range(probs.shape[-1])
+        outcomes = tf.range(probs.shape[-1], dtype=tf.float32)
         return tfd.FiniteDiscrete(outcomes, probs=probs)
 
     def lower_limit(self):

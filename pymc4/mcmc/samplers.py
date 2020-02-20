@@ -71,7 +71,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             self.deterministics_callback = _deterministics_callback
             init_state = tile_init(init_state, num_chains)
 
-        # TODO: problem with tf.function when passing as argument to _run_chains
+        # TODO: problem with tf.function when passing as argument to self._run_chains
         self._num_samples = num_samples
 
         if xla:
@@ -251,6 +251,10 @@ class CompoundStep(_BaseSampler, SamplerConstr):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
+    def sample(self):
+        ...
+
+    @staticmethod
     def _assign_step_methods():
         raise NotImplementedError
 

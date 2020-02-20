@@ -98,6 +98,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         sampler_stats = dict(zip(self._stat_names, sample_stats))
         if len(deterministic_names) > 0:
             posterior.update(dict(zip(deterministic_names, deterministic_values)))
+        print(results)
 
         return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
 
@@ -180,9 +181,16 @@ class HMC(_BaseSampler, SamplerConstr):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._stat_names = {"mean_tree_accept"}
+        # TODO: default values should be optimized
+        default_kernel_kwargs = {"step_size": 0.1, "num_leapfrog_steps": 3}
+        for k, v in default_kernel_kwargs.items():
+            self.kernel_kwargs.setdefault(k, v)
 
     def _trace_fn(self, current_state, pkr):
-        raise NotImplementedError
+        return (
+            pkr.inner_results.log_accept_ratio,
+        ) + tuple(self.deterministics_callback(*current_state))
 
 
 @register_sampler

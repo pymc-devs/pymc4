@@ -136,16 +136,16 @@ def auto_assign_sampler(
     state: Optional[flow.SamplingState] = None,
 ):
     """
-        The toy implementation of sampler assigner
+    The toy implementation of sampler assigner
 
-        Parameters
-        ----------
-        model : pymc4.Model
-            Model to sample posterior for
-        observed : Optional[Dict[str, Any]]
-            New observed values (optional)
-        state : Optional[pymc4.flow.SamplingState]
-            Alternative way to pass specify initial values and observed values
+    Parameters
+    ----------
+    model : pymc4.Model
+        Model to sample posterior for
+    observed : Optional[Dict[str, Any]]
+        New observed values (optional)
+    state : Optional[pymc4.flow.SamplingState]
+        Alternative way to pass specify initial values and observed values
     """
     return _auto_assign_sampler(model, observed, state)
 

@@ -9,6 +9,8 @@ from tensorflow_probability import bijectors as bij
 from pymc4 import distributions as dist
 from pymc4.flow.executor import EvaluationError
 
+import itertools
+
 
 TEST_SHAPES = [(), (1,), (3,), (1, 1), (1, 3), (5, 3)]
 
@@ -453,7 +455,7 @@ def test_as_sampling_state_failure_on_empty():
 
 
 def test_as_sampling_state_failure_on_dangling_distribution():
-    st = pm.flow.executor.SamplingState(distributions={"bla": pm.Normal("bla", 0, 1)})
+    st = pm.flow.executor.SamplingState(continuous_distributions={"bla": pm.Normal("bla", 0, 1)})
     with pytest.raises(TypeError):
         st.as_sampling_state()
 
@@ -597,7 +599,7 @@ def test_log_prob_elemwise(fixture_model_with_stacks):
     model, expected_rv_shapes = fixture_model_with_stacks
     _, state = pm.evaluate_model(model())
     log_prob_elemwise = dict(
-        zip(state.distributions, state.collect_log_prob_elemwise())
+        zip(itertools.chain(state.discrete_distributions, state.continuous_distributions), state.collect_log_prob_elemwise())
     )  # This will discard potentials in log_prob_elemwise
     log_prob = state.collect_log_prob()
     assert len(log_prob_elemwise) == len(expected_rv_shapes)
@@ -727,7 +729,10 @@ def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
             op(*[state.untransformed_values[i] for i in inputs]),
         )
     for rv_name, value in state.untransformed_values.items():
-        dist = state.distributions[rv_name]
+        if rv_name in state.discrete_distributions:
+            dist = state.discrete_distributions[rv_name]
+        else:
+            dist = state.continuous_distributions[rv_name]
         sample_shape = fixture_batch_shapes if dist.is_root else ()
         np.testing.assert_allclose(
             value.numpy(), dist.get_test_sample(sample_shape=sample_shape).numpy()

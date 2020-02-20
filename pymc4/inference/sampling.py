@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable, NamedTuple
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.mcmc.samplers import reg_samplers
@@ -21,6 +21,7 @@ def sample(
     xla: bool = False,
     use_auto_batching: bool = True,
     step_methods: dict = None,
+    custom_trace_fn: Callable[[flow.SamplingState, NamedTuple], None] = None,
     **kwargs,
 ):
     """
@@ -117,7 +118,7 @@ def sample(
     if "nuts" in sampler_type or "hmc" in sampler_type:
         kwargs["num_adaptation_steps"] = burn_in
 
-    sampler = sampler(model, **kwargs)
+    sampler = sampler(model, custom_trace_fn=custom_trace_fn, **kwargs)
     return sampler(
         num_samples=num_samples,
         num_chains=num_chains,
@@ -129,7 +130,11 @@ def sample(
     )
 
 
-def assign_sampler(model: Model):
+def auto_assign_sampler(
+    model: Model,
+    observed: Optional[Dict[str, Any]] = None,
+    state: Optional[flow.SamplingState] = None,
+):
     """
         The toy implementation of sampler assigner
 
@@ -137,8 +142,12 @@ def assign_sampler(model: Model):
         ----------
         model : pymc4.Model
             Model to sample posterior for
+        observed : Optional[Dict[str, Any]]
+            New observed values (optional)
+        state : Optional[pymc4.flow.SamplingState]
+            Alternative way to pass specify initial values and observed values
     """
-    return _auto_assign_sampler(model)
+    return _auto_assign_sampler(model, observed, state)
 
 
 def _auto_assign_sampler(

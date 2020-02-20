@@ -1,6 +1,7 @@
 import abc
 import inspect
-from typing import Optional
+import types
+from typing import Optional, Callable, NamedTuple
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz
@@ -23,9 +24,16 @@ def register_sampler(cls):
 
 class _BaseSampler(metaclass=abc.ABCMeta):
     def __init__(
-        self, model: Model, **kwargs,
+        self,
+        model: Model,
+        custom_trace_fn: Callable[[flow.SamplingState, NamedTuple], None] = None,
+        **kwargs,
     ):
         self.model = model
+        self._trace_fn = types.MethodType(
+            lambda self, s, p: custom_trace_fn(s, p), self
+        )
+        # assign arguments from **kwargs to distinct kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
         self._check_arguments()
 

@@ -1195,7 +1195,11 @@ class Flat(ContinuousDistribution):
         value = tf.convert_to_tensor(value)
         expected = tf.zeros(self._distribution.batch_shape + self._distribution.event_shape)
         # check if the event shape matches
-        if len(self._distribution.event_shape) and value.shape[-len(self._distribution.event_shape):] != self._distribution.event_shape:
+        if (
+            len(self._distribution.event_shape)
+            and value.shape[-len(self._distribution.event_shape) :]
+            != self._distribution.event_shape
+        ):
             raise ValueError("values not consistent with the event shape of distribution")
         # broadcast expected to shape of value
         try:
@@ -1228,7 +1232,11 @@ class HalfFlat(PositiveContinuousDistribution):
         value = tf.where(value > 0, x=0.0, y=-np.inf)
         expected = tf.zeros(self._distribution.batch_shape + self._distribution.event_shape)
         # check if the event shape matches
-        if len(self._distribution.event_shape) and value.shape[-len(self._distribution.event_shape):] != self._distribution.event_shape:
+        if (
+            len(self._distribution.event_shape)
+            and value.shape[-len(self._distribution.event_shape) :]
+            != self._distribution.event_shape
+        ):
             raise ValueError("values not consistent with the event shape of distribution")
         # broadcast expected to shape of value
         try:

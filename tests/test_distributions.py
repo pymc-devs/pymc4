@@ -308,12 +308,18 @@ _distribution_conditions = {
         "multidim_parameters": {"power": np.array([3, 2.0], dtype="float32")},
     },
     "Flat": {
-        "scalar_parameters": {"sample": -2., "expected": 0.},
-        "multidim_parameters": {"sample": np.array([[[-2.], [-1.], [0.], [1.], [2.]]]), "expected": np.array([[[0.], [0.], [0.], [0.], [0.]]])},
+        "scalar_parameters": {"sample": -2.0, "expected": 0.0},
+        "multidim_parameters": {
+            "sample": np.array([[[-2.0], [-1.0], [0.0], [1.0], [2.0]]]),
+            "expected": np.array([[[0.0], [0.0], [0.0], [0.0], [0.0]]]),
+        },
     },
     "HalfFlat": {
-        "scalar_parameters": {"sample": -2., "expected": -np.inf},
-        "multidim_parameters": {"sample": np.array([[[-2.], [-1.], [0.], [1.], [2.]]]), "expected": np.array([[[-np.inf], [-np.inf], [-np.inf], [0.], [0.]]])},
+        "scalar_parameters": {"sample": -2.0, "expected": -np.inf},
+        "multidim_parameters": {
+            "sample": np.array([[[-2.0], [-1.0], [0.0], [1.0], [2.0]]]),
+            "expected": np.array([[[-np.inf], [-np.inf], [-np.inf], [0.0], [0.0]]]),
+        },
     },
 }
 

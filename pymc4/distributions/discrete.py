@@ -199,7 +199,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return self.conditions["total_counts"]
+        return self.conditions["total_count"]
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):

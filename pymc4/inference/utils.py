@@ -31,7 +31,9 @@ def initialize_sampling_state(
     return state, deterministic_names + transformed_names
 
 
-def initialize_state(model: Model) -> Tuple[List[str]]:
+def initialize_state(
+    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+) -> Tuple[flow.SamplingState, List[str], List[str]]:
     """
     Get list of discrete/continuous distributions
 

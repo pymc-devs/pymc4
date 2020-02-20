@@ -141,8 +141,12 @@ def assign_sampler(model: Model):
     return _auto_assign_sampler(model)
 
 
-def _auto_assign_sampler(model: Model):
-    _, free_disc_names, free_cont_names = initialize_state(model)
+def _auto_assign_sampler(
+    model: Model,
+    observed: Optional[Dict[str, Any]] = None,
+    state: Optional[flow.SamplingState] = None,
+):
+    _, free_disc_names, free_cont_names = initialize_state(model, observed=observed, state=state)
     if not free_disc_names:
         _log.info("Auto-assigning NUTS sampler")
         return "nuts"

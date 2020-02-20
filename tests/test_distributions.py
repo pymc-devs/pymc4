@@ -307,6 +307,14 @@ _distribution_conditions = {
         "scalar_parameters": {"power": 2.0},
         "multidim_parameters": {"power": np.array([3, 2.0], dtype="float32")},
     },
+    "Flat": {
+        "scalar_parameters": {"sample": -2., "expected": 0.},
+        "multidim_parameters": {"sample": np.array([[[-2.], [-1.], [0.], [1.], [2.]]]), "expected": np.array([[[0.], [0.], [0.], [0.], [0.]]])},
+    },
+    "HalfFlat": {
+        "scalar_parameters": {"sample": -2., "expected": -np.inf},
+        "multidim_parameters": {"sample": np.array([[[-2.], [-1.], [0.], [1.], [2.]]]), "expected": np.array([[[-np.inf], [-np.inf], [-np.inf], [0.], [0.]]])},
+    },
 }
 
 
@@ -338,7 +346,7 @@ def test_rvs_logp_and_forward_sample(tf_seed, distribution_conditions):
 
     assert vals is not None
 
-    if expected_value:
+    if expected_value is not None:
         np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
 
 
@@ -348,6 +356,8 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
     dist_class = getattr(pm, distribution_name)
     dist = dist_class(name=distribution_name, **conditions)
     test_value = dist.test_value
+    if distribution_name in ["Flat", "HalfFlat"]:
+        pytest.skip("Flat and HalfFlat distributions don't support sampling.")
     test_sample = dist.sample()
     logp = dist.log_prob(test_value).numpy()
     assert test_value.shape == test_sample.shape

@@ -1193,32 +1193,17 @@ class Flat(ContinuousDistribution):
     def log_prob(self, value):
         # convert the value to tensor
         value = tf.convert_to_tensor(value)
-        # if not tf.rank(value):
-        #     value = tf.convert_to_tensor([value])
-        # value_shape = value.shape
-        # # if the rank of the `value` is less than distribution's `event shape` raise an error
-        # if tf.rank(value) < tf.rank(self._distribution.event_shape):
-        #     raise ValueError("Rank of input tensor less than distribution's event shape")
-        # # if the rightmost axis of `value` doesn't match the distribution's `event_shape`, raise an error
-        # if (
-        #     len(self._distribution.event_shape)
-        #     and value_shape[-1] != self._distribution.event_shape[-1]
-        # ):
-        #     raise ValueError(
-        #         "Event shape of input tensor not consistent with the distribution's event shape"
-        #     )
-        # # if the shape of `value` doesn't match the distribution's `batch_shape`, raise an error
-        # if (
-        #     len(self._distribution.batch_shape)
-        #     and value_shape[-2] != self._distribution.batch_shape[-1]
-        # ):
-        #     raise ValueError(
-        #         "Batch shape of input tensor not consistent with the distributions's batch shape"
-        #     )
-        if tf.rank(value) > 2:
-            return tf.reduce_sum(tf.zeros_like(value), axis=-1)
+        expected = tf.zeros(self._distribution.batch_shape + self._distribution.event_shape)
+        # check if the event shape matches
+        if len(self._distribution.event_shape) and value.shape[-len(self._distribution.event_shape):] != self._distribution.event_shape:
+            raise ValueError("values not consistent with the event shape of distribution")
+        # broadcast expected to shape of value
+        try:
+            expected = tf.broadcast_to(expected, value.shape)
+        except tf.python.framework.errors_impl.InvalidArgumentError:
+            raise ValueError("value can't be broadcasted to expected shape")
 
-        return tf.zeros_like(value)
+        return tf.reduce_sum(expected, axis=range(-len(self._distribution.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
         """Raises ValueError as it is not possible to sample
@@ -1239,33 +1224,21 @@ class HalfFlat(PositiveContinuousDistribution):
 
     def log_prob(self, value):
         # convert the value to tensor
-        # value = tf.convert_to_tensor(value)
-        # if not tf.rank(value):
-        #     value = tf.convert_to_tensor([value])
-        # value_shape = value.shape
-        # # if the rank of the `value` is less than distribution's `event shape` raise an error
-        # if tf.rank(value) < tf.rank(self._distribution.event_shape):
-        #     raise ValueError("Rank of input tensor less than distribution's event shape")
-        # # if the rightmost axis of `value` doesn't match the distribution's `event_shape`, raise an error
-        # if (
-        #     len(self._distribution.event_shape)
-        #     and value_shape[-1] != self._distribution.event_shape[-1]
-        # ):
-        #     raise ValueError(
-        #         "Event shape of input tensor not consistent with the distribution's event shape"
-        #     )
-        # # if the shape of `value` doesn't match the distribution's `batch_shape`, raise an error
-        # if (
-        #     len(self._distribution.batch_shape)
-        #     and value_shape[-2] != self._distribution.batch_shape[-1]
-        # ):
-        #     raise ValueError(
-        #         "Batch shape of input tensor not consistent with the distributions's batch shape"
-        #     )
-        if tf.rank(value) > 2:
-            return tf.reduce_sum(tf.where(value > 0, x=0.0, y=-np.inf), axis=-1)
+        value = tf.convert_to_tensor(value)
+        value = tf.where(value > 0, x=0.0, y=-np.inf)
+        expected = tf.zeros(self._distribution.batch_shape + self._distribution.event_shape)
+        # check if the event shape matches
+        if len(self._distribution.event_shape) and value.shape[-len(self._distribution.event_shape):] != self._distribution.event_shape:
+            raise ValueError("values not consistent with the event shape of distribution")
+        # broadcast expected to shape of value
+        try:
+            expected = tf.broadcast_to(expected, value.shape) + value
+        except tf.python.framework.errors_impl.InvalidArgumentError:
+            raise ValueError("value can't be broadcasted to expected shape")
 
-        return tf.where(value > 0, x=0.0, y=-np.inf)
+        return tf.reduce_sum(expected, axis=range(-len(self._distribution.event_shape), 0))
+
+        # return tf.where(value > 0, x=0.0, y=-np.inf)
 
     def sample(self, shape=(), seed=None):
         """Raises ValueError as it is not possible to sample

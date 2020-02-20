@@ -2,8 +2,10 @@ import abc
 import copy
 from typing import Optional, Union, Any
 
+import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
+from pymc4.distributions.batchstack import BatchStacker
 from . import transforms
 
 NameType = Union[str, int]
@@ -26,12 +28,22 @@ __all__ = (
 class Distribution(Model):
     """Statistical distribution."""
 
+    _test_value = 0.0
+
     def __init__(
-        self, name: Optional[NameType], *, transform=None, observed=None, plate=None, **kwargs
+        self,
+        name: Optional[NameType],
+        *,
+        transform=None,
+        observed=None,
+        batch_stack=None,
+        event_stack=None,
+        conditionally_independent=False,
+        reinterpreted_batch_ndims=0,
+        **kwargs,
     ):
         self.conditions = self.unpack_conditions(**kwargs)
         self._distribution = self._init_distribution(self.conditions)
-        self.plate = plate
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )
@@ -41,8 +53,18 @@ class Distribution(Model):
             )
         self.model_info.update(observed=observed)
         self.transform = self._init_transform(transform)
-        if self.plate is not None:
-            self._distribution = tfd.Sample(self._distribution, sample_shape=self.plate)
+        self.batch_stack = batch_stack
+        self.event_stack = event_stack
+        self.conditionally_independent = conditionally_independent
+        self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
+        if reinterpreted_batch_ndims:
+            self._distribution = tfd.Independent(
+                self._distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims
+            )
+        if batch_stack is not None:
+            self._distribution = BatchStacker(self._distribution, batch_stack=batch_stack)
+        if event_stack is not None:
+            self._distribution = tfd.Sample(self._distribution, sample_shape=self.event_stack)
 
     @property
     def dtype(self):
@@ -68,26 +90,30 @@ class Distribution(Model):
         """
         return kwargs
 
-    def sample(self, shape=(), seed=None):
+    @property
+    def test_value(self):
+        return tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape)
+
+    def sample(self, sample_shape=(), seed=None):
         """
         Forward sampling implementation.
 
         Parameters
         ----------
-        shape : tuple
+        sample_shape : tuple
             sample shape
         seed : int|None
             random seed
         """
-        return self._distribution.sample(shape, seed)
+        return self._distribution.sample(sample_shape, seed)
 
-    def sample_numpy(self, shape=(), seed=None):
+    def sample_numpy(self, sample_shape=(), seed=None):
         """
         Forward sampling implementation returning raw numpy arrays.
 
         Parameters
         ----------
-        shape : tuple
+        sample_shape : tuple
             sample shape
         seed : int|None
             random seed
@@ -95,7 +121,25 @@ class Distribution(Model):
         ----------
         array of given shape
         """
-        return self.sample(shape, seed).numpy()
+        return self.sample(sample_shape, seed).numpy()
+
+    def get_test_sample(self, sample_shape=(), seed=None):
+        """Get the test value using a function signature similar to meth:`~.sample`
+        
+        Parameters
+        ----------
+        sample_shape : tuple
+            sample shape
+        seed : int | None
+            ignored. Is only present to match the signature of meth:`~.sample`
+        
+        Returns
+        -------
+        The distribution's ``test_value`` broadcasted to
+        ``sample_shape + self.batch_shape + self.event_shape``
+        """
+        sample_shape = tf.TensorShape(sample_shape)
+        return tf.broadcast_to(self.test_value, sample_shape + self.batch_shape + self.event_shape)
 
     def log_prob(self, value):
         """Return log probability as tensor."""
@@ -139,6 +183,18 @@ class Distribution(Model):
     def is_observed(self):
         return self.model_info["observed"] is not None
 
+    @property
+    def is_root(self):
+        return self.conditionally_independent
+
+    @property
+    def batch_shape(self):
+        return self._distribution.batch_shape
+
+    @property
+    def event_shape(self):
+        return self._distribution.event_shape
+
 
 class Potential:
     __slots__ = ("_value", "_coef")
@@ -181,11 +237,11 @@ class Deterministic(Model):
 
 
 class ContinuousDistribution(Distribution):
-    ...
+    _test_value = 0.0
 
 
 class DiscreteDistribution(Distribution):
-    ...
+    _test_value = 0
 
 
 class BoundedDistribution(Distribution):
@@ -199,11 +255,15 @@ class BoundedDistribution(Distribution):
 
 
 class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
-    ...
+    @property
+    def _test_value(self):
+        return tf.cast(tf.round(0.5 * (self.upper_limit() + self.lower_limit())), self.dtype)
 
 
 class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution):
-    ...
+    @property
+    def _test_value(self):
+        return 0.5 * (self.upper_limit() + self.lower_limit())
 
 
 class UnitContinuousDistribution(BoundedContinuousDistribution):
@@ -221,6 +281,8 @@ class UnitContinuousDistribution(BoundedContinuousDistribution):
 
 
 class PositiveContinuousDistribution(BoundedContinuousDistribution):
+    _test_value = 1.0
+
     def _init_transform(self, transform):
         if transform is None:
             return transforms.Log()
@@ -235,6 +297,8 @@ class PositiveContinuousDistribution(BoundedContinuousDistribution):
 
 
 class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
+    _test_value = 1
+
     def lower_limit(self):
         return 0
 
@@ -243,4 +307,6 @@ class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
 
 
 class SimplexContinuousDistribution(ContinuousDistribution):
-    ...
+    @property
+    def test_value(self):
+        return tf.ones(self.batch_shape + self.event_shape) / self.event_shape[-1]

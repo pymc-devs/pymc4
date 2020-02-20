@@ -977,6 +977,14 @@ class Pareto(BoundedContinuousDistribution):
     def lower_limit(self):
         return self.conditions["scale"]
 
+    @property
+    def test_value(self):
+        return (
+            tf.zeros(self.batch_shape + self.event_shape, dtype=self.dtype)
+            + self.conditions["scale"]
+            + 1
+        )
+
 
 class StudentT(ContinuousDistribution):
     r"""Student's T random variable.

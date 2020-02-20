@@ -9,7 +9,7 @@ def initialize_sampling_state(
     model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
-    Initilize the model provided state and/or observed variables.
+    Initialize the model provided state and/or observed variables.
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ def initialize_sampling_state(
     deterministic_names: List[str]
         The list of names of the model's deterministics
     """
-    _, state = flow.evaluate_model_transformed(model, observed=observed, state=state)
+    _, state = flow.evaluate_meta_model(model, observed=observed, state=state)
     deterministic_names = list(state.deterministics)
 
     state, transformed_names = state.as_sampling_state()

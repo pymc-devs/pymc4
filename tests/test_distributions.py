@@ -375,15 +375,9 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
     )
     assert not (np.any(np.isinf(logp)) or np.any(np.isnan(logp)))
 
+
 @pytest.mark.parametrize("distribution_name", ["Flat", "HalfFlat"])
-@pytest.mark.parametrize(
-    "sample",
-    [
-        tf.zeros(1),
-        tf.zeros((1, 3, 4)),
-        tf.zeros((1, 5, 3, 4))
-    ]
-)
+@pytest.mark.parametrize("sample", [tf.zeros(1), tf.zeros((1, 3, 4)), tf.zeros((1, 5, 3, 4))])
 def test_flat_halfflat_broadcast(distribution_name, sample):
     dist_class = getattr(pm, distribution_name)
     dist = dist_class(name=distribution_name, batch_stack=(1, 2), event_stack=(3, 4))

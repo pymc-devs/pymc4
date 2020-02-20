@@ -30,9 +30,10 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         **kwargs,
     ):
         self.model = model
-        self._trace_fn = types.MethodType(
-            lambda self, s, p: custom_trace_fn(s, p), self
-        )
+        if custom_trace_fn:
+            self._trace_fn = types.MethodType(
+                lambda self, s, p: custom_trace_fn(s, p), self
+            )
         # assign arguments from **kwargs to distinct kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
         self._check_arguments()

@@ -191,15 +191,15 @@ class BetaBinomial(BoundedDiscreteDistribution):
             conditions["concentration0"],
             conditions["concentration1"],
         )
-        return tfd.DirichletMultinomial(
-            total_count=total_count, concentration=[concentration0, concentration1]
+        return tfd.BetaBinomial(
+            total_count=total_count, concentration0=concentration0, concentration1=concentration1
         )
 
     def lower_limit(self):
         return 0
 
     def upper_limit(self):
-        return self.conditions["total_counts"]
+        return self.conditions["total_count"]
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):

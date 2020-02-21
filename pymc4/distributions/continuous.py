@@ -1200,8 +1200,8 @@ class Flat(ContinuousDistribution):
         # broadcast expected to shape of value
         if len(value.shape) < len(self.batch_shape + self.event_shape):
             if (
-                value.shape[: -len(self.event_shape)]
-                != list(reversed(self.batch_shape))[: (len(value.shape) - len(self.event_shape))]
+                value.shape[: len(value.shape) - len(self.event_shape)]
+                != self.batch_shape[len(self.batch_shape) - len(value.shape) :]
             ):
                 raise ValueError(
                     "batch shape of values not consistent with distribution's batch shape"
@@ -1245,8 +1245,8 @@ class HalfFlat(PositiveContinuousDistribution):
         if len(value.shape) < len(self.batch_shape + self.event_shape):
             expected = expected + value
             if (
-                value.shape[: -len(self.event_shape)]
-                != list(reversed(self.batch_shape))[: (len(value.shape) - len(self.event_shape))]
+                value.shape[: len(value.shape) - len(self.event_shape)]
+                != self.batch_shape[len(self.batch_shape) - len(value.shape) :]
             ):
                 raise ValueError(
                     "batch shape of values not consistent with distribution's batch shape"

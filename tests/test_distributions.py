@@ -10,6 +10,18 @@ import pymc4 as pm
 
 
 _expected_log_prob = defaultdict(lambda: defaultdict(lambda: None))
+_check_broadcast = {
+    "Flat": {
+        "batch_stack": (1, 2),
+        "event_stack": (3, 4),
+        "samples": [tf.zeros(1), tf.zeros((1, 3, 4)), tf.zeros((1, 5, 3, 4))],
+    },
+    "HalfFlat": {
+        "batch_stack": (1, 2),
+        "event_stack": (3, 4),
+        "samples": [tf.zeros(1), tf.zeros((1, 3, 4)), tf.zeros((1, 5, 3, 4))],
+    },
+}
 _distribution_conditions = {
     "AR": {
         "scalar_parameters": {
@@ -344,6 +356,22 @@ def distribution_conditions(distribution, request):
     return distribution, conditions, log_prob_test_sample, expected_log_prob
 
 
+@pytest.fixture(scope="function", params=list(_check_broadcast), ids=str)
+def broadcast_distribution(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", ids=str)
+def check_broadcast(broadcast_distribution, request):
+    conditions = _check_broadcast[broadcast_distribution]
+    batch_stack = conditions.pop("batch_stack", (1, 2))
+    event_stack = conditions.pop("event_stack", (3, 4))
+    samples = conditions.pop("samples")
+    dist_class = getattr(pm, broadcast_distribution)
+    dist = dist_class(name=broadcast_distribution, batch_stack=batch_stack, event_stack=event_stack)
+    return dist, samples
+
+
 def test_rvs_logp_and_forward_sample(tf_seed, distribution_conditions):
     """Test forward sampling and evaluating the logp for all random variables."""
     distribution_name, conditions, sample, expected_value = distribution_conditions
@@ -376,10 +404,10 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
     assert not (np.any(np.isinf(logp)) or np.any(np.isnan(logp)))
 
 
-@pytest.mark.parametrize("distribution_name", ["Flat", "HalfFlat"])
-@pytest.mark.parametrize("sample", [tf.zeros(1), tf.zeros((1, 3, 4)), tf.zeros((1, 5, 3, 4))])
-def test_flat_halfflat_broadcast(distribution_name, sample):
-    dist_class = getattr(pm, distribution_name)
-    dist = dist_class(name=distribution_name, batch_stack=(1, 2), event_stack=(3, 4))
-    with pytest.raises(ValueError, match=r"not consistent"):
-        dist.log_prob(sample)
+def test_flat_halfflat_broadcast(tf_seed, check_broadcast):
+    """Test the error messages returned by Flat and HalfFlat
+    distributions for inconsistent sample shapes"""
+    dist, samples = check_broadcast
+    for sample in samples:
+        with pytest.raises(ValueError, match=r"not consistent"):
+            dist.log_prob(sample)

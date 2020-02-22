@@ -4,6 +4,7 @@ import math
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import bijectors as bij
+from tensorflow_probability.python.internal import distribution_util as dist_util
 from pymc4.distributions.distribution import (
     ContinuousDistribution,
     PositiveContinuousDistribution,
@@ -1278,7 +1279,9 @@ class Weibull(PositiveContinuousDistribution):
     Developer Notes
     ---------------
     The Weibull distribution is implemented as a standard uniform distribution transformed by the
-    Inverse of the WeibullCDF bijector.
+    Inverse of the WeibullCDF bijector. The shape to broadcast the low and high parameters for the
+    Uniform distribution are obtained using 
+    tensorflow_probability.python.internal.distribution_util.prefer_static_broadcast_shape()
     """
 
     def __init__(self, name, concentration, scale, **kwargs):
@@ -1289,8 +1292,11 @@ class Weibull(PositiveContinuousDistribution):
 
         concentration, scale = conditions["concentration"], conditions["scale"]
 
+        scale_tensor, concentration_tensor = tf.convert_to_tensor(scale), tf.convert_to_tensor(concentration)
+        broadcast_shape = dist_util.prefer_static_broadcast_shape(scale_tensor.shape,concentration_tensor.shape)
+
         return tfd.TransformedDistribution(
-            distribution=tfd.Uniform(low=tf.zeros_like(scale), high=tf.ones_like(scale)),
+            distribution=tfd.Uniform(low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape)),
             bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
             name="Weibull",
         )

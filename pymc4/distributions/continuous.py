@@ -1292,8 +1292,13 @@ class Weibull(PositiveContinuousDistribution):
 
         concentration, scale = conditions["concentration"], conditions["scale"]
 
-        scale_tensor, concentration_tensor = tf.convert_to_tensor(scale), tf.convert_to_tensor(concentration)
-        broadcast_shape = dist_util.prefer_static_broadcast_shape(scale_tensor.shape,concentration_tensor.shape)
+        scale_tensor, concentration_tensor = (
+            tf.convert_to_tensor(scale),
+            tf.convert_to_tensor(concentration),
+        )
+        broadcast_shape = dist_util.prefer_static_broadcast_shape(
+            scale_tensor.shape, concentration_tensor.shape
+        )
 
         return tfd.TransformedDistribution(
             distribution=tfd.Uniform(low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape)),

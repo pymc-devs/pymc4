@@ -139,6 +139,7 @@ class Multinomial(DiscreteDistribution):
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1 along the last axis.
     """
+
     # For some ridiculous reason, tfp needs multinomial values to be floats...
     _test_value = 0.0  # type: ignore
 

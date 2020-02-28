@@ -155,7 +155,7 @@ class NameParts:
 
 
 def get_data(filename):
-    """Returns a BytesIO object for a package data file.
+    """Return a BytesIO object for a package data file.
 
     Parameters
     ----------

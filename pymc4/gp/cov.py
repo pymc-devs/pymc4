@@ -1,3 +1,9 @@
+"""
+Covarience Functions for PyMC4's Gaussian Process module.
+
+"""
+
+from abc import abstractmethod
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -22,13 +28,14 @@ __all__ = [
 
 
 class Covarience:
-    """Base class for all PSD kernel function used as covarience functions in GP"""
+    """Base class of all covarience functions for Gaussian Process"""
 
     def __init__(self, feature_ndims, diag=False, **kwargs):
         self.feature_ndims = feature_ndims
         self.diag = diag
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
 
+    @abstractmethod
     def _init_kernel(self, feature_ndims, **kwargs):
         raise NotImplementedError("Your covarience class should override this method")
 
@@ -95,7 +102,7 @@ class Stationary(Covarience):
 
 
 class ExpQuad(Stationary):
-    """Exponential Quadratic Convarience Function
+    """Exponentiated Quadratic Convarience Function
     TODO: docs"""
 
     def __init__(self, amplitude, length_scale, feature_ndims, diag=False, **kwargs):

@@ -1,3 +1,8 @@
+"""
+Mean functions for PyMC4's Gaussian Process Module.
+
+"""
+
 import tensorflow as tf
 
 __all__ = ["Zero", "Constant"]
@@ -5,6 +10,9 @@ __all__ = ["Zero", "Constant"]
 
 class Mean:
     """Base Class for all the mean functions in GP."""
+
+    def __init__(self, feature_ndims=1):
+        self.feature_ndims = feature_ndims
 
     def __call__(self, X):
         raise NotImplementedError("Your mean function should override this method")
@@ -39,15 +47,16 @@ class Zero(Mean):
 
     def __call__(self, X):
         X = tf.convert_to_tensor(X)
-        return tf.zeros(X.shape[:-1])
+        return tf.zeros(X.shape[: -self.feature_ndims])
 
 
 class Constant(Mean):
     """Constant mean"""
 
-    def __init__(self, coef=1.):
+    def __init__(self, coef=1.0, feature_ndims=1):
         self.coef = coef
+        super().__init__(feature_ndims=feature_ndims)
 
     def __call__(self, X):
         X = tf.convert_to_tensor(X)
-        return tf.ones(X.shape[:-1])*coef
+        return tf.ones(X.shape[: -self.feature_ndims]) * coef

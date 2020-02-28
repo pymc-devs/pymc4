@@ -117,4 +117,4 @@ class ExpQuad(Stationary):
 
     @property
     def amplitude(self):
-        return self.amplitude
+        return self._amplitude

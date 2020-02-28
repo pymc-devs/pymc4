@@ -14,6 +14,9 @@ from ..distributions import MvNormal, Normal
 from .util import stabilize
 
 
+__all__ = ["LatentGP"]
+
+
 class BaseGP:
     def __init__(self, mean_fn, cov_fn):
         self.mean_fn = mean_fn

@@ -5,8 +5,8 @@ set -ex # fail on first error, print commands
 SRC_DIR=${SRC_DIR:-$(pwd)}
 
 echo "Skipping documentation check. Re-enabling this would be a helpful contribution!"
-# echo "Checking documentation..."
-# python -m pydocstyle --convention=numpy "${SRC_DIR}"/pymc4/
+echo "Checking documentation..."
+python -m pydocstyle --convention=numpy "${SRC_DIR}"/pymc4/
 echo "Success!"
 
 echo "Checking code style with black..."

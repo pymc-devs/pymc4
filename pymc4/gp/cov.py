@@ -1,5 +1,5 @@
 """
-Covarience Functions for PyMC4's Gaussian Process module.
+Covariance Functions for PyMC4's Gaussian Process module.
 
 """
 
@@ -27,8 +27,8 @@ __all__ = [
 ]
 
 
-class Covarience:
-    """Base class of all covarience functions for Gaussian Process"""
+class Covariance:
+    """Base class of all Covariance functions for Gaussian Process"""
 
     def __init__(self, feature_ndims, diag=False, **kwargs):
         self.feature_ndims = feature_ndims
@@ -37,7 +37,7 @@ class Covarience:
 
     @abstractmethod
     def _init_kernel(self, feature_ndims, **kwargs):
-        raise NotImplementedError("Your covarience class should override this method")
+        raise NotImplementedError("Your Covariance class should override this method")
 
     def __call__(self, X1, X2, **kwargs):
         """TODO: docs"""
@@ -50,17 +50,17 @@ class Covarience:
         return self._kernel.apply(X1, X2, **kwargs)
 
     def __add__(self, cov2):
-        return CovarienceAdd(self, cov2)
+        return CovarianceAdd(self, cov2)
 
     def __mul__(self, cov2):
-        return CovarienceProd(self, cov2)
+        return CovarianceProd(self, cov2)
 
     @property
     def batch_shape(self):
         return self._kernel.batch_shape
 
 
-class Combination(Covarience):
+class Combination(Covariance):
     """TODO: docs"""
 
     def __init__(self, cov1, cov2, **kwargs):
@@ -73,7 +73,7 @@ class Combination(Covarience):
         super().__init__(self.kernel1.feature_ndims, diag=(cov1.diag & cov2.diag), **kwargs)
 
 
-class CovarienceAdd(Combination):
+class CovarianceAdd(Combination):
     """TODO: docs"""
 
     def _init_kernel(self, feature_ndims, **kwargs):
@@ -85,15 +85,15 @@ class CovarienceAdd(Combination):
         return self.kernel1 + self.kernel2
 
 
-class CovarienceProd(Combination):
+class CovarianceProd(Combination):
     """TODO: docs"""
 
     def _init_kernel(self, feature_ndims, **kwargs):
-        # TODO: Similar problem as CovarienceAdd
+        # TODO: Similar problem as CovarianceAdd
         return self.kernel1 * self.kernel2
 
 
-class Stationary(Covarience):
+class Stationary(Covariance):
     """Base class for all Stationary Convarience functions"""
 
     @property
@@ -102,7 +102,7 @@ class Stationary(Covarience):
 
 
 class ExpQuad(Stationary):
-    """Exponentiated Quadratic Convarience Function
+    """Exponentiated Quadratic Covariance Function
     TODO: docs"""
 
     def __init__(self, amplitude, length_scale, feature_ndims, diag=False, **kwargs):

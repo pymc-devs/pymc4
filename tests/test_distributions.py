@@ -288,10 +288,13 @@ _distribution_conditions = {
             "sample": np.array([[1.0, 1.0], [0.0, 1.0]], dtype="float32"),
         },
     },
-    # "Weibull": {
-    #     "scalar_parameters": {"beta": 0.1, "alpha": 1.0},
-    #     "multidim_parameters": {"beta": 0.1, "alpha": 1.0},
-    # },
+    "Weibull": {
+        "scalar_parameters": {"concentration": 1.0, "scale": 1.0},
+        "multidim_parameters": {
+            "concentration": np.array([1.0, 0.5], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
+    },
     "Wishart": {
         "scalar_parameters": {
             "df": 3,

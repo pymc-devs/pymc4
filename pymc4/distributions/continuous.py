@@ -4,6 +4,7 @@ import math
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import bijectors as bij
+from tensorflow_probability.python.internal import distribution_util as dist_util
 from pymc4.distributions.distribution import (
     ContinuousDistribution,
     PositiveContinuousDistribution,
@@ -36,6 +37,7 @@ __all__ = [
     "Uniform",
     "VonMises",
     "HalfStudentT",
+    "Weibull",
 ]
 
 
@@ -1232,54 +1234,74 @@ class VonMises(BoundedContinuousDistribution):
         return math.pi
 
 
-# TODO: Implement this
-# class Weibull(PositiveContinuousDistribution):
-#     r"""Weibull random variable.
+class Weibull(PositiveContinuousDistribution):
+    r"""Weibull random variable.
 
-#     The pdf of this distribution is
+    The pdf of this distribution is
 
-#     .. math::
+    .. math::
 
-#        f(x \mid \alpha, \beta) =
-#            \frac{\alpha x^{\alpha - 1}
-#            \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
+       f(x \mid \alpha, \beta) =
+           \frac{\alpha x^{\alpha - 1}
+           \exp(-(\frac{x}{\beta})^{\alpha})}{\beta^\alpha}
 
-#     .. plot::
+    .. plot::
 
-#         import matplotlib.pyplot as plt
-#         import numpy as np
-#         import scipy.stats as st
-#         plt.style.use('seaborn-darkgrid')
-#         x = np.linspace(0, 3, 200)
-#         concentrations = [.5, 1., 1.5, 5., 5.]
-#         scales = [1., 1., 1., 1.,  2]
-#         for concentration, scale in zip(concentrations, scales):
-#             pdf = st.weibull_min.pdf(x, concentration, scale)
-#             plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(concentration, scale))
-#         plt.xlabel('x', fontsize=12)
-#         plt.ylabel('f(x)', fontsize=12)
-#         plt.ylim(0, 2.5)
-#         plt.legend(loc=1)
-#         plt.show()
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(0, 3, 200)
+        concentrations = [.5, 1., 1.5, 5., 5.]
+        scales = [1., 1., 1., 1.,  2]
+        for concentration, scale in zip(concentrations, scales):
+            pdf = st.weibull_min.pdf(x, concentration, scale)
+            plt.plot(x, pdf, label=r'$\alpha$ = {}, $\beta$ = {}'.format(concentration, scale))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.ylim(0, 2.5)
+        plt.legend(loc=1)
+        plt.show()
 
-#     ========  ====================================================
-#     Support   :math:`x \in [0, \infty)`
-#     Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
-#     Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
-#     ========  ====================================================
+    ========  ====================================================
+    Support   :math:`x \in [0, \infty)`
+    Mean      :math:`\beta \Gamma(1 + \frac{1}{\alpha})`
+    Variance  :math:`\beta^2 \Gamma(1 + \frac{2}{\alpha} - \mu^2)`
+    ========  ====================================================
 
-#     Parameters
-#     ----------
-#     concentration : float|tensor
-#         Shape parameter (concentration > 0).
-#     scale : float|tensor
-#         Scale parameter (scale > 0).
-#     """
+    Parameters
+    ----------
+     concentration : float|tensor
+        Shape parameter (concentration > 0).
+    scale : float|tensor
+        Scale parameter (scale > 0).
+    
+    Developer Notes
+    ---------------
+    The Weibull distribution is implemented as a standard uniform distribution transformed by the
+    Inverse of the WeibullCDF bijector. The shape to broadcast the low and high parameters for the
+    Uniform distribution are obtained using 
+    tensorflow_probability.python.internal.distribution_util.prefer_static_broadcast_shape()
+    """
 
-#     def __init__(self, name, concentration, scale, **kwargs):
-#         super().__init__(name, concentration=concentration, scale=scale, **kwargs)
+    def __init__(self, name, concentration, scale, **kwargs):
+        super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
-#     @staticmethod
-#     def _init_distribution(conditions):
-#         concentration, scale = conditions["concentration"], conditions["scale"]
-#         return tfd.Weibull(concentration=concentration, scale=scale)
+    @staticmethod
+    def _init_distribution(conditions):
+
+        concentration, scale = conditions["concentration"], conditions["scale"]
+
+        scale_tensor, concentration_tensor = (
+            tf.convert_to_tensor(scale),
+            tf.convert_to_tensor(concentration),
+        )
+        broadcast_shape = dist_util.prefer_static_broadcast_shape(
+            scale_tensor.shape, concentration_tensor.shape
+        )
+
+        return tfd.TransformedDistribution(
+            distribution=tfd.Uniform(low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape)),
+            bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
+            name="Weibull",
+        )

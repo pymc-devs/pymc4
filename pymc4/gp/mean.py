@@ -34,6 +34,7 @@ class MeanAdd(Mean):
     mean2 : callable, pm.Mean
         Second mean function
     """
+
     def __init__(self, mean1, mean2):
         self.mean1 = mean1
         self.mean2 = mean2
@@ -52,6 +53,7 @@ class MeanProd(Mean):
     mean2 : callable, pm.Mean
         Second mean function
     """
+
     def __init__(self, mean1, mean2):
         self.mean1 = mean1
         self.mean2 = mean2

@@ -88,7 +88,9 @@ class LatentGP(BaseGP):
 
     def __init__(self, mean_fn, cov_fn):
         if mean_fn.feature_ndims != cov_fn.feature_ndims:
-            raise ValueError("The feature_ndims of mean and covariance functions should be the same")
+            raise ValueError(
+                "The feature_ndims of mean and covariance functions should be the same"
+            )
         self.feature_ndims = mean_fn.feature_ndims
         super().__init__(mean_fn=mean_fn, cov_fn=cov_fn)
 
@@ -100,7 +102,12 @@ class LatentGP(BaseGP):
         mu = self.mean_fn(X)
         cov = stabilize(self.cov_fn(X, X))
         if self._is_univariate(X):
-            return Normal(name=name, loc=tf.squeeze(mu), scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])), **kwargs)
+            return Normal(
+                name=name,
+                loc=tf.squeeze(mu),
+                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                **kwargs,
+            )
         return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
     def _get_given_vals(self, given):
@@ -125,7 +132,7 @@ class LatentGP(BaseGP):
             raise ValueError("Prior `f` must be a numpy array or tensor.")
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
-        if self._is_univariate(X) and len(f.shape) < len(X.shape[:-(self.feature_ndims)]):
+        if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):
             f = f[..., tf.newaxis]
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
@@ -139,7 +146,7 @@ class LatentGP(BaseGP):
         mu = self.mean_fn(Xnew)[..., tf.newaxis] + tf.linalg.matrix_transpose(A) @ v
         Kss = self.cov_fn(Xnew, Xnew)
         cov = Kss - tf.linalg.matrix_transpose(A) @ A
-        # Return the stabilized covarience matrix and squeeze the 
+        # Return the stabilized covarience matrix and squeeze the
         # last dimention that we added earlier.
         return tf.squeeze(mu, axis=[-1]), stabilize(cov)
 
@@ -192,5 +199,7 @@ class LatentGP(BaseGP):
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)
         if self._is_univariate(Xnew):
-            return Normal(name=name, loc=tf.squeeze(mu, [-1]), scale=tf.math.sqrt(tf.squeeze(cov, [-1, -2])))
+            return Normal(
+                name=name, loc=tf.squeeze(mu, [-1]), scale=tf.math.sqrt(tf.squeeze(cov, [-1, -2]))
+            )
         return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)

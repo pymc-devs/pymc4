@@ -9,7 +9,7 @@ __all__ = ["Zero", "Constant"]
 
 
 class Mean:
-    """Base Class for all the mean functions in GP."""
+    r"""Base Class for all the mean functions in GP."""
 
     def __init__(self, feature_ndims=1):
         self.feature_ndims = feature_ndims
@@ -25,6 +25,15 @@ class Mean:
 
 
 class MeanAdd(Mean):
+    r"""Addition of two or more mean functions
+
+    Parameters
+    ----------
+    mean1 : callable, pm.Mean
+        First mean function
+    mean2 : callable, pm.Mean
+        Second mean function
+    """
     def __init__(self, mean1, mean2):
         self.mean1 = mean1
         self.mean2 = mean2
@@ -34,6 +43,15 @@ class MeanAdd(Mean):
 
 
 class MeanProd(Mean):
+    r"""Product of two or more mean functions
+
+    Parameters
+    ----------
+    mean1 : callable, pm.Mean
+        First mean function
+    mean2 : callable, pm.Mean
+        Second mean function
+    """
     def __init__(self, mean1, mean2):
         self.mean1 = mean1
         self.mean2 = mean2
@@ -43,7 +61,13 @@ class MeanProd(Mean):
 
 
 class Zero(Mean):
-    """Zero mean"""
+    r"""Zero mean
+
+    Parameters
+    ----------
+    feature_ndims : int, optional
+        number of rightmost dims to include in mean computation
+    """
 
     def __call__(self, X):
         X = tf.convert_to_tensor(X)
@@ -51,7 +75,15 @@ class Zero(Mean):
 
 
 class Constant(Mean):
-    """Constant mean"""
+    r"""Constant mean
+
+    Parameters
+    ----------
+    coef : tensor, array-like, optional
+        co-efficient to scale the mean
+    feature_ndims : int, optional
+        number of rightmost dims to include in mean computation
+    """
 
     def __init__(self, coef=1.0, feature_ndims=1):
         self.coef = coef

@@ -1,12 +1,23 @@
 import tensorflow as tf
 import numpy as np
 
+
 def stabilize(K):
     r"""Add a diagonal shift to a covarience matrix"""
     return tf.linalg.set_diag(K, tf.linalg.diag_part(K) + 1e-4)
 
 
-def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds", fill_alpha=0.8, samples_alpha=0.1, fill_kwargs=None, samples_kwargs=None):
+def plot_gp_dist(
+    ax,
+    samples,
+    x,
+    plot_samples=True,
+    palette="Reds",
+    fill_alpha=0.8,
+    samples_alpha=0.1,
+    fill_kwargs=None,
+    samples_kwargs=None,
+):
     """ A helper function for plotting 1D GP posteriors from trace 
     
         Parameters
@@ -47,13 +58,12 @@ def plot_gp_dist(ax, samples, x, plot_samples=True, palette="Reds", fill_alpha=0
     x = x.flatten()
     for i, p in enumerate(percs[::-1]):
         upper = np.percentile(samples, p, axis=1)
-        lower = np.percentile(samples, 100-p, axis=1)
+        lower = np.percentile(samples, 100 - p, axis=1)
         color_val = colors[i]
         ax.fill_between(x, upper, lower, color=cmap(color_val), alpha=fill_alpha, **fill_kwargs)
     if plot_samples:
         # plot a few samples
         idx = np.random.randint(0, samples.shape[1], 30)
-        ax.plot(x, samples[:,idx], color=cmap(0.9), lw=1, alpha=samples_alpha,
-                **samples_kwargs)
+        ax.plot(x, samples[:, idx], color=cmap(0.9), lw=1, alpha=samples_alpha, **samples_kwargs)
 
     return ax

@@ -5,8 +5,8 @@ import pytest
 
 OK = True
 
-BATCH_AND_FEATURE_SHAPES = [(1, ), (2, ), (2, 2, )]
-SAMPLE_SHAPE = [(1, ), (5, )]
+BATCH_AND_FEATURE_SHAPES = [(1,), (2,), (2, 2,)]
+SAMPLE_SHAPE = [(1,), (5,)]
 
 _check_mean = {
     "Zero": {},
@@ -17,9 +17,7 @@ _check_cov = {
     "ExpQuad": {"amplitude": 1.0, "length_scale": 1.0},
 }
 
-_check_gp_model = {
-    "LatentGP": {}
-}
+_check_gp_model = {"LatentGP": {}}
 
 
 @pytest.fixture(scope="module", params=BATCH_AND_FEATURE_SHAPES, ids=str)
@@ -39,7 +37,9 @@ def get_feature_shape(request):
 
 @pytest.fixture(scope="module")
 def get_data(get_batch_shape, get_sample_shape, get_feature_shape):
-    X = np.random.randn(*(get_batch_shape + get_sample_shape + get_feature_shape)).astype(np.float32)
+    X = np.random.randn(*(get_batch_shape + get_sample_shape + get_feature_shape)).astype(
+        np.float32
+    )
     return get_batch_shape, get_sample_shape, get_feature_shape, X
 
 
@@ -62,8 +62,9 @@ def get_gp_model(request):
 def get_prior_model():
     @pm.model
     def prior_model(gp, X):
-        f = yield gp.prior('f', X)
+        f = yield gp.prior("f", X)
         return f
+
     return prior_model
 
 
@@ -71,9 +72,10 @@ def get_prior_model():
 def get_cond_model():
     @pm.model
     def cond_model(gp, X, X_new):
-        f = yield gp.prior('f', X)
-        fcond = yield gp.conditional('fcond', X_new, given={'X': X, 'f': f})
+        f = yield gp.prior("f", X)
+        fcond = yield gp.conditional("fcond", X_new, given={"X": X, "f": f})
         return fcond
+
     return cond_model
 
 
@@ -113,10 +115,9 @@ def test_gp_models_prior(get_data, get_mean_func, get_cov_func, get_gp_model, ge
         prior_dist = gp_model.prior("prior", X)
     except NotImplementedError:
         pytest.skip("Skipping: prior not implemented")
-    
+
     assert prior_dist is not None
-    if samples_shape == (1, ):
-        assert prior_dist.sample(1).shape == (1, ) + batch_shape
+    if samples_shape == (1,):
+        assert prior_dist.sample(1).shape == (1,) + batch_shape
     else:
-        assert prior_dist.sample(1).shape == (1, ) + batch_shape + samples_shape
-        
+        assert prior_dist.sample(1).shape == (1,) + batch_shape + samples_shape

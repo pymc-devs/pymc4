@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import pymc4 as pm
 import pytest

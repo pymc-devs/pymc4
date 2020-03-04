@@ -19,6 +19,11 @@ __all__ = ["LatentGP"]
 
 class BaseGP:
     def __init__(self, mean_fn, cov_fn):
+        if mean_fn.feature_ndims != cov_fn.feature_ndims:
+            raise ValueError(
+                "The feature_ndims of mean and covariance functions should be the same"
+            )
+        self.feature_ndims = mean_fn.feature_ndims
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn
 
@@ -85,14 +90,6 @@ class LatentGP(BaseGP):
 
     
     """
-
-    def __init__(self, mean_fn, cov_fn):
-        if mean_fn.feature_ndims != cov_fn.feature_ndims:
-            raise ValueError(
-                "The feature_ndims of mean and covariance functions should be the same"
-            )
-        self.feature_ndims = mean_fn.feature_ndims
-        super().__init__(mean_fn=mean_fn, cov_fn=cov_fn)
 
     def _is_univariate(self, X):
         r"""Check if there is only one sample point"""

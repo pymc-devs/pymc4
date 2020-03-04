@@ -93,4 +93,4 @@ class Constant(Mean):
 
     def __call__(self, X):
         X = tf.convert_to_tensor(X)
-        return tf.ones(X.shape[: -self.feature_ndims]) * coef
+        return tf.ones(X.shape[: -self.feature_ndims]) * self.coef

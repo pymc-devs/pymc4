@@ -45,6 +45,13 @@ class Covariance:
 
     def evaluate_kernel(self, X1, X2, **kwargs):
         """Evaluate kernel at certain points
+
+        Parameters
+        ----------
+        X1 : tensor, array-like
+            First point
+        X2 : tensor, array-like
+            Second point
         """
         return self._kernel.apply(X1, X2, **kwargs)
 
@@ -53,10 +60,6 @@ class Covariance:
 
     def __mul__(self, cov2):
         return CovarianceProd(self, cov2)
-
-    @property
-    def batch_shape(self):
-        return self._kernel.batch_shape
 
 
 class Combination(Covariance):

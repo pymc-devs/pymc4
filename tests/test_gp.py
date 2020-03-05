@@ -94,7 +94,9 @@ def test_cov_funcs(tf_seed, get_data, get_cov_func):
     batch_shape, sample_shape, feature_shape, X = get_data
     cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
     cov = cov_func(X, X)
+    kernel_point_evaluation = cov_func.evaluate_kernel(X, X)
     assert cov is not None
+    assert kernel_point_evaluation is not None
     assert cov.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
     # assert tf.reduce_all(tf.linalg.eigvals(cov) > 0.)
     assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
@@ -104,7 +106,7 @@ def test_gp_models_prior(tf_seed, get_data, get_mean_func, get_cov_func, get_gp_
     batch_shape, sample_shape, feature_shape, X = get_data
     mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    gp_class = getattr(pm.gp. get_gp_model)
+    gp_class = getattr(pm.gp, get_gp_model)
     gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
     try:
         prior_dist = gp_model.prior("prior", X)
@@ -129,24 +131,24 @@ def test_gp_models_conditional(
     X_new = tf.random.normal(batch_shape + sample_shape + feature_shape)
     mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    gp_class = getattr(pm.gp. get_gp_model)
+    gp_class = getattr(pm.gp, get_gp_model)
     gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
     try:
-        trace = pm.sample(get_cond_model(gp_model, X, X_new), num_samples=3, num_chains=1)
-        # f = gp_model.prior('f', X).sample(3)
-        # cond_dist = gp_model.conditional('fcond', X_new, given={'X': X, 'f': f})
-        # cond_samples = cond_dist.sample(1)
+        # trace = pm.sample(get_cond_model(gp_model, X, X_new), num_samples=3, num_chains=1)
+        f = gp_model.prior('f', X).sample(1)[0]
+        cond_dist = gp_model.conditional('fcond', X_new, given={'X': X, 'f': f})
+        cond_samples = cond_dist.sample(3)
     except NotImplementedError:
         pytest.skip("Skipping: conditional not implemented")
 
-    # assert cond_samples is not None
-    assert trace.posterior["cond_model/fcond"] is not None
+    assert cond_samples is not None
+    # assert trace.posterior["cond_model/fcond"] is not None
     if sample_shape == (1,):
-        # assert cond_samples.shape == (1, 3, ) + batch_shape
-        assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape
+        assert cond_samples.shape == (3, ) + batch_shape
+        # assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape
     else:
-        # assert cond_samples.shape == (1, 3, ) + batch_shape + sample_shape
-        assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape + sample_shape
+        assert cond_samples.shape == (3, ) + batch_shape + sample_shape
+        # assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape + sample_shape
 
 
 def test_covariance_combination(tf_seed, get_data, get_cov_func):
@@ -189,7 +191,7 @@ def test_invalid_feature_ndims(tf_seed):
     with pytest.raises(ValueError, match=r"Cannot combine means"):
         mean1 = pm.gp.mean.Zero(1)
         mean2 = pm.gp.mean.Zero(2)
-        kernel = mean1 + mean2
+        mean = mean1 + mean2
     with pytest.raises(
         ValueError, match=r"The feature_ndims of mean and covariance functions should be the same"
     ):
@@ -214,3 +216,8 @@ def test_gp_invalid_prior(tf_seed):
         X = tf.random.normal((2, 5, 1))
         X_new = tf.random.normal((2, 2, 1))
         trace = pm.sample(invalid_model(gp, X, X_new), num_samples=1, burn_in=1, num_chains=1)
+
+def test_exp_quad_ls_amplitude(tf_seed):
+    cov = pm.gp.cov.ExpQuad(1., 1., 1)
+    assert cov.amplitude is not None
+    assert cov.length_scale is not None

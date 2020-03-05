@@ -75,16 +75,24 @@ def get_cond_model():
     return cond_model
 
 
-def get_func(test_dict, test_func, feature_shape, mod):
+def make_func(test_dict, test_func, feature_shape, mod):
     kwargs = test_dict[test_func]
     func_class = getattr(mod, test_func)
     func = func_class(feature_ndims=len(feature_shape), **kwargs)
     return func
 
 
+def make_model(data, mean_func, cov_func, test_model, feature_shape):
+    mean_func = make_func(_check_mean, mean_func, feature_shape, pm.gp.mean)
+    cov_func = make_func(_check_cov, cov_func, feature_shape, pm.gp.cov)
+    gp_class = getattr(pm.gp, test_model)
+    gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
+    return gp_model
+
+
 def test_mean_funcs(tf_seed, get_data, get_mean_func):
     batch_shape, sample_shape, feature_shape, X = get_data
-    mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    mean_func = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     mean = mean_func(X)
     assert mean is not None
     assert mean.shape == batch_shape + sample_shape
@@ -92,22 +100,18 @@ def test_mean_funcs(tf_seed, get_data, get_mean_func):
 
 def test_cov_funcs(tf_seed, get_data, get_cov_func):
     batch_shape, sample_shape, feature_shape, X = get_data
-    cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    cov_func = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
     cov = cov_func(X, X)
     kernel_point_evaluation = cov_func.evaluate_kernel(X, X)
     assert cov is not None
     assert kernel_point_evaluation is not None
     assert cov.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
-    # assert tf.reduce_all(tf.linalg.eigvals(cov) > 0.)
     assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
 
 
 def test_gp_models_prior(tf_seed, get_data, get_mean_func, get_cov_func, get_gp_model):
     batch_shape, sample_shape, feature_shape, X = get_data
-    mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
-    cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    gp_class = getattr(pm.gp, get_gp_model)
-    gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
+    gp_model = make_model(get_data, get_mean_func, get_cov_func, get_gp_model, feature_shape)
     try:
         prior_dist = gp_model.prior("prior", X)
         # trace = pm.sample(get_prior_model(gp_model, X), num_samples=3, num_chains=1)
@@ -128,15 +132,12 @@ def test_gp_models_conditional(
     tf_seed, get_data, get_mean_func, get_cov_func, get_gp_model, get_cond_model
 ):
     batch_shape, sample_shape, feature_shape, X = get_data
+    gp_model = make_model(get_data, get_mean_func, get_cov_func, get_gp_model, feature_shape)
     X_new = tf.random.normal(batch_shape + sample_shape + feature_shape)
-    mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
-    cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    gp_class = getattr(pm.gp, get_gp_model)
-    gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
     try:
         # trace = pm.sample(get_cond_model(gp_model, X, X_new), num_samples=3, num_chains=1)
-        f = gp_model.prior('f', X).sample(1)[0]
-        cond_dist = gp_model.conditional('fcond', X_new, given={'X': X, 'f': f})
+        f = gp_model.prior("f", X).sample(1)[0]
+        cond_dist = gp_model.conditional("fcond", X_new, given={"X": X, "f": f})
         cond_samples = cond_dist.sample(3)
     except NotImplementedError:
         pytest.skip("Skipping: conditional not implemented")
@@ -144,35 +145,33 @@ def test_gp_models_conditional(
     assert cond_samples is not None
     # assert trace.posterior["cond_model/fcond"] is not None
     if sample_shape == (1,):
-        assert cond_samples.shape == (3, ) + batch_shape
+        assert cond_samples.shape == (3,) + batch_shape
         # assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape
     else:
-        assert cond_samples.shape == (3, ) + batch_shape + sample_shape
+        assert cond_samples.shape == (3,) + batch_shape + sample_shape
         # assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape + sample_shape
 
 
 def test_covariance_combination(tf_seed, get_data, get_cov_func):
     batch_shape, sample_shape, feature_shape, X = get_data
-    kernel1 = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    kernel2 = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    kernel1 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    kernel2 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
     kernel_add = kernel1 + kernel2
     kernel_mul = kernel1 * kernel2
     cov_add = kernel_add(X, X)
     cov_mul = kernel_mul(X, X)
     assert cov_add is not None
     assert cov_add.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
-    # assert tf.reduce_all(tf.linalg.eigvals(cov_add) > 0.)
     assert np.all(np.linalg.eigvals(cov_add.numpy()) > 0)
     assert cov_mul is not None
     assert cov_mul.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
-    # assert tf.reduce_all(tf.linalg.eigvals(cov_mul) > 0.)
     assert np.all(np.linalg.eigvals(cov_mul.numpy()) > 0)
 
 
 def test_mean_combination(tf_seed, get_data, get_mean_func):
     batch_shape, sample_shape, feature_shape, X = get_data
-    mean1 = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
-    mean2 = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    mean1 = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    mean2 = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     mean_add = mean1 + mean2
     mean_mul = mean1 * mean2
     mean_add_val = mean_add(X)
@@ -217,7 +216,8 @@ def test_gp_invalid_prior(tf_seed):
         X_new = tf.random.normal((2, 2, 1))
         trace = pm.sample(invalid_model(gp, X, X_new), num_samples=1, burn_in=1, num_chains=1)
 
+
 def test_exp_quad_ls_amplitude(tf_seed):
-    cov = pm.gp.cov.ExpQuad(1., 1., 1)
+    cov = pm.gp.cov.ExpQuad(1.0, 1.0, 1)
     assert cov.amplitude is not None
     assert cov.length_scale is not None

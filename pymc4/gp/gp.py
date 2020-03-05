@@ -5,9 +5,6 @@ Gaussian Process Models present in PyMC4's Gaussian Process module.
 
 
 import tensorflow as tf
-
-# import tensorflow_probability as tfp
-# import numpy as np
 from .cov import ExpQuad
 from .mean import Zero
 from ..distributions import MvNormal, Normal
@@ -131,6 +128,8 @@ class LatentGP(BaseGP):
             except:
                 raise ValueError("Prior `f` must be a numpy array or tensor.")
 
+        # I am not sure about this. Do we need to worry about ``f`` being
+        # sampled previously? Do we need that support?
         # if len(f.shape) > len(X.shape[:-(self.feature_ndims)]):
         #     # f is previously sampled and may contain several chains and samples
         #     # simply broadcast the shape of data to match f.
@@ -154,7 +153,7 @@ class LatentGP(BaseGP):
         Kss = self.cov_fn(Xnew, Xnew)
         cov = Kss - tf.linalg.matrix_transpose(A) @ A
         # Return the stabilized covarience matrix and squeeze the
-        # last dimention that we added earlier.
+        # last dimension that we added earlier.
         return tf.squeeze(mu, axis=[-1]), stabilize(cov)
 
     def prior(self, name, X, **kwargs):

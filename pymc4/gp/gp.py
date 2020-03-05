@@ -8,8 +8,8 @@ import tensorflow as tf
 
 # import tensorflow_probability as tfp
 # import numpy as np
-# from .cov import ExpQuad
-# from .mean import Zero
+from .cov import ExpQuad
+from .mean import Zero
 from ..distributions import MvNormal, Normal
 from .util import stabilize
 
@@ -18,7 +18,7 @@ __all__ = ["LatentGP"]
 
 
 class BaseGP:
-    def __init__(self, mean_fn, cov_fn):
+    def __init__(self, mean_fn=Zero(1), cov_fn=ExpQuad(1.0, 1.0, 1)):
         if mean_fn.feature_ndims != cov_fn.feature_ndims:
             raise ValueError(
                 "The feature_ndims of mean and covariance functions should be the same"
@@ -101,7 +101,7 @@ class LatentGP(BaseGP):
         if self._is_univariate(X):
             return Normal(
                 name=name,
-                loc=tf.squeeze(mu),
+                loc=tf.squeeze(mu, axis=[-1]),
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
                 **kwargs,
             )
@@ -124,9 +124,12 @@ class LatentGP(BaseGP):
         return X, f, cov_total, mean_total
 
     def _build_conditional(self, Xnew, X, f, cov_total, mean_total):
-        # raise an error if the prior ``f`` is not a tensor
+        # raise an error if the prior ``f`` is not a tensor or numpy array
         if not tf.is_tensor(f):
-            raise ValueError("Prior `f` must be a numpy array or tensor.")
+            try:
+                f = tf.convert_to_tensor(f)
+            except:
+                raise ValueError("Prior `f` must be a numpy array or tensor.")
 
         # if len(f.shape) > len(X.shape[:-(self.feature_ndims)]):
         #     # f is previously sampled and may contain several chains and samples
@@ -204,6 +207,8 @@ class LatentGP(BaseGP):
         mu, cov = self._build_conditional(Xnew, *givens)
         if self._is_univariate(Xnew):
             return Normal(
-                name=name, loc=tf.squeeze(mu, [-1]), scale=tf.math.sqrt(tf.squeeze(cov, [-1, -2]))
+                name=name,
+                loc=tf.squeeze(mu, axis=[-1]),
+                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
             )
         return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)

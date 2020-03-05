@@ -4,6 +4,7 @@ Covariance Functions for PyMC4's Gaussian Process module.
 """
 
 from abc import abstractmethod
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 __all__ = [
@@ -29,7 +30,7 @@ __all__ = [
 class Covariance:
     r"""Base class of all Covariance functions for Gaussian Process"""
 
-    def __init__(self, feature_ndims, **kwargs):
+    def __init__(self, feature_ndims=1, **kwargs):
         # TODO: I have removed the diag parameter
         # for now but I can come back and add it later.
         self.feature_ndims = feature_ndims
@@ -126,18 +127,18 @@ class ExpQuad(Stationary):
     Parameters
     ----------
     amplitude : tensor, array-like
-        The :math:`\sigma` parameter of RBF kernel
+        The :math:`\sigma` parameter of RBF kernel, amplitude > 0
     length_scale : tensor, array-like
         The :math:`l` parameter of the RBF kernel
-    feature_ndims : int
+    feature_ndims : int, optional
         number of rightmost dims to include in kernel computation
-    diag : bool, optional
-        Only consider the diagonal entries of the kernel
     kwargs : optional
         Other keyword arguments that tfp's ``ExponentiatedQuadratic`` kernel takes
     """
 
-    def __init__(self, amplitude, length_scale, feature_ndims, **kwargs):
+    def __init__(self, amplitude, length_scale, feature_ndims=1, **kwargs):
+        if not tf.reduce_all(amplitude > 0.0):
+            raise ValueError("`amplitude` parameter must not contains zero or negative entries.")
         self._amplitude = amplitude
         self._length_scale = length_scale
         super().__init__(feature_ndims=feature_ndims, **kwargs)

@@ -147,3 +147,70 @@ def test_gp_models_conditional(
     else:
         # assert cond_samples.shape == (1, 3, ) + batch_shape + sample_shape
         assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape + sample_shape
+
+
+def test_covariance_combination(tf_seed, get_data, get_cov_func):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    kernel1 = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    kernel2 = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    kernel_add = kernel1 + kernel2
+    kernel_mul = kernel1 * kernel2
+    cov_add = kernel_add(X, X)
+    cov_mul = kernel_mul(X, X)
+    assert cov_add is not None
+    assert cov_add.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
+    # assert tf.reduce_all(tf.linalg.eigvals(cov_add) > 0.)
+    assert np.all(np.linalg.eigvals(cov_add.numpy()) > 0)
+    assert cov_mul is not None
+    assert cov_mul.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
+    # assert tf.reduce_all(tf.linalg.eigvals(cov_mul) > 0.)
+    assert np.all(np.linalg.eigvals(cov_mul.numpy()) > 0)
+
+
+def test_mean_combination(tf_seed, get_data, get_mean_func):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    mean1 = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    mean2 = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    mean_add = mean1 + mean2
+    mean_mul = mean1 * mean2
+    mean_add_val = mean_add(X)
+    mean_cov_val = mean_mul(X)
+    assert mean_add_val is not None
+    assert mean_add_val.shape == batch_shape + sample_shape
+    assert mean_cov_val is not None
+    assert mean_cov_val.shape == batch_shape + sample_shape
+
+
+def test_invalid_feature_ndims(tf_seed):
+    with pytest.raises(ValueError, match=r"Cannot combine kernels"):
+        kernel1 = pm.gp.cov.ExpQuad(1.0, 1.0, 1)
+        kernel2 = pm.gp.cov.ExpQuad(1.0, 1.0, 2)
+        kernel = kernel1 + kernel2
+    with pytest.raises(ValueError, match=r"Cannot combine means"):
+        mean1 = pm.gp.mean.Zero(1)
+        mean2 = pm.gp.mean.Zero(2)
+        kernel = mean1 + mean2
+    with pytest.raises(
+        ValueError, match=r"The feature_ndims of mean and covariance functions should be the same"
+    ):
+        mean = pm.gp.mean.Zero(1)
+        cov = pm.gp.cov.ExpQuad(1.0, 1.0, 2)
+        gp = pm.gp.gp.LatentGP(mean, cov)
+
+
+def test_exp_quad_invalid_amplitude(tf_seed):
+    with pytest.raises(ValueError, match=r"must not contains zero or negative entries"):
+        kernel = pm.gp.cov.ExpQuad(-1.0, 1.0, 1)
+
+
+def test_gp_invalid_prior(tf_seed):
+    @pm.model
+    def invalid_model(gp, X, X_new):
+        f = gp.prior("f", X)
+        cond = yield gp.conditional("fcond", X_new, given={"X": X, "f": f})
+
+    with pytest.raises(ValueError, match=r"must be a numpy array or tensor"):
+        gp = pm.gp.gp.LatentGP()
+        X = tf.random.normal((2, 5, 1))
+        X_new = tf.random.normal((2, 2, 1))
+        trace = pm.sample(invalid_model(gp, X, X_new), num_samples=1, burn_in=1, num_chains=1)

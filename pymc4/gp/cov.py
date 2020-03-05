@@ -4,7 +4,6 @@ Covariance Functions for PyMC4's Gaussian Process module.
 """
 
 from abc import abstractmethod
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 __all__ = [
@@ -30,9 +29,10 @@ __all__ = [
 class Covariance:
     r"""Base class of all Covariance functions for Gaussian Process"""
 
-    def __init__(self, feature_ndims, diag=False, **kwargs):
+    def __init__(self, feature_ndims, **kwargs):
+        # TODO: I have removed the diag parameter
+        # for now but I can come back and add it later.
         self.feature_ndims = feature_ndims
-        self.diag = diag
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
 
     @abstractmethod
@@ -40,10 +40,7 @@ class Covariance:
         raise NotImplementedError("Your Covariance class should override this method")
 
     def __call__(self, X1, X2, **kwargs):
-        if self.diag:
-            return tf.linalg.diag_part(self._kernel.apply(X1, X2, **kwargs))
-        else:
-            return self._kernel.matrix(X1, X2, **kwargs)
+        return self._kernel.matrix(X1, X2, **kwargs)
 
     def evaluate_kernel(self, X1, X2, **kwargs):
         """Evaluate kernel at certain points
@@ -78,7 +75,7 @@ class Combination(Covariance):
         self.feature_ndims = self.kernel1.feature_ndims
         if self.kernel1.feature_ndims != self.kernel2.feature_ndims:
             raise ValueError("Cannot combine kernels with different feature_ndims")
-        super().__init__(self.kernel1.feature_ndims, diag=False, **kwargs)
+        super().__init__(self.kernel1.feature_ndims, **kwargs)
 
 
 class CovarianceAdd(Combination):
@@ -91,10 +88,6 @@ class CovarianceAdd(Combination):
     """
 
     def _init_kernel(self, feature_ndims, **kwargs):
-        # TODO: handle the ``diag`` parameter for each kernel being combined
-        # Approches: 1. Add the diag support to tfp and use its interface to combine kernels.
-        #            2. Create a interface similar to PyMC3 to combine kernels.
-        # Currently, I have just ignored the diag parameter.
         return self.kernel1 + self.kernel2
 
 
@@ -108,7 +101,6 @@ class CovarianceProd(Combination):
     """
 
     def _init_kernel(self, feature_ndims, **kwargs):
-        # TODO: Similar problem as CovarianceAdd
         return self.kernel1 * self.kernel2
 
 
@@ -145,10 +137,10 @@ class ExpQuad(Stationary):
         Other keyword arguments that tfp's ``ExponentiatedQuadratic`` kernel takes
     """
 
-    def __init__(self, amplitude, length_scale, feature_ndims, diag=False, **kwargs):
+    def __init__(self, amplitude, length_scale, feature_ndims, **kwargs):
         self._amplitude = amplitude
         self._length_scale = length_scale
-        super().__init__(feature_ndims=feature_ndims, diag=diag, **kwargs)
+        super().__init__(feature_ndims=feature_ndims, **kwargs)
 
     def _init_kernel(self, feature_ndims, **kwargs):
         return tfp.math.psd_kernels.ExponentiatedQuadratic(

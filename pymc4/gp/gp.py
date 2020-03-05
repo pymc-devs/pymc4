@@ -127,6 +127,13 @@ class LatentGP(BaseGP):
         # raise an error if the prior ``f`` is not a tensor
         if not tf.is_tensor(f):
             raise ValueError("Prior `f` must be a numpy array or tensor.")
+
+        # if len(f.shape) > len(X.shape[:-(self.feature_ndims)]):
+        #     # f is previously sampled and may contain several chains and samples
+        #     # simply broadcast the shape of data to match f.
+        #     X = tf.broadcast_to(X, f.shape + X.shape[-(self.feature_ndims):])
+        #     Xnew = tf.broadcast_to(Xnew, f.shape + Xnew.shape[-(self.feature_ndims):])
+
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
         if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):

@@ -1,8 +1,7 @@
+import tensorflow as tf
 import numpy as np
 import pymc4 as pm
 import pytest
-
-OK = True
 
 BATCH_AND_FEATURE_SHAPES = [(1,), (2,), (2, 2,)]
 SAMPLE_SHAPE = [(1,), (5,)]
@@ -36,9 +35,7 @@ def get_feature_shape(request):
 
 @pytest.fixture(scope="module")
 def get_data(get_batch_shape, get_sample_shape, get_feature_shape):
-    X = np.random.randn(*(get_batch_shape + get_sample_shape + get_feature_shape)).astype(
-        np.float32
-    )
+    X = tf.random.normal(get_batch_shape + get_sample_shape + get_feature_shape)
     return get_batch_shape, get_sample_shape, get_feature_shape, X
 
 
@@ -59,7 +56,7 @@ def get_gp_model(request):
 
 @pytest.fixture(scope="module", ids=str)
 def get_prior_model():
-    @pm.model
+    @pm.model(name="prior_model")
     def prior_model(gp, X):
         f = yield gp.prior("f", X)
         return f
@@ -69,7 +66,7 @@ def get_prior_model():
 
 @pytest.fixture(scope="module", ids=str)
 def get_cond_model():
-    @pm.model
+    @pm.model(name="cond_model")
     def cond_model(gp, X, X_new):
         f = yield gp.prior("f", X)
         fcond = yield gp.conditional("fcond", X_new, given={"X": X, "f": f})
@@ -78,45 +75,73 @@ def get_cond_model():
     return cond_model
 
 
-def test_mean_funcs(get_data, get_mean_func):
-    batch_shape, samples_shape, feature_shape, X = get_data
-    mean_args = _check_mean[get_mean_func]
-    mean_func_class = getattr(pm.gp.mean, get_mean_func)
-    mean_func = mean_func_class(feature_ndims=len(feature_shape), **mean_args)
+def get_func(test_dict, test_func, feature_shape, mod):
+    kwargs = test_dict[test_func]
+    func_class = getattr(mod, test_func)
+    func = func_class(feature_ndims=len(feature_shape), **kwargs)
+    return func
+
+
+def test_mean_funcs(tf_seed, get_data, get_mean_func):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     mean = mean_func(X)
     assert mean is not None
-    assert mean.shape == batch_shape + samples_shape
+    assert mean.shape == batch_shape + sample_shape
 
 
-def test_cov_funcs(get_data, get_cov_func):
-    batch_shape, samples_shape, feature_shape, X = get_data
-    cov_args = _check_cov[get_cov_func]
-    cov_func_class = getattr(pm.gp.cov, get_cov_func)
-    cov_func = cov_func_class(feature_ndims=len(feature_shape), **cov_args)
+def test_cov_funcs(tf_seed, get_data, get_cov_func):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
     cov = cov_func(X, X)
     assert cov is not None
-    assert cov.shape.as_list() == list(batch_shape) + list(samples_shape + samples_shape)
+    assert cov.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
     # assert tf.reduce_all(tf.linalg.eigvals(cov) > 0.)
     assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
 
 
-def test_gp_models_prior(get_data, get_mean_func, get_cov_func, get_gp_model, get_prior_model):
-    batch_shape, samples_shape, feature_shape, X = get_data
-    mean_args = _check_mean[get_mean_func]
-    mean_func_class = getattr(pm.gp.mean, get_mean_func)
-    mean_func = mean_func_class(feature_ndims=len(feature_shape), **mean_args)
-    cov_args = _check_cov[get_cov_func]
-    cov_func_class = getattr(pm.gp.cov, get_cov_func)
-    cov_func = cov_func_class(feature_ndims=len(feature_shape), **cov_args)
+def test_gp_models_prior(tf_seed, get_data, get_mean_func, get_cov_func, get_gp_model):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
     gp_class = getattr(pm.gp.gp, get_gp_model)
     gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
     try:
         prior_dist = gp_model.prior("prior", X)
+        # trace = pm.sample(get_prior_model(gp_model, X), num_samples=3, num_chains=1)
     except NotImplementedError:
         pytest.skip("Skipping: prior not implemented")
 
     assert prior_dist is not None
-    if samples_shape == (1,):
+    # assert trace.posterior['prior_model/f'] is not None
+    if sample_shape == (1,):
         assert prior_dist.sample(1).shape == (1,) + batch_shape
+        # assert trace.posterior['prior_model/f'].shape == (1, 3, ) + batch_shape
     else:
-        assert prior_dist.sample(1).shape == (1,) + batch_shape + samples_shape
+        assert prior_dist.sample(1).shape == (1,) + batch_shape + sample_shape
+        # assert trace.posterior['prior_model/f'].shape == (1, 3, ) + batch_shape + sample_shape
+
+
+def test_gp_models_conditional(tf_seed, get_data, get_mean_func, get_cov_func, get_gp_model, get_cond_model):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    X_new = tf.random.normal(batch_shape + sample_shape + feature_shape)
+    mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    gp_class = getattr(pm.gp.gp, get_gp_model)
+    gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
+    try:
+        trace = pm.sample(get_cond_model(gp_model, X, X_new), num_samples=3, num_chains=1)
+        # f = gp_model.prior('f', X).sample(3)
+        # cond_dist = gp_model.conditional('fcond', X_new, given={'X': X, 'f': f})
+        # cond_samples = cond_dist.sample(1)
+    except NotImplementedError:
+        pytest.skip("Skipping: conditional not implemented")
+
+    # assert cond_samples is not None
+    assert trace.posterior['cond_model/fcond'] is not None
+    if sample_shape == (1,):
+        # assert cond_samples.shape == (1, 3, ) + batch_shape
+        assert trace.posterior['cond_model/fcond'].shape == (1, 3, ) + batch_shape
+    else:
+        # assert cond_samples.shape == (1, 3, ) + batch_shape + sample_shape
+        assert trace.posterior['cond_model/fcond'].shape == (1, 3, ) + batch_shape + sample_shape

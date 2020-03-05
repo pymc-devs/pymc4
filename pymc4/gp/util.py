@@ -4,7 +4,7 @@ import numpy as np
 
 def stabilize(K):
     r"""Add a diagonal shift to a covarience matrix"""
-    return tf.linalg.set_diag(K, tf.linalg.diag_part(K) + 1e-4)
+    return tf.linalg.set_diag(K, tf.linalg.diag_part(K) + 1e-6)
 
 
 def plot_gp_dist(

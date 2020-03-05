@@ -122,7 +122,9 @@ def test_gp_models_prior(tf_seed, get_data, get_mean_func, get_cov_func, get_gp_
         # assert trace.posterior['prior_model/f'].shape == (1, 3, ) + batch_shape + sample_shape
 
 
-def test_gp_models_conditional(tf_seed, get_data, get_mean_func, get_cov_func, get_gp_model, get_cond_model):
+def test_gp_models_conditional(
+    tf_seed, get_data, get_mean_func, get_cov_func, get_gp_model, get_cond_model
+):
     batch_shape, sample_shape, feature_shape, X = get_data
     X_new = tf.random.normal(batch_shape + sample_shape + feature_shape)
     mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
@@ -138,10 +140,10 @@ def test_gp_models_conditional(tf_seed, get_data, get_mean_func, get_cov_func, g
         pytest.skip("Skipping: conditional not implemented")
 
     # assert cond_samples is not None
-    assert trace.posterior['cond_model/fcond'] is not None
+    assert trace.posterior["cond_model/fcond"] is not None
     if sample_shape == (1,):
         # assert cond_samples.shape == (1, 3, ) + batch_shape
-        assert trace.posterior['cond_model/fcond'].shape == (1, 3, ) + batch_shape
+        assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape
     else:
         # assert cond_samples.shape == (1, 3, ) + batch_shape + sample_shape
-        assert trace.posterior['cond_model/fcond'].shape == (1, 3, ) + batch_shape + sample_shape
+        assert trace.posterior["cond_model/fcond"].shape == (1, 3,) + batch_shape + sample_shape

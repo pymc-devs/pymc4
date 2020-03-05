@@ -80,7 +80,7 @@ class LatentGP(BaseGP):
         # Let's define out GP model and its parameters
         mean_fn = pm.gp.mean.Zero(feature_ndims=2)
         cov_fn = pm.gp.cov.ExpQuad(1., 1., feature_ndims=2)
-        gp = pm.gp.gp.LatentGP(mean_fn, cov_fn)
+        gp = pm.gp.LatentGP(mean_fn, cov_fn)
 
         @pm.model
         def gpmodel():

@@ -104,7 +104,7 @@ def test_gp_models_prior(tf_seed, get_data, get_mean_func, get_cov_func, get_gp_
     batch_shape, sample_shape, feature_shape, X = get_data
     mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    gp_class = getattr(pm.gp.gp, get_gp_model)
+    gp_class = getattr(pm.gp. get_gp_model)
     gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
     try:
         prior_dist = gp_model.prior("prior", X)
@@ -129,7 +129,7 @@ def test_gp_models_conditional(
     X_new = tf.random.normal(batch_shape + sample_shape + feature_shape)
     mean_func = get_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     cov_func = get_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    gp_class = getattr(pm.gp.gp, get_gp_model)
+    gp_class = getattr(pm.gp. get_gp_model)
     gp_model = gp_class(mean_fn=mean_func, cov_fn=cov_func)
     try:
         trace = pm.sample(get_cond_model(gp_model, X, X_new), num_samples=3, num_chains=1)
@@ -195,7 +195,7 @@ def test_invalid_feature_ndims(tf_seed):
     ):
         mean = pm.gp.mean.Zero(1)
         cov = pm.gp.cov.ExpQuad(1.0, 1.0, 2)
-        gp = pm.gp.gp.LatentGP(mean, cov)
+        gp = pm.gp.LatentGP(mean, cov)
 
 
 def test_exp_quad_invalid_amplitude(tf_seed):
@@ -210,7 +210,7 @@ def test_gp_invalid_prior(tf_seed):
         cond = yield gp.conditional("fcond", X_new, given={"X": X, "f": f})
 
     with pytest.raises(ValueError, match=r"must be a numpy array or tensor"):
-        gp = pm.gp.gp.LatentGP()
+        gp = pm.gp.LatentGP()
         X = tf.random.normal((2, 5, 1))
         X_new = tf.random.normal((2, 2, 1))
         trace = pm.sample(invalid_model(gp, X, X_new), num_samples=1, burn_in=1, num_chains=1)

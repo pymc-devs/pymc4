@@ -372,3 +372,10 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
         (dist.batch_shape + dist.event_shape).as_list()
     )
     assert not (np.any(np.isinf(logp)) or np.any(np.isnan(logp)))
+
+
+def test_multivariate_normal_cholesky(tf_seed):
+    mean = np.zeros(2)
+    cov = np.array([[-1.0, 0.0], [0.0, -1.0]])
+    with pytest.raises(ValueError, match=r"Cholesky decomposition failed"):
+        pm.MvNormal("x", loc=mean, covariance_matrix=cov)

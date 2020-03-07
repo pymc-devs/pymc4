@@ -93,8 +93,8 @@ def test_discrete_sampling(model_with_discrete, xla_fixture):
         trace = pm.sample(model=model, sample_type="randomwalk", xla_fixture=xla_fixture)
 
 
-def test_discrete_sampling(model_with_discrete_and_continuous, xla_fixture):
-    model = model_with_discrete()
+def test_compound_sampling(model_with_discrete_and_continuous, xla_fixture):
+    model = model_with_discrete_and_continuous()
     with pytest.raises(Exception) as exinfo:
         trace = pm.sample(model=model, sample_type="compound", xla_fixture=xla_fixture)
 

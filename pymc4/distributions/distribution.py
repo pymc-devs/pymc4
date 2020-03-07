@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Callable
 
 from absl import logging
 import tensorflow as tf
@@ -32,7 +32,7 @@ class Distribution(Model):
     """Statistical distribution."""
 
     _test_value = 0.0
-    _default_new_state_part = None
+    _default_new_state_part: Union[Callable[[Any, Any], Any], None] = None
 
     def __init__(
         self,
@@ -200,7 +200,10 @@ class Distribution(Model):
         return self._distribution.event_shape
 
     @property
-    def grad_support(self, state=None):
+    def grad_support(self):
+        return self._check_grad_support()
+
+    def _check_grad_support(self, state):
         if state is None:
             state = self.sample()
         try:

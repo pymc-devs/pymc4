@@ -1,3 +1,4 @@
+from typing import NamedTuple
 import collections
 
 import tensorflow as tf
@@ -12,9 +13,7 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
         Simple support for compound step
     """
 
-    def __init__(
-        self, target_log_prob_fn, make_kernel_fn: collections.namedtuple, kernel_kwargs, name=None
-    ):
+    def __init__(self, target_log_prob_fn, make_kernel_fn: NamedTuple, kernel_kwargs, name=None):
         self._target_log_prob_fn = target_log_prob_fn
         self._make_kernel_fn = make_kernel_fn
         self._kernel_kwargs = kernel_kwargs

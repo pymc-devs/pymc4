@@ -20,7 +20,6 @@ def sample(
     state: Optional[flow.SamplingState] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
-    custom_trace_fn: Callable[[flow.SamplingState, NamedTuple], None] = None,
     **kwargs,
 ):
     """
@@ -113,7 +112,7 @@ def sample(
     if "nuts" in sampler_type or "hmc" in sampler_type:
         kwargs["num_adaptation_steps"] = burn_in
 
-    sampler = sampler(model, custom_trace_fn=custom_trace_fn, **kwargs)
+    sampler = sampler(model, **kwargs)
     if sampler_type == "compound":
         sampler._assign_methods(state, observed)
 

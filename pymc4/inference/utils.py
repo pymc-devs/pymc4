@@ -35,7 +35,7 @@ def initialize_state(
     observed: Optional[dict] = None,
     state: Optional[flow.SamplingState] = None,
     return_non_sampling_state=False,
-) -> Tuple[flow.SamplingState, List[str], List[str]]:
+) -> Tuple[flow.SamplingState, List[str], List[str], Optional[flow.SamplingState]]:
     """
     Get list of discrete/continuous distributions
 
@@ -64,7 +64,7 @@ def initialize_state(
     free_continuous_names = list(filter(lambda x: x not in observed_rvs, free_continuous_names))
     sampling_state = None
     if return_non_sampling_state is True:
-        sampling_state, _ = stat.as_sampling_state()
+        sampling_state, _ = state.as_sampling_state()
     return state, free_discrete_names, free_continuous_names, sampling_state
 
 

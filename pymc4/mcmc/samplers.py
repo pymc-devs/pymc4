@@ -1,7 +1,7 @@
 import abc
 import inspect
 import types
-from typing import Optional, Callable, NamedTuple
+from typing import Optional, Callable, NamedTuple, List
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz, initialize_state
@@ -26,14 +26,10 @@ def register_sampler(cls):
 
 class _BaseSampler(metaclass=abc.ABCMeta):
     def __init__(
-        self,
-        model: Model,
-        custom_trace_fn: Callable[[flow.SamplingState, NamedTuple], None] = None,
-        **kwargs,
+        self, model: Model, **kwargs,
     ):
         self.model = model
-        if custom_trace_fn:
-            self._trace_fn = types.MethodType(lambda self, s, p: custom_trace_fn(s, p), self)
+        self._stat_names: List = []
         # assign arguments from **kwargs to distinct kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
         self._check_arguments()
@@ -196,8 +192,8 @@ class HMC(_BaseSampler, SamplerConstr):
     _kernel = mcmc.HamiltonianMonteCarlo
     _grad = True
 
-    _default_kernel_kwargs = {"step_size": 0.1, "num_leapfrog_steps": 3}
-    _default_adapter_kwargs = {}
+    _default_kernel_kwargs: dict = {"step_size": 0.1, "num_leapfrog_steps": 3}
+    _default_adapter_kwargs: dict = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -222,13 +218,13 @@ class NUTS(_BaseSampler, SamplerConstr):
     _kernel = mcmc.NoUTurnSampler
     _grad = True
 
-    _default_adapter_kwargs = {
+    _default_adapter_kwargs: dict = {
         "num_adaptation_steps": 100,  # TODO: why thoud?
         "step_size_getter_fn": lambda pkr: pkr.step_size,
         "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
         "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
     }
-    _default_kernel_kwargs = {"step_size": 0.1}
+    _default_kernel_kwargs: dict = {"step_size": 0.1}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -257,8 +253,8 @@ class RandomWalkM(_BaseSampler, SamplerConstr):
     _kernel = mcmc.RandomWalkMetropolis
     _grad = False
 
-    _default_kernel_kwargs = {}
-    _default_adapter_kwargs = {}
+    _default_kernel_kwargs: dict = {}
+    _default_adapter_kwargs: dict = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -275,8 +271,8 @@ class CompoundStep(_BaseSampler, SamplerConstr):
     _kernel = _CompoundStepTF
     _grad = False
 
-    _default_adapter_kwargs = {}
-    _default_kernel_kwargs = {}
+    _default_adapter_kwargs: dict = {}
+    _default_kernel_kwargs: dict = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -292,16 +288,18 @@ class CompoundStep(_BaseSampler, SamplerConstr):
         init = state.all_unobserved_values
         init_state = list(init.values())
         init_keys = list(init.keys())
-        make_kernel_fn = []
-        part_kernel_kwargs = []
+        make_kernel_fn: list = []
+        part_kernel_kwargs: list = []
 
         for i, state_part in enumerate(init_state):
             distr = state.continuous_distributions.get(init_keys[i], None)
             if distr is None:
                 distr = state.discrete_distributions[init_keys[i]]
             part_kernel_kwargs.append({})
-            if distr._default_new_state_part:
-                part_kernel_kwargs[i]["new_state_fn"] = distr._default_new_state_part()
+            part_kernel_kwargs[i]["new_state_fn"] = distr._default_new_state_part
+            if callable(part_kernel_kwargs[i]["new_state_fn"]):
+                part_kernel_kwargs[i]["new_state_fn"] = part_kernel_kwargs[i]["new_state_fn"]()
+
             # simplest way of assigning sampling methods
             if distr.grad_support:
                 make_kernel_fn.append(NUTS._default_kernel_maker())

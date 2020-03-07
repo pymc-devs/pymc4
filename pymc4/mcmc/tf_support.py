@@ -40,6 +40,7 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
 
     def one_step(self, state, _):
         for i, make_kernel_fn in enumerate(self._make_kernel_fn):
+
             def _target_log_prob_fn_part(state_part):
                 state[i] = state_part
                 return self._target_log_prob_fn(*state)
@@ -52,7 +53,8 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
             if mkf.adaptive_kernel:
                 kernel = mkf.adaptive_kernel(inner_kernel=kernel, **mkf.adaptive_kwargs)
             state[i], _ = kernel.one_step(state[i], kernel.bootstrap_results(state[i]))
-        return state, ()
+            next_target_log_prob = self.target_log_prob_fn(*state)
+        return [state, CompoundStepResults(target_log_prob=next_target_log_prob)]
 
     def bootstrap_results(self, init_state):
         with tf.name_scope(mcmc_util.make_name(self.name, "compound", "bootstrap_results")):

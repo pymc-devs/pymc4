@@ -1,5 +1,6 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tensorflow_probability.python.mcmc.internal import util as mcmc_util
 
 tfd = tfp.distributions
 
@@ -24,17 +25,18 @@ def categorical_uniform_fn(scale=1.0, name=None):
     """
 
     def _fn(state_parts, seed):
-        with tf.name_scope(name, "categorical_uniform_fn"):
+        with tf.name_scope(name or "categorical_uniform_fn"):
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
             if len(scales) == 1:
                 scales *= len(state_parts)
             if len(state_parts) != len(scales):
                 raise ValueError("`scale` must broadcast with `state_parts`")
             probs = tf.ones_like(state_parts)
-            return [
-                tfd.Categorical(probs=probts / tf.math.reduce_sum(probs, -1)).sample(seed=seed)
+            deltas = [
+                tf.squeeze(tfd.Categorical(probs=probs / tf.math.reduce_sum(probs, -1), dtype=tf.float32).sample(seed=seed, sample_shape=(tf.shape(state_part))), -1)
                 for scale_part, state_part in zip(scales, state_parts)
             ]
+            return deltas
         # TODO: not sure if scale should be used here
 
     return _fn

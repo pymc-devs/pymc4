@@ -223,7 +223,7 @@ class NUTS(_BaseSampler, SamplerConstr):
     _grad = True
 
     _default_adapter_kwargs = {
-        "num_adaptation_steps": 100, # TODO: why thoud?
+        "num_adaptation_steps": 100,  # TODO: why thoud?
         "step_size_getter_fn": lambda pkr: pkr.step_size,
         "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
         "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
@@ -257,8 +257,8 @@ class RandomWalkM(_BaseSampler, SamplerConstr):
     _kernel = mcmc.RandomWalkMetropolis
     _grad = False
 
-    _default_kernel_kwargs = {"step_size": 0.1}
     _default_kernel_kwargs = {}
+    _default_adapter_kwargs = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -280,6 +280,7 @@ class CompoundStep(_BaseSampler, SamplerConstr):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._stat_names = ["target_log_prob"]
 
     def _trace_fn(self, current_state, pkr):
         return pkr.target_log_prob

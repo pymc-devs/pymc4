@@ -599,7 +599,10 @@ def test_log_prob_elemwise(fixture_model_with_stacks):
     model, expected_rv_shapes = fixture_model_with_stacks
     _, state = pm.evaluate_model(model())
     log_prob_elemwise = dict(
-        zip(itertools.chain(state.discrete_distributions, state.continuous_distributions), state.collect_log_prob_elemwise())
+        zip(
+            itertools.chain(state.discrete_distributions, state.continuous_distributions),
+            state.collect_log_prob_elemwise(),
+        )
     )  # This will discard potentials in log_prob_elemwise
     log_prob = state.collect_log_prob()
     assert len(log_prob_elemwise) == len(expected_rv_shapes)

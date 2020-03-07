@@ -20,7 +20,7 @@ def simple_model():
 def model_with_discrete():
     @pm.model()
     def model_with_discrete():
-        disc = yield pm.DiscreteUniform("disc", 0, 1)
+        disc = yield pm.Categorical("disc", probs=[0.1, 0.9])
         return disc
 
     return model_with_discrete
@@ -76,19 +76,7 @@ def vectorized_model_fixture(request):
     return model, is_vectorized_model, core_shapes
 
 
-def test_random_walk_sampling(simple_model, xla_fixture):
-    model = simple_model()
-    trace = pm.sample(
-        model=model,
-        sampler_type="randomwalk",
-        num_samples=1000,
-        num_chains=4,
-        burn_in=100,
-        step_size=0.1,
-        xla=xla_fixture,
-    )
-
-
 def test_discrete_sampling(model_with_discrete, xla_fixture):
     model = model_with_discrete()
-    trace = pm.sample(model=model, xla_fixture=xla_fixture)
+    with pytest.raises(Exception) as exinfo:
+        trace = pm.sample(model=model, sample_type="randomwalk", xla_fixture=xla_fixture)

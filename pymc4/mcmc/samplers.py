@@ -4,12 +4,13 @@ import types
 from typing import Optional, Callable, NamedTuple
 import tensorflow as tf
 from tensorflow_probability import mcmc
-from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz
+from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz, initialize_state
 
-from .base_mcmc import SamplerConstr
+from pymc4.mcmc.base_mcmc import SamplerConstr
 from pymc4.coroutine_model import Model
 from pymc4.utils import NameParts
 from pymc4 import flow
+from pymc4.mcmc.tf_support import _CompoundStepTF
 
 
 __all__ = ["HMC", "NUTS", "RandomWalk"]
@@ -31,9 +32,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
     ):
         self.model = model
         if custom_trace_fn:
-            self._trace_fn = types.MethodType(
-                lambda self, s, p: custom_trace_fn(s, p), self
-            )
+            self._trace_fn = types.MethodType(lambda self, s, p: custom_trace_fn(s, p), self)
         # assign arguments from **kwargs to distinct kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
         self._check_arguments()
@@ -98,7 +97,6 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         sampler_stats = dict(zip(self._stat_names, sample_stats))
         if len(deterministic_names) > 0:
             posterior.update(dict(zip(deterministic_names, deterministic_values)))
-        print(results)
 
         return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
 
@@ -171,6 +169,9 @@ class _BaseSampler(metaclass=abc.ABCMeta):
     def __call__(self, *args, **kwargs):
         return self.sample(*args, **kwargs)
 
+    def _bound_kwargs(self, *args):
+        ...
+
 
 @register_sampler
 class HMC(_BaseSampler, SamplerConstr):
@@ -188,9 +189,9 @@ class HMC(_BaseSampler, SamplerConstr):
             self.kernel_kwargs.setdefault(k, v)
 
     def _trace_fn(self, current_state, pkr):
-        return (
-            pkr.inner_results.log_accept_ratio,
-        ) + tuple(self.deterministics_callback(*current_state))
+        return (pkr.inner_results.log_accept_ratio,) + tuple(
+            self.deterministics_callback(*current_state)
+        )
 
 
 @register_sampler
@@ -247,6 +248,9 @@ class RandomWalk(_BaseSampler, SamplerConstr):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._stat_names = ["mean_accept"]
+        default_kernel_kwargs = {"step_size": 0.1}
+        for k, v in default_kernel_kwargs.items():
+            self.kernel_kwargs.setdefault(k, v)
 
     def _trace_fn(self, current_state, pkr):
         return (pkr.log_accept_ratio,) + tuple(self.deterministics_callback(*current_state))
@@ -255,16 +259,41 @@ class RandomWalk(_BaseSampler, SamplerConstr):
 @register_sampler
 class CompoundStep(_BaseSampler, SamplerConstr):
     _name = "compound"
+    _adaptation = None
+    _kernel = _CompoundStepTF
+    _grad = False
 
     def __init__(self, *args, **kwargs):
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
-    def sample(self):
-        ...
+    def _trace_fn(self, current_state, pkr):
+        return pkr.target_log_prob
 
-    @staticmethod
-    def _assign_step_methods():
-        raise NotImplementedError
+    def _assign_methods(
+        self, state: Optional[flow.SamplingState] = None, observed: Optional[dict] = None
+    ):
+        (state, _, _, _) = initialize_state(self.model, observed=observed, state=state)
+        init = state.all_unobserved_values
+        init_state = list(init.values())
+        init_keys = list(init.keys())
+        make_kernel_fn = []
+        part_kernel_kwargs = []
+
+        for i, state_part in enumerate(init_state):
+            distr = state.continuous_distributions.get(init_keys[i], None)
+            if distr is None:
+                distr = state.discrete_distributions[init_keys[i]]
+            part_kernel_kwargs.append({})
+            if distr._default_new_state_part:
+                part_kernel_kwargs[i]["new_state_fn"] = distr._default_new_state_part()
+            # simplest way of assigning sampling methods
+            if distr.grad_support:
+                make_kernel_fn.append(mcmc.NoUTurnSampler)
+            else:
+                make_kernel_fn.append(mcmc.RandomWalkMetropolis)
+
+        self.kernel_kwargs["make_kernel_fn"] = make_kernel_fn
+        self.kernel_kwargs["kernel_kwargs"] = part_kernel_kwargs
 
 
 def build_logp_and_deterministic_functions(

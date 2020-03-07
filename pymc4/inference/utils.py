@@ -26,13 +26,15 @@ def initialize_sampling_state(
     """
     _, state = flow.evaluate_meta_model(model, observed=observed, state=state)
     deterministic_names = list(state.deterministics)
-
     state, transformed_names = state.as_sampling_state()
     return state, deterministic_names + transformed_names
 
 
 def initialize_state(
-    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+    model: Model,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
+    return_non_sampling_state=False,
 ) -> Tuple[flow.SamplingState, List[str], List[str]]:
     """
     Get list of discrete/continuous distributions
@@ -49,6 +51,8 @@ def initialize_state(
         The list of free discrete variables
     free_continuous_names: List[str]
         The list of free continuous variables
+    sampling_state:
+        The model's sampling state
     """
     _, state = flow.evaluate_model_transformed(model)
     free_discrete_names, free_continuous_names = (
@@ -58,7 +62,10 @@ def initialize_state(
     observed_rvs = list(state.observed_values.keys())
     free_discrete_names = list(filter(lambda x: x not in observed_rvs, free_discrete_names))
     free_continuous_names = list(filter(lambda x: x not in observed_rvs, free_continuous_names))
-    return state, free_discrete_names, free_continuous_names
+    sampling_state = None
+    if return_non_sampling_state is True:
+        sampling_state, _ = stat.as_sampling_state()
+    return state, free_discrete_names, free_continuous_names, sampling_state
 
 
 def trace_to_arviz(

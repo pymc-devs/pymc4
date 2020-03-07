@@ -17,7 +17,7 @@ class SamplerConstr:
                     type(model)
                 )
             )
-        non_sampling_state, disc_names, cont_names = initialize_state(model)
+        non_sampling_state, disc_names, cont_names, _ = initialize_state(model)
         if cls._grad is True and disc_names:
             raise ValueError("Discrete distributions can't be used with gradient-based sampler")
         # TODO: add Compound support in class constructor?

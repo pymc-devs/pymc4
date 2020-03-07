@@ -20,7 +20,6 @@ def sample(
     state: Optional[flow.SamplingState] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
-    step_methods: dict = None,
     custom_trace_fn: Callable[[flow.SamplingState, NamedTuple], None] = None,
     **kwargs,
 ):
@@ -110,15 +109,14 @@ def sample(
 
     _log.info("{} doesn't support discrete variables".format(sampler.__name__))
 
-    if sampler_type == "compound" and step_methods is None:
-        # TODO: should be removed if not able to implement
-        step_methods = sampler._assign_step_methods()
-
     # TODO: keep num_adaptation_steps for nuts/hmc with adaptive step but later should be removed because of ambiguity
     if "nuts" in sampler_type or "hmc" in sampler_type:
         kwargs["num_adaptation_steps"] = burn_in
 
     sampler = sampler(model, custom_trace_fn=custom_trace_fn, **kwargs)
+    if sampler_type == "compound":
+        sampler._assign_methods(state, observed)
+
     return sampler(
         num_samples=num_samples,
         num_chains=num_chains,

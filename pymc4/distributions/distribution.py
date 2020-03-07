@@ -202,7 +202,7 @@ class Distribution(Model):
     def grad_support(self):
         return self._check_grad_support()
 
-    def _check_grad_support(self, state):
+    def _check_grad_support(self, state=None):
         if state is None:
             state = self.sample()
         try:

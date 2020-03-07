@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, Callable, NamedTuple
+from typing import Optional, Dict, Any
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.mcmc.samplers import reg_samplers

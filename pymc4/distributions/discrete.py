@@ -5,7 +5,7 @@ from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
 )
-from pymc4.distributions.state_functions import *
+from pymc4.distributions.state_functions import categorical_uniform_fn
 
 __all__ = [
     "Bernoulli",

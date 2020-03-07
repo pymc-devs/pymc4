@@ -1,7 +1,6 @@
 import abc
 import inspect
-import types
-from typing import Optional, Callable, NamedTuple, List
+from typing import Optional, List
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz, initialize_state

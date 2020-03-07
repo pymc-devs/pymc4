@@ -9,7 +9,6 @@ from tensorflow_probability.python.mcmc.internal import util as mcmc_util
 from pymc4.coroutine_model import Model, unpack
 from pymc4.distributions.batchstack import BatchStacker
 from pymc4.distributions import transforms
-from pymc4.distributions.state_functions import *
 
 NameType = Union[str, int]
 

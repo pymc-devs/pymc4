@@ -1,3 +1,4 @@
+import functools
 from typing import NamedTuple
 import collections
 
@@ -39,14 +40,13 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
 
     def one_step(self, state, _):
         for i, make_kernel_fn in enumerate(self._make_kernel_fn):
-
-            def _target_log_prob_fn_part(state_part):
-                state[i] = state_part
+            def _target_log_prob_fn_part(state_part, idx):
+                state[idx] = state_part
                 return self._target_log_prob_fn(*state)
 
             mkf = make_kernel_fn
             kernel = mkf.kernel(
-                target_log_prob_fn=_target_log_prob_fn_part,
+                target_log_prob_fn=functools.partial(_target_log_prob_fn_part, idx=i),
                 **{**self._kernel_kwargs[i], **mkf.kernel_kwargs},
             )
             if mkf.adaptive_kernel:

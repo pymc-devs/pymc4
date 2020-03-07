@@ -11,9 +11,10 @@ from pymc4.coroutine_model import Model
 from pymc4.utils import NameParts
 from pymc4 import flow
 from pymc4.mcmc.tf_support import _CompoundStepTF
+from pymc4.utils import KERNEL_KWARGS_SET
 
 
-__all__ = ["HMC", "NUTS", "RandomWalk"]
+__all__ = ["HMC", "NUTS", "RandomWalkM"]
 
 reg_samplers = {}
 
@@ -36,6 +37,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         # assign arguments from **kwargs to distinct kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
         self._check_arguments()
+        self._bound_kwargs()
 
     def sample(
         self,
@@ -170,7 +172,21 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         return self.sample(*args, **kwargs)
 
     def _bound_kwargs(self, *args):
-        ...
+        for k, v in self._default_kernel_kwargs.items():
+            self.kernel_kwargs.setdefault(k, v)
+        for k, v in self._default_adapter_kwargs.items():
+            self.adaptation_kwargs.setdefault(k, v)
+
+    @classmethod
+    def _default_kernel_maker(cls):
+        # TODO: maybe can be done with partial, but not sure how to do it recursively
+        kernel_collection = KERNEL_KWARGS_SET(
+            kernel=cls._kernel,
+            adaptive_kernel=cls._adaptation,
+            kernel_kwargs=cls._default_kernel_kwargs,
+            adaptive_kwargs=cls._default_adapter_kwargs,
+        )
+        return kernel_collection
 
 
 @register_sampler
@@ -180,13 +196,12 @@ class HMC(_BaseSampler, SamplerConstr):
     _kernel = mcmc.HamiltonianMonteCarlo
     _grad = True
 
+    _default_kernel_kwargs = {"step_size": 0.1, "num_leapfrog_steps": 3}
+    _default_adapter_kwargs = {}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._stat_names = {"mean_tree_accept"}
-        # TODO: default values should be optimized
-        default_kernel_kwargs = {"step_size": 0.1, "num_leapfrog_steps": 3}
-        for k, v in default_kernel_kwargs.items():
-            self.kernel_kwargs.setdefault(k, v)
 
     def _trace_fn(self, current_state, pkr):
         return (pkr.inner_results.log_accept_ratio,) + tuple(
@@ -207,20 +222,17 @@ class NUTS(_BaseSampler, SamplerConstr):
     _kernel = mcmc.NoUTurnSampler
     _grad = True
 
+    _default_adapter_kwargs = {
+        "num_adaptation_steps": 100, # TODO: why thoud?
+        "step_size_getter_fn": lambda pkr: pkr.step_size,
+        "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
+        "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
+    }
+    _default_kernel_kwargs = {"step_size": 0.1}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
-
-        default_adapter_kwargs = {
-            "step_size_getter_fn": lambda pkr: pkr.step_size,
-            "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
-            "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
-        }
-        default_kernel_kwargs = {"step_size": 0.1}
-        for k, v in default_adapter_kwargs.items():
-            self.adaptation_kwargs.setdefault(k, v)
-        for k, v in default_kernel_kwargs.items():
-            self.kernel_kwargs.setdefault(k, v)
 
     def _trace_fn(self, current_state, pkr):
         return (
@@ -239,18 +251,18 @@ class NUTSSimple(NUTS):
 
 
 @register_sampler
-class RandomWalk(_BaseSampler, SamplerConstr):
-    _name = "randomwalk"
+class RandomWalkM(_BaseSampler, SamplerConstr):
+    _name = "randomwalkm"
     _adaptation = None
     _kernel = mcmc.RandomWalkMetropolis
     _grad = False
 
+    _default_kernel_kwargs = {"step_size": 0.1}
+    _default_kernel_kwargs = {}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._stat_names = ["mean_accept"]
-        default_kernel_kwargs = {"step_size": 0.1}
-        for k, v in default_kernel_kwargs.items():
-            self.kernel_kwargs.setdefault(k, v)
 
     def _trace_fn(self, current_state, pkr):
         return (pkr.log_accept_ratio,) + tuple(self.deterministics_callback(*current_state))
@@ -262,6 +274,9 @@ class CompoundStep(_BaseSampler, SamplerConstr):
     _adaptation = None
     _kernel = _CompoundStepTF
     _grad = False
+
+    _default_adapter_kwargs = {}
+    _default_kernel_kwargs = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -288,9 +303,9 @@ class CompoundStep(_BaseSampler, SamplerConstr):
                 part_kernel_kwargs[i]["new_state_fn"] = distr._default_new_state_part()
             # simplest way of assigning sampling methods
             if distr.grad_support:
-                make_kernel_fn.append(mcmc.NoUTurnSampler)
+                make_kernel_fn.append(NUTS._default_kernel_maker())
             else:
-                make_kernel_fn.append(mcmc.RandomWalkMetropolis)
+                make_kernel_fn.append(RandomWalkM._default_kernel_maker())
 
         self.kernel_kwargs["make_kernel_fn"] = make_kernel_fn
         self.kernel_kwargs["kernel_kwargs"] = part_kernel_kwargs

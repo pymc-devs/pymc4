@@ -12,7 +12,9 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
         Simple support for compound step
     """
 
-    def __init__(self, target_log_prob_fn, make_kernel_fn, kernel_kwargs, name=None):
+    def __init__(
+        self, target_log_prob_fn, make_kernel_fn: collections.namedtuple, kernel_kwargs, name=None
+    ):
         self._target_log_prob_fn = target_log_prob_fn
         self._make_kernel_fn = make_kernel_fn
         self._kernel_kwargs = kernel_kwargs
@@ -38,12 +40,17 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
 
     def one_step(self, state, _):
         for i, make_kernel_fn in enumerate(self._make_kernel_fn):
-
             def _target_log_prob_fn_part(state_part):
                 state[i] = state_part
                 return self._target_log_prob_fn(*state)
 
-            kernel = make_kernel_fn(_target_log_prob_fn_part, **self._kernel_kwargs[i])
+            mkf = make_kernel_fn
+            kernel = mkf.kernel(
+                target_log_prob_fn=_target_log_prob_fn_part,
+                **{**self._kernel_kwargs[i], **mkf.kernel_kwargs},
+            )
+            if mkf.adaptive_kernel:
+                kernel = mkf.adaptive_kernel(inner_kernel=kernel, **mkf.adaptive_kwargs)
             state[i], _ = kernel.one_step(state[i], kernel.bootstrap_results(state[i]))
         return state, ()
 

@@ -1,9 +1,14 @@
+import collections
 import functools
 import re
 from typing import Callable
 import io
 import pkgutil
 import os
+
+KERNEL_KWARGS_SET = collections.namedtuple(
+    "KERNEL_ARGS_SET", ["kernel", "adaptive_kernel", "kernel_kwargs", "adaptive_kwargs"]
+)
 
 
 def map_nested(fn, structure, cond=lambda obj: True):

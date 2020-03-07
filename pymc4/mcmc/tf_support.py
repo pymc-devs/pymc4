@@ -40,6 +40,7 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
 
     def one_step(self, state, _):
         for i, make_kernel_fn in enumerate(self._make_kernel_fn):
+
             def _target_log_prob_fn_part(state_part, idx):
                 state[idx] = state_part
                 return self._target_log_prob_fn(*state)

@@ -26,6 +26,17 @@ def model_with_discrete():
     return model_with_discrete
 
 
+@pytest.fixture(scope="function")
+def model_with_discrete_and_continuous():
+    @pm.model()
+    def model_with_discrete_and_continuous():
+        disc = yield pm.Categorical("disc", probs=[0.1, 0.9])
+        norm = yield pn.Normal("mu", 0, 1)
+        return norm
+
+    return model_with_discrete_and_continuous
+
+
 @pytest.fixture(scope="module", params=["XLA", "noXLA"], ids=str)
 def xla_fixture(request):
     return request.param == "XLA"
@@ -80,3 +91,10 @@ def test_discrete_sampling(model_with_discrete, xla_fixture):
     model = model_with_discrete()
     with pytest.raises(Exception) as exinfo:
         trace = pm.sample(model=model, sample_type="randomwalk", xla_fixture=xla_fixture)
+
+
+def test_discrete_sampling(model_with_discrete_and_continuous, xla_fixture):
+    model = model_with_discrete()
+    with pytest.raises(Exception) as exinfo:
+        trace = pm.sample(model=model, sample_type="compound", xla_fixture=xla_fixture)
+

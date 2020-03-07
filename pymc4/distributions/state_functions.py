@@ -33,7 +33,12 @@ def categorical_uniform_fn(scale=1.0, name=None):
                 raise ValueError("`scale` must broadcast with `state_parts`")
             probs = tf.ones_like(state_parts)
             deltas = [
-                tf.squeeze(tfd.Categorical(probs=probs / tf.math.reduce_sum(probs, -1), dtype=tf.float32).sample(seed=seed, sample_shape=(tf.shape(state_part))), -1)
+                tf.squeeze(
+                    tfd.Categorical(
+                        probs=probs / tf.math.reduce_sum(probs, -1), dtype=tf.float32
+                    ).sample(seed=seed, sample_shape=(tf.shape(state_part))),
+                    -1,
+                )
                 for scale_part, state_part in zip(scales, state_parts)
             ]
             return deltas

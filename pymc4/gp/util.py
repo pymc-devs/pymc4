@@ -2,9 +2,9 @@ import tensorflow as tf
 import numpy as np
 
 
-def stabilize(K):
+def stabilize(K, noise=1e-6):
     r"""Add a diagonal shift to a covarience matrix"""
-    return tf.linalg.set_diag(K, tf.linalg.diag_part(K) + 1e-6)
+    return tf.linalg.set_diag(K, tf.linalg.diag_part(K) + noise)
 
 
 def plot_gp_dist(

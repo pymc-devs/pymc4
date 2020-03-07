@@ -94,7 +94,7 @@ class LatentGP(BaseGP):
 
     def _build_prior(self, name, X, **kwargs):
         mu = self.mean_fn(X)
-        cov = stabilize(self.cov_fn(X, X))
+        cov = stabilize(self.cov_fn(X, X), noise=1e-4)
         if self._is_univariate(X):
             return Normal(
                 name=name,
@@ -154,7 +154,7 @@ class LatentGP(BaseGP):
         cov = Kss - tf.linalg.matrix_transpose(A) @ A
         # Return the stabilized covarience matrix and squeeze the
         # last dimension that we added earlier.
-        return tf.squeeze(mu, axis=[-1]), stabilize(cov)
+        return tf.squeeze(mu, axis=[-1]), stabilize(cov, noise=1e-4)
 
     def prior(self, name, X, **kwargs):
         r"""Returns the GP prior distribution evaluated over the input locations `X`.

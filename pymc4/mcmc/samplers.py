@@ -296,6 +296,17 @@ class CompoundStep(_BaseSampler):
     def _trace_fn(self, current_state, pkr):
         return pkr.target_log_prob
 
+    @staticmethod
+    def _convert_sampler_methods(sampler_methods):
+        sampler_methods_dict = {}
+        for (var, sampler) in sampler_methods:
+            if isinstance(var, (list, tuple)):
+                for var_ in var:
+                    sampler_methods_dict[var_] = sampler
+            else:
+                sampler_methods_dict[var] = sampler
+        return sampler_methods_dict
+
     def _assign_default_methods(
         self,
         *,
@@ -304,7 +315,7 @@ class CompoundStep(_BaseSampler):
         observed: Optional[dict] = None,
     ):
         if sampler_methods is not None:
-            sampler_methods = _convert_sampler_methods(sampler_methods)
+            sampler_methods = CompoundStep._convert_sampler_methods(sampler_methods)
 
         (state, _, _, _) = initialize_state(self.model, observed=observed, state=state)
         init = state.all_unobserved_values
@@ -320,9 +331,9 @@ class CompoundStep(_BaseSampler):
                 distr = state.discrete_distributions[init_keys[i]]
             part_kernel_kwargs.append({})
             # add the default `new_state_fn` for each distribution
-            part_kernel_kwargs[i]["new_state_fn"] = distr._default_new_state_part
-            if callable(part_kernel_kwargs[i]["new_state_fn"]):
-                part_kernel_kwargs[i]["new_state_fn"] = part_kernel_kwargs[i]["new_state_fn"]()
+            func = distr._default_new_state_part
+            if callable(func):
+                part_kernel_kwargs[i]["new_state_fn"] = func()
 
             # simplest way of assigning sampling methods
             # if the sampler_methods was passed and if a var is provided
@@ -347,17 +358,6 @@ class CompoundStep(_BaseSampler):
 
         self.kernel_kwargs["make_kernel_fn"] = make_kernel_fn
         self.kernel_kwargs["kernel_kwargs"] = part_kernel_kwargs
-
-    @staticmethod
-    def _convert_sampler_methods(sampler_methods):
-        sampler_methods_dict = {}
-        for (var, sampler) in sampler_methods:
-            if isinstance(var, (list, tuple)):
-                for var_ in var:
-                    sampler_methods_dict[var_] = sampler
-            else:
-                sampler_methods_dict[var] = sampler
-        return sampler_methods_dict
 
 
 def build_logp_and_deterministic_functions(

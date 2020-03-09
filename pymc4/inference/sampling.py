@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.mcmc.samplers import reg_samplers
-from pymc4.inference.utils import initialize_state
+from pymc4.mcmc.utils import initialize_state
 
 import logging
 
@@ -106,8 +106,7 @@ def sample(
     except KeyError:
         print("The given sampler doesn't exist")
 
-    _log.info("{} doesn't support discrete variables".format(sampler.__name__))
-
+    # _log.info("{} doesn't support discrete variables".format(sampler.__name__))
     # TODO: keep num_adaptation_steps for nuts/hmc with adaptive step but later should be removed because of ambiguity
     if "nuts" in sampler_type or "hmc" in sampler_type:
         kwargs["num_adaptation_steps"] = burn_in
@@ -158,4 +157,4 @@ def _auto_assign_sampler(
         return "nuts"
     else:
         # TODO: more complex logic here
-        return "randomwalk"
+        return "randomwalkm"

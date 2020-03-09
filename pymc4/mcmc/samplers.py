@@ -3,14 +3,18 @@ import inspect
 from typing import Optional, List
 import tensorflow as tf
 from tensorflow_probability import mcmc
-from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz, initialize_state
+from pymc4.mcmc.utils import (
+    initialize_sampling_state,
+    trace_to_arviz,
+    initialize_state,
+    KERNEL_KWARGS_SET,
+)
 
 from pymc4.mcmc.base_mcmc import SamplerConstr
 from pymc4.coroutine_model import Model
 from pymc4.utils import NameParts
 from pymc4 import flow
 from pymc4.mcmc.tf_support import _CompoundStepTF
-from pymc4.utils import KERNEL_KWARGS_SET
 
 
 __all__ = ["HMC", "NUTS", "RandomWalkM"]

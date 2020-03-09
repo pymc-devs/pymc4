@@ -1,4 +1,4 @@
-from pymc4.inference.utils import initialize_state
+from pymc4.mcmc.utils import initialize_state
 from pymc4.coroutine_model import Model
 
 __all__ = ["SamplerConstr"]
@@ -20,5 +20,5 @@ class SamplerConstr:
         non_sampling_state, disc_names, cont_names, _ = initialize_state(model)
         if cls._grad is True and disc_names:
             raise ValueError("Discrete distributions can't be used with gradient-based sampler")
-        # TODO: add Compound support in class constructor?
+
         return super().__new__(cls)

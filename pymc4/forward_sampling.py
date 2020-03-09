@@ -12,7 +12,7 @@ from pymc4.flow import (
     evaluate_model_posterior_predictive,
     evaluate_meta_posterior_predictive_model,
 )
-from pymc4.inference.utils import trace_to_arviz
+from pymc4.mcmc.utils import trace_to_arviz
 from pymc4.flow.executor import assert_values_compatible_with_distribution_shape
 
 

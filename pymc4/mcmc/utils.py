@@ -1,6 +1,11 @@
-from typing import Optional, Tuple, List
+import collections
 import numpy as np
 import arviz as az
+from typing import Optional, Tuple, List
+
+KERNEL_KWARGS_SET = collections.namedtuple(
+    "KERNEL_ARGS_SET", ["kernel", "adaptive_kernel", "kernel_kwargs", "adaptive_kwargs"]
+)
 
 from pymc4 import Model, flow
 

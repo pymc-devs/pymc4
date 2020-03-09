@@ -10,14 +10,13 @@ from pymc4.mcmc.utils import (
     KERNEL_KWARGS_SET,
 )
 
-from pymc4.mcmc.base_mcmc import SamplerConstr
 from pymc4.coroutine_model import Model
 from pymc4.utils import NameParts
 from pymc4 import flow
 from pymc4.mcmc.tf_support import _CompoundStepTF
 
 
-__all__ = ["HMC", "NUTS", "RandomWalkM"]
+__all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep"]
 
 reg_samplers = {}
 
@@ -31,6 +30,17 @@ class _BaseSampler(metaclass=abc.ABCMeta):
     def __init__(
         self, model: Model, **kwargs,
     ):
+        if not isinstance(model, Model):
+            raise TypeError(
+                "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
+                    type(model)
+                )
+            )
+
+        non_sampling_state, disc_names, cont_names, _ = initialize_state(model)
+        if self._grad is True and disc_names:
+            raise ValueError("Discrete distributions can't be used with gradient-based sampler")
+
         self.model = model
         self._stat_names: List = []
         # assign arguments from **kwargs to distinct kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`
@@ -189,7 +199,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
 
 @register_sampler
-class HMC(_BaseSampler, SamplerConstr):
+class HMC(_BaseSampler):
     _name = "hmc"
     _adaptation = mcmc.DualAveragingStepSizeAdaptation
     _kernel = mcmc.HamiltonianMonteCarlo
@@ -215,7 +225,7 @@ class HMCSimple(HMC):
 
 
 @register_sampler
-class NUTS(_BaseSampler, SamplerConstr):
+class NUTS(_BaseSampler):
     _name = "nuts"
     _adaptation = mcmc.DualAveragingStepSizeAdaptation
     _kernel = mcmc.NoUTurnSampler
@@ -250,7 +260,7 @@ class NUTSSimple(NUTS):
 
 
 @register_sampler
-class RandomWalkM(_BaseSampler, SamplerConstr):
+class RandomWalkM(_BaseSampler):
     _name = "randomwalkm"
     _adaptation = None
     _kernel = mcmc.RandomWalkMetropolis
@@ -268,7 +278,9 @@ class RandomWalkM(_BaseSampler, SamplerConstr):
 
 
 @register_sampler
-class CompoundStep(_BaseSampler, SamplerConstr):
+class CompoundStep(_BaseSampler):
+    """The basic implementation of the compound step"""
+
     _name = "compound"
     _adaptation = None
     _kernel = _CompoundStepTF
@@ -284,9 +296,16 @@ class CompoundStep(_BaseSampler, SamplerConstr):
     def _trace_fn(self, current_state, pkr):
         return pkr.target_log_prob
 
-    def _assign_methods(
-        self, state: Optional[flow.SamplingState] = None, observed: Optional[dict] = None
+    def _assign_default_methods(
+        self,
+        *,
+        sampler_methods=None,
+        state: Optional[flow.SamplingState] = None,
+        observed: Optional[dict] = None,
     ):
+        if sampler_methods is not None:
+            sampler_methods = _convert_sampler_methods(sampler_methods)
+
         (state, _, _, _) = initialize_state(self.model, observed=observed, state=state)
         init = state.all_unobserved_values
         init_state = list(init.values())
@@ -295,22 +314,50 @@ class CompoundStep(_BaseSampler, SamplerConstr):
         part_kernel_kwargs: list = []
 
         for i, state_part in enumerate(init_state):
+            unscoped_var = init_keys[i].rsplit("/", 1)[-1]
             distr = state.continuous_distributions.get(init_keys[i], None)
             if distr is None:
                 distr = state.discrete_distributions[init_keys[i]]
             part_kernel_kwargs.append({})
+            # add the default `new_state_fn` for each distribution
             part_kernel_kwargs[i]["new_state_fn"] = distr._default_new_state_part
             if callable(part_kernel_kwargs[i]["new_state_fn"]):
                 part_kernel_kwargs[i]["new_state_fn"] = part_kernel_kwargs[i]["new_state_fn"]()
 
             # simplest way of assigning sampling methods
-            if distr.grad_support:
+            # if the sampler_methods was passed and if a var is provided
+            # then the var will be assigned to the given sampler
+            # but will also be checked if the sampler supports the distr
+
+            if sampler_methods and unscoped_var in sampler_methods:
+                sampler = sampler_methods[unscoped_var]
+                if not distr.grad_support and sampler._grad:
+                    raise ValueError(
+                        "The `{}` doesn't support gradient, please provide an appropriate sampler method".format(
+                            unscoped_var
+                        )
+                    )
+
+                make_kernel_fn.append(sampler._default_kernel_maker())
+
+            elif distr.grad_support:
                 make_kernel_fn.append(NUTS._default_kernel_maker())
             else:
                 make_kernel_fn.append(RandomWalkM._default_kernel_maker())
 
         self.kernel_kwargs["make_kernel_fn"] = make_kernel_fn
         self.kernel_kwargs["kernel_kwargs"] = part_kernel_kwargs
+
+    @staticmethod
+    def _convert_sampler_methods(sampler_methods):
+        sampler_methods_dict = {}
+        for (var, sampler) in sampler_methods:
+            if isinstance(var, (list, tuple)):
+                for var_ in var:
+                    sampler_methods_dict[var_] = sampler
+            else:
+                sampler_methods_dict[var] = sampler
+        return sampler_methods_dict
 
 
 def build_logp_and_deterministic_functions(

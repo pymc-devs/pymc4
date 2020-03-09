@@ -20,6 +20,7 @@ def sample(
     state: Optional[flow.SamplingState] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
+    sampler_methods=None,
     **kwargs,
 ):
     """
@@ -113,7 +114,9 @@ def sample(
 
     sampler = sampler(model, **kwargs)
     if sampler_type == "compound":
-        sampler._assign_methods(state, observed)
+        sampler._assign_default_methods(
+            sampler_methods=sampler_methods, state=state, observed=observed
+        )
 
     return sampler(
         num_samples=num_samples,

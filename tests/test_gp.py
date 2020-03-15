@@ -192,16 +192,11 @@ def test_invalid_feature_ndims(tf_seed):
         mean2 = pm.gp.mean.Zero(2)
         mean = mean1 + mean2
     with pytest.raises(
-        ValueError, match=r"The feature_ndims of mean and covariance functions should be the same"
+        ValueError, match=r"The feature_ndims of mean and covariance functions should be equal"
     ):
         mean = pm.gp.mean.Zero(1)
         cov = pm.gp.cov.ExpQuad(1.0, 1.0, 2)
         gp = pm.gp.LatentGP(mean, cov)
-
-
-def test_exp_quad_invalid_amplitude(tf_seed):
-    with pytest.raises(ValueError, match=r"must not contains zero or negative entries"):
-        kernel = pm.gp.cov.ExpQuad(-1.0, 1.0, 1)
 
 
 def test_gp_invalid_prior(tf_seed):
@@ -211,7 +206,7 @@ def test_gp_invalid_prior(tf_seed):
         cond = yield gp.conditional("fcond", X_new, given={"X": X, "f": f})
 
     with pytest.raises(ValueError, match=r"must be a numpy array or tensor"):
-        gp = pm.gp.LatentGP()
+        gp = pm.gp.LatentGP(cov_fn=pm.gp.cov.ExpQuad(1.0, 1.0))
         X = tf.random.normal((2, 5, 1))
         X_new = tf.random.normal((2, 2, 1))
         trace = pm.sample(invalid_model(gp, X, X_new), num_samples=1, burn_in=1, num_chains=1)

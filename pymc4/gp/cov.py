@@ -4,7 +4,6 @@ Covariance Functions for PyMC4's Gaussian Process module.
 """
 
 from abc import abstractmethod
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 __all__ = [
@@ -31,10 +30,15 @@ class Covariance:
     r"""Base class of all Covariance functions for Gaussian Process"""
 
     def __init__(self, feature_ndims=1, **kwargs):
-        # TODO: I have removed the diag parameter
-        # for now but I can come back and add it later.
+        # TODO: Implement the `diag` parameter as in PyMC3.
         self.feature_ndims = feature_ndims
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
+        if self._kernel is not None:
+            # wrap the kernel in FeatureScaled kernel for ARD
+            self._scale_diag = kwargs.pop("scale_diag", 1.0)
+            self._kernel = tfp.math.psd_kernels.FeatureScaled(
+                self._kernel, scale_diag=self._scale_diag
+            )
 
     @abstractmethod
     def _init_kernel(self, feature_ndims, **kwargs):
@@ -140,8 +144,6 @@ class ExpQuad(Stationary):
     """
 
     def __init__(self, amplitude, length_scale, feature_ndims=1, **kwargs):
-        if not tf.reduce_all(amplitude > 0.0):
-            raise ValueError("`amplitude` parameter must not contains zero or negative entries.")
         self._amplitude = amplitude
         self._length_scale = length_scale
         super().__init__(feature_ndims=feature_ndims, **kwargs)

@@ -57,6 +57,8 @@ class MeanProd(Mean):
     """
 
     def __init__(self, mean1, mean2):
+        if mean1.feature_ndims != mean2.feature_ndims:
+            raise ValueError("Cannot combine kernels with different feature_ndims")
         self.mean1 = mean1
         self.mean2 = mean2
 

@@ -1,11 +1,4 @@
-"""
-Gaussian Process Models present in PyMC4's Gaussian Process module.
-
-"""
-
-
 import tensorflow as tf
-from .cov import ExpQuad
 from .mean import Zero
 from ..distributions import MvNormal, Normal
 from .util import stabilize
@@ -15,11 +8,9 @@ __all__ = ["LatentGP"]
 
 
 class BaseGP:
-    def __init__(self, mean_fn=Zero(1), cov_fn=ExpQuad(1.0, 1.0, 1)):
+    def __init__(self, cov_fn, mean_fn=Zero(1)):
         if mean_fn.feature_ndims != cov_fn.feature_ndims:
-            raise ValueError(
-                "The feature_ndims of mean and covariance functions should be the same"
-            )
+            raise ValueError("The feature_ndims of mean and covariance functions should be equal")
         self.feature_ndims = mean_fn.feature_ndims
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn
@@ -58,9 +49,9 @@ class LatentGP(BaseGP):
 
     Parameters
     ----------
-    cov_fn : pm.Covariance
+    cov_fn : pm.gp.Covariance
         The covariance function.
-    mean_fn : pm.Mean
+    mean_fn : pm.gp.Mean
         The mean function.
 
     Examples
@@ -94,7 +85,7 @@ class LatentGP(BaseGP):
 
     def _build_prior(self, name, X, **kwargs):
         mu = self.mean_fn(X)
-        cov = stabilize(self.cov_fn(X, X), noise=1e-4)
+        cov = stabilize(self.cov_fn(X, X), shift=1e-4)
         if self._is_univariate(X):
             return Normal(
                 name=name,
@@ -142,7 +133,7 @@ class LatentGP(BaseGP):
             f = f[..., tf.newaxis]
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
-        L = tf.linalg.cholesky(stabilize(Kxx))
+        L = tf.linalg.cholesky(stabilize(Kxx, shift=1e-4))
         A = tf.linalg.solve(L, Kxs)
         # We add a `newaxis` to make the shape of mean_total(X)
         # [batch_shape, num_samples, 1] which is consistent with
@@ -154,7 +145,7 @@ class LatentGP(BaseGP):
         cov = Kss - tf.linalg.matrix_transpose(A) @ A
         # Return the stabilized covarience matrix and squeeze the
         # last dimension that we added earlier.
-        return tf.squeeze(mu, axis=[-1]), stabilize(cov, noise=1e-4)
+        return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=1e-4)
 
     def prior(self, name, X, **kwargs):
         r"""Returns the GP prior distribution evaluated over the input locations `X`.
@@ -185,10 +176,13 @@ class LatentGP(BaseGP):
         Given a set of function values `f` that
         the GP prior was over, the conditional distribution over a
         set of new points, `f_*` is
+
         .. math::
+
            f_* \mid f, X, X_* \sim \mathcal{GP}\left(
                K(X_*, X) K(X, X)^{-1} f \,,
                K(X_*, X_*) - K(X_*, X) K(X, X)^{-1} K(X, X_*) \right)
+
         Parameters
         ----------
         name : string
@@ -197,7 +191,7 @@ class LatentGP(BaseGP):
             Function input values.
         given : dict
             Dictionary containing the observed data tensor `X` under the key "X" and
-            prior samples `f` unser the key "f".
+            prior samples `f` under the key "f".
         **kwargs :
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.

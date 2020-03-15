@@ -4,19 +4,25 @@ import pymc4 as pm
 from pymc4.gp.util import stabilize
 import pytest
 
+# Tensor shapes on which the GP model will be tested
 BATCH_AND_FEATURE_SHAPES = [(1,), (2,), (2, 2,)]
 SAMPLE_SHAPE = [(1,), (3,)]
 
+# Test all the mean functions in pm.gp module
 _check_mean = {
     "Zero": {},
     "Constant": {"coef": 5.0},
 }
 
+# Test all the covariance functions in pm.gp module
 _check_cov = {
     "ExpQuad": {"amplitude": 1.0, "length_scale": 1.0},
-    # "Constant": {"coef": 1.0}
 }
 
+# Test all the GP models only using a particular
+# mean and covariance functions but varying tensor shapes
+# NOTE: the mean and covariance functions used here
+# must be present in `_check_mean` and `_check_cov` resp.
 _check_gp_model = {"LatentGP": {"mean_fn": "Zero", "cov_fn": "ExpQuad"}}
 
 
@@ -57,6 +63,7 @@ def get_gp_model(request):
 
 
 def make_func(test_dict, test_func, feature_shape, mod):
+    """Returns a mean function from specified name present in test_dict"""
     kwargs = test_dict[test_func]
     func_class = getattr(mod, test_func)
     func = func_class(feature_ndims=len(feature_shape), **kwargs)
@@ -64,6 +71,7 @@ def make_func(test_dict, test_func, feature_shape, mod):
 
 
 def make_model(data, test_model, feature_shape):
+    """Returns a GP model for testing."""
     _, _, feature_shape, _ = data
     gp_params = _check_gp_model[test_model]
     mean_name = gp_params.pop("mean_fn", "Zero")
@@ -76,6 +84,7 @@ def make_model(data, test_model, feature_shape):
 
 
 def test_mean_funcs(tf_seed, get_data, get_mean_func):
+    """Test the mean functions present in _check_mean dictionary"""
     batch_shape, sample_shape, feature_shape, X = get_data
     mean_func = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     mean = mean_func(X)
@@ -84,6 +93,7 @@ def test_mean_funcs(tf_seed, get_data, get_mean_func):
 
 
 def test_cov_funcs(tf_seed, get_data, get_cov_func):
+    """Test the covariance functions present in _check_cov dictionary"""
     batch_shape, sample_shape, feature_shape, X = get_data
     cov_func = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
     cov = stabilize(cov_func(X, X))
@@ -95,6 +105,7 @@ def test_cov_funcs(tf_seed, get_data, get_cov_func):
 
 
 def test_gp_models_prior(tf_seed, get_data, get_gp_model):
+    """Test the prior method of a GP mode, if present"""
     batch_shape, sample_shape, feature_shape, X = get_data
     gp_model = make_model(get_data, get_gp_model, feature_shape)
     try:
@@ -110,6 +121,7 @@ def test_gp_models_prior(tf_seed, get_data, get_gp_model):
 
 
 def test_gp_models_conditional(tf_seed, get_data, get_gp_model):
+    """Test the conditional method of a GP mode, if present"""
     batch_shape, sample_shape, feature_shape, X = get_data
     gp_model = make_model(get_data, get_gp_model, feature_shape)
     X_new = tf.random.normal(batch_shape + sample_shape + feature_shape)
@@ -128,6 +140,9 @@ def test_gp_models_conditional(tf_seed, get_data, get_gp_model):
 
 
 def test_covariance_combination(tf_seed, get_cov_func):
+    """Test if the combination of various covariance functions
+    yield consistent results
+    """
     batch_shape, sample_shape, feature_shape, X = (2,), (2,), (2,), tf.random.normal((2, 2, 2))
     kernel1 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
     kernel2 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
@@ -144,6 +159,9 @@ def test_covariance_combination(tf_seed, get_cov_func):
 
 
 def test_mean_combination(tf_seed, get_mean_func):
+    """Test if the combination of various mean functions
+    yield consistent results
+    """
     batch_shape, sample_shape, feature_shape, X = (2,), (2,), (2,), tf.random.normal((2, 2, 2))
     mean1 = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
     mean2 = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
@@ -158,6 +176,7 @@ def test_mean_combination(tf_seed, get_mean_func):
 
 
 def test_invalid_feature_ndims(tf_seed):
+    """Test if an error is throw for inconsistent feature_ndims"""
     with pytest.raises(ValueError, match=r"Cannot combine kernels"):
         kernel1 = pm.gp.cov.ExpQuad(1.0, 1.0, 1)
         kernel2 = pm.gp.cov.ExpQuad(1.0, 1.0, 2)
@@ -179,6 +198,7 @@ def test_invalid_feature_ndims(tf_seed):
 
 
 def test_gp_invalid_prior(tf_seed):
+    """Test if an error is thrown for invalid model prior"""
     @pm.model
     def invalid_model(gp, X, X_new):
         f = gp.prior("f", X)
@@ -192,12 +212,14 @@ def test_gp_invalid_prior(tf_seed):
 
 
 def test_exp_quad_ls_amplitude(tf_seed):
+    """Test the property methods on Exponentiated Quadratic kernel"""
     cov = pm.gp.cov.ExpQuad(1.0, 1.0, 1)
     assert cov.amplitude is not None
     assert cov.length_scale is not None
 
 
 def test_gp_plot(tf_seed):
+    """Test if the plot_gp_dist returns consistent results"""
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots()

@@ -31,7 +31,7 @@ class Covariance:
 
     def __init__(self, feature_ndims=1, **kwargs):
         # TODO: Implement the `diag` parameter as in PyMC3.
-        self.feature_ndims = feature_ndims
+        self._feature_ndims = feature_ndims
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
         if self._kernel is not None:
             # wrap the kernel in FeatureScaled kernel for ARD
@@ -53,9 +53,9 @@ class Covariance:
         Parameters
         ----------
         X1 : tensor, array-like
-            First point
+            First point(s)
         X2 : tensor, array-like
-            Second point
+            Second point(s)
         """
         return self._kernel.apply(X1, X2, **kwargs)
 
@@ -65,25 +65,28 @@ class Covariance:
     def __mul__(self, cov2):
         return CovarianceProd(self, cov2)
 
+    @property
+    def feature_ndims(self):
+        return self._feature_ndims
+
 
 class Combination(Covariance):
     r"""Combination of two or more covariance functions
 
     Parameters
     ----------
-    cov1 : pm.Covariance
+    cov1 : pm.gp.Covariance
         First covariance function.
-    cov2 : pm.Covariance
+    cov2 : pm.gp.Covariance
         Second covariance function.
     """
 
     def __init__(self, cov1, cov2, **kwargs):
         self.kernel1 = cov1._kernel
         self.kernel2 = cov2._kernel
-        self.feature_ndims = self.kernel1.feature_ndims
-        if self.kernel1.feature_ndims != self.kernel2.feature_ndims:
+        if cov1.feature_ndims != cov2.feature_ndims:
             raise ValueError("Cannot combine kernels with different feature_ndims")
-        super().__init__(self.kernel1.feature_ndims, **kwargs)
+        super().__init__(cov1.feature_ndims, **kwargs)
 
 
 class CovarianceAdd(Combination):

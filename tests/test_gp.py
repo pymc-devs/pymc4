@@ -199,6 +199,7 @@ def test_invalid_feature_ndims(tf_seed):
 
 def test_gp_invalid_prior(tf_seed):
     """Test if an error is thrown for invalid model prior"""
+
     @pm.model
     def invalid_model(gp, X, X_new):
         f = gp.prior("f", X)

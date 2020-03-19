@@ -2,10 +2,8 @@ import abc
 import copy
 from typing import Optional, Union, Any, Callable
 
-from absl import logging
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
-from tensorflow_probability.python.mcmc.internal import util as mcmc_util
 from pymc4.coroutine_model import Model, unpack
 from pymc4.distributions.batchstack import BatchStacker
 from pymc4.distributions import transforms

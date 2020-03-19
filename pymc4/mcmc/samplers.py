@@ -342,7 +342,7 @@ class CompoundStep(_BaseSampler):
 
             if sampler_methods and unscoped_var in sampler_methods:
                 sampler = sampler_methods[unscoped_var]
-                if not distr.grad_support and sampler._grad:
+                if not distr._grad_support and sampler._grad:
                     raise ValueError(
                         "The `{}` doesn't support gradient, please provide an appropriate sampler method".format(
                             unscoped_var
@@ -351,7 +351,7 @@ class CompoundStep(_BaseSampler):
 
                 make_kernel_fn.append(sampler._default_kernel_maker())
 
-            elif distr.grad_support:
+            elif distr._grad_support:
                 make_kernel_fn.append(NUTS._default_kernel_maker())
             else:
                 make_kernel_fn.append(RandomWalkM._default_kernel_maker())

@@ -32,6 +32,7 @@ class Distribution(Model):
 
     _test_value = 0.0
     _default_new_state_part: Union[Callable[[Any, Any], Any], None] = None
+    _grad_support: bool = True
 
     def __init__(
         self,
@@ -197,22 +198,6 @@ class Distribution(Model):
     @property
     def event_shape(self):
         return self._distribution.event_shape
-
-    @property
-    def grad_support(self):
-        return self._check_grad_support()
-
-    def _check_grad_support(self, state=None):
-        if state is None:
-            state = self.sample()
-        try:
-            logging.set_verbosity(logging.ERROR)
-            mcmc_util.maybe_call_fn_and_grads(self.log_prob, state)
-        except ValueError:
-            return False
-        except Exception as e:
-            raise e
-        return True
 
 
 class Potential:

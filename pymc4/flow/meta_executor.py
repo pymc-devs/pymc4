@@ -92,7 +92,7 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
                 )
             else:
                 return_value = state.untransformed_values[scoped_name] = dist.get_test_sample()
-        if dist.grad_support:
+        if dist._grad_support:
             state.continuous_distributions[scoped_name] = dist
         else:
             state.discrete_distributions[scoped_name] = dist

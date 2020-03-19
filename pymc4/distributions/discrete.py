@@ -241,6 +241,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     high : int
         Upper limit (high > low).
     """
+    _grad_support = False
 
     def __init__(self, name, low, high, **kwargs):
         super().__init__(name, low=low, high=high, **kwargs)
@@ -291,6 +292,7 @@ class Categorical(BoundedDiscreteDistribution):
         probs > 0 and the elements of probs must sum to 1.
     """
     _default_new_state_part = categorical_uniform_fn
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
@@ -346,6 +348,7 @@ class Geometric(BoundedDiscreteDistribution):
     """
     # Another example for a wrong type used on the tensorflow side
     _test_value = 2.0  # type: ignore
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
@@ -703,6 +706,7 @@ class Zipf(PositiveDiscreteDistribution):
     power : float
         Exponent parameter (power > 1).
     """
+    _grad_support = False
 
     def __init__(self, name, power, **kwargs):
         super().__init__(name, power=power, **kwargs)

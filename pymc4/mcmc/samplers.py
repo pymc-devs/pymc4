@@ -336,9 +336,7 @@ class CompoundStep(_BaseSampler):
             # add the default `new_state_fn` for each distribution
             func = distr._default_new_state_part
             if callable(func):
-                part_kernel_kwargs[i]["new_state_fn"] = functools.partial(
-                    func, scale=1.0, name=None
-                )
+                part_kernel_kwargs[i]["new_state_fn"] = func(name=None)
 
             # simplest way of assigning sampling methods
             # if the sampler_methods was passed and if a var is provided

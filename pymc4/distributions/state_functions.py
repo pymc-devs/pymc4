@@ -42,6 +42,5 @@ def categorical_uniform_fn(scale=1.0, name=None):
                 for scale_part, state_part in zip(scales, state_parts)
             ]
             return deltas
-        # TODO: not sure if scale should be used here
 
     return _fn

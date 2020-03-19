@@ -1,7 +1,5 @@
 import pytest
 import pymc4 as pm
-import numpy as np
-import tensorflow as tf
 
 
 @pytest.fixture(scope="function")

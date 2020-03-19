@@ -29,7 +29,6 @@ class Distribution(Model):
     """Statistical distribution."""
 
     _test_value = 0.0
-    _default_new_state_part: Union[Callable[[Any, Any], Any], None] = None
     _grad_support: bool = True
 
     def __init__(
@@ -46,6 +45,7 @@ class Distribution(Model):
     ):
         self.conditions = self.unpack_conditions(**kwargs)
         self._distribution = self._init_distribution(self.conditions)
+        self._default_new_state_part: Union[Callable[[Any, Any], Any], None] = None
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )

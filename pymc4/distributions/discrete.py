@@ -291,11 +291,11 @@ class Categorical(BoundedDiscreteDistribution):
     probs : array of floats
         probs > 0 and the elements of probs must sum to 1.
     """
-    _default_new_state_part = categorical_uniform_fn
     _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        self._default_new_state_part = categorical_uniform_fn
 
     @staticmethod
     def _init_distribution(conditions):

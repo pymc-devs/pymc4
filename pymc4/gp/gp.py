@@ -31,19 +31,17 @@ class BaseGP:
 class LatentGP(BaseGP):
     r"""Latent Gaussian process.
 
-    The `gp.LatentGP` class is a direct implementation of a GP.  No additive
-    noise is assumed.  It is called "Latent" because the underlying function
-    values are treated as latent variables.  It has a `prior` method and a
-    `conditional` method.  Given a mean and covariance function the
+    The `gp.LatentGP` class is a direct implementation of a GP.  No additive noise is assumed.
+    It is called "Latent" because the underlying function values are treated as latent variables.
+    It has a `prior` method and a `conditional` method.  Given a mean and covariance function the
     function :math:`f(x)` is modeled as,
 
     .. math::
        f(x) \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
 
-    Use the `prior` and `conditional` methods to actually construct random
-    variables representing the unknown, or latent, function whose
-    distribution is the GP prior or GP conditional.  This GP implementation
-    can be used to implement regression on data that is not normally
+    Use the `prior` and `conditional` methods to actually construct random variables representing
+    the unknown, or latent, function whose distribution is the GP prior or GP conditional.
+    This GP implementation can be used to implement regression on data that is not normally
     distributed. For more information on the `prior` and `conditional` methods,
     see their docstrings.
 
@@ -56,10 +54,11 @@ class LatentGP(BaseGP):
 
     Examples
     --------
-    We can construct a LatentGP class with multiple ``feature_ndims``
-    and multiple batches. Below is an example with ``feature_ndims=2``
-    , ``batch_shape=2``, 10 prior samples, and 5 new samples. Notice
-    that unlike PyMC3, ``given`` in ``conditional`` method is NOT optional.
+    We can construct a LatentGP class with multiple ``feature_ndims`` and multiple batches.
+    Below is an example with ``feature_ndims=2`` , ``batch_shape=2``, 10 prior samples,
+    and 5 new samples. Notice that unlike PyMC3, ``given`` in ``conditional`` method is
+    NOT optional.
+    
     .. code:: python
 
         X = np.random.randn(2, 10, 2, 2)
@@ -75,8 +74,6 @@ class LatentGP(BaseGP):
             prior = yield gp.prior('prior', X)
             cond = yield gp.conditional('cond', Xnew, given={'X': X, 'f': prior})
             return cond
-
-    
     """
 
     def _is_univariate(self, X):
@@ -191,7 +188,7 @@ class LatentGP(BaseGP):
             Function input values.
         given : dict
             Dictionary containing the observed data tensor `X` under the key "X" and
-            prior samples `f` under the key "f".
+            prior random variable `f` under the key "f".
         **kwargs :
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.

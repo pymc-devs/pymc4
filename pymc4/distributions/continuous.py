@@ -34,6 +34,7 @@ __all__ = [
     "Pareto",
     "StudentT",
     "Triangular",
+    "TruncatedNormal",
     "Uniform",
     "VonMises",
     "HalfStudentT",
@@ -1118,6 +1119,102 @@ class Triangular(BoundedContinuousDistribution):
     def upper_limit(self):
         return self.conditions["high"]
 
+class TruncatedNormal(ContinuousDistribution):
+    r"""Univariate truncated normal random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \tau, low, high) =
+        \begin{cases}
+         \frac{1}{z}\sqrt{\frac{\tau}{2\pi}}
+           \exp\left\{-\frac{\tau}{2} (x - \mu)^2 \right\}
+           & \text{for } low \le x \le high, \\
+         0 & \text{otherwise }.
+        \end{cases}
+    
+    where
+
+    .. math::
+
+        z = \text{NormalCDF}\left(\sqrt\tau\left(high - \mu\right)\right) - 
+            \text{NormalCDF}\left(\sqrt\tau\left(low - \mu\right)\right).
+
+    The normal distribution can be parameterized either in terms of precision or
+    standard deviation. The link between the two parametrizations is given by
+
+    .. math::
+
+       \tau = \dfrac{1}{\sigma^2}
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-15, 15, 1000)
+        locs = [-8., 0., 9., 0.]
+        scales = [2., 2., 10., 10.]
+        low = -10
+        high = 10
+        for loc, scale in zip(locs, scales):
+            a, b = (low - loc) / scale, (high - loc) / scale
+            pdf = st.truncnorm.pdf(x, a, b, loc, scale)
+            plt.plot(x, pdf,
+            label=r'$\mu$ = {}, $\sigma$ = {}, $a$ = {}, $b$ = {}'.format(loc, scale, low, high))
+
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ====================================================================================
+    Support   :math:`x \in [low, high]`
+    Mean      :math:`\mu +  \frac{\phi(\alpha)-\phi(\beta)}{Z}\sigma`
+                where :math:`\phi(\xi)=\frac{1}{\sqrt{2 \pi}}\exp\left(-\frac{1}{2}\xi^2\right)`,
+                :math:`\alpha=\tau(low - \mu)` and :math:`\beta=\tau(high - \mu)`
+    Variance  :math:`\sigma^2\left[1+\frac{\alpha\phi(\alpha)-\beta\phi(\beta)}{Z}
+                -\left(\frac{\phi(\alpha)-\phi(\beta)}{Z}\right)^2\right]`
+                where :math:`\phi(\xi)=\frac{1}{\sqrt{2 \pi}}\exp\left(-\frac{1}{2}\xi^2\right)`,
+                :math:`\alpha=\tau(low - \mu)` and :math:`\beta=\tau(high - \mu)`
+    ========  ====================================================================================
+
+    Parameters
+    ----------
+    loc : float
+        Location parameter. For the normal distribution, this is the mean.
+    scale : float
+        Scale parameter. For the normal distribution, this is the standard
+        deviation (scale > 0).
+    low : float
+        Lower Limit
+    high : float
+        Upper Limit
+
+    Examples
+    --------
+    .. code-block:: python
+        @pm.model
+        def model():
+            x = pm.TruncatedNormal('x', loc=0, scale=10, low=-8, high=5)
+    """
+
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, low=low, high=high, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        loc, scale = conditions["loc"], conditions["scale"]
+        low, high = conditions["low"], conditions["high"]
+        return tfd.TruncatedNormal(loc=loc, scale=scale, low=low, high=high, validate_args=True)
+    
+    def lower_limit(self):
+        return self.conditions["low"]
+
+    def upper_limit(self):
+        return self.conditions["high"]
 
 class Uniform(BoundedContinuousDistribution):
     r"""Continuous uniform random variable.

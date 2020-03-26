@@ -262,6 +262,15 @@ _distribution_conditions = {
             "peak": np.array([0.5, 0.5], dtype="float32"),
         },
     },
+    "TruncatedNormal": {
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0, "low": 0.0, "high": 2.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+            "low": np.array([0.0, 0.0]),
+            "high": np.array([2.0, 2.0]),
+        },
+    },
     "Uniform": {
         "scalar_parameters": {"low": 0.0, "high": 1.0},
         "multidim_parameters": {

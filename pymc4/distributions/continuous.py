@@ -1119,6 +1119,7 @@ class Triangular(BoundedContinuousDistribution):
     def upper_limit(self):
         return self.conditions["high"]
 
+
 class TruncatedNormal(ContinuousDistribution):
     r"""Univariate truncated normal random variable.
 
@@ -1209,12 +1210,13 @@ class TruncatedNormal(ContinuousDistribution):
         loc, scale = conditions["loc"], conditions["scale"]
         low, high = conditions["low"], conditions["high"]
         return tfd.TruncatedNormal(loc=loc, scale=scale, low=low, high=high, validate_args=True)
-    
+
     def lower_limit(self):
         return self.conditions["low"]
 
     def upper_limit(self):
         return self.conditions["high"]
+
 
 class Uniform(BoundedContinuousDistribution):
     r"""Continuous uniform random variable.

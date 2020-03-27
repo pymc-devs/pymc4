@@ -104,7 +104,7 @@ class Normal(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Normal(loc=loc, scale=scale)
+        return tfd.Normal(loc=loc, scale=scale, validate_args=True)
 
 
 class HalfNormal(PositiveContinuousDistribution):
@@ -170,7 +170,7 @@ class HalfNormal(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         scale = conditions["scale"]
-        return tfd.HalfNormal(scale=scale)
+        return tfd.HalfNormal(scale=scale, validate_args=True)
 
 
 class HalfStudentT(PositiveContinuousDistribution):
@@ -290,7 +290,9 @@ class Beta(UnitContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
-        return tfd.Beta(concentration0=concentration0, concentration1=concentration1)
+        return tfd.Beta(
+            concentration0=concentration0, concentration1=concentration1, validate_args=True
+        )
 
 
 class Cauchy(ContinuousDistribution):
@@ -343,7 +345,7 @@ class Cauchy(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Cauchy(loc=loc, scale=scale)
+        return tfd.Cauchy(loc=loc, scale=scale, validate_args=True)
 
 
 class Chi2(PositiveContinuousDistribution):
@@ -389,7 +391,7 @@ class Chi2(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         df = conditions["df"]
-        return tfd.Chi2(df=df)
+        return tfd.Chi2(df=df, validate_args=True)
 
 
 class Exponential(PositiveContinuousDistribution):
@@ -434,7 +436,7 @@ class Exponential(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         rate = conditions["rate"]
-        return tfd.Exponential(rate=rate)
+        return tfd.Exponential(rate=rate, validate_args=True)
 
 
 class Gamma(PositiveContinuousDistribution):
@@ -487,7 +489,7 @@ class Gamma(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         concentration, rate = conditions["concentration"], conditions["rate"]
-        return tfd.Gamma(concentration=concentration, rate=rate)
+        return tfd.Gamma(concentration=concentration, rate=rate, validate_args=True)
 
 
 class Gumbel(ContinuousDistribution):
@@ -543,7 +545,7 @@ class Gumbel(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Gumbel(loc=loc, scale=scale)
+        return tfd.Gumbel(loc=loc, scale=scale, validate_args=True)
 
 
 class HalfCauchy(PositiveContinuousDistribution):
@@ -593,7 +595,7 @@ class HalfCauchy(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         scale = conditions["scale"]
-        return tfd.HalfCauchy(loc=0, scale=scale)
+        return tfd.HalfCauchy(loc=0, scale=scale, validate_args=True)
 
 
 class InverseGamma(PositiveContinuousDistribution):
@@ -645,7 +647,7 @@ class InverseGamma(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         concentration, scale = conditions["concentration"], conditions["scale"]
-        return tfd.InverseGamma(concentration=concentration, scale=scale)
+        return tfd.InverseGamma(concentration=concentration, scale=scale, validate_args=True)
 
 
 class InverseGaussian(PositiveContinuousDistribution):
@@ -663,7 +665,7 @@ class InverseGaussian(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, concentration = conditions["loc"], conditions["concentration"]
-        return tfd.InverseGaussian(loc=loc, concentration=concentration)
+        return tfd.InverseGaussian(loc=loc, concentration=concentration, validate_args=True)
 
 
 class Kumaraswamy(UnitContinuousDistribution):
@@ -715,7 +717,9 @@ class Kumaraswamy(UnitContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
-        return tfd.Kumaraswamy(concentration0=concentration0, concentration1=concentration1)
+        return tfd.Kumaraswamy(
+            concentration0=concentration0, concentration1=concentration1, validate_args=True
+        )
 
 
 class Laplace(ContinuousDistribution):
@@ -765,7 +769,7 @@ class Laplace(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Laplace(loc=loc, scale=scale)
+        return tfd.Laplace(loc=loc, scale=scale, validate_args=True)
 
 
 class Logistic(ContinuousDistribution):
@@ -816,7 +820,7 @@ class Logistic(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Logistic(loc=loc, scale=scale)
+        return tfd.Logistic(loc=loc, scale=scale, validate_args=True)
 
 
 class LogitNormal(UnitContinuousDistribution):
@@ -849,7 +853,7 @@ class LogitNormal(UnitContinuousDistribution):
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
         return tfd.TransformedDistribution(
-            distribution=tfd.Normal(loc=loc, scale=scale),
+            distribution=tfd.Normal(loc=loc, scale=scale, validate_args=True),
             bijector=bij.Sigmoid(),
             name="LogitNormal",
         )
@@ -915,7 +919,7 @@ class LogNormal(PositiveContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.LogNormal(loc=loc, scale=scale)
+        return tfd.LogNormal(loc=loc, scale=scale, validate_args=True)
 
 
 class Pareto(BoundedContinuousDistribution):
@@ -968,7 +972,7 @@ class Pareto(BoundedContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         concentration, scale = conditions["concentration"], conditions["scale"]
-        return tfd.Pareto(concentration=concentration, scale=scale)
+        return tfd.Pareto(concentration=concentration, scale=scale, validate_args=True)
 
     def upper_limit(self):
         return float("inf")
@@ -1048,7 +1052,7 @@ class StudentT(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         df, loc, scale = conditions["df"], conditions["loc"], conditions["scale"]
-        return tfd.StudentT(df=df, loc=loc, scale=scale)
+        return tfd.StudentT(df=df, loc=loc, scale=scale, validate_args=True)
 
 
 class Triangular(BoundedContinuousDistribution):
@@ -1110,7 +1114,7 @@ class Triangular(BoundedContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         low, high, peak = conditions["low"], conditions["high"], conditions["peak"]
-        return tfd.Triangular(low=low, high=high, peak=peak)
+        return tfd.Triangular(low=low, high=high, peak=peak, validate_args=True)
 
     def lower_limit(self):
         return self.conditions["low"]
@@ -1166,7 +1170,7 @@ class Uniform(BoundedContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         low, high = conditions["low"], conditions["high"]
-        return tfd.Uniform(low=low, high=high)
+        return tfd.Uniform(low=low, high=high, validate_args=True)
 
     # FIXME should we rename this functions as well?
     def lower_limit(self):
@@ -1225,7 +1229,7 @@ class VonMises(BoundedContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, concentration = conditions["loc"], conditions["concentration"]
-        return tfd.VonMises(loc=loc, concentration=concentration)
+        return tfd.VonMises(loc=loc, concentration=concentration, validate_args=True)
 
     def lower_limit(self):
         return -math.pi
@@ -1301,7 +1305,9 @@ class Weibull(PositiveContinuousDistribution):
         )
 
         return tfd.TransformedDistribution(
-            distribution=tfd.Uniform(low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape)),
+            distribution=tfd.Uniform(
+                low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape), validate_args=True
+            ),
             bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
             name="Weibull",
         )

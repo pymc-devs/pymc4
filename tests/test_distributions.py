@@ -4,11 +4,24 @@ Tests for PyMC4 random variables
 from collections import defaultdict
 import pytest
 import numpy as np
+import tensorflow as tf
 
 import pymc4 as pm
 
 
 _expected_log_prob = defaultdict(lambda: defaultdict(lambda: None))
+_check_broadcast = {
+    "Flat": {
+        "batch_stack": (1, 2),
+        "event_stack": (3, 4),
+        "samples": [tf.zeros(1), tf.zeros((1, 3, 4)), tf.zeros((1, 5, 3, 4))],
+    },
+    "HalfFlat": {
+        "batch_stack": (1, 2),
+        "event_stack": (3, 4),
+        "samples": [tf.zeros(1), tf.zeros((1, 3, 4)), tf.zeros((1, 5, 3, 4))],
+    },
+}
 _distribution_conditions = {
     "AR": {
         "scalar_parameters": {
@@ -324,6 +337,20 @@ _distribution_conditions = {
         "scalar_parameters": {"power": 2.0},
         "multidim_parameters": {"power": np.array([3, 2.0], dtype="float32")},
     },
+    "Flat": {
+        "scalar_parameters": {"sample": -2.0, "expected": 0.0},
+        "multidim_parameters": {
+            "sample": np.array([[[-2.0], [-1.0], [0.0], [1.0], [2.0]]]),
+            "expected": np.array([[[0.0], [0.0], [0.0], [0.0], [0.0]]]),
+        },
+    },
+    "HalfFlat": {
+        "scalar_parameters": {"sample": -2.0, "expected": -np.inf},
+        "multidim_parameters": {
+            "sample": np.array([[[-2.0], [-1.0], [0.0], [1.0], [2.0]]]),
+            "expected": np.array([[[-np.inf], [-np.inf], [-np.inf], [0.0], [0.0]]]),
+        },
+    },
 }
 
 
@@ -346,6 +373,22 @@ def distribution_conditions(distribution, request):
     return distribution, conditions, log_prob_test_sample, expected_log_prob
 
 
+@pytest.fixture(scope="function", params=list(_check_broadcast), ids=str)
+def broadcast_distribution(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", ids=str)
+def check_broadcast(broadcast_distribution, request):
+    conditions = _check_broadcast[broadcast_distribution]
+    batch_stack = conditions.pop("batch_stack", (1, 2))
+    event_stack = conditions.pop("event_stack", (3, 4))
+    samples = conditions.pop("samples")
+    dist_class = getattr(pm, broadcast_distribution)
+    dist = dist_class(name=broadcast_distribution, batch_stack=batch_stack, event_stack=event_stack)
+    return dist, samples
+
+
 def test_rvs_logp_and_forward_sample(tf_seed, distribution_conditions):
     """Test forward sampling and evaluating the logp for all random variables."""
     distribution_name, conditions, sample, expected_value = distribution_conditions
@@ -355,7 +398,7 @@ def test_rvs_logp_and_forward_sample(tf_seed, distribution_conditions):
 
     assert vals is not None
 
-    if expected_value:
+    if expected_value is not None:
         np.testing.assert_allclose(expected_value, vals, atol=0.01, rtol=0)
 
 
@@ -365,6 +408,10 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
     dist_class = getattr(pm, distribution_name)
     dist = dist_class(name=distribution_name, **conditions)
     test_value = dist.test_value
+    if distribution_name in ["Flat", "HalfFlat"]:
+        # pytest.skip("Flat and HalfFlat distributions don't support sampling.")
+        assert test_value.shape == dist.batch_shape + dist.event_shape
+        return
     test_sample = dist.sample()
     logp = dist.log_prob(test_value).numpy()
     assert test_value.shape == test_sample.shape
@@ -372,3 +419,12 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
         (dist.batch_shape + dist.event_shape).as_list()
     )
     assert not (np.any(np.isinf(logp)) or np.any(np.isnan(logp)))
+
+
+def test_flat_halfflat_broadcast(tf_seed, check_broadcast):
+    """Test the error messages returned by Flat and HalfFlat
+    distributions for inconsistent sample shapes"""
+    dist, samples = check_broadcast
+    for sample in samples:
+        with pytest.raises(ValueError, match=r"not consistent"):
+            dist.log_prob(sample)

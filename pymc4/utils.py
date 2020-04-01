@@ -1,3 +1,4 @@
+"""Miscellaneous utility functions."""
 import functools
 import re
 from typing import Callable
@@ -7,8 +8,7 @@ import os
 
 
 def map_nested(fn, structure, cond=lambda obj: True):
-    r"""
-    Structure preserving nested map.
+    r"""Structure preserving nested map.
 
     Apply fn to an object in a possibly nested data structure and returns
     same structure with every element changed if condition satisfied.
@@ -35,8 +35,7 @@ def map_nested(fn, structure, cond=lambda obj: True):
 
 
 def merge_dicts(*dicts: dict, **kwargs: dict):
-    """
-    Merge dicts and assert their keys do not overlap.
+    """Merge dicts and assert their keys do not overlap.
 
     Parameters
     ----------

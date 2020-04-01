@@ -1,3 +1,4 @@
+"""Prior and posterior predictive sampling."""
 import types
 from typing import Optional, Union, Tuple, List, Dict, Set, Any
 import collections

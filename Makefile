@@ -41,7 +41,7 @@ docker:  # Set up a Docker image for development.
 
 docstyle:
 	@printf "Checking documentation with pydocstyle...\n"
-	pydocstyle pymc4/
+	${PYTHON} -m pydocstyle --convention=numpy pymc4/
 	@printf "\033[1;34mPydocstyle passes!\033[0m\n\n"
 
 format:

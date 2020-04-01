@@ -24,7 +24,7 @@ steps:
     displayName: "Install dependencies"
 
   - script: |
-      python -m pydocstyle --convention=numpy pymc4/ tests/
+      python -m pydocstyle --convention=numpy pymc4/
     displayName: "pydocstyle"
 
   - script: |

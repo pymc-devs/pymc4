@@ -6,10 +6,11 @@ one or both sides to distributions that are supported for all real numbers.
 import functools
 
 
-from typing import Mapping, Any
+from types import GeneratorType
+from typing import Mapping, Any, Generator
 from pymc4 import scopes, distributions
 from pymc4.distributions import distribution
-from pymc4.distributions.transforms import JacobianPreference
+from pymc4.distributions.transforms import JacobianPreference, Transform
 from pymc4.flow.executor import (
     SamplingExecutor,
     EvaluationError,
@@ -29,7 +30,36 @@ class TransformedSamplingExecutor(SamplingExecutor):
     def modify_distribution(
         self, dist: ModelType, model_info: Mapping[str, Any], state: SamplingState
     ) -> ModelType:
-        """Apply transformations to a distribution."""
+        """Apply transformations to a ``ModelType``.
+        
+        This function calls the base class'
+        :meth:`~pymc4.flow.executor.SamplingExecutor.modify_distribution` method on the supplied
+        ``dist``. If the output of said call is not a :class:`pymc4.distributions.distribution.Distribution`
+        instance, it is returned immediately. On the other hand, if the output is a
+        :class:`pymc4.distributions.distribution.Distribution` instance, then it is passed to
+        :func:`~.transform_dist_if_necessary` and the call's output is returned.
+
+        Parameters
+        ----------
+        dist: ModelType
+            Can be any type compatible with a pymc4 ``Model``, such as generator functions or
+            ``Distribution`` instances. The type of ``dist`` is inspected to determine whether
+            it should be passed onto :func:`~.transform_dist_if_necessary` or not.
+        model_info: Mapping[str, Any]
+            A dictionary of default model information parameters that is used to transform raw
+            generator functions to :class:`~pymc4.model.Model` instances, by the base class'
+            (:class:`~pymc4.flow.executor.SamplingExecutor`) ``modify_distribution`` method.
+        state: pymc4.flow.executor.SamplingState
+            The sampling state of the :meth:`~pymc4.flow.executor.SamplingExecutor.evaluate_model`
+            flow.
+
+        Returns
+        -------
+        modified: ModelType
+            Either the output of the base class's
+            :meth:`~pymc4.flow.executor.SamplingExecutor.modify_distribution` method, or the
+            output of :func:`~.transform_dist_if_necessary`.
+        """
         dist = super().modify_distribution(dist, model_info, state)
         if not isinstance(dist, distribution.Distribution):
             return dist
@@ -37,7 +67,9 @@ class TransformedSamplingExecutor(SamplingExecutor):
         return transform_dist_if_necessary(dist, state, allow_transformed_and_untransformed=True)
 
 
-def make_untransformed_model(dist, transform, state):
+def make_untransformed_model(
+    dist: distribution.Distribution, transform: Transform, state: SamplingState
+) -> Generator:
     # we gonna sample here, but logp should be computed for the transformed space
     # 0. as explained above we indicate we already performed autotransform
     dist.model_info["autotransformed"] = True
@@ -66,7 +98,9 @@ def make_untransformed_model(dist, transform, state):
     return sampled_untransformed_value
 
 
-def make_transformed_model(dist, transform, state):
+def make_transformed_model(
+    dist: distribution.Distribution, transform: Transform, state: SamplingState
+) -> Generator:
     # 1. now compute all the variables: in the transformed and untransformed space
     scoped_name = scopes.variable_name(dist.name)
     transformed_scoped_name = scopes.transformed_variable_name(transform.name, dist.name)
@@ -104,7 +138,45 @@ def make_transformed_model(dist, transform, state):
     return (yield dist)
 
 
-def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransformed):
+def transform_dist_if_necessary(
+    dist: distribution.Distribution, state: SamplingState, *, allow_transformed_and_untransformed
+) -> ModelType:
+    """Add the unbounded distribution to the executor's flow only if necessary.
+
+    This function will inspect the provided distribution instance and state and determine whether
+    it should intercept the normal coroutine's execution flow to add the unbounded representation
+    of the distribution or not. If the unbounded representation must not be added, it returns the
+    generator function that is outputed by :func:`~.make_untransformed_model`. On the other hand,
+    if the unbounded representation of the ``dist`` instance must be added to the execution flow,
+    it does so by returning the generator function that is given by calling
+    :func:`~.make_transformed_model`.
+
+    The regular execution flow will be intercepted to add the unbounded representation of ``dist``
+    if ``dist`` is not an observed value and has a transformed scope name.
+
+    Parameters
+    ----------
+    dist: pymc4.distributions.distribution.Distribution
+        The original :class:`~pymc4.distributions.distribution.Distribution` instance that is
+        inspected to decide whether to add its unbounded representation or not to the coroutine's
+        execution flow.
+    state: pymc4.flow.executor.SamplingState
+        The sampling state of the :meth:`~pymc4.flow.executor.SamplingExecutor.evaluate_model`
+        flow.
+    allow_transformed_and_untransformed: bool
+        If ``False``, the original instance's untransformed value is popped from the ``state``.
+        Only the unbounded representation's value will be left in the ``transformed_values``
+        attribute of ``state``.
+
+    Returns
+    -------
+    model_maker: ModelType
+        A coroutine that will yield the distribution's normal and unbounded representation
+        values, along with a ``Potential`` with the appropriate ``log_det_jacobian`` value.
+        Will either be the output of :func:`~.make_untransformed_model` or
+        :func:`~.make_transformed_model` depending on whether the supplied ``dist`` must be
+        unbounded or not.
+    """
     if dist.transform is None or dist.model_info.get("autotransformed", False):
         return dist
     scoped_name = scopes.variable_name(dist.name)

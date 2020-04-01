@@ -1,6 +1,7 @@
 """PyMC4 continuous random variables for tensorflow."""
 import math
 
+import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import bijectors as bij
@@ -35,6 +36,8 @@ __all__ = [
     "StudentT",
     "Triangular",
     "Uniform",
+    "Flat",
+    "HalfFlat",
     "VonMises",
     "HalfStudentT",
     "Weibull",
@@ -1174,6 +1177,97 @@ class Uniform(BoundedContinuousDistribution):
 
     def upper_limit(self):
         return self.conditions["high"]
+
+
+class Flat(ContinuousDistribution):
+    r"""A uniform distribution with support :math:`(-\inf, \inf)`.
+    Used as a uninformative log-likelihood that returns
+    zeros regardless of the passed values.
+    """
+
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        return tfd.Uniform(low=-np.inf, high=np.inf)
+
+    def log_prob(self, value):
+        # convert the value to tensor
+        value = tf.convert_to_tensor(value)
+        expected = tf.zeros(self.batch_shape + self.event_shape)
+        # check if the event shape matches
+        if len(self.event_shape) and value.shape[-len(self.event_shape) :] != self.event_shape:
+            raise ValueError("values not consistent with the event shape of distribution")
+        # broadcast expected to shape of value
+        if len(value.shape) < len(self.batch_shape + self.event_shape):
+            if (
+                value.shape[: len(value.shape) - len(self.event_shape)]
+                != self.batch_shape[len(self.batch_shape) - len(value.shape) :]
+            ):
+                raise ValueError(
+                    "batch shape of values not consistent with distribution's batch shape"
+                )
+        else:
+            try:
+                expected = tf.broadcast_to(expected, value.shape)
+            except tf.errors.InvalidArgumentError:
+                raise ValueError(
+                    "shape of value not consistent with the distribution's batch + event shape"
+                )
+
+        return tf.reduce_sum(expected, axis=range(-len(self._distribution.event_shape), 0))
+
+    def sample(self, shape=(), seed=None):
+        """Raises ValueError as it is not possible to sample
+        from flat distribution.
+        """
+        raise TypeError("cannot sample from a flat distribution")
+
+
+class HalfFlat(PositiveContinuousDistribution):
+    r"""Improper flat priors over positive reals."""
+
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        return tfd.Uniform(low=0.0, high=np.inf)
+
+    def log_prob(self, value):
+        # convert the value to tensor
+        value = tf.convert_to_tensor(value)
+        value = tf.where(value > 0, x=0.0, y=-np.inf)
+        expected = tf.zeros(self.batch_shape + self.event_shape)
+        # check if the event shape matches
+        if len(self.event_shape) and value.shape[-len(self.event_shape) :] != self.event_shape:
+            raise ValueError("values not consistent with the event shape of distribution")
+        # broadcast expected to shape of value
+        if len(value.shape) < len(self.batch_shape + self.event_shape):
+            expected = expected + value
+            if (
+                value.shape[: len(value.shape) - len(self.event_shape)]
+                != self.batch_shape[len(self.batch_shape) - len(value.shape) :]
+            ):
+                raise ValueError(
+                    "batch shape of values not consistent with distribution's batch shape"
+                )
+        else:
+            try:
+                expected = tf.broadcast_to(expected, value.shape) + value
+            except tf.errors.InvalidArgumentError:
+                raise ValueError(
+                    "shape of value not consistent with the distribution's batch + event shape"
+                )
+
+        return tf.reduce_sum(expected, axis=range(-len(self.event_shape), 0))
+
+    def sample(self, shape=(), seed=None):
+        """Raises ValueError as it is not possible to sample
+        from half flat distribution.
+        """
+        raise TypeError("cannot sample from a half flat distribution")
 
 
 class VonMises(BoundedContinuousDistribution):

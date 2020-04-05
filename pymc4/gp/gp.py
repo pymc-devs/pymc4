@@ -71,9 +71,9 @@ class LatentGP(BaseGP):
 
         @pm.model
         def gpmodel():
-            prior = yield gp.prior('prior', X)
-            cond = yield gp.conditional('cond', Xnew, given={'X': X, 'f': prior})
-            return cond
+            f = yield gp.prior('f', X)
+            fcond = yield gp.conditional('fcond', Xnew, given={'X': X, 'f': f})
+            return fcond
     """
 
     def _is_univariate(self, X):

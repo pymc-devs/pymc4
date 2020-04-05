@@ -65,6 +65,12 @@ class Covariance:
     def __mul__(self, cov2):
         return CovarianceProd(self, cov2)
 
+    def __radd__(self, other):
+        return CovarianceAdd(self, other)
+
+    def __rmul__(self, other):
+        return CovarianceProd(self, other)
+
     @property
     def feature_ndims(self):
         return self._feature_ndims
@@ -81,12 +87,19 @@ class Combination(Covariance):
         Second covariance function.
     """
 
-    def __init__(self, cov1, cov2, **kwargs):
-        self.kernel1 = cov1._kernel
-        self.kernel2 = cov2._kernel
-        if cov1.feature_ndims != cov2.feature_ndims:
-            raise ValueError("Cannot combine kernels with different feature_ndims")
-        super().__init__(cov1.feature_ndims, **kwargs)
+    def __init__(self, cov1, cov2):
+        self.cov1 = cov1
+        self.cov2 = cov2
+        if isinstance(cov1, Covariance) and isinstance(cov2, Covariance):
+            if cov1.feature_ndims != cov2.feature_ndims:
+                raise ValueError("Cannot combine kernels with different feature_ndims")
+
+    @property
+    def feature_ndims(self):
+        if isinstance(self.cov1, Covariance):
+            return self.cov1.feature_ndims
+        else:
+            return self.cov2.feature_ndims
 
 
 class CovarianceAdd(Combination):
@@ -98,8 +111,13 @@ class CovarianceAdd(Combination):
         number of rightmost dims to include in kernel computation
     """
 
-    def _init_kernel(self, feature_ndims, **kwargs):
-        return self.kernel1 + self.kernel2
+    def __call__(self, X1, X2, **kwargs):
+        if not isinstance(self.cov1, Covariance):
+            return self.cov1 + self.cov2(X1, X2, **kwargs)
+        elif not isinstance(self.cov2, Covariance):
+            return self.cov2 + self.cov1(X1, X2, **kwargs)
+        else:
+            return self.cov1(X1, X2, **kwargs) + self.cov2(X1, X2, **kwargs)
 
 
 class CovarianceProd(Combination):
@@ -111,8 +129,13 @@ class CovarianceProd(Combination):
         number of rightmost dims to include in kernel computation
     """
 
-    def _init_kernel(self, feature_ndims, **kwargs):
-        return self.kernel1 * self.kernel2
+    def __call__(self, X1, X2, **kwargs):
+        if not isinstance(self.cov1, Covariance):
+            return self.cov1 * self.cov2(X1, X2, **kwargs)
+        elif not isinstance(self.cov2, Covariance):
+            return self.cov2 * self.cov1(X1, X2, **kwargs)
+        else:
+            return self.cov1(X1, X2, **kwargs) * self.cov2(X1, X2, **kwargs)
 
 
 class Stationary(Covariance):
@@ -146,7 +169,7 @@ class ExpQuad(Stationary):
         Other keyword arguments that tfp's ``ExponentiatedQuadratic`` kernel takes
     """
 
-    def __init__(self, amplitude, length_scale, feature_ndims=1, **kwargs):
+    def __init__(self, length_scale, amplitude=1.0, feature_ndims=1, **kwargs):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super().__init__(feature_ndims=feature_ndims, **kwargs)

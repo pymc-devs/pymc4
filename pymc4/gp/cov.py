@@ -71,7 +71,7 @@ class Covariance:
 
     def __rmul__(self, other):
         return CovarianceProd(self, other)
-    
+
     def __array_wrap__(self, result):
         # we retain the original shape to reshape the result later
         original_shape = result.shape

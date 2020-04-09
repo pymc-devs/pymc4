@@ -163,7 +163,7 @@ def test_covariance_non_covaraiance_combination(tf_seed, get_cov_func):
     and broadcastable vector"""
     batch_shape, sample_shape, feature_shape, X = (2,), (3,), (4,), tf.random.normal((2, 3, 4))
     kernel1 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    others = [2., np.random.randn(2, 3, 3)]
+    others = [2.0, np.random.randn(2, 3, 3)]
     for other in others:
         other = np.random.randn(2, 3, 3)
         rmul_kernel = other * kernel1

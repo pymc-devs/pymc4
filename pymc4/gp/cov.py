@@ -5,6 +5,7 @@ Covariance Functions for PyMC4's Gaussian Process module.
 
 from abc import abstractmethod
 import tensorflow_probability as tfp
+import numpy as np
 
 __all__ = [
     #     "Constant",
@@ -70,6 +71,24 @@ class Covariance:
 
     def __rmul__(self, other):
         return CovarianceProd(self, other)
+    
+    def __array_wrap__(self, result):
+        # we retain the original shape to reshape the result later
+        original_shape = result.shape
+        # we flatten the array and re-build the left array
+        # using the ``.cov2`` attribute of combined kernels.
+        result = result.ravel()
+        left_array = np.zeros_like(result)
+        for i in range(result.size):
+            left_array[i] = result[i].cov2
+        # reshape the array to its original shape
+        left_array = left_array.reshape(original_shape)
+        # now, we can put the left array on the right side
+        # to create the final combination.
+        if isinstance(result[0], CovarianceAdd):
+            return result[0] + left_array
+        elif isinstance(result[0], CovarianceProd):
+            return result[0] * left_array
 
     @property
     def feature_ndims(self):

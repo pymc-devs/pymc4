@@ -151,11 +151,29 @@ def test_covariance_combination(tf_seed, get_cov_func):
     cov_add = kernel_add(X, X)
     cov_mul = kernel_mul(X, X)
     assert cov_add is not None
-    assert cov_add.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
+    assert cov_add.shape == batch_shape + sample_shape + sample_shape
     assert np.all(np.linalg.eigvals(cov_add.numpy()) > 0)
     assert cov_mul is not None
-    assert cov_mul.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
+    assert cov_mul.shape == batch_shape + sample_shape + sample_shape
     assert np.all(np.linalg.eigvals(cov_mul.numpy()) > 0)
+
+
+def test_covariance_non_covaraiance_combination(tf_seed, get_cov_func):
+    """Test combination of a covariance function with a scalar, vector,
+    and broadcastable vector"""
+    batch_shape, sample_shape, feature_shape, X = (2,), (3,), (4,), tf.random.normal((2, 3, 4))
+    kernel1 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    others = [2., np.random.randn(2, 3, 3)]
+    for other in others:
+        other = np.random.randn(2, 3, 3)
+        rmul_kernel = other * kernel1
+        radd_kernel = other + kernel1
+        eval_rmul = rmul_kernel(X, X)
+        eval_radd = radd_kernel(X, X)
+        assert rmul_kernel is not None
+        assert radd_kernel is not None
+        assert eval_rmul.shape == batch_shape + sample_shape + sample_shape
+        assert eval_radd.shape == batch_shape + sample_shape + sample_shape
 
 
 def test_mean_combination(tf_seed, get_mean_func):

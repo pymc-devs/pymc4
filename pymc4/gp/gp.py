@@ -107,7 +107,9 @@ class LatentGP(BaseGP):
         else:
             # XXX: Maybe we can add this feature later
             # X, f = self.X, self.f
-            raise ValueError("given must contain 'X' and 'f' keys. found {} only.".format(list(given.keys())))
+            raise ValueError(
+                "given must contain 'X' and 'f' keys. found {} only.".format(list(given.keys()))
+            )
         return X, f, cov_total, mean_total
 
     def _build_conditional(self, Xnew, X, f, cov_total, mean_total):

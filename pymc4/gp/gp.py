@@ -105,7 +105,9 @@ class LatentGP(BaseGP):
         if all(val in given for val in ["X", "f"]):
             X, f = given["X"], given["f"]
         else:
-            X, f = self.X, self.f
+            # XXX: Maybe we can add this feature later
+            # X, f = self.X, self.f
+            raise ValueError("given must contain 'X' and 'f' keys. found {} only.".format(list(given.keys())))
         return X, f, cov_total, mean_total
 
     def _build_conditional(self, Xnew, X, f, cov_total, mean_total):
@@ -113,34 +115,26 @@ class LatentGP(BaseGP):
         if not tf.is_tensor(f):
             try:
                 f = tf.convert_to_tensor(f)
-            except:
+            except ValueError:
                 raise ValueError("Prior `f` must be a numpy array or tensor.")
-
-        # I am not sure about this. Do we need to worry about ``f`` being
-        # sampled previously? Do we need that support?
-        # if len(f.shape) > len(X.shape[:-(self.feature_ndims)]):
-        #     # f is previously sampled and may contain several chains and samples
-        #     # simply broadcast the shape of data to match f.
-        #     X = tf.broadcast_to(X, f.shape + X.shape[-(self.feature_ndims):])
-        #     Xnew = tf.broadcast_to(Xnew, f.shape + Xnew.shape[-(self.feature_ndims):])
 
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
         if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):
-            f = f[..., tf.newaxis]
+            f = tf.expand_dims(f, -1)
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
         L = tf.linalg.cholesky(stabilize(Kxx, shift=1e-4))
-        A = tf.linalg.solve(L, Kxs)
+        A = tf.linalg.triangular_solve(L, Kxs, lower=True)
         # We add a `newaxis` to make the shape of mean_total(X)
         # [batch_shape, num_samples, 1] which is consistent with
         # the shape `tf.linalg.solve` accepts.
-        v = tf.linalg.solve(L, (f - mean_total(X))[..., tf.newaxis])
-        # Add an axis to avoid broadcasting
-        mu = self.mean_fn(Xnew)[..., tf.newaxis] + tf.linalg.matrix_transpose(A) @ v
+        v = tf.linalg.triangular_solve(L, tf.expand_dims((f - mean_total(X)), -1), lower=True)
+        # Add an axis to avoid right align broadcasting
+        mu = tf.expand_dims(self.mean_fn(Xnew), -1) + tf.linalg.matmul(A, v, transpose_a=True)
         Kss = self.cov_fn(Xnew, Xnew)
-        cov = Kss - tf.linalg.matrix_transpose(A) @ A
-        # Return the stabilized covarience matrix and squeeze the
+        cov = Kss - tf.linalg.matmul(A, A, transpose_a=True)
+        # Return the stabilized covariance matrix and squeeze the
         # last dimension that we added earlier.
         return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=1e-4)
 
@@ -163,8 +157,6 @@ class LatentGP(BaseGP):
             Extra keyword arguments that are passed to distribution constructor.
         """
         f = self._build_prior(name, X, **kwargs)
-        self.X = X
-        self.f = f
         return f
 
     def conditional(self, name, Xnew, given, **kwargs):

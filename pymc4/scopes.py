@@ -40,7 +40,7 @@ class Scope(object):
 
     @classmethod
     def get_contexts(cls):
-        # no race-condition here, cls.contexts is a thread-local object
+        # no race-condition here, cls.context is a thread-local object
         # be sure not to override contexts in a subclass however!
         if not hasattr(cls.context, "stack"):
             cls.context.stack = []

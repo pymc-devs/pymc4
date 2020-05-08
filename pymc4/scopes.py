@@ -12,7 +12,7 @@ class Scope(object):
 
     The class absorbs any keyword arguments passed there. Accessing any attribute should return
     either None or the passed value by keyword. :func:`Scope.chain` will return all
-    attributes for context, starting from the last one.
+    attributes for context, starting from the first one (the deepest one is the last one).
 
     Examples
     --------

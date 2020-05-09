@@ -125,7 +125,7 @@ class NameParts:
         path, original_name = split[:-1], split[-1]
         match = cls.NAME_RE.match(original_name)
         if not cls.is_valid_name(name):
-            raise ValueError(cls.NAME_ERROR_MESSAGE)
+            raise ValueError(cls.NAME_ERROR_MESSAGE.format(name))
         return cls(path, match["transform"], match["name"])
 
     @property

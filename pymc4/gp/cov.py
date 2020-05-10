@@ -46,7 +46,9 @@ class Covariance:
             )
 
     @abstractmethod
-    def _init_kernel(self, feature_ndims: int, **kwargs) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
+    def _init_kernel(
+        self, feature_ndims: int, **kwargs
+    ) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         raise NotImplementedError("Your Covariance class should override this method")
 
     def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
@@ -191,15 +193,20 @@ class ExpQuad(Stationary):
         Other keyword arguments that tfp's ``ExponentiatedQuadratic`` kernel takes
     """
 
-    def __init__(self, length_scale: ArrayLike,
-                 amplitude: Optional[Union[ArrayLike, float]] = 1.0,
-                 feature_ndims: Optional[Union[ArrayLike, float]] = 1,
-                 **kwargs):
+    def __init__(
+        self,
+        length_scale: ArrayLike,
+        amplitude: Optional[Union[ArrayLike, float]] = 1.0,
+        feature_ndims: Optional[Union[ArrayLike, float]] = 1,
+        **kwargs,
+    ):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super().__init__(feature_ndims=feature_ndims, **kwargs)
 
-    def _init_kernel(self, feature_ndims: int, **kwargs) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
+    def _init_kernel(
+        self, feature_ndims: int, **kwargs
+    ) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         return tfp.math.psd_kernels.ExponentiatedQuadratic(
             length_scale=self._length_scale, amplitude=self._amplitude, feature_ndims=feature_ndims
         )

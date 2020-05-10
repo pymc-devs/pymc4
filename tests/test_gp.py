@@ -9,21 +9,21 @@ BATCH_AND_FEATURE_SHAPES = [(1,), (2,), (2, 2,)]
 SAMPLE_SHAPE = [(1,), (3,)]
 
 # Test all the mean functions in pm.gp module
-_check_mean = {
+_TEST_MEAN = {
     "Zero": {},
     "Constant": {"coef": 5.0},
 }
 
 # Test all the covariance functions in pm.gp module
-_check_cov = {
+_TEST_COV = {
     "ExpQuad": {"amplitude": 1.0, "length_scale": 1.0},
 }
 
 # Test all the GP models only using a particular
 # mean and covariance functions but varying tensor shapes
 # NOTE: the mean and covariance functions used here
-# must be present in `_check_mean` and `_check_cov` resp.
-_check_gp_model = {"LatentGP": {"mean_fn": "Zero", "cov_fn": "ExpQuad"}}
+# must be present in `_TEST_MEAN` and `_TEST_COV` resp.
+_TEST_GP_MODELS = {"LatentGP": {"mean_fn": "Zero", "cov_fn": "ExpQuad"}}
 
 
 @pytest.fixture(scope="module", params=BATCH_AND_FEATURE_SHAPES, ids=str)
@@ -47,17 +47,17 @@ def get_data(get_batch_shape, get_sample_shape, get_feature_shape):
     return get_batch_shape, get_sample_shape, get_feature_shape, X
 
 
-@pytest.fixture(scope="module", params=list(_check_mean), ids=str)
+@pytest.fixture(scope="module", params=list(_TEST_MEAN), ids=str)
 def get_mean_func(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=list(_check_cov), ids=str)
+@pytest.fixture(scope="module", params=list(_TEST_COV), ids=str)
 def get_cov_func(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=list(_check_gp_model), ids=str)
+@pytest.fixture(scope="module", params=list(_TEST_GP_MODELS), ids=str)
 def get_gp_model(request):
     return request.param
 
@@ -73,29 +73,29 @@ def make_func(test_dict, test_func, feature_shape, mod):
 def make_model(data, test_model, feature_shape):
     """Returns a GP model for testing."""
     _, _, feature_shape, _ = data
-    gp_params = _check_gp_model[test_model]
+    gp_params = _TEST_GP_MODELS[test_model]
     mean_name = gp_params.pop("mean_fn", "Zero")
     cov_name = gp_params.pop("cov_fn", "ExpQuad")
-    mean_fn = make_func(_check_mean, mean_name, feature_shape, pm.gp.mean)
-    cov_fn = make_func(_check_cov, cov_name, feature_shape, pm.gp.cov)
+    mean_fn = make_func(_TEST_MEAN, mean_name, feature_shape, pm.gp.mean)
+    cov_fn = make_func(_TEST_COV, cov_name, feature_shape, pm.gp.cov)
     gp_class = getattr(pm.gp, test_model)
     gp_model = gp_class(mean_fn=mean_fn, cov_fn=cov_fn, **gp_params)
     return gp_model
 
 
 def test_mean_funcs(tf_seed, get_data, get_mean_func):
-    """Test the mean functions present in _check_mean dictionary"""
+    """Test the mean functions present in _TEST_MEAN dictionary"""
     batch_shape, sample_shape, feature_shape, X = get_data
-    mean_func = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    mean_func = make_func(_TEST_MEAN, get_mean_func, feature_shape, pm.gp.mean)
     mean = mean_func(X)
     assert mean is not None
     assert mean.shape == batch_shape + sample_shape
 
 
 def test_cov_funcs(tf_seed, get_data, get_cov_func):
-    """Test the covariance functions present in _check_cov dictionary"""
+    """Test the covariance functions present in _TEST_COV dictionary"""
     batch_shape, sample_shape, feature_shape, X = get_data
-    cov_func = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    cov_func = make_func(_TEST_COV, get_cov_func, feature_shape, pm.gp.cov)
     cov = stabilize(cov_func(X, X))
     kernel_point_evaluation = cov_func.evaluate_kernel(X, X)
     assert cov is not None
@@ -144,8 +144,8 @@ def test_covariance_combination(tf_seed, get_cov_func):
     yield consistent results
     """
     batch_shape, sample_shape, feature_shape, X = (2,), (2,), (2,), tf.random.normal((2, 2, 2))
-    kernel1 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
-    kernel2 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    kernel1 = make_func(_TEST_COV, get_cov_func, feature_shape, pm.gp.cov)
+    kernel2 = make_func(_TEST_COV, get_cov_func, feature_shape, pm.gp.cov)
     kernel_add = kernel1 + kernel2
     kernel_mul = kernel1 * kernel2
     cov_add = kernel_add(X, X)
@@ -162,7 +162,7 @@ def test_covariance_non_covaraiance_combination(tf_seed, get_cov_func):
     """Test combination of a covariance function with a scalar, vector,
     and broadcastable vector"""
     batch_shape, sample_shape, feature_shape, X = (2,), (3,), (4,), tf.random.normal((2, 3, 4))
-    kernel1 = make_func(_check_cov, get_cov_func, feature_shape, pm.gp.cov)
+    kernel1 = make_func(_TEST_COV, get_cov_func, feature_shape, pm.gp.cov)
     others = [2.0, np.random.randn(2, 3, 3)]
     for other in others:
         other = np.random.randn(2, 3, 3)
@@ -181,8 +181,8 @@ def test_mean_combination(tf_seed, get_mean_func):
     yield consistent results
     """
     batch_shape, sample_shape, feature_shape, X = (2,), (2,), (2,), tf.random.normal((2, 2, 2))
-    mean1 = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
-    mean2 = make_func(_check_mean, get_mean_func, feature_shape, pm.gp.mean)
+    mean1 = make_func(_TEST_MEAN, get_mean_func, feature_shape, pm.gp.mean)
+    mean2 = make_func(_TEST_MEAN, get_mean_func, feature_shape, pm.gp.mean)
     mean_add = mean1 + mean2
     mean_mul = mean1 * mean2
     mean_add_val = mean_add(X)

@@ -1,5 +1,11 @@
+from typing import Union
+
 import tensorflow as tf
 import numpy as np
+
+
+ArrayLike = Union[np.ndarray, tf.python.framework.ops.EagerTensor]
+TfTensor = tf.python.framework.ops.EagerTensor
 
 
 def stabilize(K, shift=1e-6):

@@ -1,30 +1,37 @@
+from typing import Union, Optional
+
 import tensorflow as tf
-from .mean import Zero
-from ..distributions import MvNormal, Normal
-from .util import stabilize
+
+from .mean import Mean, Zero
+from .cov import Covariance
+from ..distributions import MvNormal, Normal, ContinuousDistribution
+from .util import stabilize, ArrayLike, TfTensor
+
+
+NameType = Union[str, int]
 
 
 __all__ = ["LatentGP"]
 
 
 class BaseGP:
-    def __init__(self, cov_fn, mean_fn=Zero(1)):
+    def __init__(self, cov_fn: Covariance, mean_fn: Optional[Mean] = Zero(1)):
         if mean_fn.feature_ndims != cov_fn.feature_ndims:
             raise ValueError("The feature_ndims of mean and covariance functions should be equal")
         self.feature_ndims = mean_fn.feature_ndims
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn
 
-    def prior(self, name, X, **kwargs):
+    def prior(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
-    def conditional(self, name, Xnew, **kwargs):
+    def conditional(self, name: NameType, Xnew: ArrayLike, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
-    def predict(self, name, Xnew, **kwargs):
+    def predict(self, Xnew, **kwargs) -> TfTensor:
         raise NotImplementedError
 
-    def marginal_likelihood(self, name, X, **kwargs):
+    def marginal_likelihood(self, name, X, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
 

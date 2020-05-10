@@ -2,10 +2,14 @@
 Covariance Functions for PyMC4's Gaussian Process module.
 
 """
-
+from typing import Union, Optional
 from abc import abstractmethod
-import tensorflow_probability as tfp
+
 import numpy as np
+import tensorflow_probability as tfp
+
+from .util import ArrayLike, TfTensor
+
 
 __all__ = [
     #     "Constant",
@@ -30,7 +34,7 @@ __all__ = [
 class Covariance:
     r"""Base class of all Covariance functions for Gaussian Process"""
 
-    def __init__(self, feature_ndims=1, **kwargs):
+    def __init__(self, feature_ndims: Optional[int] = 1, **kwargs):
         # TODO: Implement the `diag` parameter as in PyMC3.
         self._feature_ndims = feature_ndims
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
@@ -42,13 +46,13 @@ class Covariance:
             )
 
     @abstractmethod
-    def _init_kernel(self, feature_ndims, **kwargs):
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         raise NotImplementedError("Your Covariance class should override this method")
 
-    def __call__(self, X1, X2, **kwargs):
+    def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         return self._kernel.matrix(X1, X2, **kwargs)
 
-    def evaluate_kernel(self, X1, X2, **kwargs):
+    def evaluate_kernel(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         """Evaluate kernel at certain points
 
         Parameters
@@ -66,13 +70,11 @@ class Covariance:
     def __mul__(self, cov2):
         return CovarianceProd(self, cov2)
 
-    def __radd__(self, other):
-        return CovarianceAdd(self, other)
+    __radd__ = __add__
 
-    def __rmul__(self, other):
-        return CovarianceProd(self, other)
+    __rmul__ = __mul__
 
-    def __array_wrap__(self, result):
+    def __array_wrap__(self, result: np.ndarray) -> TfTensor:
         # we retain the original shape to reshape the result later
         original_shape = result.shape
         # we flatten the array and re-build the left array
@@ -91,7 +93,8 @@ class Covariance:
             return result[0] * left_array
 
     @property
-    def feature_ndims(self):
+    def feature_ndims(self) -> int:
+        """feature_ndims of the kernel"""
         return self._feature_ndims
 
 
@@ -106,7 +109,7 @@ class Combination(Covariance):
         Second covariance function.
     """
 
-    def __init__(self, cov1, cov2):
+    def __init__(self, cov1: Union[Covariance, ArrayLike], cov2: Union[Covariance, ArrayLike]):
         self.cov1 = cov1
         self.cov2 = cov2
         if isinstance(cov1, Covariance) and isinstance(cov2, Covariance):
@@ -114,7 +117,7 @@ class Combination(Covariance):
                 raise ValueError("Cannot combine kernels with different feature_ndims")
 
     @property
-    def feature_ndims(self):
+    def feature_ndims(self) -> int:
         if isinstance(self.cov1, Covariance):
             return self.cov1.feature_ndims
         else:
@@ -130,7 +133,7 @@ class CovarianceAdd(Combination):
         number of rightmost dims to include in kernel computation
     """
 
-    def __call__(self, X1, X2, **kwargs):
+    def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         if not isinstance(self.cov1, Covariance):
             return self.cov1 + self.cov2(X1, X2, **kwargs)
         elif not isinstance(self.cov2, Covariance):
@@ -148,7 +151,7 @@ class CovarianceProd(Combination):
         number of rightmost dims to include in kernel computation
     """
 
-    def __call__(self, X1, X2, **kwargs):
+    def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         if not isinstance(self.cov1, Covariance):
             return self.cov1 * self.cov2(X1, X2, **kwargs)
         elif not isinstance(self.cov2, Covariance):
@@ -161,7 +164,7 @@ class Stationary(Covariance):
     r"""Base class for all Stationary Covariance functions"""
 
     @property
-    def length_scale(self):
+    def length_scale(self) -> Union[ArrayLike, float]:
         r"""Length scale of the covariance function"""
         return self._length_scale
 
@@ -188,17 +191,20 @@ class ExpQuad(Stationary):
         Other keyword arguments that tfp's ``ExponentiatedQuadratic`` kernel takes
     """
 
-    def __init__(self, length_scale, amplitude=1.0, feature_ndims=1, **kwargs):
+    def __init__(self, length_scale: ArrayLike,
+                 amplitude: Optional[Union[ArrayLike, float]] = 1.0,
+                 feature_ndims: Optional[Union[ArrayLike, float]] = 1,
+                 **kwargs):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super().__init__(feature_ndims=feature_ndims, **kwargs)
 
-    def _init_kernel(self, feature_ndims, **kwargs):
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         return tfp.math.psd_kernels.ExponentiatedQuadratic(
             length_scale=self._length_scale, amplitude=self._amplitude, feature_ndims=feature_ndims
         )
 
     @property
-    def amplitude(self):
+    def amplitude(self) -> Union[ArrayLike, float]:
         r"""Amplitude of the kernel function"""
         return self._amplitude

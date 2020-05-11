@@ -12,7 +12,7 @@ class Scope(object):
 
     The class absorbs any keyword arguments passed there. Accessing any attribute should return
     either None or the passed value by keyword. :func:`Scope.chain` will return all
-    attributes for context, starting from the last one.
+    attributes for context, starting from the first one (the deepest one is the last one).
 
     Examples
     --------
@@ -40,7 +40,7 @@ class Scope(object):
 
     @classmethod
     def get_contexts(cls):
-        # no race-condition here, cls.contexts is a thread-local object
+        # no race-condition here, cls.context is a thread-local object
         # be sure not to override contexts in a subclass however!
         if not hasattr(cls.context, "stack"):
             cls.context.stack = []

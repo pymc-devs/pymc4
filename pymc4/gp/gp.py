@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union
 
 import tensorflow as tf
 
@@ -15,7 +15,7 @@ __all__ = ["LatentGP"]
 
 
 class BaseGP:
-    def __init__(self, cov_fn: Covariance, mean_fn: Optional[Mean] = Zero(1)):
+    def __init__(self, cov_fn: Covariance, mean_fn: Mean = Zero(1)):
         if mean_fn.feature_ndims != cov_fn.feature_ndims:
             raise ValueError("The feature_ndims of mean and covariance functions should be equal")
         self.feature_ndims = mean_fn.feature_ndims
@@ -28,10 +28,10 @@ class BaseGP:
     def conditional(self, name: NameType, Xnew: ArrayLike, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
-    def predict(self, Xnew, **kwargs) -> TfTensor:
+    def predict(self, Xnew: ArrayLike, **kwargs) -> TfTensor:
         raise NotImplementedError
 
-    def marginal_likelihood(self, name, X, **kwargs) -> ContinuousDistribution:
+    def marginal_likelihood(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
 

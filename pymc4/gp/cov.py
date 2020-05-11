@@ -2,7 +2,7 @@
 Covariance Functions for PyMC4's Gaussian Process module.
 
 """
-from typing import Union, Optional
+from typing import Union
 from abc import abstractmethod
 
 import numpy as np
@@ -34,7 +34,7 @@ __all__ = [
 class Covariance:
     r"""Base class of all Covariance functions for Gaussian Process"""
 
-    def __init__(self, feature_ndims: Optional[int] = 1, **kwargs):
+    def __init__(self, feature_ndims: int = 1, **kwargs):
         # TODO: Implement the `diag` parameter as in PyMC3.
         self._feature_ndims = feature_ndims
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
@@ -122,8 +122,7 @@ class Combination(Covariance):
     def feature_ndims(self) -> int:
         if isinstance(self.cov1, Covariance):
             return self.cov1.feature_ndims
-        else:
-            return self.cov2.feature_ndims
+        return self.cov2.feature_ndims
 
 
 class CovarianceAdd(Combination):
@@ -168,7 +167,7 @@ class Stationary(Covariance):
     @property
     def length_scale(self) -> Union[ArrayLike, float]:
         r"""Length scale of the covariance function"""
-        return self._length_scale
+        return self._length_scale  # type: ignore
 
 
 class ExpQuad(Stationary):
@@ -195,9 +194,9 @@ class ExpQuad(Stationary):
 
     def __init__(
         self,
-        length_scale: ArrayLike,
-        amplitude: Optional[Union[ArrayLike, float]] = 1.0,
-        feature_ndims: Optional[Union[ArrayLike, float]] = 1,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
         **kwargs,
     ):
         self._amplitude = amplitude

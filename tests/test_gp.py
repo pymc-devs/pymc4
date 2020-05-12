@@ -235,14 +235,3 @@ def test_exp_quad_ls_amplitude(tf_seed):
     cov = pm.gp.cov.ExpQuad(1.0, 1.0, 1)
     assert cov.amplitude is not None
     assert cov.length_scale is not None
-
-
-def test_gp_plot(tf_seed):
-    """Test if the plot_gp_dist returns consistent results"""
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots()
-    ax = pm.gp.util.plot_gp_dist(
-        ax, np.random.randn(2, 2), x=np.random.randn(2, 1), plot_samples=True
-    )
-    assert ax is not None

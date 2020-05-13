@@ -312,8 +312,9 @@ class SamplingExecutor:
         if isinstance(return_object, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
             raise EvaluationError(
                 "Return values should not contain instances of "
-                "apm.coroutine_model.Model`, "
-                "`types.GeneratorType` "
+                "a `pm.coroutine_model.Model`, "
+                "`types.GeneratorType`, "
+                "`pm.distributions.Deterministic`, "
                 "and `pm.distributions.Potential`. "
                 "To fix the error you should change the return statement to something like\n"
                 "    ..."

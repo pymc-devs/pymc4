@@ -23,11 +23,11 @@ def map_nested(fn, structure, cond=lambda obj: True):
             return fn(obj)
         return obj
 
-    # After map_nested is called, a inner_map cell will exist. This cell
+    # After map_nested is called, an inner_map cell will exist. This cell
     # has a reference to the actual function inner_map, which has references
-    # to a closure that has a reference to the inner_map cell (because the
-    # fn is recursive). To avoid this reference cycle, we set the function to
-    # None, clearing the cell
+    # to a closure that has a reference to the inner_map cell (because
+    # inner_map is a recursive function). To avoid this reference cycle, we set the function to
+    # None, clearing the cell.
     try:
         return inner_map(structure)
     finally:

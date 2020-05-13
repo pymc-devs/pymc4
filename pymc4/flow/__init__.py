@@ -1,4 +1,4 @@
-"""Functions for evaluating log probabilities."""
+"""Module that controls the evaluation of models."""
 from .executor import SamplingExecutor, SamplingState
 from .transformed_executor import TransformedSamplingExecutor
 from .posterior_predictive_executor import PosteriorPredictiveSamplingExecutor

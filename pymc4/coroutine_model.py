@@ -47,7 +47,9 @@ def get_name(default, base_fn, name) -> Optional[str]:
 
     Returns
     -------
-    str or None
+    rv_name: Optional[str]
+        The parsed name of the rv. Can be ``None`` if ``name`` is None or if
+        ``name`` is ``_no_name_provided`` and ``default`` is ``None``.
     """
     if name is _no_name_provided:
         if default is not _no_name_provided:
@@ -194,7 +196,14 @@ class Model:
 
     @staticmethod
     def validate_name(name: Optional[Union[int, str]]) -> Optional[str]:
-        """Validate the type of the name argument."""
+        """Validate the type of the name argument.
+        
+        Parameters
+        ----------
+        name: Optional[Union[int, str]]
+            The supplied name
+        
+        """
         if name is not None and not isinstance(name, (int, str)):
             raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
         elif name is None:

@@ -25,7 +25,9 @@ class BaseGP:
     def prior(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
-    def conditional(self, name: NameType, Xnew: ArrayLike, given, **kwargs) -> ContinuousDistribution:
+    def conditional(
+        self, name: NameType, Xnew: ArrayLike, given, **kwargs
+    ) -> ContinuousDistribution:
         raise NotImplementedError
 
     def predict(self, Xnew: ArrayLike, **kwargs) -> TfTensor:

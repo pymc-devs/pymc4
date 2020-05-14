@@ -5,7 +5,7 @@ import tensorflow as tf
 from .mean import Mean, Zero
 from .cov import Covariance
 from ..distributions import MvNormal, Normal, ContinuousDistribution
-from .util import stabilize, ArrayLike, TfTensor
+from .util import stabilize, ArrayLike, TfTensor, FreeRV
 
 
 NameType = Union[str, int]
@@ -25,7 +25,7 @@ class BaseGP:
     def prior(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
-    def conditional(self, name: NameType, Xnew: ArrayLike, **kwargs) -> ContinuousDistribution:
+    def conditional(self, name: NameType, Xnew: ArrayLike, given, **kwargs) -> ContinuousDistribution:
         raise NotImplementedError
 
     def predict(self, Xnew: ArrayLike, **kwargs) -> TfTensor:
@@ -56,8 +56,8 @@ class LatentGP(BaseGP):
     ----------
     cov_fn : pm.gp.Covariance
         The covariance function.
-    mean_fn : pm.gp.Mean
-        The mean function.
+    mean_fn : pm.gp.Mean, optional
+        The mean function. Defaults to ``Zero`` mean
 
     Examples
     --------
@@ -83,23 +83,16 @@ class LatentGP(BaseGP):
             return fcond
     """
 
-    def _is_univariate(self, X):
+    def _is_univariate(self, X: ArrayLike) -> bool:
         r"""Check if there is only one sample point"""
         return X.shape[-(self.cov_fn.feature_ndims + 1)] == 1
 
-    def _build_prior(self, name, X, **kwargs):
+    def _build_prior(self, name, X: ArrayLike, **kwargs) -> tuple:
         mu = self.mean_fn(X)
         cov = stabilize(self.cov_fn(X, X), shift=1e-4)
-        if self._is_univariate(X):
-            return Normal(
-                name=name,
-                loc=tf.squeeze(mu, axis=[-1]),
-                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
-                **kwargs,
-            )
-        return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
+        return mu, cov
 
-    def _get_given_vals(self, given):
+    def _get_given_vals(self, given: dict) -> tuple:
         r"""Get the conditional parameters"""
         if given is None:
             given = {}
@@ -119,7 +112,9 @@ class LatentGP(BaseGP):
             )
         return X, f, cov_total, mean_total
 
-    def _build_conditional(self, Xnew, X, f, cov_total, mean_total):
+    def _build_conditional(
+        self, Xnew: ArrayLike, X: ArrayLike, f: FreeRV, cov_total: Covariance, mean_total: Mean
+    ) -> tuple:
         # raise an error if the prior ``f`` is not a tensor or numpy array
         if not tf.is_tensor(f):
             try:
@@ -147,7 +142,7 @@ class LatentGP(BaseGP):
         # last dimension that we added earlier.
         return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=1e-4)
 
-    def prior(self, name, X, **kwargs):
+    def prior(self, name: NameType, X, **kwargs) -> ContinuousDistribution:
         r"""Returns the GP prior distribution evaluated over the input locations `X`.
         
         This is the prior probability over the space
@@ -159,16 +154,43 @@ class LatentGP(BaseGP):
         Parameters
         ----------
         name : string
-            Name of the random variable
+            Name of the random variable.
         X : tensor, array-like
             Function input values.
         **kwargs :
             Extra keyword arguments that are passed to distribution constructor.
-        """
-        f = self._build_prior(name, X, **kwargs)
-        return f
 
-    def conditional(self, name, Xnew, given, **kwargs):
+        Returns
+        -------
+        f : EagerTensor
+            Gaussian Process prior distribution.
+
+        Examples
+        --------
+        >>> import pymc3 as pm
+        >>> import numpy as np
+        >>> X = np.linspace(0, 1, 10)
+        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., ls=1.)
+        >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
+        >>> @pm.model
+        ... def gp_model():
+        ...     f = yield gp.prior('f', X)
+        >>> model = gp_model()
+        >>> trace = pm.sample(model, num_samples=100)
+        """
+        mu, cov = self._build_prior(name, X, **kwargs)
+        if self._is_univariate(X):
+            return Normal(
+                name=name,
+                loc=tf.squeeze(mu, axis=[-1]),
+                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                **kwargs,
+            )
+        return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
+
+    def conditional(
+        self, name: NameType, Xnew: ArrayLike, given: dict, **kwargs
+    ) -> ContinuousDistribution:
         r"""Returns the conditional distribution evaluated over new input
         locations `Xnew`.
         Given a set of function values `f` that
@@ -185,7 +207,7 @@ class LatentGP(BaseGP):
         ----------
         name : string
             Name of the random variable
-        Xnew : tensor, array-like
+        Xnew : array_like
             Function input values.
         given : dict
             Dictionary containing the observed data tensor `X` under the key "X" and
@@ -193,6 +215,26 @@ class LatentGP(BaseGP):
         **kwargs :
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
+
+        Returns
+        -------
+        fcond: EagerTensor
+            Gaussian Process Conditional Distribution
+
+        Examples
+        --------
+        >>> import pymc3 as pm
+        >>> import numpy as np
+        >>> X = np.linspace(0, 1, 10)
+        >>> Xnew = np.linspace(0, 1, 50)
+        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., ls=1.)
+        >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
+        >>> @pm.model
+        ... def gp_model():
+        ...     f = yield gp.prior('f', X)
+        ...     fcond = yield gp.conditional('fcond', Xnew, given={'f': f, 'X': X})
+        >>> model = gp_model()
+        >>> trace = pm.sample(model, num_samples=100)
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)

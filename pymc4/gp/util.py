@@ -6,6 +6,7 @@ import numpy as np
 
 ArrayLike = Union[np.ndarray, tf.python.framework.ops.EagerTensor]
 TfTensor = tf.python.framework.ops.EagerTensor
+FreeRV = ArrayLike
 
 
 def stabilize(K, shift=1e-6):

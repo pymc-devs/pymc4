@@ -59,9 +59,9 @@ class Covariance:
 
         Parameters
         ----------
-        X1 : tensor, array-like
+        X1 : array_like
             First point(s)
-        X2 : tensor, array-like
+        X2 : array_like
             Second point(s)
         """
         return self._kernel.apply(X1, X2, **kwargs)

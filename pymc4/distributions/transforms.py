@@ -3,7 +3,7 @@ from typing import Optional
 
 from tensorflow_probability import bijectors as tfb
 
-__all__ = ["Log", "Sigmoid"]
+__all__ = ["Log", "Sigmoid", "Exp"]
 
 
 class JacobianPreference(enum.Enum):
@@ -147,6 +147,26 @@ class Sigmoid(Transform):
     def inverse(self, z):
         return self._transform.forward(z)
 
+    def forward_log_det_jacobian(self, x):
+        return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
+
+    def inverse_log_det_jacobian(self, z):
+        return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)
+
+
+class Exp(Transform):
+    name = "exp"
+    JacobianPreference = JacobianPreference.Backward
+
+    def __init__(self):
+        self._transform = tfb.Exp()
+    
+    def forward(self, x):
+        return self._transform.inverse(x)
+    
+    def inverse(self, z):
+        return self._transform.forward(z)
+    
     def forward_log_det_jacobian(self, x):
         return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
 

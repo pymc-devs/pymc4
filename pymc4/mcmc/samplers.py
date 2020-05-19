@@ -297,7 +297,7 @@ class CompoundStep(_BaseSampler):
         self._stat_names = ["target_log_prob"]
 
     def _trace_fn(self, current_state, pkr):
-        return pkr.target_log_prob
+        return (pkr.target_log_prob, ) + tuple(self.deterministics_callback(*current_state))
 
     @staticmethod
     def _convert_sampler_methods(sampler_methods):

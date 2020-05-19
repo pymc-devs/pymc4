@@ -5,7 +5,7 @@ from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
 )
-from pymc4.distributions.state_functions import categorical_uniform_fn
+from pymc4.distributions.state_functions import categorical_uniform_fn, bernoulli_uniform_fn
 
 __all__ = [
     "Bernoulli",
@@ -58,13 +58,16 @@ class Bernoulli(BoundedDiscreteDistribution):
         Probability of success (0 < probs < 1).
     """
 
+    _grad_support = False
+
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        self._default_new_state_part = bernoulli_uniform_fn
 
     @staticmethod
     def _init_distribution(conditions):
         probs = conditions["probs"]
-        return tfd.Bernoulli(probs=probs)
+        return tfd.Bernoulli(probs=probs, dtype=tf.float32)
 
     def lower_limit(self):
         return 0

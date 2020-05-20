@@ -160,13 +160,13 @@ class Exp(Transform):
 
     def __init__(self):
         self._transform = tfb.Exp()
-    
+
     def forward(self, x):
         return self._transform.inverse(x)
-    
+
     def inverse(self, z):
         return self._transform.forward(z)
-    
+
     def forward_log_det_jacobian(self, x):
         return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
 

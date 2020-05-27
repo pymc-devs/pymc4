@@ -851,11 +851,7 @@ class LogitNormal(UnitContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.TransformedDistribution(
-            distribution=tfd.Normal(loc=loc, scale=scale),
-            bijector=bij.Sigmoid(),
-            name="LogitNormal",
-        )
+        return tfd.LogitNormal(loc=loc, scale=scale)
 
 
 class LogNormal(PositiveContinuousDistribution):

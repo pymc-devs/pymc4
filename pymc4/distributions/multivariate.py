@@ -11,7 +11,7 @@ from pymc4.distributions.distribution import (
     ContinuousDistribution,
 )
 
-__all__ = ("Dirichlet", "LKJ", "Multinomial", "MvNormal", "VonMisesFisher", "Wishart")
+__all__ = ("Dirichlet", "LKJ",  "LKJCholesky", "Multinomial", "MvNormal", "VonMisesFisher", "Wishart")
 
 
 class Dirichlet(SimplexContinuousDistribution):
@@ -275,6 +275,47 @@ class Wishart(ContinuousDistribution):
     def _init_distribution(conditions):
         df, scale = conditions["df"], conditions["scale"]
         return tfd.WishartTriL(df=df, scale_tril=scale)
+
+    @property
+    def test_value(self):
+        return tf.linalg.diag(tf.ones((self.batch_shape + self.event_shape)[:-1]))
+
+
+class LKJCholesky(ContinuousDistribution):
+    r"""The LKJ (Lewandowski, Kurowicka and Joe) distribution
+    on Cholesky factors of correlation matrices.
+
+    The LKJ distribution is a prior distribution over correlation matrices.
+    The LKJCholesky is a distribution over the Cholesky factor L of a correlation
+    matrix, i.e., the lower triangular matrix of the correlation matrix X,
+    such that L * L^T = X.
+
+    ========  ==============================================
+    Support   Lower triangular matrix with values in [-1, 1]
+    ========  ==============================================
+
+    Parameters
+    ----------
+    dimension : int
+        Dimension of the covariance matrix (n > 1).
+    concentration : float
+        The shape parameter (concentration > 0) of the LKJCholesky distribution.
+
+    References
+    ----------
+    .. [LKJ2009] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+        "Generating random correlation matrices based on vines and
+        extended onion method." Journal of multivariate analysis,
+        100(9), pp.1989-2001.
+    """
+
+    def __init__(self, name, dimension, concentration, **kwargs):
+        super().__init__(name, dimension=dimension, concentration=concentration, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        dimension, concentration = conditions["dimension"], conditions["concentration"]
+        return tfd.CholeskyLKJ(dimension=dimension, concentration=concentration)
 
     @property
     def test_value(self):

@@ -369,8 +369,7 @@ class MvNormalCholesky(ContinuousDistribution):
     Developer Notes
     ---------------
     ``MvNormalCholesky`` is based on TensorFlow Probability's
-    ``MutivariateNormalFullCovariance``, in which the full covariance matrix
-    must be specified.
+    ``MultivariateNormalTriL``.
     """
 
     def __init__(self, name, loc, scale_tril, **kwargs):

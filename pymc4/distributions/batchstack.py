@@ -23,6 +23,7 @@ from tensorflow_probability.python.internal import tensorshape_util
 
 def _make_summary_statistic(attr):
     """Build functions that compute summary statistics, eg, mean, stddev, mode."""
+
     def _fn(self, **kwargs):
         """Implement summary statistic, eg, mean, stddev, mode."""
         x = getattr(self.distribution, attr)(**kwargs)

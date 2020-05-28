@@ -39,22 +39,22 @@ docker:  # Set up a Docker image for development.
 	@printf "Creating Docker image...\n"
 	${SHELL} ./scripts/container.sh --build
 
-docstyle:
+docstyle:  # Test that the docstyle conforms to numpy convention
 	@printf "Checking documentation with pydocstyle...\n"
 	${PYTHON} -m pydocstyle --convention=numpy pymc4/
 	@printf "\033[1;34mPydocstyle passes!\033[0m\n\n"
 
-format:
+format:  # Test that pymc4 and its tests conform to black style
 	@printf "Checking code style with black...\n"
 	black --check --diff pymc4 tests
 	@printf "\033[1;34mBlack passes!\033[0m\n\n"
 
-style:
+style:  # Run pylint on pymc4
 	@printf "Checking code style with pylint...\n"
 	pylint pymc4/
 	@printf "\033[1;34mPylint passes!\033[0m\n\n"
 
-types:
+types:  # Check the type hints with mypy
 	@printf "Checking code type signatures with mypy...\n"
 	python -m mypy --ignore-missing-imports pymc4/
 	@printf "\033[1;34mMypy passes!\033[0m\n\n"
@@ -62,7 +62,7 @@ types:
 black:  # Format code in-place using black.
 	black pymc4/ tests/
 
-notebooks: notebooks/*
+notebooks: notebooks/*  # Test that the notebooks run without errors
 	jupyter nbconvert --config nbconfig.py --execute --ExecutePreprocessor.kernel_name="pymc4-dev" --ExecutePreprocessor.timeout=1200
 	rm notebooks/*.html
 

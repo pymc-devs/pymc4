@@ -40,6 +40,7 @@ ChainMap.__iter__ = _chain_map_iter  # type: ignore
 
 class EvaluationError(RuntimeError):
     """Errors that happen while a pymc4 model is evaluated."""
+
     # common error messages
     OBSERVED_VARIABLE_IS_NOT_SUPPRESSED_BUT_ADDITIONAL_VALUE_PASSED = (
         "Attempting to evaluate a model with both "

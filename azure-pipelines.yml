@@ -23,9 +23,9 @@ steps:
       python -m pip freeze
     displayName: "Install dependencies"
 
-  # - script: |
-  #     python -m pydocstyle --convention=numpy pymc4/ tests/
-  #   displayName: "pydocstyle"
+  - script: |
+      python -m pydocstyle --convention=numpy pymc4/
+    displayName: "pydocstyle"
 
   - script: |
       python -m black --check pymc4/ tests/

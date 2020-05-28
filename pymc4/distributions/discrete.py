@@ -756,4 +756,4 @@ class OrderedLogistic(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return len(self.conditions["cutpoints"]) + 1
+        return len(self.conditions["cutpoints"])

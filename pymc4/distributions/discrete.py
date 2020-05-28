@@ -746,11 +746,7 @@ class OrderedLogistic(BoundedDiscreteDistribution):
     def _init_distribution(conditions):
         cutpoints = tf.convert_to_tensor(conditions["cutpoints"])
         loc = conditions["loc"]
-        return tfd.OrderedLogistic(
-            cutpoints=cutpoints,
-            loc=loc,
-            validate_args=True
-        )
+        return tfd.OrderedLogistic(cutpoints=cutpoints, loc=loc, validate_args=True)
 
     def lower_limit(self):
         return 0

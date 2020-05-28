@@ -17,5 +17,6 @@ from . import inference
 from .distributions import *
 from .forward_sampling import sample_prior_predictive, sample_posterior_predictive
 from .inference.sampling import sample
+from . import gp
 
 __version__ = "4.0a2"

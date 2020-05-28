@@ -185,7 +185,8 @@ class MvNormal(ContinuousDistribution):
     Developer Notes
     ---------------
     ``MvNormal`` is based on TensorFlow Probability's
-    ``MutivariateNormalFullCovariance``, in which the full covariance matrix
+    ``MultivariateNormalTriL``, in which the lower triangular cholesky
+    decomposition of the full covariance matrix is used but full covariance
     must be specified.
     """
 
@@ -195,7 +196,11 @@ class MvNormal(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions):
         loc, covariance_matrix = conditions["loc"], conditions["covariance_matrix"]
-        return tfd.MultivariateNormalFullCovariance(loc=loc, covariance_matrix=covariance_matrix)
+        try:
+            chol_cov_matrix = tf.linalg.cholesky(covariance_matrix)
+        except tf.errors.InvalidArgumentError:
+            raise ValueError("Cholesky decomposition failed! Check your `covariance_matrix`.")
+        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=chol_cov_matrix)
 
 
 class VonMisesFisher(ContinuousDistribution):

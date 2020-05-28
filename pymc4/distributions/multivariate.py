@@ -11,7 +11,16 @@ from pymc4.distributions.distribution import (
     ContinuousDistribution,
 )
 
-__all__ = ("Dirichlet", "LKJ",  "LKJCholesky", "Multinomial", "MvNormal", "VonMisesFisher", "Wishart")
+__all__ = (
+    "Dirichlet",
+    "LKJ",
+    "LKJCholesky",
+    "Multinomial",
+    "MvNormal",
+    "MvNormalCholesky",
+    "VonMisesFisher",
+    "Wishart",
+)
 
 
 class Dirichlet(SimplexContinuousDistribution):
@@ -75,7 +84,7 @@ class LKJ(ContinuousDistribution):
     Parameters
     ----------
     dimension : int
-        Dimension of the covariance matrix (n > 1).
+        Dimension of the correlation matrix (n > 1).
     concentration : float
         The shape parameter (concentration > 0) of the LKJ distribution.
         concentration = 1 implies a uniform distribution of the correlation
@@ -168,7 +177,7 @@ class MvNormal(ContinuousDistribution):
 
     Parameters
     ----------
-    mu : array
+    loc : array
         Vector of means.
     cov : array
         Covariance matrix.
@@ -297,7 +306,7 @@ class LKJCholesky(ContinuousDistribution):
     Parameters
     ----------
     dimension : int
-        Dimension of the covariance matrix (n > 1).
+        Dimension of the correlation matrix (n > 1).
     concentration : float
         The shape parameter (concentration > 0) of the LKJCholesky distribution.
 
@@ -320,3 +329,54 @@ class LKJCholesky(ContinuousDistribution):
     @property
     def test_value(self):
         return tf.linalg.diag(tf.ones((self.batch_shape + self.event_shape)[:-1]))
+
+
+class MvNormalCholesky(ContinuousDistribution):
+    r"""
+    Multivariate normal random variable parameterized by a
+    lower triangular matrix, i.e., the Cholesky factor L of a covariance matrix
+    that has real, positive entries on the diagonal.
+
+    .. math::
+       f(x \mid \pi, T) =
+           \frac{|T|^{1/2}}{(2\pi)^{k/2}}
+           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T (x-\mu) \right\}
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{R}^k`
+    Mean      :math:`\mu`
+    Variance  :math:`T^{-1} = (L @ L.T)^{-1}`
+    ========  ==========================
+
+    Parameters
+    ----------
+    loc : array
+        Vector of means.
+    scale_tril : array
+        Lower triangular matrix, such that scale @ scale.T is positive
+        semi-definite
+
+    Examples
+    --------
+    Define a multivariate normal variable for a given covariance
+    matrix::
+
+        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
+        chol_factor = np.linalg.cholesky(covariance_matrix)
+        mu = np.zeros(2)
+        vals = pm.MvNormalCholesky('vals', loc=loc, scale=chol_factor)
+
+    Developer Notes
+    ---------------
+    ``MvNormalCholesky`` is based on TensorFlow Probability's
+    ``MutivariateNormalFullCovariance``, in which the full covariance matrix
+    must be specified.
+    """
+
+    def __init__(self, name, loc, scale_tril, **kwargs):
+        super().__init__(name, loc=loc, scale_tril=scale_tril, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        loc, scale_tril = conditions["loc"], conditions["scale_tril"]
+        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril)

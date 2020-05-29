@@ -61,8 +61,14 @@ class Scope(object):
         return cls.context.stack
 
     @classmethod
-    def chain(cls, attr: str, *, predicate : Callable[[Any], bool]=lambda _: True, drop_none: bool=False, leaf: Any=_leaf
-              ) -> Generator[Any, None, None]:
+    def chain(
+        cls,
+        attr: str,
+        *,
+        predicate: Callable[[Any], bool] = lambda _: True,
+        drop_none: bool = False,
+        leaf: Any = _leaf,
+    ) -> Generator[Any, None, None]:
         """Yield all the values of a scoped attribute starting from the first to the deepest.
 
         Each ``Scope`` context manager can be used to add any given attribute's value to the context.

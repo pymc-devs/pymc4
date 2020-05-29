@@ -223,7 +223,7 @@ class NameParts:
         
         Returns
         -------
-        str:
+        str
             The original name. This will include the transform and the
             untransformed parts of the name.
         """
@@ -238,7 +238,7 @@ class NameParts:
         
         Returns
         -------
-        str:
+        str
             The full name. This will include the path, transform and the
             untransformed parts of the name.
         """
@@ -250,7 +250,7 @@ class NameParts:
         
         Returns
         -------
-        str:
+        str
             The path and the untransformed_name joined by a slash.
         """
         return "/".join(self.path + (self.untransformed_name,))

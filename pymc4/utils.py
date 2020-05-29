@@ -7,12 +7,13 @@ import pkgutil
 import os
 
 
-def map_nested(fn, structure, cond=lambda obj: True):
+def map_nested(fn, structure, cond=lambda obj: True):  # noqa
     r"""Structure preserving nested map.
 
     Apply fn to an object in a possibly nested data structure and returns
     same structure with every element changed if condition satisfied.
     """
+
     def inner_map(obj):
         if isinstance(obj, (tuple, list)) and len(obj) > 0:
             return type(obj)(map(inner_map, obj))
@@ -57,7 +58,7 @@ def merge_dicts(*dicts: dict, **kwargs: dict):
     return kwargs
 
 
-def biwrap(wrapper) -> Callable:
+def biwrap(wrapper) -> Callable:  # noqa
     """Allow for optional keyword arguments in lower level decoratrors.
 
     Notes
@@ -66,6 +67,7 @@ def biwrap(wrapper) -> Callable:
     keep_auxiliary and keep_return. See pm.Model for all possible keyword parameters
 
     """
+
     @functools.wraps(wrapper)
     def enhanced(*args, **kwargs) -> Callable:
 

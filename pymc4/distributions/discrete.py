@@ -14,6 +14,7 @@ __all__ = [
     "Categorical",
     "Geometric",
     "NegativeBinomial",
+    "OrderedLogistic",
     "Poisson",
     "Zipf",
 ]
@@ -709,3 +710,46 @@ class Zipf(PositiveDiscreteDistribution):
     def _init_distribution(conditions):
         power = conditions["power"]
         return tfd.Zipf(power=power)
+
+
+class OrderedLogistic(BoundedDiscreteDistribution):
+    r"""Ordinal logistic random variable.
+
+    An ordered discrete random variable. The OrderedLogistic
+    distribution is parameterized by a location
+    and a set of cutpoints. The pmf of this distribution
+
+    .. math:: f(x \mid c, loc) = P(X > x-1) - P(x > x)
+                                       = s(x-1; c, loc) - s(x; c, loc)
+
+    where c is the set of cutpoints and s is the survival function of the
+    distribution, i.e., the logistic function
+
+    .. math:: s(x; c, loc) = logistic(loc - concat([-inf, c, inf])[x+1])
+
+    ========  ===================================
+    Support   :math:`x \in \{0, 1, \ldots, |c| + 1}`
+    ========  ===================================
+
+    Parameters
+    ----------
+    loc : float
+        mean of the latent logistic distribution
+    cutpoints: array of floats
+        array of cutpoints must be ordered such that cutpoints[i] <= cutpoints[i + 1]
+    """
+
+    def __init__(self, name, loc, cutpoints, **kwargs):
+        super().__init__(name, loc=loc, cutpoints=cutpoints, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        cutpoints = tf.convert_to_tensor(conditions["cutpoints"])
+        loc = conditions["loc"]
+        return tfd.OrderedLogistic(cutpoints=cutpoints, loc=loc)
+
+    def lower_limit(self):
+        return 0
+
+    def upper_limit(self):
+        return len(self._distribution.cutpoints)

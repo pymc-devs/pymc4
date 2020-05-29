@@ -838,11 +838,6 @@ class LogitNormal(UnitContinuousDistribution):
         Location parameter.
     scale : float
         Standard deviation. (scale > 0).
-
-    Developer Notes
-    ---------------
-    The logit-normal is implemented as Normal distribution transformed by the
-    Sigmoid bijector.
     """
 
     def __init__(self, name, loc, scale, **kwargs):

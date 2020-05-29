@@ -735,7 +735,7 @@ class OrderedLogistic(BoundedDiscreteDistribution):
     ----------
     loc : float
         mean of the latent logistic distribution
-   cutpoints: array of floats
+    cutpoints: array of floats
         array of cutpoints must be ordered such that cutpoints[i] <= cutpoints[i + 1]
     """
 
@@ -746,10 +746,10 @@ class OrderedLogistic(BoundedDiscreteDistribution):
     def _init_distribution(conditions):
         cutpoints = tf.convert_to_tensor(conditions["cutpoints"])
         loc = conditions["loc"]
-        return tfd.OrderedLogistic(cutpoints=cutpoints, loc=loc, validate_args=True)
+        return tfd.OrderedLogistic(cutpoints=cutpoints, loc=loc)
 
     def lower_limit(self):
         return 0
 
     def upper_limit(self):
-        return len(self.conditions["cutpoints"])
+        return len(self._distribution.cutpoints)

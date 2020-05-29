@@ -178,6 +178,18 @@ _distribution_conditions = {
             "sample": np.array([[[1.0]], [[1.0]]], dtype="float32"),
         },
     },
+    "LKJCholesky": {
+        "scalar_parameters": {
+            "dimension": 1,
+            "concentration": 1.5,
+            "sample": np.array([[1.0]], dtype="float32"),
+        },
+        "multidim_parameters": {
+            "dimension": 1,
+            "concentration": np.array([3.0, 1.5], dtype="float32"),
+            "sample": np.array([[[1.0]], [[1.0]]], dtype="float32"),
+        },
+    },
     "Laplace": {
         "scalar_parameters": {"loc": 0.0, "scale": 1.0},
         "multidim_parameters": {
@@ -232,6 +244,20 @@ _distribution_conditions = {
             "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
         },
     },
+    "MvNormalCholesky": {
+        "scalar_parameters": {
+            "loc": np.array([1.0, 2.0], dtype="float32"),
+            "scale_tril": np.array([[1.0, 0.0], [0.5, 0.866025]], dtype="float32"),
+            "sample": np.array([1.0, 2.0], dtype="float32"),
+        },
+        "multidim_parameters": {
+            "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
+            "scale_tril": np.array(
+                [[[1.0, 0.0], [0.5, 0.866025]], [[1.0, 0.0], [0.5, 0.866025]]], dtype="float32",
+            ),
+            "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
+        },
+    },
     "NegativeBinomial": {
         "scalar_parameters": {"total_count": 3, "probs": 0.6, "sample": 5.0},
         "multidim_parameters": {
@@ -245,6 +271,18 @@ _distribution_conditions = {
         "multidim_parameters": {
             "loc": np.array([0.0, 0.0], dtype="float32"),
             "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
+    },
+    "OrderedLogistic": {
+        "scalar_parameters": {
+            "loc": 1.0,
+            "cutpoints": np.array([0.1, 0.5, 1.0], dtype="float32"),
+            "sample": 2,
+        },
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "cutpoints": np.array([[0.0, 1.0], [1.0, 2.0]], dtype="float32"),
+            "sample": np.array([2, 2], dtype="int32"),
         },
     },
     "Pareto": {

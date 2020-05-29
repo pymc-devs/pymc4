@@ -4,7 +4,7 @@ import tensorflow as tf
 
 from .mean import Mean, Zero
 from .cov import Covariance
-from ..distributions import MvNormal, Normal, ContinuousDistribution
+from ..distributions import MvNormalCholesky, MvNormal, Normal, ContinuousDistribution
 from .util import stabilize, ArrayLike, TfTensor, FreeRV
 
 
@@ -67,22 +67,20 @@ class LatentGP(BaseGP):
     Below is an example with ``feature_ndims=2`` , ``batch_shape=2``, 10 prior samples,
     and 5 new samples. Notice that unlike PyMC3, ``given`` in ``conditional`` method is
     NOT optional.
-    
-    .. code:: python
 
-        X = np.random.randn(2, 10, 2, 2)
-        Xnew = np.random.randn(2, 5, 2, 2)
-
-        # Let's define out GP model and its parameters
-        mean_fn = pm.gp.mean.Zero(feature_ndims=2)
-        cov_fn = pm.gp.cov.ExpQuad(1., 1., feature_ndims=2)
-        gp = pm.gp.LatentGP(mean_fn, cov_fn)
-
-        @pm.model
-        def gpmodel():
-            f = yield gp.prior('f', X)
-            fcond = yield gp.conditional('fcond', Xnew, given={'X': X, 'f': f})
-            return fcond
+    >>> import pymc4 as pm
+    >>> import numpy as np
+    >>> X = np.random.randn(2, 10, 2, 2)
+    >>> Xnew = np.random.randn(2, 5, 2, 2)
+    >>> # Let's define out GP model and its parameters
+    ... mean_fn = pm.gp.mean.Zero(feature_ndims=2)
+    >>> cov_fn = pm.gp.cov.ExpQuad(1., 1., feature_ndims=2)
+    >>> gp = pm.gp.LatentGP(mean_fn, cov_fn)
+    >>> @pm.model
+    ... def gpmodel():
+    ...     f = yield gp.prior('f', X)
+    ...     fcond = yield gp.conditional('fcond', Xnew, given={'X': X, 'f': f})
+    ...     return fcond
     """
 
     def _is_univariate(self, X: ArrayLike) -> bool:
@@ -144,9 +142,11 @@ class LatentGP(BaseGP):
         # last dimension that we added earlier.
         return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=1e-4)
 
-    def prior(self, name: NameType, X, **kwargs) -> ContinuousDistribution:
+    def prior(
+        self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs
+    ) -> ContinuousDistribution:
         r"""Returns the GP prior distribution evaluated over the input locations `X`.
-        
+
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
@@ -157,22 +157,26 @@ class LatentGP(BaseGP):
         ----------
         name : string
             Name of the random variable.
-        X : tensor, array-like
+        X : array-like
             Function input values.
+        reparameterize : bool, optional
+            If True, `MvNormalCholesky` distribution is returned instead
+            of `MvNormal`. It is numerically more stable and recommended.
+            (default=True)
         **kwargs :
             Extra keyword arguments that are passed to distribution constructor.
 
         Returns
         -------
-        f : EagerTensor
+        f : tensorflow.Tensor
             Gaussian Process prior distribution.
 
         Examples
         --------
-        >>> import pymc3 as pm
+        >>> import pymc4 as pm
         >>> import numpy as np
         >>> X = np.linspace(0, 1, 10)
-        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., ls=1.)
+        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
         ... def gp_model():
@@ -188,10 +192,13 @@ class LatentGP(BaseGP):
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
                 **kwargs,
             )
-        return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
+        if reparameterize:
+            chol_cov = tf.linalg.cholesky(cov)
+            return MvNormalCholesky(name, loc=mu, chol_cov=chol_cov)
+        return MvNormal(name, loc=mu, cov=cov, **kwargs)
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, given: dict, **kwargs
+        self, name: NameType, Xnew: ArrayLike, given: dict, *, reparameterize=True, **kwargs
     ) -> ContinuousDistribution:
         r"""Returns the conditional distribution evaluated over new input
         locations `Xnew`.
@@ -214,22 +221,26 @@ class LatentGP(BaseGP):
         given : dict
             Dictionary containing the observed data tensor `X` under the key "X" and
             prior random variable `f` under the key "f".
+        reparameterize : bool, optional
+            If True, `MvNormalCholesky` distribution is returned instead
+            of `MvNormal`. It is numerically more stable and recommended.
+            (default=True)
         **kwargs :
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
 
         Returns
         -------
-        fcond: EagerTensor
+        fcond : EagerTensor
             Gaussian Process Conditional Distribution
 
         Examples
         --------
-        >>> import pymc3 as pm
+        >>> import pymc4 as pm
         >>> import numpy as np
         >>> X = np.linspace(0, 1, 10)
         >>> Xnew = np.linspace(0, 1, 50)
-        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., ls=1.)
+        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
         ... def gp_model():
@@ -246,4 +257,7 @@ class LatentGP(BaseGP):
                 loc=tf.squeeze(mu, axis=[-1]),
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
             )
-        return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)
+        if reparameterize:
+            chol_cov = tf.linalg.cholesky(cov)
+            return MvNormalCholesky(name, loc=mu, chol_cov=chol_cov, **kwargs)
+        return MvNormal(name=name, loc=mu, cov=cov, **kwargs)

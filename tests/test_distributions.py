@@ -233,12 +233,12 @@ _distribution_conditions = {
     "MvNormal": {
         "scalar_parameters": {
             "loc": np.array([1.0, 2.0], dtype="float32"),
-            "covariance_matrix": np.array([[0.36, 0.12], [0.12, 0.36]], dtype="float32"),
+            "cov": np.array([[0.36, 0.12], [0.12, 0.36]], dtype="float32"),
             "sample": np.array([1.0, 2.0], dtype="float32"),
         },
         "multidim_parameters": {
             "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
-            "covariance_matrix": np.array(
+            "cov": np.array(
                 [[[0.36, 0.12], [0.12, 0.36]], [[0.36, 0.12], [0.12, 0.36]]], dtype="float32",
             ),
             "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
@@ -247,12 +247,12 @@ _distribution_conditions = {
     "MvNormalCholesky": {
         "scalar_parameters": {
             "loc": np.array([1.0, 2.0], dtype="float32"),
-            "scale_tril": np.array([[1.0, 0.0], [0.5, 0.866025]], dtype="float32"),
+            "chol_cov": np.array([[1.0, 0.0], [0.5, 0.866025]], dtype="float32"),
             "sample": np.array([1.0, 2.0], dtype="float32"),
         },
         "multidim_parameters": {
             "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
-            "scale_tril": np.array(
+            "chol_cov": np.array(
                 [[[1.0, 0.0], [0.5, 0.866025]], [[1.0, 0.0], [0.5, 0.866025]]], dtype="float32",
             ),
             "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
@@ -457,13 +457,6 @@ def test_rvs_test_point_are_valid(tf_seed, distribution_conditions):
         (dist.batch_shape + dist.event_shape).as_list()
     )
     assert not (np.any(np.isinf(logp)) or np.any(np.isnan(logp)))
-
-
-def test_multivariate_normal_cholesky(tf_seed):
-    mean = np.zeros(2)
-    cov = np.array([[-1.0, 0.0], [0.0, -1.0]])
-    with pytest.raises(ValueError, match=r"Cholesky decomposition failed"):
-        pm.MvNormal("x", loc=mean, covariance_matrix=cov)
 
 
 def test_flat_halfflat_broadcast(tf_seed, check_broadcast):

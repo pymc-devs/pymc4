@@ -177,39 +177,31 @@ class MvNormal(ContinuousDistribution):
 
     Parameters
     ----------
-    loc : array
+    loc : array_like
         Vector of means.
-    cov : array
+    cov : array_like
         Covariance matrix.
 
     Examples
     --------
-    Define a multivariate normal variable for a given covariance
-    matrix::
+    Define a multivariate normal variable for a given full covariance
+    matrix
 
-        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
+    .. code::
+
+        cov = np.array([[1., 0.5], [0.5, 2]])
         mu = np.zeros(2)
-        vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
+        dist = pm.MvNormal('dist', loc=loc, cov=cov, shape=(5, 2))
 
-    Developer Notes
-    ---------------
-    ``MvNormal`` is based on TensorFlow Probability's
-    ``MultivariateNormalTriL``, in which the lower triangular cholesky
-    decomposition of the full covariance matrix is used but full covariance
-    must be specified.
     """
 
-    def __init__(self, name, loc, covariance_matrix, **kwargs):
-        super().__init__(name, loc=loc, covariance_matrix=covariance_matrix, **kwargs)
+    def __init__(self, name, loc, cov, **kwargs):
+        super().__init__(name, loc=loc, cov=cov, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        loc, covariance_matrix = conditions["loc"], conditions["covariance_matrix"]
-        try:
-            chol_cov_matrix = tf.linalg.cholesky(covariance_matrix)
-        except tf.errors.InvalidArgumentError:
-            raise ValueError("Cholesky decomposition failed! Check your `covariance_matrix`.")
-        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=chol_cov_matrix)
+        loc, cov = conditions["loc"], conditions["cov"]
+        return tfd.MultivariateNormalFullCovariance(loc=loc, covariance_matrix=cov)
 
 
 class VonMisesFisher(ContinuousDistribution):
@@ -357,30 +349,26 @@ class MvNormalCholesky(ContinuousDistribution):
     ----------
     loc : array
         Vector of means.
-    scale_tril : array
-        Lower triangular matrix, such that scale @ scale.T is positive
-        semi-definite
+    chol_cov : array
+        Lower triangular cholesky factorization of the full covariance
+        matrix such that chol_cov @ chol_cov.T is positive
+        semi-definite and equal to the full covariance matrix.
 
     Examples
     --------
-    Define a multivariate normal variable for a given covariance
-    matrix::
+    Define a multivariate normal variable for a given cholesky decomposition of
+    the full covariance matrix. This is numerically more stable than `pm.MvNormal`
 
-        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
-        chol_factor = np.linalg.cholesky(covariance_matrix)
-        mu = np.zeros(2)
-        vals = pm.MvNormalCholesky('vals', loc=loc, scale=chol_factor)
-
-    Developer Notes
-    ---------------
-    ``MvNormalCholesky`` is based on TensorFlow Probability's
-    ``MultivariateNormalTriL``.
+    >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
+    >>> chol_factor = np.linalg.cholesky(covariance_matrix)
+    >>> mu = np.zeros(2)
+    >>> vals = pm.MvNormalCholesky('vals', loc=loc, chol_cov=chol_factor)
     """
 
-    def __init__(self, name, loc, scale_tril, **kwargs):
-        super().__init__(name, loc=loc, scale_tril=scale_tril, **kwargs)
+    def __init__(self, name, loc, chol_cov, **kwargs):
+        super().__init__(name, loc=loc, chol_cov=chol_cov, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions):
-        loc, scale_tril = conditions["loc"], conditions["scale_tril"]
-        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril)
+        loc, chol_cov = conditions["loc"], conditions["chol_cov"]
+        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=chol_cov)

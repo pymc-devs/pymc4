@@ -161,7 +161,13 @@ EXIT /B %ERRORLEVEL%
 
 
 :docstrings
-sphinx-apidoc --ext-autodoc --ext-intersphinx --ext-mathjax --full --separate --module-first -o test_docs %PACKAGE_DIR% && ^
+sphinx-apidoc --ext-autodoc ^
+ --ext-intersphinx ^
+ --ext-mathjax ^
+ --extension sphinx.ext.napoleon ^
+ --extension matplotlib.sphinxext.plot_directive ^
+ --full --separate --module-first ^
+ -o test_docs %PACKAGE_DIR% && ^
  sphinx-build -nWT test_docs\ test_docs\_build\
 SET CMDERRORLEVEL=%ERRORLEVEL%
 rmdir /s /q test_docs

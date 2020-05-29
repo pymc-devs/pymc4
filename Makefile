@@ -77,5 +77,11 @@ docstrings:  # Test that docstrings can generate an apidoc without warnings
 	bash -c "trap 'trap - SIGINT SIGTERM ERR; rm -rf test_docs; exit 1' SIGINT SIGTERM ERR; $(MAKE) _docstrings"
 
 _docstrings:
-	sphinx-apidoc --ext-autodoc --ext-intersphinx --ext-mathjax --full --separate --module-first -o test_docs pymc4 && \
+	sphinx-apidoc --ext-autodoc \
+	--ext-intersphinx \
+	--ext-mathjax \
+	--extension sphinx.ext.napoleon \
+	--extension matplotlib.sphinxext.plot_directive \
+	--full --separate --module-first \
+	-o test_docs pymc4 && \
 	sphinx-build -nWT test_docs/ test_docs/_build/

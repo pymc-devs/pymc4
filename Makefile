@@ -1,4 +1,4 @@
-.PHONY: help venv conda docker docstyle format style types black test lint check notebooks
+.PHONY: help venv conda docker docstyle format style types black test lint check notebooks docstrings
 .DEFAULT_GOAL = help
 
 PYTHON = python
@@ -72,3 +72,10 @@ test:  # Test code using pytest.
 lint: docstyle format style types  # Lint code using pydocstyle, black, pylint and mypy.
 
 check: lint test  # Both lint and test code. Runs `make lint` followed by `make test`.
+
+docstrings:  # Test that docstrings can generate an apidoc without warnings
+	bash -c "trap 'trap - SIGINT SIGTERM ERR; rm -rf test_docs; exit 1' SIGINT SIGTERM ERR; $(MAKE) _docstrings"
+
+_docstrings:
+	sphinx-apidoc --ext-autodoc --ext-intersphinx --ext-mathjax --full --separate --module-first -o test_docs pymc4 && \
+	sphinx-build -nWT test_docs/ test_docs/_build/

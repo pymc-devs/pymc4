@@ -35,6 +35,7 @@ echo. make test: run tests with pytest
 echo. make lint: run all docstyle, format, style and docscheck checks
 echo. make check: run lint, test
 echo. make notebooks: execute jupyter notebooks
+echo. make docstrings: test that docstrings can generate an apidoc without warnings
 EXIT /B 0
 
 
@@ -157,3 +158,11 @@ EXIT /B %ERRORLEVEL%
 :check
 call :lint && call :test
 EXIT /B %ERRORLEVEL%
+
+
+:docstrings
+sphinx-apidoc --ext-autodoc --ext-intersphinx --ext-mathjax --full --separate --module-first -o test_docs %PACKAGE_DIR% && ^
+ sphinx-build -nWT test_docs\ test_docs\_build\
+SET CMDERRORLEVEL=%ERRORLEVEL%
+rmdir /s /q test_docs
+EXIT /B %CMDERRORLEVEL%

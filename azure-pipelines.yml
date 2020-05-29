@@ -40,6 +40,10 @@ steps:
     displayName: "pylint"
 
   - script: |
+      make docstrings
+    displayName: "docstrings"
+
+  - script: |
       python -m pip install pytest-azurepipelines
       python -m pytest -xv --cov pymc4 --junitxml=junit/test-results.xml --cov-report xml --cov-report term --cov-report html .
     displayName: "pytest"

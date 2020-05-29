@@ -6,4 +6,5 @@ pytest-html
 pylint
 black
 mock
-
+sphinx
+sphinx-apidoc

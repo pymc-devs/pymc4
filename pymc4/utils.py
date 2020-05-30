@@ -1,7 +1,7 @@
 """Miscellaneous utility functions."""
 import functools
 import re
-from typing import Callable, List, Tuple, Union, Optional
+from typing import Callable, Sequence, Optional
 import io
 import pkgutil
 import os
@@ -127,8 +127,6 @@ class NameParts:
 
         Parameters
         ----------
-        cls : NameParts
-            The ``NameParts`` class.
         name : str
             The name to test.
 
@@ -148,8 +146,6 @@ class NameParts:
 
         Parameters
         ----------
-        cls : NameParts
-            The ``NameParts`` class.
         name : str
             The name to test.
 
@@ -165,7 +161,7 @@ class NameParts:
 
     def __init__(
         self,
-        path: Union[List[str], Tuple[str]],
+        path: Sequence[str],
         transform_name: Optional[str],
         untransformed_name: str,
     ):
@@ -173,8 +169,8 @@ class NameParts:
 
         Parameters
         ----------
-        path : Union[List[str], Tuple[str]]
-            The path part of the name. This is a ``list`` or ``tuple`` of
+        path : Sequence[str]
+            The path part of the name. This is a sequence of
             strings, each indicating a deeper layer in the path hierarchy.
         transform_name : Optional[str]
             The name of the applied transformation. ``None`` means no
@@ -193,8 +189,6 @@ class NameParts:
 
         Parameters
         ----------
-        cls : NameParts
-            The ``NameParts`` class.
         name : str
             The name that must be segmented into parts.
 

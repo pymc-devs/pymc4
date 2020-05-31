@@ -159,12 +159,7 @@ class NameParts:
         match = cls.NAME_RE.match(name)
         return match is not None
 
-    def __init__(
-        self,
-        path: Sequence[str],
-        transform_name: Optional[str],
-        untransformed_name: str,
-    ):
+    def __init__(self, path: Sequence[str], transform_name: Optional[str], untransformed_name: str):
         """Initialize a ``NameParts`` instance from its parts.
 
         Parameters

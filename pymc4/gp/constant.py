@@ -13,8 +13,6 @@ from tensorflow_probability.python.math.psd_kernels.positive_semidefinite_kernel
     PositiveSemidefiniteKernel,
 )
 
-__all__ = ["_Constant"]
-
 
 class _Constant(PositiveSemidefiniteKernel):
     def __init__(self, coef=None, feature_ndims=1, validate_args=False, name="Constant"):
@@ -32,30 +30,13 @@ class _Constant(PositiveSemidefiniteKernel):
 
     def _apply(self, x1, x2, example_ndims=0):
         shape = tf.broadcast_dynamic_shape(
-            x1.shape[: -(example_ndims + self.feature_ndims - 1)],
-            x2.shape[: -(example_ndims + self.feature_ndims - 1)],
+            x1.shape[: -(self.feature_ndims)], x2.shape[: -(self.feature_ndims)],
         )
         expected = tf.ones(shape, dtype=self._dtype)
         if self.coef is not None:
             coef = tf.convert_to_tensor(self._coef)
-            expected = coef * expected
-        return expected
-
-    def _matrix(self, x1, x2):
-        # x1 => [batch_shape, m, 1, feature_ndims]
-        # x2 => [batch_shape, 1, n, feature_ndims]
-        shape = tf.broadcast_dynamic_shape(
-            x1.shape[: -(1 + self.feature_ndims)], x2.shape[: -(1 + self.feature_ndims)]
-        )
-        shape = (
-            tuple(shape)
-            + (x1.shape[-(1 + self.feature_ndims)],)
-            + (x1.shape[-(1 + self.feature_ndims)],)
-        )
-        expected = tf.ones(shape, dtype=self._dtype)
-        if self.coef is not None:
-            coef = tf.convert_to_tensor(self._coef)
-            expected = coef * expected
+            coef = util.pad_shape_with_ones(coef, example_ndims)
+            expected *= coef
         return expected
 
     @property
@@ -64,7 +45,7 @@ class _Constant(PositiveSemidefiniteKernel):
 
     def _batch_shape(self):
         scalar_shape = tf.TensorShape([])
-        return scalar_shape if self.coef is None else tf.shape(self.coef)
+        return scalar_shape if self.coef is None else self.coef.shape
 
     def _batch_shape_tensor(self):
         return tf.TensorShape([]) if self.coef is None else self.coef.shape

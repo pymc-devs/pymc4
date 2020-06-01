@@ -22,6 +22,7 @@ MEAN_FUNCS = {
 COV_FUNCS = {
     "ExpQuad": {"amplitude": 1.0, "length_scale": 1.0},
     "Constant": {"coef": 1.0},
+    "WhiteNoise": {"noise": 1e-4},
 }
 
 # Test all the GP models only using a particular
@@ -107,11 +108,21 @@ def test_cov_funcs(tf_seed, get_data, get_cov_func):
     batch_shape, sample_shape, feature_shape, X = get_data
     cov_func = make_func(COV_FUNCS, get_cov_func, feature_shape, pm.gp.cov)
     cov = stabilize(cov_func(X, X))
-    kernel_point_evaluation = cov_func.evaluate_kernel(X, X)
     assert cov is not None
-    assert kernel_point_evaluation is not None
     assert cov.shape == batch_shape + sample_shape + sample_shape
     assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
+
+
+def test_cov_funcs_point_eval(tf_seed, get_data, get_cov_func):
+    """Test the `evaluate_kernel` method of covariance functions"""
+    batch_shape, sample_shape, feature_shape, X = get_data
+    cov_func = make_func(COV_FUNCS, get_cov_func, feature_shape, pm.gp.cov)
+    try:
+        cov = cov_func.evaluate_kernel(X, X)
+    except NotImplementedError:
+        pytest.skip("`evaluate_kernel` method not implemeted. skipping...")
+    assert cov is not None
+    assert cov.shape == batch_shape + sample_shape
 
 
 def test_gp_models_prior(tf_seed, get_data, get_gp_model):

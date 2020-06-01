@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow_probability as tfp
 
 from .constant import _Constant
+from .white_noise import _WhiteNoise
 from .util import ArrayLike, TfTensor, _inherit_docs
 
 
@@ -168,7 +169,8 @@ class CovarianceAdd(Combination):
     Parameters
     ----------
     feature_ndims : int
-        number of rightmost dims to include in kernel computation
+        The number of rightmost dimensions to be absorbed during
+        the computation or evaluation of the covariance function.
     """
 
     @_inherit_docs(Covariance.__call__)
@@ -187,7 +189,8 @@ class CovarianceProd(Combination):
     Parameters
     ----------
     feature_ndims : int
-        number of rightmost dims to include in kernel computation
+        The number of rightmost dimensions to be absorbed during
+        the computation or evaluation of the covariance function.
     """
 
     @_inherit_docs(Covariance.__call__)
@@ -225,8 +228,9 @@ class ExpQuad(Stationary):
         The :math:`\sigma` parameter of RBF kernel, amplitude > 0
     length_scale : array_like
         The :math:`l` parameter of the RBF kernel
-    feature_ndims : int, optional
-        number of rightmost dims to include in kernel computation
+    feature_ndims : int
+        The number of rightmost dimensions to be absorbed during
+        the computation or evaluation of the covariance function.
 
     Other Parameters
     ----------------
@@ -278,13 +282,19 @@ class ExpQuad(Stationary):
 
 class Constant(Stationary):
     r"""
-    A Constant Stationary Covariance Function
+    A Constant Stationary Covariance Function.
+
+    .. math::
+        k(x, x') = c
+
+    where :math:`c` = :code:`coef`
 
     Parameters
     ----------
     coef : array_like
         The constant coefficient indicating the covariance
-        between any two points.
+        between any two points. It is the constant `c` in
+        the equation above.
     feature_ndims : int
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
@@ -305,9 +315,58 @@ class Constant(Stationary):
         [5., 5., 5.]], dtype=float32)>
     """
 
-    def __init__(self, coef: ArrayLike, feature_ndims=1, **kwargs):
+    def __init__(self, coef: Union[float, ArrayLike], feature_ndims=1, **kwargs):
         self._coef = coef
         super().__init__(feature_ndims=feature_ndims, **kwargs)
 
     def _init_kernel(self, feature_ndims, **kwargs):
         return _Constant(self._coef, self._feature_ndims, **kwargs)
+
+
+class WhiteNoise(Stationary):
+    r"""
+    White-noise kernel function. This kernel adds some noise
+    to the covariance functions and is mostly used to stabilize
+    other PSD kernels. This helps them become non-singular and makes
+    cholesky decomposition possible for sampling from the MvNormalCholesky.
+    It is recommended to use this kernel in combination with other
+    covariance/kernel function when working with GP on large data.
+
+    .. math::
+        k(x_i, x_j') = 1 \text{ if } i = j, 0 \text{ otherwise}
+
+    Parameters
+    ----------
+    noise : array_like
+        The `noise_level` of the kernel.
+    feature_ndims : int
+        The number of rightmost dimensions to be absorbed during
+        the computation or evaluation of the covariance function.
+
+    Examples
+    --------
+    >>> from pymc4.gp.cov import WhiteNoise
+    >>> import numpy as np
+    >>> k = WhiteNoise(noise=1e-4, feature_ndims=1)
+    >>> k
+    <pymc4.gp.cov.WhiteNoise object at 0x00000162FC073390>
+    >>> X1 = np.array([[1.], [2.]])
+    >>> X2 = np.array([[3.], [4.]])
+    >>> k(X1, X2)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1.e-04, 0.e+00],
+        [0.e+00, 1.e-04]], dtype=float32)>
+
+    Notes
+    -----
+    This kernel function dosn't have a point evaluation scheme.
+    Hence, the `pymc4.gp.cov.WhiteNoise.evaluate_kernel` method
+    rasies a `NotImplementedError`.
+    """
+
+    def __init__(self, noise: Union[float, ArrayLike], feature_ndims=1, **kwargs):
+        self._noise = noise
+        super().__init__(feature_ndims=feature_ndims, **kwargs)
+
+    def _init_kernel(self, feature_ndims, **kwargs):
+        return _WhiteNoise(self._noise, self._feature_ndims, **kwargs)

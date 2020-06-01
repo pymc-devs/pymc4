@@ -8,42 +8,57 @@ from abc import abstractmethod
 import numpy as np
 import tensorflow_probability as tfp
 
-from .util import ArrayLike, TfTensor
+from .constant import _Constant
+from .util import ArrayLike, TfTensor, _inherit_docs
 
 
 __all__ = [
-    #     "Constant",
-    #     "WhiteNoise",
+    "Constant",
+    # "WhiteNoise",
     "ExpQuad",
-    #     "RatQuad",
-    #     "Exponential",
-    #     "Matern52",
-    #     "Matern32",
-    #     "Linear",
-    #     "Polynomial",
-    #     "Cosine",
-    #     "Periodic",
-    #     "WarpedInput",
-    #     "Gibbs",
-    #     "Coregion",
-    #     "ScaledCov",
-    #     "Kron",
+    # "RatQuad",
+    # "Exponential",
+    # "Matern52",
+    # "Matern32",
+    # "Linear",
+    # "Polynomial",
+    # "Cosine",
+    # "Periodic",
+    # "WarpedInput",
+    # "Gibbs",
+    # "Coregion",
+    # "ScaledCov",
+    # "Kron",
 ]
 
 
 class Covariance:
-    r"""Base class of all Covariance functions for Gaussian Process"""
+    r"""Base class of all Covariance functions for Gaussian Process
 
-    def __init__(self, feature_ndims: int = 1, **kwargs):
+    Parameters
+    ----------
+    feature_ndims : int
+        The number of dimensions to consider as features
+        which will be absorbed during the computation.
+
+    Notes
+    -----
+    ARD (automatic relevence detection) is done if the length_scale
+    is a vector or a tensor. To disable this behavious, a keyword argument
+    `ARD=False` needs to be passed.
+    """
+
+    def __init__(self, feature_ndims: int, **kwargs):
         # TODO: Implement the `diag` parameter as in PyMC3.
         self._feature_ndims = feature_ndims
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
         if self._kernel is not None:
             # wrap the kernel in FeatureScaled kernel for ARD
-            self._scale_diag = kwargs.pop("scale_diag", 1.0)
-            self._kernel = tfp.math.psd_kernels.FeatureScaled(
-                self._kernel, scale_diag=self._scale_diag
-            )
+            if kwargs.pop("ARD", True):
+                self._scale_diag = kwargs.pop("scale_diag", 1.0)
+                self._kernel = tfp.math.psd_kernels.FeatureScaled(
+                    self._kernel, scale_diag=self._scale_diag
+                )
 
     @abstractmethod
     def _init_kernel(
@@ -52,10 +67,27 @@ class Covariance:
         raise NotImplementedError("Your Covariance class should override this method")
 
     def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
+        r"""
+        Evaluate the covariance matrix between the points X1 and X2.
+
+        Parameters
+        ----------
+        X1 : (..., feature_ndims) array_like
+            A tensor of points.
+        X2 : (..., feature_ndims) array_like
+            A tensor of other points.
+
+        Returns
+        -------
+        cov : tensorflow.Tensor
+            A covariance matrix with the last `feature_ndims`
+            dimensions absorbed to compute the covariance.
+        """
         return self._kernel.matrix(X1, X2, **kwargs)
 
     def evaluate_kernel(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
-        """Evaluate kernel at certain points
+        r"""
+        Evaluate kernel at certain points
 
         Parameters
         ----------
@@ -63,6 +95,11 @@ class Covariance:
             First point(s)
         X2 : array_like
             Second point(s)
+
+        Returns
+        -------
+        cov : tensorflow.Tensor
+            Covariance between pair of points in `X1` and `X2`.
         """
         return self._kernel.apply(X1, X2, **kwargs)
 
@@ -96,7 +133,7 @@ class Covariance:
 
     @property
     def feature_ndims(self) -> int:
-        """feature_ndims of the kernel"""
+        f"""Returns the `feature_ndims` of the kernel"""
         return self._feature_ndims
 
 
@@ -134,6 +171,7 @@ class CovarianceAdd(Combination):
         number of rightmost dims to include in kernel computation
     """
 
+    @_inherit_docs(Covariance.__call__)
     def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         if not isinstance(self.cov1, Covariance):
             return self.cov1 + self.cov2(X1, X2, **kwargs)
@@ -152,6 +190,7 @@ class CovarianceProd(Combination):
         number of rightmost dims to include in kernel computation
     """
 
+    @_inherit_docs(Covariance.__call__)
     def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         if not isinstance(self.cov1, Covariance):
             return self.cov1 * self.cov2(X1, X2, **kwargs)
@@ -182,21 +221,39 @@ class ExpQuad(Stationary):
 
     Parameters
     ----------
-    amplitude : tensor, array-like
+    amplitude : array_like
         The :math:`\sigma` parameter of RBF kernel, amplitude > 0
-    length_scale : tensor, array-like
+    length_scale : array_like
         The :math:`l` parameter of the RBF kernel
     feature_ndims : int, optional
         number of rightmost dims to include in kernel computation
-    kwargs : optional
+
+    Other Parameters
+    ----------------
+    **kwargs :
         Other keyword arguments that tfp's ``ExponentiatedQuadratic`` kernel takes
+
+    Examples
+    --------
+    >>> from pymc4.gp.cov import ExpQuad
+    >>> import numpy as np
+    >>> X1 = np.array([[1.], [2.], [3.]])
+    >>> X2 = np.array([[3.], [2.], [1.]])
+    >>> kernel = ExpQuad(amplitude=1., length_scale=1., feature_ndims=1)
+    >>> kernel(X1, X2)
+    <tf.Tensor: shape=(3, 3), dtype=float32, numpy=
+    array([[0.13533528, 0.60653067, 1.        ],
+        [0.60653067, 1.        , 0.60653067],
+        [1.        , 0.60653067, 0.13533528]], dtype=float32)>
+    >>> kernel.evaluate_kernel(X1, X2)
+    <tf.Tensor: shape=(3,), dtype=float32, numpy=array([0.13533528, 1.        , 0.13533528], dtype=float32)>
     """
 
     def __init__(
         self,
         length_scale: Union[ArrayLike, float],
         amplitude: Union[ArrayLike, float] = 1.0,
-        feature_ndims: int = 1,
+        feature_ndims=1,
         **kwargs,
     ):
         self._amplitude = amplitude
@@ -207,10 +264,50 @@ class ExpQuad(Stationary):
         self, feature_ndims: int, **kwargs
     ) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         return tfp.math.psd_kernels.ExponentiatedQuadratic(
-            length_scale=self._length_scale, amplitude=self._amplitude, feature_ndims=feature_ndims
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            feature_ndims=feature_ndims,
+            **kwargs,
         )
 
     @property
     def amplitude(self) -> Union[ArrayLike, float]:
         r"""Amplitude of the kernel function"""
         return self._amplitude
+
+
+class Constant(Stationary):
+    r"""
+    A Constant Stationary Covariance Function
+
+    Parameters
+    ----------
+    coef : array_like
+        The constant coefficient indicating the covariance
+        between any two points.
+    feature_ndims : int
+        The number of rightmost dimensions to be absorbed during
+        the computation or evaluation of the covariance function.
+
+    Examples
+    --------
+    >>> from pymc4.gp.cov import Constant
+    >>> import numpy as np
+    >>> k = Constant(coef=5., feature_ndims=1)
+    >>> k
+    <pymc4.gp.cov.Constant object at 0x000001C96936DE10>
+    >>> X1 = np.array([[1.], [2.], [3.]])
+    >>> X2 = np.array([[4.], [5.], [6.]])
+    >>> k(X1, X2)
+    <tf.Tensor: shape=(3, 3), dtype=float32, numpy=
+    array([[5., 5., 5.],
+        [5., 5., 5.],
+        [5., 5., 5.]], dtype=float32)>
+    """
+
+    def __init__(self, coef: ArrayLike, feature_ndims=1, **kwargs):
+        self._coef = coef
+        super().__init__(feature_ndims=feature_ndims, **kwargs)
+
+    def _init_kernel(self, feature_ndims, **kwargs):
+        return _Constant(self._coef, self._feature_ndims, **kwargs)

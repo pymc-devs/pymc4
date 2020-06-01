@@ -1,12 +1,9 @@
-"""
-Mean functions for PyMC4's Gaussian Process Module.
-
-"""
+"""Mean functions for PyMC4's Gaussian Process Module."""
 from typing import Union
 
 import tensorflow as tf
 
-from .util import ArrayLike, TfTensor
+from .util import ArrayLike, TfTensor, _inherit_docs
 
 __all__ = ["Zero", "Constant"]
 
@@ -18,6 +15,20 @@ class Mean:
         self.feature_ndims = feature_ndims
 
     def __call__(self, X: ArrayLike) -> TfTensor:
+        r"""
+        Evaluate the mean function at a point.
+
+        Parameters
+        ----------
+        X : array_like
+            Tensor or array of points at which to evaluate
+            the mean function.
+
+        Returns
+        -------
+        mu : tensorflow.Tensor
+            Mean evalueated at points `X`.
+        """
         raise NotImplementedError("Your mean function should override this method")
 
     def __add__(self, mean2):
@@ -32,9 +43,9 @@ class MeanAdd(Mean):
 
     Parameters
     ----------
-    mean1 : {callable, pm.Mean}
+    mean1 : {callable, pymc4.gp.Mean}
         First mean function
-    mean2 : {callable, pm.Mean}
+    mean2 : {callable, pymc4.gp.Mean}
         Second mean function
     """
 
@@ -44,6 +55,7 @@ class MeanAdd(Mean):
         self.mean1 = mean1
         self.mean2 = mean2
 
+    @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
         return self.mean1(X) + self.mean2(X)
 
@@ -65,12 +77,13 @@ class MeanProd(Mean):
         self.mean1 = mean1
         self.mean2 = mean2
 
+    @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
         return self.mean1(X) * self.mean2(X)
 
 
 class Zero(Mean):
-    r"""Zero mean
+    r"""Zero mean function
 
     Parameters
     ----------
@@ -78,13 +91,14 @@ class Zero(Mean):
         number of rightmost dims to include in mean computation
     """
 
+    @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
         X = tf.convert_to_tensor(X)
         return tf.zeros(X.shape[: -self.feature_ndims])
 
 
 class Constant(Mean):
-    r"""Constant mean
+    r"""Constant mean function
 
     Parameters
     ----------
@@ -98,6 +112,7 @@ class Constant(Mean):
         self.coef = coef
         super().__init__(feature_ndims=feature_ndims)
 
+    @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
         X = tf.convert_to_tensor(X)
         return tf.ones(X.shape[: -self.feature_ndims]) * self.coef

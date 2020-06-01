@@ -1,7 +1,11 @@
+"""Test suite for GP Module"""
+
 import tensorflow as tf
 import numpy as np
+
 import pymc4 as pm
 from pymc4.gp.util import stabilize
+
 import pytest
 
 # Tensor shapes on which the GP model will be tested
@@ -17,13 +21,16 @@ MEAN_FUNCS = {
 # Test all the covariance functions in pm.gp module
 COV_FUNCS = {
     "ExpQuad": {"amplitude": 1.0, "length_scale": 1.0},
+    "Constant": {"coef": 1.0},
 }
 
 # Test all the GP models only using a particular
 # mean and covariance functions but varying tensor shapes
 # NOTE: the mean and covariance functions used here
 # must be present in `MEAN_FUNCS` and `COV_FUNCS` resp.
-GP_MODELS = {"LatentGP": {"mean_fn": "Zero", "cov_fn": "ExpQuad"}}
+GP_MODELS = {
+    "LatentGP": {"mean_fn": ["Zero", "Zero"], "cov_fn": ["ExpQuad", "Constant"]},
+}
 
 
 @pytest.fixture(scope="module", params=BATCH_AND_FEATURE_SHAPES, ids=str)
@@ -71,16 +78,19 @@ def make_func(test_dict, test_func, feature_shape, mod):
 
 
 def make_model(data, test_model, feature_shape):
-    """Returns a GP model for testing."""
+    """Returns GP model(s) for testing."""
     _, _, feature_shape, _ = data
+    gp_models = []
     gp_params = GP_MODELS[test_model]
-    mean_name = gp_params.pop("mean_fn", "Zero")
-    cov_name = gp_params.pop("cov_fn", "ExpQuad")
-    mean_fn = make_func(MEAN_FUNCS, mean_name, feature_shape, pm.gp.mean)
-    cov_fn = make_func(COV_FUNCS, cov_name, feature_shape, pm.gp.cov)
-    gp_class = getattr(pm.gp, test_model)
-    gp_model = gp_class(mean_fn=mean_fn, cov_fn=cov_fn, **gp_params)
-    return gp_model
+    mean_names = gp_params.pop("mean_fn", ["Zero"])
+    cov_names = gp_params.pop("cov_fn", ["ExpQuad"])
+    for m, c in zip(mean_names, cov_names):
+        mean_fn = make_func(MEAN_FUNCS, m, feature_shape, pm.gp.mean)
+        cov_fn = make_func(COV_FUNCS, c, feature_shape, pm.gp.cov)
+        gp_class = getattr(pm.gp, test_model)
+        gp_model = gp_class(mean_fn=mean_fn, cov_fn=cov_fn, **gp_params)
+        gp_models.append(gp_model)
+    return gp_models
 
 
 def test_mean_funcs(tf_seed, get_data, get_mean_func):
@@ -100,43 +110,45 @@ def test_cov_funcs(tf_seed, get_data, get_cov_func):
     kernel_point_evaluation = cov_func.evaluate_kernel(X, X)
     assert cov is not None
     assert kernel_point_evaluation is not None
-    assert cov.shape.as_list() == list(batch_shape) + list(sample_shape + sample_shape)
+    assert cov.shape == batch_shape + sample_shape + sample_shape
     assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
 
 
 def test_gp_models_prior(tf_seed, get_data, get_gp_model):
     """Test the prior method of a GP mode, if present"""
     batch_shape, sample_shape, feature_shape, X = get_data
-    gp_model = make_model(get_data, get_gp_model, feature_shape)
-    try:
-        prior_dist = gp_model.prior("prior", X)
-    except NotImplementedError:
-        pytest.skip("Skipping: prior not implemented")
+    gp_models = make_model(get_data, get_gp_model, feature_shape)
+    for gp_model in gp_models:
+        try:
+            prior_dist = gp_model.prior("prior", X)
+        except NotImplementedError:
+            pytest.skip("Skipping: prior not implemented")
 
-    assert prior_dist is not None
-    if sample_shape == (1,):
-        assert prior_dist.sample(1).shape == (1,) + batch_shape
-    else:
-        assert prior_dist.sample(1).shape == (1,) + batch_shape + sample_shape
+        assert prior_dist is not None
+        if sample_shape == (1,):
+            assert prior_dist.sample(1).shape == (1,) + batch_shape
+        else:
+            assert prior_dist.sample(1).shape == (1,) + batch_shape + sample_shape
 
 
 def test_gp_models_conditional(tf_seed, get_data, get_gp_model):
     """Test the conditional method of a GP mode, if present"""
     batch_shape, sample_shape, feature_shape, X = get_data
-    gp_model = make_model(get_data, get_gp_model, feature_shape)
+    gp_models = make_model(get_data, get_gp_model, feature_shape)
     X_new = tf.random.normal(batch_shape + sample_shape + feature_shape)
-    try:
-        f = gp_model.prior("f", X).sample(1)[0]
-        cond_dist = gp_model.conditional("fcond", X_new, given={"X": X, "f": f})
-        cond_samples = cond_dist.sample(3)
-    except NotImplementedError:
-        pytest.skip("Skipping: conditional not implemented")
+    for gp_model in gp_models:
+        try:
+            f = gp_model.prior("f", X).sample(1)[0]
+            cond_dist = gp_model.conditional("fcond", X_new, given={"X": X, "f": f})
+            cond_samples = cond_dist.sample(3)
+        except NotImplementedError:
+            pytest.skip("Skipping: conditional not implemented")
 
-    assert cond_samples is not None
-    if sample_shape == (1,):
-        assert cond_samples.shape == (3,) + batch_shape
-    else:
-        assert cond_samples.shape == (3,) + batch_shape + sample_shape
+        assert cond_samples is not None
+        if sample_shape == (1,):
+            assert cond_samples.shape == (3,) + batch_shape
+        else:
+            assert cond_samples.shape == (3,) + batch_shape + sample_shape
 
 
 def test_covariance_combination(tf_seed, get_cov_func):
@@ -148,8 +160,8 @@ def test_covariance_combination(tf_seed, get_cov_func):
     kernel2 = make_func(COV_FUNCS, get_cov_func, feature_shape, pm.gp.cov)
     kernel_add = kernel1 + kernel2
     kernel_mul = kernel1 * kernel2
-    cov_add = kernel_add(X, X)
-    cov_mul = kernel_mul(X, X)
+    cov_add = stabilize(kernel_add(X, X))
+    cov_mul = stabilize(kernel_mul(X, X))
     assert cov_add is not None
     assert cov_add.shape == batch_shape + sample_shape + sample_shape
     assert np.all(np.linalg.eigvals(cov_add.numpy()) > 0)

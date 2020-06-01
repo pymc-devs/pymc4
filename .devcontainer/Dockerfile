@@ -31,7 +31,7 @@ RUN apt-get update \
     #
     # Update environment.
     && /opt/conda/bin/pip install -r /tmp/conda-tmp/requirements.txt \
-    && /opt/conda/bin/pip install -r /tmp/conda-tmp/requirements-dev.txt
+    && /opt/conda/bin/pip install -r /tmp/conda-tmp/requirements-dev.txt \
     #
     # Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
     && groupadd --gid $USER_GID $USERNAME \

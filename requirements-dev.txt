@@ -6,4 +6,6 @@ pytest-html
 pylint
 black
 mock
-
+jupyter
+jupyterlab
+  

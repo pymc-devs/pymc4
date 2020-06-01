@@ -67,7 +67,7 @@ class Normal(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-5, 5, 1000)
         locs = [0., 0., 0., -2.]
         scales = [0.4, 1., 2., 0.4]
@@ -137,7 +137,7 @@ class HalfNormal(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 5, 200)
         for scale in [0.4, 1., 2.]:
             pdf = st.halfnorm.pdf(x, scale=scale)
@@ -193,7 +193,7 @@ class HalfStudentT(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 5, 200)
         scales = [1., 1., 2., 1.]
         nus = [.5, 1., 1., 30.]
@@ -253,7 +253,7 @@ class Beta(UnitContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 1, 200)
         alphas = [.5, 5., 1., 2., 2.]
         betas = [.5, 1., 3., 2., 5.]
@@ -313,7 +313,7 @@ class Cauchy(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-5, 5, 500)
         alphas = [0., 0., 0., -2.]
         betas = [.5, 1., 2., 1.]
@@ -363,7 +363,7 @@ class Chi2(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 15, 200)
         for df in [1, 2, 3, 6, 9]:
             pdf = st.chi2.pdf(x, df)
@@ -409,7 +409,7 @@ class Exponential(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 100)
         for lam in [0.5, 1., 2.]:
             pdf = st.expon.pdf(x, scale=1.0/lam)
@@ -458,7 +458,7 @@ class Gamma(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 20, 200)
         alphas = [1., 2., 3., 7.5]
         betas = [.5, .5, 1., 1.]
@@ -513,7 +513,7 @@ class Gumbel(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-10, 20, 200)
         locs = [0., 4., -1.]
         betas = [2., 2., 4.]
@@ -563,7 +563,7 @@ class HalfCauchy(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 5, 200)
         for b in [0.5, 1.0, 2.0]:
             pdf = st.cauchy.pdf(x, scale=b)
@@ -615,7 +615,7 @@ class InverseGamma(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 500)
         alphas = [1., 2., 3., 3.]
         betas = [1., 1., 1., .5]
@@ -683,7 +683,7 @@ class Kumaraswamy(UnitContinuousDistribution):
 
         import matplotlib.pyplot as plt
         import numpy as np
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 1, 200)
         a_s = [.5, 5., 1., 2., 2.]
         b_s = [.5, 1., 3., 2., 5.]
@@ -736,7 +736,7 @@ class Laplace(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-10, 10, 1000)
         locs = [0., 0., 0., -5.]
         bs = [1., 2., 4., 4.]
@@ -786,7 +786,7 @@ class Logistic(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-5, 5, 200)
         locs = [0., 0., 0., -2.]
         scales = [.4, 1., 2., .4]
@@ -870,7 +870,7 @@ class LogNormal(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 100)
         locs = [0., 0., 0.]
         scales = [.25, .5, 1.]
@@ -929,7 +929,7 @@ class Pareto(BoundedContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 4, 1000)
         alphas = [1., 2., 5., 5.]
         ms = [1., 1., 1., 2.]
@@ -1000,7 +1000,7 @@ class StudentT(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-8, 8, 200)
         locs = [0., 0., -2., -2.]
         scales = [1., 1., 1., 2.]
@@ -1065,7 +1065,7 @@ class Triangular(BoundedContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-2, 10, 500)
         lowers = [0., -1, 2]
         cs = [2., 0., 6.5]
@@ -1126,7 +1126,7 @@ class Uniform(BoundedContinuousDistribution):
 
         import matplotlib.pyplot as plt
         import numpy as np
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-3, 3, 500)
         ls = [0., -2]
         us = [2., 1]
@@ -1278,7 +1278,7 @@ class VonMises(BoundedContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-np.pi, np.pi, 200)
         locs = [0., 0., 0.,  -2.5]
         concentrations = [.01, 0.5,  4., 2.]
@@ -1335,7 +1335,7 @@ class Weibull(PositiveContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(0, 3, 200)
         concentrations = [.5, 1., 1.5, 5., 5.]
         scales = [1., 1., 1., 1.,  2]

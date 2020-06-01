@@ -8,14 +8,13 @@ from abc import abstractmethod
 import numpy as np
 import tensorflow_probability as tfp
 
-from .constant import _Constant
-from .white_noise import _WhiteNoise
+from .kernel import _Constant, _WhiteNoise
 from .util import ArrayLike, TfTensor, _inherit_docs
 
 
 __all__ = [
     "Constant",
-    # "WhiteNoise",
+    "WhiteNoise",
     "ExpQuad",
     # "RatQuad",
     # "Exponential",
@@ -34,7 +33,8 @@ __all__ = [
 
 
 class Covariance:
-    r"""Base class of all Covariance functions for Gaussian Process
+    r"""
+    Base class of all Covariance functions for Gaussian Process
 
     Parameters
     ----------
@@ -42,10 +42,15 @@ class Covariance:
         The number of dimensions to consider as features
         which will be absorbed during the computation.
 
+    Other Parameters
+    ----------------
+    **kwargs :
+        Keyword arguments to pass to the `_init_kernel` method
+
     Notes
     -----
     ARD (automatic relevence detection) is done if the length_scale
-    is a vector or a tensor. To disable this behavious, a keyword argument
+    is a vector or a tensor. To disable this behaviour, a keyword argument
     `ARD=False` needs to be passed.
     """
 
@@ -139,7 +144,8 @@ class Covariance:
 
 
 class Combination(Covariance):
-    r"""Combination of two or more covariance functions
+    r"""
+    Combination of two or more covariance functions
 
     Parameters
     ----------
@@ -164,13 +170,19 @@ class Combination(Covariance):
 
 
 class CovarianceAdd(Combination):
-    r"""Addition of two or more covariance functions.
+    r"""
+    Addition of two or more covariance functions.
 
     Parameters
     ----------
     feature_ndims : int
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
+
+    Other Parameters
+    ----------------
+    **kwargs:
+        Keyword arguments to pass to the covariance `metrix` method
     """
 
     @_inherit_docs(Covariance.__call__)
@@ -184,13 +196,19 @@ class CovarianceAdd(Combination):
 
 
 class CovarianceProd(Combination):
-    r"""Product of two or more covariance functions.
+    r"""
+    Product of two or more covariance functions.
 
     Parameters
     ----------
     feature_ndims : int
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
+
+    Other Parameters
+    ----------------
+    **kwargs:
+        Keyword arguments to pass to the `_init_kernel` method
     """
 
     @_inherit_docs(Covariance.__call__)
@@ -213,8 +231,9 @@ class Stationary(Covariance):
 
 
 class ExpQuad(Stationary):
-    r"""Exponentiated Quadratic Stationary Covariance Function.
-    Commonly known as the Radial Basis Kernel Function.
+    r"""
+    Exponentiated Quadratic Stationary Covariance Function.
+    A kernel from the Radial Basis family of kernels.
 
     .. math::
        k(x, x') = \sigma^2 \mathrm{exp}\left[ -\frac{(x - x')^2}{2 l^2} \right]
@@ -251,6 +270,12 @@ class ExpQuad(Stationary):
         [1.        , 0.60653067, 0.13533528]], dtype=float32)>
     >>> kernel.evaluate_kernel(X1, X2)
     <tf.Tensor: shape=(3,), dtype=float32, numpy=array([0.13533528, 1.        , 0.13533528], dtype=float32)>
+
+    Notes
+    -----
+    ARD (automatic relevence detection) is done if the length_scale
+    is a vector or a tensor. To disable this behaviour, a keyword argument
+    `ARD=False` needs to be passed.
     """
 
     def __init__(
@@ -299,6 +324,11 @@ class Constant(Stationary):
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
 
+    Other Parameters
+    ----------------
+    **kwargs:
+        Keyword arguments to pass to the `_Constant` kernel.
+
     Examples
     --------
     >>> from pymc4.gp.cov import Constant
@@ -313,6 +343,12 @@ class Constant(Stationary):
     array([[5., 5., 5.],
         [5., 5., 5.],
         [5., 5., 5.]], dtype=float32)>
+
+    Notes
+    -----
+    ARD (automatic relevence detection) is done if the length_scale
+    is a vector or a tensor. To disable this behaviour, a keyword argument
+    `ARD=False` needs to be passed.
     """
 
     def __init__(self, coef: Union[float, ArrayLike], feature_ndims=1, **kwargs):
@@ -343,6 +379,11 @@ class WhiteNoise(Stationary):
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
 
+    Other Parameters
+    ----------------
+    **kwargs :
+        Keyword arguments to pass to the `_WhiteNoise` kernel.
+
     Examples
     --------
     >>> from pymc4.gp.cov import WhiteNoise
@@ -361,7 +402,7 @@ class WhiteNoise(Stationary):
     -----
     This kernel function dosn't have a point evaluation scheme.
     Hence, the `pymc4.gp.cov.WhiteNoise.evaluate_kernel` method
-    rasies a `NotImplementedError`.
+    raises a `NotImplementedError` when called.
     """
 
     def __init__(self, noise: Union[float, ArrayLike], feature_ndims=1, **kwargs):

@@ -27,7 +27,7 @@ class Mean:
         Returns
         -------
         mu : tensorflow.Tensor
-            Mean evalueated at points `X`.
+            Mean evaluated at points `X`.
         """
         raise NotImplementedError("Your mean function should override this method")
 

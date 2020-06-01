@@ -30,7 +30,10 @@ COV_FUNCS = {
 # NOTE: the mean and covariance functions used here
 # must be present in `MEAN_FUNCS` and `COV_FUNCS` resp.
 GP_MODELS = {
-    "LatentGP": {"mean_fn": ["Zero", "Zero", "Zero"], "cov_fn": ["ExpQuad", "Constant", "WhiteNoise"]},
+    "LatentGP": {
+        "mean_fn": ["Zero", "Zero", "Zero"],
+        "cov_fn": ["ExpQuad", "Constant", "WhiteNoise"],
+    },
 }
 
 

@@ -123,4 +123,3 @@ class _WhiteNoise(PositiveSemidefiniteKernel):
                     )
                 )
         return assertions
-

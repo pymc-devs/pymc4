@@ -38,7 +38,9 @@ Now, in VSCode:
 2. Paste in the branch URL
 3. If prompted, create it in a "Unique Volume".
 
-Happy hacking away! Don't forget to commit your changes and push them to your branch.
+Happy hacking away! 
+Because the repo will be cloned into an ephemeral repo,
+**don't forget to commit your changes and push them to your branch!**
 Then follow the usual pull request workflow back into PyMC4.
 
 We hope you enjoy the time saved on setting up your development environment!

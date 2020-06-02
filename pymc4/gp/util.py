@@ -4,8 +4,8 @@ import tensorflow as tf
 import numpy as np
 
 
-ArrayLike = Union[np.ndarray, tf.python.framework.ops.EagerTensor]
-TfTensor = tf.python.framework.ops.EagerTensor
+ArrayLike = Union[np.ndarray, tf.Tensor]
+TfTensor = tf.Tensor
 FreeRV = ArrayLike
 
 

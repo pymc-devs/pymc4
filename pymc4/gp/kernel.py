@@ -94,7 +94,7 @@ class _WhiteNoise(PositiveSemidefiniteKernel):
         if self.noise is not None:
             noise = tf.convert_to_tensor(self._noise)
             noise = util.pad_shape_with_ones(noise, 2)
-            expected = noise * expected
+            expected *= noise
         return expected
 
     @property

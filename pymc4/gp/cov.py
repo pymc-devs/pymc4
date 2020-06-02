@@ -2,11 +2,15 @@
 Covariance Functions for PyMC4's Gaussian Process module.
 
 """
-from typing import Union
+from typing import Union, Optional
+from collections.abc import Iterable
+from numbers import Number
 from abc import abstractmethod
 
 import numpy as np
+import tensorflow as tf
 import tensorflow_probability as tfp
+from tensorflow_probability.python.math.psd_kernels.internal import util
 
 from .kernel import _Constant, _WhiteNoise
 from .util import ArrayLike, TfTensor, _inherit_docs
@@ -41,11 +45,18 @@ class Covariance:
     feature_ndims : int
         The number of dimensions to consider as features
         which will be absorbed during the computation.
+    active_dims : {int, Iterable}
+        The columns to operate on. If `None`, defaults to using all the
+        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
+        are considered for evaluation and not the rightmost dims.
+    scale_diag : {Number, array_like}
+        Scaling parameter of lenght_scale for performing ARD.
+        Ignored if keyword argument `ARD=False`.
 
     Other Parameters
     ----------------
     **kwargs :
-        Keyword arguments to pass to the `_init_kernel` method
+        Keyword arguments to pass to the `_init_kernel` method.
 
     Notes
     -----
@@ -54,17 +65,45 @@ class Covariance:
     `ARD=False` needs to be passed.
     """
 
-    def __init__(self, feature_ndims: int, **kwargs):
-        # TODO: Implement the `diag` parameter as in PyMC3.
-        self._feature_ndims = feature_ndims
-        self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
-        if self._kernel is not None:
-            # wrap the kernel in FeatureScaled kernel for ARD
-            if kwargs.pop("ARD", True):
-                self._scale_diag = kwargs.pop("scale_diag", 1.0)
-                self._kernel = tfp.math.psd_kernels.FeatureScaled(
-                    self._kernel, scale_diag=self._scale_diag
+    def __init__(
+        self,
+        feature_ndims: int,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        if not isinstance(feature_ndims, int) or feature_ndims <= 0:
+            raise ValueError(
+                "expected 'feature_ndims' to be an integer greater or equal to 1"
+                f" but found {feature_ndims}."
+            )
+        if active_dims is not None:
+            if isinstance(active_dims, int):
+                active_dims = (active_dims,)
+            elif isinstance(active_dims, Iterable):
+                active_dims = tuple(active_dims)
+            if any(dim < 0.0 for dim in active_dims):
+                raise ValueError(f"active dims can't contain negative values. found {active_dims}.")
+            elif len(active_dims) > feature_ndims:
+                raise ValueError(
+                    "active dims contain more entries than number of feature dimensions."
+                    " Consider increasing the `feature_ndims` or decreasing the entries"
+                    " in `active_dims`. expected len(active_dims) < feature_ndims but got"
+                    f" {len(active_dims)} > {feature_ndims}"
                 )
+            active_dims = active_dims + (None,) * (feature_ndims - len(active_dims))
+            self._slices = [slice(0, i) if isinstance(i, int) else i for i in active_dims]
+        self._feature_ndims = feature_ndims
+        self._active_dims = active_dims
+        self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
+        self._scale_diag = scale_diag
+        # wrap the kernel in FeatureScaled kernel for ARD
+        if kwargs.pop("ARD", True):
+            if self._scale_diag is None:
+                self._scale_diag = 1.0
+            self._kernel = tfp.math.psd_kernels.FeatureScaled(
+                self._kernel, scale_diag=self._scale_diag
+            )
 
     @abstractmethod
     def _init_kernel(
@@ -72,7 +111,17 @@ class Covariance:
     ) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
         raise NotImplementedError("Your Covariance class should override this method")
 
-    def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
+    def _slice(self, X1: TfTensor, X2: TfTensor) -> TfTensor:
+        if self._active_dims is None:
+            return X1, X2
+        # We slice the tensors.
+        X1 = X1[..., (*self._slices)]
+        X2 = X2[..., (*self._slices)]
+        return X1, X2
+
+    def __call__(
+        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
+    ) -> TfTensor:
         r"""
         Evaluate the covariance matrix between the points X1 and X2.
 
@@ -82,6 +131,17 @@ class Covariance:
             A tensor of points.
         X2 : (..., feature_ndims) array_like
             A tensor of other points.
+        diag : bool, optional
+            If true, only evaulates the diagonal of the full covariance matrix.
+        to_dense: bool, optional
+            If True, returns full covariance matrix when `diag=True`. Otherwise,
+            only the diagonal component of the matrix is returned. Ignored if `diag=False`
+
+        Other Parameters
+        ----------------
+        **kwargs : optional
+            Keyword arguments to be passed to the `matrix` method of the underlying
+            tfp's PSD kernels.
 
         Returns
         -------
@@ -89,7 +149,20 @@ class Covariance:
             A covariance matrix with the last `feature_ndims`
             dimensions absorbed to compute the covariance.
         """
+        dtyp = util.maybe_get_common_dtype([X1, X2])
+        X1 = tf.convert_to_tensor(X1, dtype=dtyp)
+        X2 = tf.convert_to_tensor(X2, dtype=dtyp)
+        X1, X2 = self._slice(X1, X2)
+        if diag:
+            return self._diag(X1, X2)
         return self._kernel.matrix(X1, X2, **kwargs)
+
+    def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
+        """Returns only the diagonal part of the full covariance matrix."""
+        cov = self(X1, X2)
+        if to_dense:
+            return cov
+        return tf.linalg.diag_part(cov)
 
     def evaluate_kernel(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         r"""
@@ -139,8 +212,18 @@ class Covariance:
 
     @property
     def feature_ndims(self) -> int:
-        f"""Returns the `feature_ndims` of the kernel"""
+        r"""Returns the `feature_ndims` of the kernel"""
         return self._feature_ndims
+
+    @property
+    def active_dims(self) -> Optional[Union[int, tuple]]:
+        r"""Returns the active dimensions of the kernel"""
+        return self._active_dims
+
+    @property
+    def scale_diag(self) -> Union[Number, ArrayLike]:
+        """Returns the scaling parameter of length scale for performing ARD"""
+        return self._scale_diag
 
 
 class Combination(Covariance):
@@ -250,6 +333,13 @@ class ExpQuad(Stationary):
     feature_ndims : int
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
+    active_dims : {int, Iterable}
+        The columns to operate on. If `None`, defaults to using all the
+        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
+        are considered for evaluation and not the rightmost dims.
+    scale_diag : {Number, array_like}
+        Scaling parameter of lenght_scale for performing ARD.
+        Ignored if keyword argument `ARD=False`.
 
     Other Parameters
     ----------------
@@ -282,7 +372,9 @@ class ExpQuad(Stationary):
         self,
         length_scale: Union[ArrayLike, float],
         amplitude: Union[ArrayLike, float] = 1.0,
-        feature_ndims=1,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
         **kwargs,
     ):
         self._amplitude = amplitude
@@ -323,6 +415,13 @@ class Constant(Stationary):
     feature_ndims : int
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
+    active_dims : {int, Iterable}
+        The columns to operate on. If `None`, defaults to using all the
+        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
+        are considered for evaluation and not the rightmost dims.
+    scale_diag : {Number, array_like}
+        Scaling parameter of lenght_scale for performing ARD.
+        Ignored if keyword argument `ARD=False`.
 
     Other Parameters
     ----------------
@@ -351,9 +450,18 @@ class Constant(Stationary):
     `ARD=False` needs to be passed.
     """
 
-    def __init__(self, coef: Union[float, ArrayLike], feature_ndims=1, **kwargs):
+    def __init__(
+        self,
+        coef: Union[float, ArrayLike],
+        feature_ndims=1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
         self._coef = coef
-        super().__init__(feature_ndims=feature_ndims, **kwargs)
+        super().__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
 
     def _init_kernel(self, feature_ndims, **kwargs):
         return _Constant(self._coef, self._feature_ndims, **kwargs)
@@ -378,6 +486,13 @@ class WhiteNoise(Stationary):
     feature_ndims : int
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
+    active_dims : {int, Iterable}
+        The columns to operate on. If `None`, defaults to using all the
+        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
+        are considered for evaluation and not the rightmost dims.
+    scale_diag : {Number, array_like}
+        Scaling parameter of lenght_scale for performing ARD.
+        Ignored if keyword argument `ARD=False`.
 
     Other Parameters
     ----------------
@@ -405,9 +520,18 @@ class WhiteNoise(Stationary):
     raises a `NotImplementedError` when called.
     """
 
-    def __init__(self, noise: Union[float, ArrayLike], feature_ndims=1, **kwargs):
+    def __init__(
+        self,
+        noise: Union[float, ArrayLike],
+        feature_ndims=1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
         self._noise = noise
-        super().__init__(feature_ndims=feature_ndims, **kwargs)
+        super().__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
 
     def _init_kernel(self, feature_ndims, **kwargs):
         return _WhiteNoise(self._noise, self._feature_ndims, **kwargs)

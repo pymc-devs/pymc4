@@ -24,7 +24,8 @@ See here for the design document: https://github.com/pymc-devs/pymc4/blob/master
 One easy way of developing on PyMC4 is to take advantage of the development containers! 
 Using pre-built development environments allows you to develop on PyMC4 without needing to set up locally.
 
-To use the dev containers, you will need to have Docker and VSCode running locally on your machine, and will need the VSCode Remote extension installed inside VSCode.
+To use the dev containers, you will need to have Docker and VSCode running locally on your machine, 
+and will need the VSCode Remote extension (`ms-vscode-remote.vscode-remote-extensionpack`).
 
 Once you have done that, to develop on PyMC4, on GitHub:
 

@@ -21,6 +21,7 @@ __all__ = [
     "Chi2",
     "Exponential",
     "Gamma",
+    "GeneralizedNormal",
     "Gumbel",
     "HalfCauchy",
     "HalfNormal",
@@ -108,6 +109,67 @@ class Normal(ContinuousDistribution):
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
         return tfd.Normal(loc=loc, scale=scale)
+
+
+class GeneralizedNormal(ContinuousDistribution):
+    r"""Univariate generalized normal random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x \mid \mu, \alpha, \beta) = 
+           \frac{\beta}{2 \Gamma(1/\beta)}
+           \exp(-(|x - \mu| /\alpha)^\beta)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('seaborn-darkgrid')
+        x = np.linspace(-4, 4, 1000)
+        shapes = [0.4, 1., 2., 8.]
+        for shape in shapes:
+            pdf = st.gennorm.pdf(x, shape)
+            plt.plot(x, pdf, label=r'$\mu$ = 0, $\alpha$ = 1, $\beta$ = {}'.format(shape))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu`
+    Variance  :math:`\dfrac{\alpha^2\Gamma(3/\beta)}{\Gamma(1/\beta)}`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    loc : float
+        Location parameter. For the generalized normal distribution, this is the mean.
+    scale : float
+        Scale parameter.
+    power: float
+        Power parameter. When power is greater than 2, tails are heavier than normal,
+        when power is less than 2, tails are lighter than normal and when power is
+        equal to 2, the distribution becomes normal.
+
+    Examples
+    --------
+    .. code-block:: python
+        @pm.model
+        def model():
+            x = pm.GeneralizedNormal('x', loc=0, scale=10, power=4)
+    """
+
+    def __init__(self, name, loc, scale, power, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, power=power, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        loc, scale, power = conditions["loc"], conditions["scale"], conditions["power"]
+        return tfd.GeneralizedNormal(loc=loc, scale=scale, power=power)
 
 
 class HalfNormal(PositiveContinuousDistribution):

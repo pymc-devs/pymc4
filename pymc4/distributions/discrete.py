@@ -127,7 +127,7 @@ class Binomial(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return self.conditions["total_count"]
+        return self._distribution.total_count
 
 
 class BetaBinomial(BoundedDiscreteDistribution):
@@ -200,7 +200,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return self.conditions["total_count"]
+        return self._distribution.total_count
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):
@@ -252,10 +252,10 @@ class DiscreteUniform(BoundedDiscreteDistribution):
         return tfd.FiniteDiscrete(outcomes, probs=outcomes / (high - low))
 
     def lower_limit(self):
-        return self.conditions["low"]
+        return self._distribution.outcomes[0].numpy()
 
     def upper_limit(self):
-        return self.conditions["high"]
+        return self._distribution.outcomes[-1].numpy()
 
 
 class Categorical(BoundedDiscreteDistribution):
@@ -304,7 +304,7 @@ class Categorical(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return len(self.conditions["probs"])
+        return len(self._distribution.probs)
 
 
 class Geometric(BoundedDiscreteDistribution):

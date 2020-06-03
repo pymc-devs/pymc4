@@ -1030,13 +1030,13 @@ class Pareto(BoundedContinuousDistribution):
         return float("inf")
 
     def lower_limit(self):
-        return self.conditions["scale"]
+        return self._distribution.scale
 
     @property
     def test_value(self):
         return (
             tf.zeros(self.batch_shape + self.event_shape, dtype=self.dtype)
-            + self.conditions["scale"]
+            + self._distribution.scale
             + 1
         )
 
@@ -1169,10 +1169,10 @@ class Triangular(BoundedContinuousDistribution):
         return tfd.Triangular(low=low, high=high, peak=peak)
 
     def lower_limit(self):
-        return self.conditions["low"]
+        return self._distribution.low
 
     def upper_limit(self):
-        return self.conditions["high"]
+        return self._distribution.high
 
 
 class Uniform(BoundedContinuousDistribution):
@@ -1226,10 +1226,10 @@ class Uniform(BoundedContinuousDistribution):
 
     # FIXME should we rename this functions as well?
     def lower_limit(self):
-        return self.conditions["low"]
+        return self._distribution.low
 
     def upper_limit(self):
-        return self.conditions["high"]
+        return self._distribution.high
 
 
 class Flat(ContinuousDistribution):

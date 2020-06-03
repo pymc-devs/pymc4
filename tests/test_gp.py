@@ -1,7 +1,6 @@
 """Test suite for GP Module"""
 
 import tensorflow as tf
-import numpy as np
 
 import pymc4 as pm
 

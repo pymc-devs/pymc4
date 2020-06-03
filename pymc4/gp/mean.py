@@ -2,7 +2,6 @@
 from typing import Union
 
 import tensorflow as tf
-from tensorflow_probability.python.internal import tensor_util
 from tensorflow_probability.python.internal import dtype_util
 
 from .util import ArrayLike, TfTensor, _inherit_docs

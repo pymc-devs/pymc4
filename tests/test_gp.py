@@ -219,28 +219,6 @@ def test_mean_combination(tf_seed, get_mean_func):
     assert mean_mul_val.shape == batch_shape + sample_shape
 
 
-def test_invalid_feature_ndims(tf_seed):
-    """Test if an error is throw for inconsistent feature_ndims"""
-    with pytest.raises(ValueError, match=r"Cannot combine kernels"):
-        kernel1 = pm.gp.cov.ExpQuad(1.0, 1.0, 1)
-        kernel2 = pm.gp.cov.ExpQuad(1.0, 1.0, 2)
-        kernel = kernel1 + kernel2
-    with pytest.raises(ValueError, match=r"Cannot combine means"):
-        mean1 = pm.gp.mean.Zero(1)
-        mean2 = pm.gp.mean.Zero(2)
-        mean = mean1 + mean2
-    with pytest.raises(ValueError, match=r"Cannot combine means"):
-        mean1 = pm.gp.mean.Zero(1)
-        mean2 = pm.gp.mean.Zero(2)
-        mean = mean1 * mean2
-    with pytest.raises(
-        ValueError, match=r"The feature_ndims of mean and covariance functions should be equal"
-    ):
-        mean = pm.gp.mean.Zero(1)
-        cov = pm.gp.cov.ExpQuad(1.0, 1.0, 2)
-        gp = pm.gp.LatentGP(mean, cov)
-
-
 def test_gp_invalid_prior(tf_seed):
     """Test if an error is thrown for invalid model prior"""
 

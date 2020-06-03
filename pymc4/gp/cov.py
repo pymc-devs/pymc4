@@ -1,11 +1,11 @@
-"""
-Covariance Functions for PyMC4's Gaussian Process module.
+"""Covariance Functions for PyMC4's Gaussian Process module."""
 
-"""
 from typing import Union, Optional
 from collections.abc import Iterable
 from numbers import Number
 from abc import abstractmethod
+import operator
+from functools import reduce
 
 import numpy as np
 import tensorflow as tf
@@ -133,9 +133,11 @@ class Covariance:
             A tensor of other points.
         diag : bool, optional
             If true, only evaulates the diagonal of the full covariance matrix.
-        to_dense: bool, optional
-            If True, returns full covariance matrix when `diag=True`. Otherwise,
-            only the diagonal component of the matrix is returned. Ignored if `diag=False`
+            (default=False)
+        to_dense : bool, optional
+            If True, returns full covariance matrix with non-diagonal entries zero
+            when `diag=True`. Otherwise, only the diagonal component of the matrix
+            is returned. Ignored if `diag=False`. (default=True)
 
         Other Parameters
         ----------------
@@ -154,7 +156,7 @@ class Covariance:
         X2 = tf.convert_to_tensor(X2, dtype=dtyp)
         X1, X2 = self._slice(X1, X2)
         if diag:
-            return self._diag(X1, X2)
+            return self._diag(X1, X2, to_dense=to_dense)
         return self._kernel.matrix(X1, X2, **kwargs)
 
     def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
@@ -183,10 +185,10 @@ class Covariance:
         return self._kernel.apply(X1, X2, **kwargs)
 
     def __add__(self, cov2):
-        return CovarianceAdd(self, cov2)
+        return _Add(self, cov2)
 
     def __mul__(self, cov2):
-        return CovarianceProd(self, cov2)
+        return _Prod(self, cov2)
 
     __radd__ = __add__
 
@@ -198,17 +200,17 @@ class Covariance:
         # we flatten the array and re-build the left array
         # using the ``.cov2`` attribute of combined kernels.
         result = result.ravel()
-        left_array = np.zeros_like(result)
+        left_array = np.zeros(result.shape, dtype=np.float32)
         for i in range(result.size):
-            left_array[i] = result[i].cov2
+            left_array[i] = result[i].factors[1]
         # reshape the array to its original shape
         left_array = left_array.reshape(original_shape)
         # now, we can put the left array on the right side
         # to create the final combination.
-        if isinstance(result[0], CovarianceAdd):
-            return result[0] + left_array
-        elif isinstance(result[0], CovarianceProd):
-            return result[0] * left_array
+        if isinstance(result[0], _Add):
+            return result[0].factors[0] + left_array
+        elif isinstance(result[0], _Prod):
+            return result[0].factors[0] * left_array
 
     @property
     def feature_ndims(self) -> int:
@@ -232,76 +234,72 @@ class Combination(Covariance):
 
     Parameters
     ----------
-    cov1 : pm.gp.Covariance
-        First covariance function.
-    cov2 : pm.gp.Covariance
-        Second covariance function.
+    cov1, cov2, ... : {Covariance, array_like}
+        Covariance functions or tensors to be combined to form
+        a new covariance function.
     """
 
-    def __init__(self, cov1: Union[Covariance, ArrayLike], cov2: Union[Covariance, ArrayLike]):
-        self.cov1 = cov1
-        self.cov2 = cov2
-        if isinstance(cov1, Covariance) and isinstance(cov2, Covariance):
-            if cov1.feature_ndims != cov2.feature_ndims:
-                raise ValueError("Cannot combine kernels with different feature_ndims")
+    def __init__(self, *factors):
+        self.factors = []
+        for factor in factors:
+            if isinstance(factor, self.__class__):
+                self.factors.extend(factor.factors)
+            else:
+                self.factors.append(factor)
+        self._feature_ndims = [
+            factor._feature_ndims if isinstance(factor, Covariance) else None for factor in factors
+        ]
+        self._active_dims = [
+            factor._active_dims if isinstance(factor, Covariance) else None for factor in factors
+        ]
 
-    @property
-    def feature_ndims(self) -> int:
-        if isinstance(self.cov1, Covariance):
-            return self.cov1.feature_ndims
-        return self.cov2.feature_ndims
+    def merge_factors(self, X1, X2, diag=False, to_dense=True):
+        eval_factors = []
+        for factor in self.factors:
+            if isinstance(factor, Covariance):
+                eval_factors.append(factor(X1, X2, diag=diag, to_dense=to_dense))
+            else:
+                if diag:
+                    eval_factors.append(tf.linalg.diag(tf.linalg.diag_part(factor)))
+                else:
+                    eval_factors.append(factor)
+        return eval_factors
 
 
-class CovarianceAdd(Combination):
+class _Add(Combination):
     r"""
     Addition of two or more covariance functions.
 
     Parameters
     ----------
-    feature_ndims : int
-        The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function.
-
-    Other Parameters
-    ----------------
-    **kwargs:
-        Keyword arguments to pass to the covariance `metrix` method
+    cov1, cov2, ... : {Covariance, array_like}
+        Covariance functions or tensors to be combined to form
+        a new covariance function.
     """
 
     @_inherit_docs(Covariance.__call__)
-    def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
-        if not isinstance(self.cov1, Covariance):
-            return self.cov1 + self.cov2(X1, X2, **kwargs)
-        elif not isinstance(self.cov2, Covariance):
-            return self.cov2 + self.cov1(X1, X2, **kwargs)
-        else:
-            return self.cov1(X1, X2, **kwargs) + self.cov2(X1, X2, **kwargs)
+    def __call__(
+        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
+    ) -> TfTensor:
+        return reduce(operator.add, self.merge_factors(X1, X2, diag=diag, to_dense=to_dense))
 
 
-class CovarianceProd(Combination):
+class _Prod(Combination):
     r"""
     Product of two or more covariance functions.
 
     Parameters
     ----------
-    feature_ndims : int
-        The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function.
-
-    Other Parameters
-    ----------------
-    **kwargs:
-        Keyword arguments to pass to the `_init_kernel` method
+    cov1, cov2, ... : {Covariance, array_like}
+        Covariance functions or tensors to be combined to form
+        a new covariance function.
     """
 
     @_inherit_docs(Covariance.__call__)
-    def __call__(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
-        if not isinstance(self.cov1, Covariance):
-            return self.cov1 * self.cov2(X1, X2, **kwargs)
-        elif not isinstance(self.cov2, Covariance):
-            return self.cov2 * self.cov1(X1, X2, **kwargs)
-        else:
-            return self.cov1(X1, X2, **kwargs) * self.cov2(X1, X2, **kwargs)
+    def __call__(
+        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
+    ) -> TfTensor:
+        return reduce(operator.mul, self.merge_factors(X1, X2, diag=diag, to_dense=to_dense))
 
 
 class Stationary(Covariance):

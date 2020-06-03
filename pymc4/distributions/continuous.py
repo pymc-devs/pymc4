@@ -128,7 +128,7 @@ class GeneralizedNormal(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-4, 4, 1000)
         shapes = [0.4, 1., 2., 8.]
         for shape in shapes:

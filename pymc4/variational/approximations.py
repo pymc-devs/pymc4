@@ -3,35 +3,114 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from pymc4 import flow
 from pymc4.coroutine_model import Model
-from pymc4.inference.sampling import build_logp_and_deterministic_functions, vectorize_logp_function
+from pymc4.inference.utils import initialize_sampling_state
 
 tfd = tfp.distributions
 tfb = tfp.bijectors
 
 V1_optimizer = tf.python.training.optimizer.Optimizer
 V2_optimizer = tf.python.keras.optimizer_v2.optimizer_v2.OptimizerV2
-ConvergenceCriterion = tfp.optimizer.convergence_criteria.ConvergenceCriterion
 
 
 class Approximation(object):
+    """
+    """
     def __init__(
         self,
         model: Model,
         *,
         optimizer: Optional[V1_optimizer, V2_optimizer] = None,
-        convergence_criteria: Optional[ConvergenceCriterion] = None,
         random_seed: int = None,
-
     ):
-        pass
+        self.model = model
+        self._opt = optimizer
+        self._seed = random_seed
+
+    def build_logfn(self):
+        state, _ = initialize_sampling_state(self.model)
+        if not state.all_unobserved_values:
+            raise ValueError(
+                f"Can not calculate a log probability: the model {self.model.name or ''} has no unobserved values."
+            )
+        unobserved_keys = state.all_unobserved_values.keys()
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs)
+            _, st = flow.evaluate_model_transformed(self.model, state=st)
+            return st.collect_log_prob()
+
+        def vectorize_logp_function(logpfn):
+
+            def vectorized_logpfn(*q_samples):
+                return tf.vectorized_map(lambda samples: logpfn(*samples), q_samples)
+            return vectorized_logpfn
+        
+        return vectorize_logp_function(logpfn)
+
+    def fit(self):
+        target_log_prob = self.build_logfn()
+        if optimizer:
+            opt = optimizer
+        else:
+            opt = tf.optimizers.Adam(learning_rate=0.1)
+
+        loss = tfp.vi.fit_surrogate_posterior(
+            target_log_prob_fn=target_log_prob,
+            surrogate_posterior=posterior,
+            optimizer=opt,
+            num_steps=num_steps,
+            seed=random_seed,
+        )
+
+        return loss
 
 
 class MeanField(Approximation):
-    pass
 
+    @property
+    def loc(self):
+        pass
+
+    @property
+    def cov_matrix(self):
+        pass
+
+    @property
+    def posterior(self):
+        pass
 
 class FullRank(Approximation):
-    pass
+
+    @property
+    def loc(self):
+        pass
+
+    @property
+    def cov_matrix(self):
+        pass
+
+    @property
+    def build_posterior(self):
+        pass
+
+class LowRank(Approximation):
+
+    @property
+    def loc(self):
+        pass
+
+    @property
+    def cov_matrix(self):
+        pass
+
+    @property
+    def build_posterior(self):
+        pass
 
 
 def fit(
@@ -41,33 +120,33 @@ def fit(
     method: str = "advi",
     sample_size: int = 1,
     random_seed: int = None,
-    observed: Optional[Dict[str, Any]] = None,
-    state: Optional[flow.SamplingState] = None,
+    **kwargs
 ):
     """
     pass
     """
-    (
-        logpfn,
-        init,
-        _deterministics_callback,
-        deterministic_names,
-        state_,
-    ) = build_logp_and_deterministic_functions(
-        model, state=state, observed=observed, collect_reduced_log_prob=True,
+    if not isinstance(model, Model):
+        raise TypeError(
+            "`fit` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
+                type(model)
+            )
+        )
+
+    _select = dict(
+        advi=MeanField,
     )
 
-    if optimizer:
-        opt = optimizer
+    if isinstance(method, str):
+        try:
+            inference = _select[method.lower()]()
+        except KeyError:
+            raise KeyError('method should be one of %s '
+                           'or Inference instance' %
+                           set(_select.keys()))
+    elif isinstance(method, Approximation):
+        inference = method
     else:
-        opt = tf.optimizers.Adam(learning_rate=0.1)
-
-    loss = tfp.vi.fit_surrogate_posterior(
-        target_log_prob_fn=None,
-        surrogate_posterior=None,
-        optimizer=opt,
-        num_steps=num_steps,
-        seed=random_seed,
-    )
-
-    return loss
+        raise TypeError('method should be one of %s '
+                        'or Inference instance' %
+                        set(_select.keys()))
+    return inference.fit(num_steps, **kwargs)

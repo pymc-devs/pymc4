@@ -219,6 +219,13 @@ _distribution_conditions = {
             "scale": np.array([3.0, 3.0], dtype="float32"),
         },
     },
+    "Moyal": {
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0},
+        "multidim_parameters": {
+            "loc": np.array([0.0, 0.0], dtype="float32"),
+            "scale": np.array([1.0, 1.0], dtype="float32"),
+        },
+    },
     "Multinomial": {
         "scalar_parameters": {
             "total_count": 4,

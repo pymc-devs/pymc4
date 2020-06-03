@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional
 import tensorflow as tf
 import tensorflow_probability as tfp
 from pymc4 import flow
@@ -15,16 +15,9 @@ V2_optimizer = tf.python.keras.optimizer_v2.optimizer_v2.OptimizerV2
 class Approximation(object):
     """
     """
-    def __init__(
-        self,
-        model: Model,
-        *,
-        optimizer: Optional[V1_optimizer, V2_optimizer] = None,
-        random_seed: int = None,
-    ):
+
+    def __init__(self, model: Model):
         self.model = model
-        self._opt = optimizer
-        self._seed = random_seed
 
     def build_logfn(self):
         state, _ = initialize_sampling_state(self.model)
@@ -45,33 +38,15 @@ class Approximation(object):
             return st.collect_log_prob()
 
         def vectorize_logp_function(logpfn):
-
             def vectorized_logpfn(*q_samples):
                 return tf.vectorized_map(lambda samples: logpfn(*samples), q_samples)
+
             return vectorized_logpfn
-        
+
         return vectorize_logp_function(logpfn)
-
-    def fit(self):
-        target_log_prob = self.build_logfn()
-        if optimizer:
-            opt = optimizer
-        else:
-            opt = tf.optimizers.Adam(learning_rate=0.1)
-
-        loss = tfp.vi.fit_surrogate_posterior(
-            target_log_prob_fn=target_log_prob,
-            surrogate_posterior=posterior,
-            optimizer=opt,
-            num_steps=num_steps,
-            seed=random_seed,
-        )
-
-        return loss
 
 
 class MeanField(Approximation):
-
     @property
     def loc(self):
         pass
@@ -80,26 +55,11 @@ class MeanField(Approximation):
     def cov_matrix(self):
         pass
 
-    @property
-    def posterior(self):
-        pass
-
-class FullRank(Approximation):
-
-    @property
-    def loc(self):
-        pass
-
-    @property
-    def cov_matrix(self):
-        pass
-
-    @property
     def build_posterior(self):
         pass
 
-class LowRank(Approximation):
 
+class FullRank(Approximation):
     @property
     def loc(self):
         pass
@@ -108,7 +68,19 @@ class LowRank(Approximation):
     def cov_matrix(self):
         pass
 
+    def build_posterior(self):
+        pass
+
+
+class LowRank(Approximation):
     @property
+    def loc(self):
+        pass
+
+    @property
+    def cov_matrix(self):
+        pass
+
     def build_posterior(self):
         pass
 
@@ -116,11 +88,12 @@ class LowRank(Approximation):
 def fit(
     model: Model,
     *,
-    num_steps: int = 10000,
     method: str = "advi",
+    num_steps: int = 10000,
     sample_size: int = 1,
-    random_seed: int = None,
-    **kwargs
+    random_seed: Optional[int] = None,
+    optimizer: Optional[V1_optimizer, V2_optimizer] = None,
+    **kwargs,
 ):
     """
     pass
@@ -132,21 +105,33 @@ def fit(
             )
         )
 
-    _select = dict(
-        advi=MeanField,
-    )
+    _select = dict(advi=MeanField,)
 
     if isinstance(method, str):
         try:
-            inference = _select[method.lower()]()
+            inference = _select[method.lower()](model)
         except KeyError:
-            raise KeyError('method should be one of %s '
-                           'or Inference instance' %
-                           set(_select.keys()))
+            raise KeyError("method should be one of %s or Inference instance" % set(_select.keys()))
     elif isinstance(method, Approximation):
         inference = method
     else:
-        raise TypeError('method should be one of %s '
-                        'or Inference instance' %
-                        set(_select.keys()))
-    return inference.fit(num_steps, **kwargs)
+        raise TypeError("method should be one of %s or Inference instance" % set(_select.keys()))
+
+    target_log_prob = inference.build_logfn()
+    surrogate_posterior = inference.build_posterior()
+    if optimizer:
+        opt = optimizer
+    else:
+        opt = tf.optimizers.Adam(learning_rate=0.1)
+
+    losses = tfp.vi.fit_surrogate_posterior(
+        target_log_prob_fn=target_log_prob,
+        surrogate_posterior=surrogate_posterior,
+        num_steps=num_steps,
+        sample_size=sample_size,
+        seed=random_seed,
+        optimizer=opt,
+        **kwargs,
+    )
+
+    return losses

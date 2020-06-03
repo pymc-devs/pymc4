@@ -2,6 +2,8 @@
 from typing import Union
 
 import tensorflow as tf
+from tensorflow_probability.python.internal import tensor_util
+from tensorflow_probability.python.internal import dtype_util
 
 from .util import ArrayLike, TfTensor, _inherit_docs
 
@@ -39,13 +41,14 @@ class Mean:
 
 
 class MeanAdd(Mean):
-    r"""Addition of two or more mean functions
+    r"""
+    Addition of two or more mean functions
 
     Parameters
     ----------
-    mean1 : {callable, pymc4.gp.Mean}
+    mean1 : Mean
         First mean function
-    mean2 : {callable, pymc4.gp.Mean}
+    mean2 : Mean
         Second mean function
     """
 
@@ -61,13 +64,14 @@ class MeanAdd(Mean):
 
 
 class MeanProd(Mean):
-    r"""Product of two or more mean functions
+    r"""
+    Product of two or more mean functions
 
     Parameters
     ----------
-    mean1 : {callable, pm.Mean}
+    mean1 : Mean
         First mean function
-    mean2 : {callable, pm.Mean}
+    mean2 : Mean
         Second mean function
     """
 
@@ -83,7 +87,8 @@ class MeanProd(Mean):
 
 
 class Zero(Mean):
-    r"""Zero mean function
+    r"""
+    Zero mean function
 
     Parameters
     ----------
@@ -93,12 +98,14 @@ class Zero(Mean):
 
     @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
-        X = tf.convert_to_tensor(X)
-        return tf.zeros(X.shape[: -self.feature_ndims])
+        dtyp = dtype_util.common_dtype([X])
+        X = tf.convert_to_tensor(X, dtype=dtyp)
+        return tf.zeros(X.shape[: -self.feature_ndims], dtype=dtyp)
 
 
 class Constant(Mean):
-    r"""Constant mean function
+    r"""
+    Constant mean function
 
     Parameters
     ----------
@@ -108,11 +115,12 @@ class Constant(Mean):
         number of rightmost dims to include in mean computation
     """
 
-    def __init__(self, coef: Union[ArrayLike, float] = 1.0, feature_ndims: int = 1):
+    def __init__(self, coef: Union[ArrayLike, float] = 1, feature_ndims: int = 1):
         self.coef = coef
         super().__init__(feature_ndims=feature_ndims)
 
     @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
-        X = tf.convert_to_tensor(X)
-        return tf.ones(X.shape[: -self.feature_ndims]) * self.coef
+        dtyp = dtype_util.common_dtype([X, self.coef])
+        X = tf.convert_to_tensor(X, dtype=dtyp)
+        return tf.ones(X.shape[: -self.feature_ndims], dtype=dtyp) * self.coef

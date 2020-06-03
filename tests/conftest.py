@@ -5,6 +5,10 @@ import numpy as np
 import tensorflow as tf
 import itertools
 
+# Tensor shapes on which the GP model will be tested
+BATCH_AND_FEATURE_SHAPES = [(1,), (2,), (2, 2,)]
+SAMPLE_SHAPE = [(1,), (3,)]
+
 
 @pytest.fixture(scope="function", autouse=True)
 def tf_seed():
@@ -154,3 +158,24 @@ def vectorized_model_fixture(request):
             x = yield pm.Normal("x", mu, scale, batch_stack=5, observed=observed)
 
     return model, is_vectorized_model, core_shapes
+
+
+@pytest.fixture(scope="module", params=BATCH_AND_FEATURE_SHAPES, ids=str)
+def get_batch_shape(request):
+    return request.param
+
+
+@pytest.fixture(scope="module", params=SAMPLE_SHAPE, ids=str)
+def get_sample_shape(request):
+    return request.param
+
+
+@pytest.fixture(scope="module", params=BATCH_AND_FEATURE_SHAPES, ids=str)
+def get_feature_shape(request):
+    return request.param
+
+
+@pytest.fixture(scope="module")
+def get_data(get_batch_shape, get_sample_shape, get_feature_shape):
+    X = tf.random.normal(get_batch_shape + get_sample_shape + get_feature_shape)
+    return get_batch_shape, get_sample_shape, get_feature_shape, X

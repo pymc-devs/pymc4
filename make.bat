@@ -168,7 +168,7 @@ sphinx-apidoc --ext-autodoc ^
  --extension matplotlib.sphinxext.plot_directive ^
  --full --separate --module-first ^
  -o test_docs %PACKAGE_DIR% && ^
- sphinx-build -nWT test_docs\ test_docs\_build\
+sphinx-build -nWT test_docs\ test_docs\_build\
 SET CMDERRORLEVEL=%ERRORLEVEL%
 rmdir /s /q test_docs
 EXIT /B %CMDERRORLEVEL%

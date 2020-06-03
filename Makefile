@@ -5,6 +5,16 @@ PYTHON = python
 PIP = pip
 CONDA = conda
 SHELL = bash
+define MAPPING
+{\n\
+    \"python\": \(\"https://user:password@docs.python.org/3\", None\),\n\
+    \"tensorflow\": \(\"https://www.tensorflow.org/api_docs/python\", \"https://github.com/mr-ubik/tensorflow-intersphinx/raw/master/tf2_py_objects.inv\"\),\n\
+    \"numpy\": \(\"https://docs.scipy.org/doc/numpy/\", None\),\n\
+    \"scipy\": \(\"https://docs.scipy.org/doc/scipy/reference/\", None\),\n\
+    \"arviz\": \(\"https://arviz-devs.github.io/arviz/\", None\),\n\
+}\n
+endef
+
 
 help:
 	@printf "Usage:\n"
@@ -84,4 +94,6 @@ _docstrings:
 	--extension matplotlib.sphinxext.plot_directive \
 	--full --separate --module-first \
 	-o test_docs pymc4 && \
+	sed -i.bak 's|intersphinx_mapping = .*|intersphinx_mapping = $(MAPPING)|g' test_docs/conf.py && \
+	rm test_docs/conf.py.bak && \
 	sphinx-build -nWT test_docs/ test_docs/_build/

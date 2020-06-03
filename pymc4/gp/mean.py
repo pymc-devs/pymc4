@@ -30,7 +30,7 @@ class Mean:
         mu : tensorflow.Tensor
             Mean evaluated at points `X`.
         """
-        raise NotImplementedError("Your mean function should override this method")
+        raise NotImplementedError("Your mean function should override this method.")
 
     def __add__(self, mean2):
         return MeanAdd(self, mean2)
@@ -41,7 +41,7 @@ class Mean:
 
 class MeanAdd(Mean):
     r"""
-    Addition of two or more mean functions
+    Addition of two or more mean functions.
 
     Parameters
     ----------
@@ -53,7 +53,7 @@ class MeanAdd(Mean):
 
     def __init__(self, mean1: Mean, mean2: Mean):
         if mean1.feature_ndims != mean2.feature_ndims:
-            raise ValueError("Cannot combine means with different feature_ndims")
+            raise ValueError("Cannot combine means with different feature_ndims.")
         self.mean1 = mean1
         self.mean2 = mean2
 
@@ -64,7 +64,7 @@ class MeanAdd(Mean):
 
 class MeanProd(Mean):
     r"""
-    Product of two or more mean functions
+    Product of two or more mean functions.
 
     Parameters
     ----------
@@ -76,7 +76,7 @@ class MeanProd(Mean):
 
     def __init__(self, mean1: Mean, mean2: Mean):
         if mean1.feature_ndims != mean2.feature_ndims:
-            raise ValueError("Cannot combine means with different feature_ndims")
+            raise ValueError("Cannot combine means with different feature_ndims.")
         self.mean1 = mean1
         self.mean2 = mean2
 
@@ -87,7 +87,7 @@ class MeanProd(Mean):
 
 class Zero(Mean):
     r"""
-    Zero mean function
+    Zero mean function.
 
     Parameters
     ----------
@@ -104,7 +104,7 @@ class Zero(Mean):
 
 class Constant(Mean):
     r"""
-    Constant mean function
+    Constant mean function.
 
     Parameters
     ----------

@@ -38,7 +38,7 @@ __all__ = [
 
 class Covariance:
     r"""
-    Base class of all Covariance functions for Gaussian Process
+    Base class of all Covariance functions for Gaussian Process.
 
     Parameters
     ----------
@@ -109,7 +109,7 @@ class Covariance:
     def _init_kernel(
         self, feature_ndims: int, **kwargs
     ) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
-        raise NotImplementedError("Your Covariance class should override this method")
+        raise NotImplementedError("Your Covariance class should override this method.")
 
     def _slice(self, X1: TfTensor, X2: TfTensor) -> TfTensor:
         if self._active_dims is None:
@@ -118,6 +118,46 @@ class Covariance:
         X1 = X1[..., (*self._slices)]
         X2 = X2[..., (*self._slices)]
         return X1, X2
+
+    def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
+        """Diagonal part of the full covariance matrix."""
+        cov = self(X1, X2)
+        if to_dense:
+            return cov
+        return tf.linalg.diag_part(cov)
+
+    def evaluate_kernel(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
+        r"""
+        Evaluate kernel at certain points.
+
+        Parameters
+        ----------
+        X1 : array_like
+            First point(s)
+        X2 : array_like
+            Second point(s)
+
+        Returns
+        -------
+        cov : tensorflow.Tensor
+            Covariance between pair of points in `X1` and `X2`.
+        """
+        return self._kernel.apply(X1, X2, **kwargs)
+
+    @property
+    def feature_ndims(self) -> int:
+        r"""`feature_ndims` parameter of the kernel."""
+        return self._feature_ndims
+
+    @property
+    def active_dims(self) -> Optional[Union[int, tuple]]:
+        r"""Active dimensions of the kernel."""
+        return self._active_dims
+
+    @property
+    def scale_diag(self) -> Union[Number, ArrayLike]:
+        """Scaling parameter of length scale for performing ARD."""
+        return self._scale_diag
 
     def __call__(
         self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
@@ -159,31 +199,6 @@ class Covariance:
             return self._diag(X1, X2, to_dense=to_dense)
         return self._kernel.matrix(X1, X2, **kwargs)
 
-    def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
-        """Returns only the diagonal part of the full covariance matrix."""
-        cov = self(X1, X2)
-        if to_dense:
-            return cov
-        return tf.linalg.diag_part(cov)
-
-    def evaluate_kernel(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
-        r"""
-        Evaluate kernel at certain points
-
-        Parameters
-        ----------
-        X1 : array_like
-            First point(s)
-        X2 : array_like
-            Second point(s)
-
-        Returns
-        -------
-        cov : tensorflow.Tensor
-            Covariance between pair of points in `X1` and `X2`.
-        """
-        return self._kernel.apply(X1, X2, **kwargs)
-
     def __add__(self, cov2):
         return _Add(self, cov2)
 
@@ -212,25 +227,10 @@ class Covariance:
         elif isinstance(result[0], _Prod):
             return result[0].factors[0] * left_array
 
-    @property
-    def feature_ndims(self) -> int:
-        r"""Returns the `feature_ndims` of the kernel"""
-        return self._feature_ndims
-
-    @property
-    def active_dims(self) -> Optional[Union[int, tuple]]:
-        r"""Returns the active dimensions of the kernel"""
-        return self._active_dims
-
-    @property
-    def scale_diag(self) -> Union[Number, ArrayLike]:
-        """Returns the scaling parameter of length scale for performing ARD"""
-        return self._scale_diag
-
 
 class Combination(Covariance):
     r"""
-    Combination of two or more covariance functions
+    Combination of two or more covariance functions.
 
     Parameters
     ----------
@@ -303,17 +303,18 @@ class _Prod(Combination):
 
 
 class Stationary(Covariance):
-    r"""Base class for all Stationary Covariance functions"""
+    r"""Base class for all Stationary Covariance functions."""
 
     @property
     def length_scale(self) -> Union[ArrayLike, float]:
-        r"""Length scale of the covariance function"""
+        r"""Length scale of the covariance function."""
         return self._length_scale  # type: ignore
 
 
 class ExpQuad(Stationary):
     r"""
     Exponentiated Quadratic Stationary Covariance Function.
+
     A kernel from the Radial Basis family of kernels.
 
     .. math::
@@ -391,7 +392,7 @@ class ExpQuad(Stationary):
 
     @property
     def amplitude(self) -> Union[ArrayLike, float]:
-        r"""Amplitude of the kernel function"""
+        r"""Amplitude of the kernel function."""
         return self._amplitude
 
 
@@ -467,12 +468,14 @@ class Constant(Stationary):
 
 class WhiteNoise(Stationary):
     r"""
-    White-noise kernel function. This kernel adds some noise
-    to the covariance functions and is mostly used to stabilize
-    other PSD kernels. This helps them become non-singular and makes
-    cholesky decomposition possible for sampling from the MvNormalCholesky.
-    It is recommended to use this kernel in combination with other
-    covariance/kernel function when working with GP on large data.
+    White-noise kernel function.
+
+    This kernel adds some noise to the covariance functions and is mostly
+    used to stabilize other PSD kernels. This helps them become non-singular
+    and makes cholesky decomposition possible for sampling from the
+    `MvNormalCholesky` distribution. It is recommended to use this kernel in
+    combination with other covariance/kernel function when working with GP on
+    large data.
 
     .. math::
         k(x_i, x_j') = 1 \text{ if } i = j, 0 \text{ otherwise}

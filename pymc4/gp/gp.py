@@ -1,3 +1,5 @@
+"""An Interface for creating Gaussian Process Models in PyMC4."""
+
 from typing import Union
 
 import tensorflow as tf
@@ -83,7 +85,7 @@ class LatentGP(BaseGP):
     """
 
     def _is_univariate(self, X: ArrayLike) -> bool:
-        r"""Check if there is only one sample point"""
+        r"""Check if there is only one sample point."""
         return X.shape[-(self.cov_fn.feature_ndims + 1)] == 1
 
     def _build_prior(self, name, X: ArrayLike, **kwargs) -> tuple:
@@ -92,7 +94,7 @@ class LatentGP(BaseGP):
         return mu, cov
 
     def _get_given_vals(self, given: dict) -> tuple:
-        r"""Get the conditional parameters"""
+        r"""Get the conditional parameters."""
         if given is None:
             given = {}
         if "gp" in given:
@@ -142,8 +144,9 @@ class LatentGP(BaseGP):
         return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=1e-4)
 
     def prior(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
-        r"""Returns the GP prior distribution evaluated over the input locations `X`.
-        
+        r"""
+        Evaluate the GP prior distribution evaluated over the input locations `X`.
+
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
@@ -193,8 +196,9 @@ class LatentGP(BaseGP):
     def conditional(
         self, name: NameType, Xnew: ArrayLike, given: dict, **kwargs
     ) -> ContinuousDistribution:
-        r"""Returns the conditional distribution evaluated over new input
-        locations `Xnew`.
+        r"""
+        Evaluate the conditional distribution evaluated over new input locations `Xnew`.
+
         Given a set of function values `f` that
         the GP prior was over, the conditional distribution over a
         set of new points, `f_*` is

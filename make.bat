@@ -168,7 +168,7 @@ sphinx-apidoc --ext-autodoc ^
  --extension matplotlib.sphinxext.plot_directive ^
  --full --separate --module-first ^
  -o test_docs %PACKAGE_DIR% && ^
-%PYTHON% .\scripts\apidoc_intersphinx_patch.py test_docs\conf.py ^
+%PYTHON% .\scripts\apidoc_intersphinx_patch.py test_docs\conf.py && ^
 sphinx-build -nWT test_docs\ test_docs\_build\
 SET CMDERRORLEVEL=%ERRORLEVEL%
 rmdir /s /q test_docs

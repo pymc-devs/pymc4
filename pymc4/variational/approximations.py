@@ -48,11 +48,11 @@ class Approximation(object):
 
 class MeanField(Approximation):
     @property
-    def loc(self):
+    def _build_loc(self):
         pass
 
     @property
-    def cov_matrix(self):
+    def _build_cov_matrix(self):
         pass
 
     def build_posterior(self):
@@ -61,11 +61,11 @@ class MeanField(Approximation):
 
 class FullRank(Approximation):
     @property
-    def loc(self):
+    def _build_loc(self):
         pass
 
     @property
-    def cov_matrix(self):
+    def _build_cov_matrix(self):
         pass
 
     def build_posterior(self):
@@ -74,11 +74,11 @@ class FullRank(Approximation):
 
 class LowRank(Approximation):
     @property
-    def loc(self):
+    def _build_loc(self):
         pass
 
     @property
-    def cov_matrix(self):
+    def _build_cov_matrix(self):
         pass
 
     def build_posterior(self):

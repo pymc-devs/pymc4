@@ -1018,10 +1018,9 @@ class Moyal(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.Moyal('x', loc=0, scale=10)
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.Moyal('x', loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, **kwargs):

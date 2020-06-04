@@ -7,4 +7,3 @@ pylint
 black
 mock
 sphinx
-sphinx-apidoc

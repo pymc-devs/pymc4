@@ -18,3 +18,4 @@ However, expect things to break or change without warning.
 
 See here for an example: https://github.com/pymc-devs/pymc4/blob/master/notebooks/radon_hierarchical.ipynb
 See here for the design document: https://github.com/pymc-devs/pymc4/blob/master/notebooks/pymc4_design_guide.ipynb
+

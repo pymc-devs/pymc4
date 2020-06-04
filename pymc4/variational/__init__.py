@@ -1,1 +1,1 @@
-from . import inference
+from . import approximations

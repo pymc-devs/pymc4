@@ -35,7 +35,7 @@ class Bernoulli(BoundedDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = [0, 1]
         for prob in [0, 0.5, 0.8]:
             pmf = st.bernoulli.pmf(x, prob)
@@ -89,7 +89,7 @@ class Binomial(BoundedDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 22)
         total_counts = [10, 17]
         probs = [0.5, 0.7]
@@ -127,7 +127,7 @@ class Binomial(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return self.conditions["total_count"]
+        return self._distribution.total_count
 
 
 class BetaBinomial(BoundedDiscreteDistribution):
@@ -146,7 +146,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         n = 10
         x = np.arange(0, n)
         alphas = [1, 2]
@@ -200,7 +200,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return self.conditions["total_count"]
+        return self._distribution.total_count
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):
@@ -215,7 +215,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         lows = [1, -2]
         highs = [6, 2]
         for low, high in zip(lows, highs):
@@ -252,10 +252,10 @@ class DiscreteUniform(BoundedDiscreteDistribution):
         return tfd.FiniteDiscrete(outcomes, probs=outcomes / (high - low))
 
     def lower_limit(self):
-        return self.conditions["low"]
+        return self._distribution.outcomes[0].numpy()
 
     def upper_limit(self):
-        return self.conditions["high"]
+        return self._distribution.outcomes[-1].numpy()
 
 
 class Categorical(BoundedDiscreteDistribution):
@@ -270,7 +270,7 @@ class Categorical(BoundedDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         probs = [[0.1, 0.6, 0.3], [0.3, 0.1, 0.1, 0.5]]
         for prob in probs:
             x = range(len(prob))
@@ -304,7 +304,7 @@ class Categorical(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return len(self.conditions["probs"])
+        return len(self._distribution.probs)
 
 
 class Geometric(BoundedDiscreteDistribution):
@@ -322,7 +322,7 @@ class Geometric(BoundedDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.arange(1, 11)
         for prob in [0.1, 0.25, 0.75]:
             pmf = st.geom.pmf(x, prob)
@@ -384,7 +384,7 @@ class NegativeBinomial(PositiveDiscreteDistribution):
         import numpy as np
         import scipy.stats as st
         from scipy import special
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
 
         def NegBinom(a, m, x):
             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
@@ -439,7 +439,7 @@ class Poisson(PositiveDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.arange(0, 15)
         for rate in [0.5, 3, 8]:
             pmf = st.poisson.pmf(x, rate)
@@ -497,7 +497,7 @@ class Poisson(PositiveDiscreteDistribution):
 #         import matplotlib.pyplot as plt
 #         import numpy as np
 #         import scipy.stats as st
-#         plt.style.use('seaborn-darkgrid')
+#         plt.style.use('arviz-darkgrid')
 #         x = np.arange(0, 25)
 #         ns = [10, 20]
 #         ps = [0.5, 0.7]
@@ -567,7 +567,7 @@ class Poisson(PositiveDiscreteDistribution):
 #         import numpy as np
 #         import scipy.stats as st
 #         from scipy import special
-#         plt.style.use('seaborn-darkgrid')
+#         plt.style.use('arviz-darkgrid')
 #         def ZeroInfNegBinom(a, m, psi, x):
 #             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
 #             pmf[0] = (1 - psi) + pmf[0]
@@ -630,7 +630,7 @@ class Poisson(PositiveDiscreteDistribution):
 #         import matplotlib.pyplot as plt
 #         import numpy as np
 #         import scipy.stats as st
-#         plt.style.use('seaborn-darkgrid')
+#         plt.style.use('arviz-darkgrid')
 #         x = np.arange(0, 22)
 #         psis = [0.7, 0.4]
 #         thetas = [8, 4]
@@ -682,7 +682,7 @@ class Zipf(PositiveDiscreteDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.arange(1, 8)
         for power in [1.1, 2., 5.]:
             pmf = st.zipf.pmf(x, power)

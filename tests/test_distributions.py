@@ -116,6 +116,14 @@ _distribution_conditions = {
             "rate": np.array([1.0, 2.0, 2.0], dtype="float32"),
         },
     },
+    "GeneralizedNormal": {
+        "scalar_parameters": {"loc": 0.0, "scale": 1.0, "power": 4.0},
+        "multidim_parameters": {
+            "loc": np.array([0.25, 0.5], dtype="float32"),
+            "scale": np.array([5.0, 10.0], dtype="float32"),
+            "power": np.array([1.0, 4.0], dtype="float32"),
+        },
+    },
     "Geometric": {
         "scalar_parameters": {"probs": 0.5, "sample": 10.0},
         "multidim_parameters": {

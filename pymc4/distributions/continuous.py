@@ -992,7 +992,7 @@ class Moyal(ContinuousDistribution):
         import numpy as np
         import scipy.stats as st
         plt.style.use('arviz-darkgrid')
-        x = np.linspace(-5, 5, 1000)
+        x = np.linspace(-5, 10, 1000)
         locs = [0., 0., 0., -2.]
         scales = [0.5, 0.6, 1., 1.]
         for loc, scale in zip(locs, scales):

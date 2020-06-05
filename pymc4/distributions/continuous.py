@@ -32,6 +32,7 @@ __all__ = [
     "LogNormal",
     "Logistic",
     "LogitNormal",
+    "Moyal",
     "Normal",
     "Pareto",
     "StudentT",
@@ -127,7 +128,7 @@ class GeneralizedNormal(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-4, 4, 1000)
         shapes = [0.4, 1., 2., 8.]
         for shape in shapes:
@@ -972,6 +973,63 @@ class LogNormal(PositiveContinuousDistribution):
     def _init_distribution(conditions):
         loc, scale = conditions["loc"], conditions["scale"]
         return tfd.LogNormal(loc=loc, scale=scale)
+
+
+class Moyal(ContinuousDistribution):
+    r"""Continuous Moyal random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+        f(x \mid \mu, \sigma) = 
+           \frac{1}{\sqrt{2\pi}\sigma}
+           \exp\left(-\frac{1}{2}\left[\frac{x-\mu}{\sigma}+\exp\left(-\frac{x-\mu}{\sigma}\right)\right]\right)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('arviz-darkgrid')
+        x = np.linspace(-5, 10, 1000)
+        locs = [0., 0., 0., -2.]
+        scales = [0.5, 0.6, 1., 1.]
+        for loc, scale in zip(locs, scales):
+            pdf = st.moyal.pdf(x, loc, scale)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(loc, scale))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu+\sigma(\gamma+ln(2))` where \gamma is the Euler-Mascheroni constant
+    Variance  :math:`\dfrac{\pi^2\sigma^2}{2}`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    loc : float
+        Location parameter.
+    scale : float
+        Scale parameter.
+
+    Examples
+    --------
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.Moyal('x', loc=0, scale=10)
+    """
+
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions):
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.Moyal(loc=loc, scale=scale)
 
 
 class Pareto(BoundedContinuousDistribution):

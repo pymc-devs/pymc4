@@ -51,6 +51,6 @@ steps:
     displayName: "notebooks"
 
   - script: |
-      bash <(curl -s https://codecov.io/bash)
+      bash <(curl -s https://codecov.io/bash) -n "$(NAME)" -C $BUILD_SOURCEVERSION
     displayName: "Publish test results to codecov for Python $(python.version)"
     condition: succeededOrFailed()

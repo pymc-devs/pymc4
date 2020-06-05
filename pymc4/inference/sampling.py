@@ -191,7 +191,6 @@ def build_logp_and_deterministic_functions(
     state: Optional[flow.SamplingState] = None,
     collect_reduced_log_prob: bool = True,
 ):
-    print("hello")
     if not isinstance(model, Model):
         raise TypeError(
             "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(

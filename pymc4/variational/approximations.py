@@ -1,3 +1,4 @@
+"""Implements ADVI approximations."""
 from typing import Optional, Union
 
 import tensorflow as tf
@@ -15,8 +16,7 @@ V2_optimizer = tf.python.keras.optimizer_v2.optimizer_v2.OptimizerV2
 
 
 class Approximation(object):
-    """
-    """
+    """Base Approximation class."""
 
     def __init__(self, model: Model, random_seed: Optional[int] = None):
         self.model = model
@@ -27,7 +27,9 @@ class Approximation(object):
                 f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
             )
 
-        self.unobserved_keys, self.unobserved_values = zip(*self.state.all_unobserved_values.items())
+        self.unobserved_keys, self.unobserved_values = zip(
+            *self.state.all_unobserved_values.items()
+        )
         self.target_log_prob = self._build_logfn()
         self.approx = self._build_posterior()
 
@@ -51,6 +53,7 @@ class Approximation(object):
         return vectorize_logp_function(logpfn)
 
     def flatten_view(self):
+        """Flattened view of the variational parameters."""
         pass
 
     def _build_posterior(self):
@@ -58,8 +61,21 @@ class Approximation(object):
 
 
 class MeanField(Approximation):
+    """
+    Mean Field ADVI.
+
+    This class implements Mean Field Automatic Differentiation Variational Inference. It posits spherical 
+    Gaussian family to fit posterior. And assumes the parameters to be uncorrelated.
+
+    References
+    ----------
+    -   Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+    and Blei, D. M. (2016). Automatic Differentiation Variational
+    Inference. arXiv preprint arXiv:1603.00788.
+    """
+
     def _build_loc(self, shape, dtype):
-        loc = tf.Variable(tf.random.normal(shape), dtype=dtype)
+        loc = tf.Variable(tf.random.normal(shape, seed=self._seed), dtype=dtype)
         return loc
 
     def _build_cov_matrix(self, shape, dtype):
@@ -80,6 +96,8 @@ class MeanField(Approximation):
 
 
 class FullRank(Approximation):
+    """Full Rank Automatic Differential Variational Inference(Full Rank ADVI)."""
+
     def _build_loc(self):
         pass
 
@@ -91,6 +109,8 @@ class FullRank(Approximation):
 
 
 class LowRank(Approximation):
+    """Low Rank Automatic Differential Variational Inference(Low Rank ADVI)."""
+
     def _build_loc(self):
         pass
 
@@ -112,7 +132,31 @@ def fit(
     **kwargs,
 ):
     """
-    pass
+    Fit an approximating distribution to log_prob of the model.
+
+    Parameters
+    ----------
+    model : :class:`Model`
+        Model to fit posterior against
+    method : str|:class:`Approximation`
+        Method to fit model using VI
+
+        - 'advi' for :class:`MeanField`
+        - 'fullrank_advi' for :class:`FullRank`
+        - 'lowrank_advi' for :class:`LowRank`
+    num_steps : int
+        Number of iterations to run the optimizer
+    sample_size : int
+        Number of Monte Carlo samples used for approximation
+    random_seed : int|None
+        Seed for tensorflow random number generator.
+    optimizer : Union[TF1-style, TF2-style, None]
+        Tensorflow optimizer to use
+
+    Returns
+    -------
+    ELBO : list|dict
+        Negative ELBO loss depending on the `trace_fn`
     """
     if not isinstance(model, Model):
         raise TypeError(

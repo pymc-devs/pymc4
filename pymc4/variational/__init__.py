@@ -1,1 +1,2 @@
-from . import approximations
+"""Tools for Variational Inference."""
+from .approximations import *

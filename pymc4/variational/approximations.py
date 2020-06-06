@@ -11,14 +11,11 @@ from pymc4.inference.utils import initialize_sampling_state
 tfd = tfp.distributions
 tfb = tfp.bijectors
 
-V1_optimizer = tf.python.training.optimizer.Optimizer
-V2_optimizer = tf.python.keras.optimizer_v2.optimizer_v2.OptimizerV2
-
 
 class Approximation(object):
     """Base Approximation class."""
 
-    def __init__(self, model: Model, random_seed: Optional[int] = None):
+    def __init__(self, model: Optional[Model] = None, random_seed: Optional[int] = None):
         if not isinstance(model, Model):
             raise TypeError(
                 "`fit` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
@@ -138,11 +135,11 @@ class LowRank(Approximation):
 
 def fit(
     model: Optional[Model] = None,
-    method: Union[str, Approximation] = "advi",
+    method: Union[str, MeanField] = "advi",
     num_steps: int = 10000,
     sample_size: int = 1,
     random_seed: Optional[int] = None,
-    optimizer: Union[V1_optimizer, V2_optimizer, None] = None,
+    optimizer=None,
     **kwargs,
 ):
     """
@@ -165,7 +162,7 @@ def fit(
         Number of Monte Carlo samples used for approximation
     random_seed : Optional[int]
         Seed for tensorflow random number generator
-    optimizer : Union[TF1-style, TF2-style, None]
+    optimizer : TF1-style or TF2-style optimizer
         Tensorflow optimizer to use
     kwargs : Optional[Dict[str, Any]]
         Pass extra non-default arguments to

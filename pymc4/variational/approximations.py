@@ -19,6 +19,13 @@ class Approximation(object):
     """Base Approximation class."""
 
     def __init__(self, model: Model, random_seed: Optional[int] = None):
+        if not isinstance(model, Model):
+            raise TypeError(
+                "`fit` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
+                    type(model)
+                )
+            )
+
         self.model = model
         self._seed = random_seed
         self.state, self.deterministic_names = initialize_sampling_state(model)
@@ -27,13 +34,13 @@ class Approximation(object):
                 f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
             )
 
-        self.unobserved_keys, self.unobserved_values = zip(
-            *self.state.all_unobserved_values.items()
-        )
+        self.unobserved_keys = self.state.all_unobserved_values.keys()
         self.target_log_prob = self._build_logfn()
         self.approx = self._build_posterior()
 
     def _build_logfn(self):
+        """Build vectorized logp function."""
+
         @tf.function(autograph=False)
         def logpfn(*values, **kwargs):
             if kwargs and values:
@@ -74,24 +81,32 @@ class MeanField(Approximation):
     Inference. arXiv preprint arXiv:1603.00788.
     """
 
-    def _build_loc(self, shape, dtype):
-        loc = tf.Variable(tf.random.normal(shape, seed=self._seed), dtype=dtype)
+    def _build_loc(self, shape, dtype, name):
+        loc = tf.Variable(tf.random.normal(shape, seed=self._seed), name=f"{name}/mu", dtype=dtype)
         return loc
 
-    def _build_cov_matrix(self, shape, dtype):
+    def _build_cov_matrix(self, shape, dtype, name):
+        # As per `tfp.vi.fit_surrogate_posterior` docs, use `TransformedVariable` or `DeferredTensor`
+        # to ensure all ops invoke gradients while applying transformation.
         scale = tfp.util.TransformedVariable(
             tf.fill(shape, value=tf.constant(0.02, dtype=dtype)),
             tfb.Softplus(),  # For positive values of scale
+            name=f"{name}/sigma",
         )
         return scale
 
     def _build_posterior(self):
-        def apply_normal(param):
-            shape = param.shape
-            dtype = param.dtype
-            return tfd.Normal(self._build_loc(shape, dtype), self._build_cov_matrix(shape, dtype))
+        def apply_normal(dist_name):
+            unobserved_value = self.state.all_unobserved_values[dist_name]
+            shape = unobserved_value.shape
+            dtype = unobserved_value.dtype
+            return tfd.Normal(
+                self._build_loc(shape, dtype, dist_name),
+                self._build_cov_matrix(shape, dtype, dist_name),
+            )
 
-        variational_params = tf.nest.map_structure(apply_normal, self.unobserved_values)
+        # Should we use `tf.nest.map_structure` or `pm.utils.map_structure`?
+        variational_params = tf.nest.map_structure(apply_normal, self.unobserved_keys)
         return tfd.JointDistributionSequential(variational_params)
 
 
@@ -122,9 +137,8 @@ class LowRank(Approximation):
 
 
 def fit(
-    model: Model,
-    *,
-    method: str = "advi",
+    model: Optional[Model] = None,
+    method: Union[str, Approximation] = "advi",
     num_steps: int = 10000,
     sample_size: int = 1,
     random_seed: Optional[int] = None,
@@ -136,46 +150,48 @@ def fit(
 
     Parameters
     ----------
-    model : :class:`Model`
+    model : Optional[:class:`Model`]
         Model to fit posterior against
-    method : str|:class:`Approximation`
+    method : Union[str, :class:`Approximation`]
         Method to fit model using VI
 
         - 'advi' for :class:`MeanField`
         - 'fullrank_advi' for :class:`FullRank`
         - 'lowrank_advi' for :class:`LowRank`
+        - or directly pass in :class:`Approximation` instance
     num_steps : int
         Number of iterations to run the optimizer
     sample_size : int
         Number of Monte Carlo samples used for approximation
-    random_seed : int|None
-        Seed for tensorflow random number generator.
+    random_seed : Optional[int]
+        Seed for tensorflow random number generator
     optimizer : Union[TF1-style, TF2-style, None]
         Tensorflow optimizer to use
+    kwargs : Optional[Dict[str, Any]]
+        Pass extra non-default arguments to
+        ``tensorflow_probability.vi.fit_surrogate_posterior``
 
     Returns
     -------
     ELBO : list|dict
         Negative ELBO loss depending on the `trace_fn`
     """
-    if not isinstance(model, Model):
-        raise TypeError(
-            "`fit` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
-                type(model)
-            )
-        )
-
     _select = dict(advi=MeanField,)
 
     if isinstance(method, str):
+        # Here we assume that `model` parameter is provided by the user.
         try:
             inference = _select[method.lower()](model, random_seed)
         except KeyError:
             raise KeyError(
                 "method should be one of %s or Approximation instance" % set(_select.keys())
             )
+
     elif isinstance(method, Approximation):
+        # Here we assume that `model` parameter is not provided by the user
+        # as the :class:`Approximation` itself contains :class:`Model` instance.
         inference = method
+
     else:
         raise TypeError(
             "method should be one of %s or Approximation instance" % set(_select.keys())

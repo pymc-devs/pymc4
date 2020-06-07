@@ -169,10 +169,10 @@ class LatentGP(BaseGP):
 
         Examples
         --------
-        >>> import pymc3 as pm
+        >>> import pymc4 as pm
         >>> import numpy as np
         >>> X = np.linspace(0, 1, 10)
-        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., ls=1.)
+        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
         ... def gp_model():
@@ -225,11 +225,11 @@ class LatentGP(BaseGP):
 
         Examples
         --------
-        >>> import pymc3 as pm
+        >>> import pymc4 as pm
         >>> import numpy as np
         >>> X = np.linspace(0, 1, 10)
         >>> Xnew = np.linspace(0, 1, 50)
-        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., ls=1.)
+        >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
         ... def gp_model():

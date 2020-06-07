@@ -1,3 +1,4 @@
+import warnings
 import tensorflow as tf
 from tensorflow_probability import sts
 from tensorflow_probability import distributions as tfd
@@ -52,8 +53,18 @@ class AR(ContinuousDistribution):
             **kwargs,
         )
 
+    @classmethod
+    def unpack_conditions(cls, **kwargs):
+        conditions, base_parameters = super().unpack_conditions(**kwargs)
+        warnings.warn(
+            "At the moment, the Autoregressive distribution does not accept the initialization "
+            "arguments: dtype, allow_nan_stats or validate_args. Any of those keyword arguments "
+            "passed during initialization will be ignored."
+        )
+        return conditions, {}
+
     @staticmethod
-    def _init_distribution(conditions: dict):
+    def _init_distribution(conditions: dict, base_parameters=None):
         num_timesteps = conditions["num_timesteps"]
         coefficients = conditions["coefficients"]
         level_scale = conditions["level_scale"]

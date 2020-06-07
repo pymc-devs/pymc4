@@ -349,7 +349,7 @@ _distribution_conditions = {
             "sample": np.array([0.0, 1.0], dtype="float32"),
         },
         "multidim_parameters": {
-            "mean_direction": np.array([[1.0, 1.0], [0.0, 1.0]], dtype="float32"),
+            "mean_direction": np.array([[1.0, 0.0], [0.0, 1.0]], dtype="float32"),
             "concentration": np.array([1.0, 1.0], dtype="float32"),
             "sample": np.array([[1.0, 1.0], [0.0, 1.0]], dtype="float32"),
         },

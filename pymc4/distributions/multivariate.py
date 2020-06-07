@@ -64,9 +64,9 @@ class Dirichlet(SimplexContinuousDistribution):
         super().__init__(name, concentration=concentration, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         concentration = conditions["concentration"]
-        return tfd.Dirichlet(concentration=concentration)
+        return tfd.Dirichlet(concentration=concentration, **kwargs)
 
 
 class LKJ(ContinuousDistribution):
@@ -108,9 +108,9 @@ class LKJ(ContinuousDistribution):
         super().__init__(name, dimension=dimension, concentration=concentration, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         dimension, concentration = conditions["dimension"], conditions["concentration"]
-        return tfd.LKJ(dimension=dimension, concentration=concentration)
+        return tfd.LKJ(dimension=dimension, concentration=concentration, **kwargs)
 
     @property
     def test_value(self):
@@ -155,9 +155,9 @@ class Multinomial(DiscreteDistribution):
         super().__init__(name, total_count=total_count, probs=probs, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         total_count, probs = conditions["total_count"], conditions["probs"]
-        return tfd.Multinomial(total_count=total_count, probs=probs)
+        return tfd.Multinomial(total_count=total_count, probs=probs, **kwargs)
 
 
 class MvNormal(ContinuousDistribution):
@@ -203,13 +203,13 @@ class MvNormal(ContinuousDistribution):
         super().__init__(name, loc=loc, covariance_matrix=covariance_matrix, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, covariance_matrix = conditions["loc"], conditions["covariance_matrix"]
         try:
             chol_cov_matrix = tf.linalg.cholesky(covariance_matrix)
         except tf.errors.InvalidArgumentError:
             raise ValueError("Cholesky decomposition failed! Check your `covariance_matrix`.")
-        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=chol_cov_matrix)
+        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=chol_cov_matrix, **kwargs)
 
 
 class VonMisesFisher(ContinuousDistribution):
@@ -245,9 +245,11 @@ class VonMisesFisher(ContinuousDistribution):
         super().__init__(name, mean_direction=mean_direction, concentration=concentration, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         mean_direction, concentration = conditions["mean_direction"], conditions["concentration"]
-        return tfd.VonMisesFisher(mean_direction=mean_direction, concentration=concentration)
+        return tfd.VonMisesFisher(
+            mean_direction=mean_direction, concentration=concentration, **kwargs
+        )
 
 
 class Wishart(ContinuousDistribution):
@@ -286,9 +288,9 @@ class Wishart(ContinuousDistribution):
         super().__init__(name, df=df, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         df, scale = conditions["df"], conditions["scale"]
-        return tfd.WishartTriL(df=df, scale_tril=scale)
+        return tfd.WishartTriL(df=df, scale_tril=scale, **kwargs)
 
     @property
     def test_value(self):
@@ -327,9 +329,9 @@ class LKJCholesky(ContinuousDistribution):
         super().__init__(name, dimension=dimension, concentration=concentration, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         dimension, concentration = conditions["dimension"], conditions["concentration"]
-        return tfd.CholeskyLKJ(dimension=dimension, concentration=concentration)
+        return tfd.CholeskyLKJ(dimension=dimension, concentration=concentration, **kwargs)
 
     @property
     def test_value(self):
@@ -381,6 +383,6 @@ class MvNormalCholesky(ContinuousDistribution):
         super().__init__(name, loc=loc, scale_tril=scale_tril, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale_tril = conditions["loc"], conditions["scale_tril"]
-        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril)
+        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=scale_tril, **kwargs)

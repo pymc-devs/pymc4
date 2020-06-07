@@ -245,5 +245,6 @@ class LatentGP(BaseGP):
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                **kwargs,
             )
         return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)

@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------------------------------------
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See https://go.microsoft.com/fwlink/?linkid=2090316 for license information.
+# Original Dockerfile available at: https://github.com/microsoft/vscode-dev-containers/blob/master/containers/python-3-miniconda/.devcontainer/Dockerfile
 #-------------------------------------------------------------------------------------------------------------
 
 FROM continuumio/miniconda3

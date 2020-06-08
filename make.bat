@@ -156,3 +156,4 @@ EXIT /B %ERRORLEVEL%
 
 :check
 call :lint && call :test
+EXIT /B %ERRORLEVEL%

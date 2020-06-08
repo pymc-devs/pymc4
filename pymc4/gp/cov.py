@@ -81,6 +81,9 @@ class Covariance:
                 f" but found {feature_ndims}."
             )
         if active_dims is not None:
+            noslice = slice(None, None)
+            self._list_slices = []
+            self._slices = []
             if isinstance(active_dims, int):
                 active_dims = (active_dims,)
             elif isinstance(active_dims, Iterable):
@@ -92,14 +95,25 @@ class Covariance:
                     " in 'active_dims'. expected len(active_dims) < feature_ndims but got"
                     f" {len(active_dims)} > {feature_ndims}"
                 )
-            active_dims = active_dims + (None,) * (feature_ndims - len(active_dims))
-            self._slices = [slice(0, i) if isinstance(i, int) else i for i in active_dims]
+            active_dims = active_dims + (noslice,) * (feature_ndims - len(active_dims))
+            for dim in active_dims:
+                if isinstance(dim, Iterable):
+                    self._list_slices.append(dim)
+                    self._slices.append(noslice)
+                else:
+                    if not isinstance(dim, slice):
+                        self._slices.append(slice(0, dim))
+                    else:
+                        self._slices.append(dim)
+                    self._list_slices.append(noslice)
         self._feature_ndims = feature_ndims
         self._active_dims = active_dims
-        self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
         self._scale_diag = scale_diag
-        # wrap the kernel in FeatureScaled kernel for ARD
-        if kwargs.pop("ARD", True):
+        ard = kwargs.pop("ARD", True)
+        # Initialize Kernel.
+        self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
+        # Wrap the kernel in FeatureScaled kernel for ARD.
+        if ard:
             if self._scale_diag is None:
                 self._scale_diag = 1.0
             self._kernel = tfp.math.psd_kernels.FeatureScaled(
@@ -118,6 +132,16 @@ class Covariance:
         # We slice the tensors.
         X1 = X1[..., (*self._slices)]
         X2 = X2[..., (*self._slices)]
+        # Workaround for list indices as tensorflow doesn't allow
+        # lists as index like numpy. It is not very efficient as
+        # `tf.stack` creates a copy instead of view.
+        for ax, l in enumerate(self._list_slices):
+            if l != slice(None, None):
+                rem = (slice(None, None),) * (self._feature_ndims - ax - 1)
+                axisX1 = X1.ndim - self._feature_ndims + ax
+                axisX2 = X2.ndim - self._feature_ndims + ax
+                X1 = tf.stack([X1[..., i, (*rem)] for i in l], axis=axisX1)
+                X2 = tf.stack([X2[..., i, (*rem)] for i in l], axis=axisX2)
         return X1, X2
 
     def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:

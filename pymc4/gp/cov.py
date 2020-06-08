@@ -105,7 +105,7 @@ class Covariance:
                         self._slices.append(slice(0, dim))
                     else:
                         self._slices.append(dim)
-                    self._list_slices.append(noslice) # type: ignore
+                    self._list_slices.append(noslice)  # type: ignore
         self._feature_ndims = feature_ndims
         self._active_dims = active_dims
         self._scale_diag = scale_diag

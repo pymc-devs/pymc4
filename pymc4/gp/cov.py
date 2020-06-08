@@ -12,7 +12,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow_probability.python.math.psd_kernels.internal import util
 
-from .kernel import _Constant, _WhiteNoise
+from ._kernel import _Constant, _WhiteNoise
 from .util import ArrayLike, TfTensor, _inherit_docs
 
 
@@ -46,12 +46,15 @@ class Covariance:
         The number of dimensions to consider as features
         which will be absorbed during the computation.
     active_dims : {int, Iterable}
-        The columns to operate on. If `None`, defaults to using all the
-        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
-        are considered for evaluation and not the rightmost dims.
+        A list of (list of) numbers of dimensions in each `feature_ndims`
+        columns to operate on. If `None`, defaults to using all the dimensions
+        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
+        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
+        are considered for evaluation.
     scale_diag : {Number, array_like}
-        Scaling parameter of lenght_scale for performing ARD.
-        Ignored if keyword argument `ARD=False`.
+        Scaling parameter of the lenght_scale parameter of stationary kernels for
+        performing Automatic Relevence Detection (ARD).
+        Ignored if keyword argument ARD=False.
 
     Other Parameters
     ----------------
@@ -82,13 +85,11 @@ class Covariance:
                 active_dims = (active_dims,)
             elif isinstance(active_dims, Iterable):
                 active_dims = tuple(active_dims)
-            if any(dim < 0.0 for dim in active_dims):
-                raise ValueError(f"active dims can't contain negative values. found {active_dims}.")
-            elif len(active_dims) > feature_ndims:
+            if len(active_dims) > feature_ndims:
                 raise ValueError(
-                    "active dims contain more entries than number of feature dimensions."
-                    " Consider increasing the `feature_ndims` or decreasing the entries"
-                    " in `active_dims`. expected len(active_dims) < feature_ndims but got"
+                    "'active_dims' contain more entries than number of feature dimensions."
+                    " Consider increasing the 'feature_ndims' or decreasing the entries"
+                    " in 'active_dims'. expected len(active_dims) < feature_ndims but got"
                     f" {len(active_dims)} > {feature_ndims}"
                 )
             active_dims = active_dims + (None,) * (feature_ndims - len(active_dims))
@@ -120,7 +121,7 @@ class Covariance:
         return X1, X2
 
     def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
-        """Diagonal part of the full covariance matrix."""
+        """Evaluate diagonal part of the full covariance matrix."""
         cov = self(X1, X2)
         if to_dense:
             return cov
@@ -210,7 +211,7 @@ class Covariance:
     __rmul__ = __mul__
 
     def __array_wrap__(self, result: np.ndarray) -> TfTensor:
-        # we retain the original shape to reshape the result later
+        # we retain the original shape to reshape the result later.
         original_shape = result.shape
         # we flatten the array and re-build the left array
         # using the ``.cov2`` attribute of combined kernels.
@@ -333,12 +334,15 @@ class ExpQuad(Stationary):
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
     active_dims : {int, Iterable}
-        The columns to operate on. If `None`, defaults to using all the
-        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
-        are considered for evaluation and not the rightmost dims.
+        A list of (list of) numbers of dimensions in each `feature_ndims`
+        columns to operate on. If `None`, defaults to using all the dimensions
+        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
+        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
+        are considered for evaluation.
     scale_diag : {Number, array_like}
-        Scaling parameter of lenght_scale for performing ARD.
-        Ignored if keyword argument `ARD=False`.
+        Scaling parameter of the lenght_scale parameter of stationary kernels for
+        performing Automatic Relevence Detection (ARD).
+        Ignored if keyword argument ARD=False.
 
     Other Parameters
     ----------------
@@ -378,7 +382,9 @@ class ExpQuad(Stationary):
     ):
         self._amplitude = amplitude
         self._length_scale = length_scale
-        super().__init__(feature_ndims=feature_ndims, **kwargs)
+        super(ExpQuad, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
 
     def _init_kernel(
         self, feature_ndims: int, **kwargs
@@ -400,6 +406,11 @@ class Constant(Stationary):
     r"""
     A Constant Stationary Covariance Function.
 
+    Constant kernel just evaluates to a constant value in each entry of the covariance
+    matrix and point evaluations irrespective of the input. It is very useful as a
+    lightweight kernel when speed and performance is a primary goal. It doesn’t evaluate
+    a complex function and so its gradients are faster and easier to compute.
+
     .. math::
         k(x, x') = c
 
@@ -415,12 +426,15 @@ class Constant(Stationary):
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
     active_dims : {int, Iterable}
-        The columns to operate on. If `None`, defaults to using all the
-        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
-        are considered for evaluation and not the rightmost dims.
+        A list of (list of) numbers of dimensions in each `feature_ndims`
+        columns to operate on. If `None`, defaults to using all the dimensions
+        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
+        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
+        are considered for evaluation.
     scale_diag : {Number, array_like}
-        Scaling parameter of lenght_scale for performing ARD.
-        Ignored if keyword argument `ARD=False`.
+        Scaling parameter of the lenght_scale parameter of stationary kernels for
+        performing Automatic Relevence Detection (ARD).
+        Ignored if keyword argument ARD=False.
 
     Other Parameters
     ----------------
@@ -458,12 +472,16 @@ class Constant(Stationary):
         **kwargs,
     ):
         self._coef = coef
-        super().__init__(
+        super(Constant, self).__init__(
             feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
         )
 
     def _init_kernel(self, feature_ndims, **kwargs):
         return _Constant(self._coef, self._feature_ndims, **kwargs)
+
+    @property
+    def coef(self):
+        return self._coef
 
 
 class WhiteNoise(Stationary):
@@ -488,12 +506,15 @@ class WhiteNoise(Stationary):
         The number of rightmost dimensions to be absorbed during
         the computation or evaluation of the covariance function.
     active_dims : {int, Iterable}
-        The columns to operate on. If `None`, defaults to using all the
-        columns of all the feature_ndims dimensions. The leftmost `len(active_dims)`
-        are considered for evaluation and not the rightmost dims.
+        A list of (list of) numbers of dimensions in each `feature_ndims`
+        columns to operate on. If `None`, defaults to using all the dimensions
+        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
+        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
+        are considered for evaluation.
     scale_diag : {Number, array_like}
-        Scaling parameter of lenght_scale for performing ARD.
-        Ignored if keyword argument `ARD=False`.
+        Scaling parameter of the lenght_scale parameter of stationary kernels for
+        performing Automatic Relevence Detection (ARD).
+        Ignored if keyword argument ARD=False.
 
     Other Parameters
     ----------------
@@ -530,9 +551,13 @@ class WhiteNoise(Stationary):
         **kwargs,
     ):
         self._noise = noise
-        super().__init__(
+        super(WhiteNoise, self).__init__(
             feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
         )
 
     def _init_kernel(self, feature_ndims, **kwargs):
         return _WhiteNoise(self._noise, self._feature_ndims, **kwargs)
+
+    @property
+    def noise(self):
+        return self._noise

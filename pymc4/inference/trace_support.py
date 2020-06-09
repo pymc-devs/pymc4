@@ -43,6 +43,7 @@ def trace_scan(
             dynamic_size, initial_size = tf.is_tensor(length), length
         elif static_trace_allocation_size:
             dynamic_size, initial_size = False, static_trace_allocation_size
+
         if progressbar is True:
             loop_fn = tf.function(loop_fn, autograph=False, experimental_compile=xla)
 

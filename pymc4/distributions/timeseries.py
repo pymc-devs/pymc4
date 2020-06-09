@@ -64,7 +64,7 @@ class AR(ContinuousDistribution):
         return conditions, {}
 
     @staticmethod
-    def _init_distribution(conditions: dict, base_parameters=None):
+    def _init_distribution(conditions: dict, **kwargs):
         num_timesteps = conditions["num_timesteps"]
         coefficients = conditions["coefficients"]
         level_scale = conditions["level_scale"]

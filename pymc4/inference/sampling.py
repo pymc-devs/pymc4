@@ -2,7 +2,7 @@ import functools
 from typing import Optional, Dict, Any
 import tensorflow as tf
 from tensorflow_probability import mcmc
-from pymc4 import trace_support
+from pymc4.inference import trace_support
 from tensorflow_probability.python.mcmc import sample as mcmc_sample
 from pymc4.coroutine_model import Model
 from pymc4 import flow
@@ -23,7 +23,7 @@ def sample(
     sample_chain_kwargs: Optional[Dict[str, Any]] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
-    debug=False,
+    progressbar=False,
 ):
     """
     Perform MCMC sampling using NUTS (for now).
@@ -134,6 +134,7 @@ def sample(
         deterministics_callback = _deterministics_callback
         init_state = tile_init(init_state, num_chains)
 
+    @tf.function(autograph=False)
     def trace_fn(current_state, pkr):
         return (
             pkr.inner_results.target_log_prob,
@@ -155,12 +156,18 @@ def sample(
             step_size_setter_fn=lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
             **(adaptation_kwargs or dict()),
         )
-        if debug is True:
+
+        if progressbar is True:
+            # to avoid warnings of repeated tracing for
+            # the second call of sampling function
             adapt_nuts_kernel.bootstrap_results = tf.function(
-                adapt_nuts_kernel.bootstrap_results, autograph=False
+                adapt_nuts_kernel.bootstrap_results, autograph=False, experimental_compile=xla
             )
 
-        mcmc_sample.mcmc_util.trace_scan = functools.partial(trace_support.trace_scan, debug=debug)
+        mcmc_sample.mcmc_util.trace_scan = functools.partial(
+            trace_support.trace_scan, progressbar=progressbar, xla=xla,
+        )
+
         results, sample_stats = mcmc_sample.sample_chain(
             num_samples,
             current_state=init,
@@ -172,8 +179,8 @@ def sample(
 
         return results, sample_stats
 
-    if debug is False:
-        run_chains = tf.function(run_chains, autograph=False)
+    if progressbar is False:
+        run_chains = tf.function(run_chains, autograph=True, experimental_compile=xla)
 
     if xla:
         results, sample_stats = tf.xla.experimental.compile(

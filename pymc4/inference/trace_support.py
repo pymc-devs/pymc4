@@ -4,9 +4,6 @@ from tensorflow_probability.python.internal import prefer_static
 from tensorflow_probability.python.internal import tensorshape_util
 from tqdm import tqdm
 
-__all__ = [
-    "trace_scan",
-]
 
 def trace_scan(
     loop_fn,
@@ -17,9 +14,13 @@ def trace_scan(
     static_trace_allocation_size=None,
     parallel_iterations=10,
     name=None,
-    debug=False,
+    *,
+    progressbar=False,
+    xla=False,
 ):
-    with tf.name_scope(name or "trace_scan"), tf1.variable_scope(tf1.get_variable_scope()) as vs:
+    with tf.name_scope(name or "pm4_trace_scan"), tf1.variable_scope(
+        tf1.get_variable_scope()
+    ) as vs:
         if vs.caching_device is None and not tf.executing_eagerly():
             vs.set_caching_device(lambda op: op.device)
 
@@ -42,28 +43,10 @@ def trace_scan(
             dynamic_size, initial_size = tf.is_tensor(length), length
         elif static_trace_allocation_size:
             dynamic_size, initial_size = False, static_trace_allocation_size
+        if progressbar is True:
+            loop_fn = tf.function(loop_fn, autograph=False, experimental_compile=xla)
 
-        def trace_one_step(state):
-            return trace_fn(state)
-
-        def loop_fn_(state, elem):
-            return loop_fn(state, elem)
-
-        if debug is True:
-            trace_one_step = tf.function(trace_one_step, autograph=False)
-            loop_fn_ = tf.function(loop_fn_, autograph=False)
-
-        init_trace = trace_one_step(initial_state)
-
-        def stack(ta, x):
-            """
-                TODO:
-                    we should think how this function
-                    can be serialized too. For now
-                    the dynamic shape of give tensor
-                    is the problem.
-            """
-            return tf.concat([ta, tf.expand_dims(x, 0)], axis=0)
+        init_trace = trace_fn(initial_state)
 
         trace_arrays = tf.nest.map_structure(
             lambda x: tf.TensorArray(
@@ -77,12 +60,12 @@ def trace_scan(
 
         def _body(i, state, num_steps_traced, trace_arrays):
             elem = elems_array.read(i)
-            state = loop_fn_(state, elem)
+            state = loop_fn(state, elem)
             cond = trace_criterion_fn(state) if trace_criterion_fn else True
             if cond is True:
-                trace_fn = trace_one_step(state)
+                trace_results = trace_fn(state)
                 trace_arrays = tf.nest.map_structure(
-                    lambda ta, x: ta.write(num_steps_traced, x), trace_arrays, trace_fn,
+                    lambda ta, x: ta.write(num_steps_traced, x), trace_arrays, trace_results,
                 )
                 num_steps_traced += 1
 
@@ -91,8 +74,8 @@ def trace_scan(
         num_steps_traced = 0
         i = 0
 
-        if debug is True:
-            for i in tqdm(range(length)):
+        if progressbar is True:
+            for i in tqdm(range(length), total=length):
                 _, initial_state, num_steps_traced, trace_arrays = _body(
                     i, initial_state, num_steps_traced, trace_arrays
                 )
@@ -105,13 +88,18 @@ def trace_scan(
                 parallel_iterations=parallel_iterations,
             )
 
-        stacked_trace = tf.nest.map_structure(lambda x: x.stack(), trace_arrays)
+        def post_process_trace_array(trace_arrays):
+            stacked_trace = tf.nest.map_structure(lambda x: x.stack(), trace_arrays)
 
-        # Restore the static length if we know it.
-        static_length = tf.TensorShape(None if dynamic_size else initial_size)
-        def _merge_static_length(x):
-          tensorshape_util.set_shape(x, static_length.concatenate(x.shape[1:]))
-          return x
+            # Restore the static length if we know it.
+            static_length = tf.TensorShape(None if dynamic_size else initial_size)
 
-        stacked_trace = tf.nest.map_structure(_merge_static_length, stacked_trace)
+            def _merge_static_length(x):
+                tensorshape_util.set_shape(x, static_length.concatenate(x.shape[1:]))
+                return x
+
+            stacked_trace = tf.nest.map_structure(_merge_static_length, stacked_trace)
+            return stacked_trace
+
+        stacked_trace = post_process_trace_array(trace_arrays)
         return final_state, stacked_trace

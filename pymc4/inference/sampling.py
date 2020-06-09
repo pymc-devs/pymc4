@@ -1,6 +1,9 @@
+import functools
 from typing import Optional, Dict, Any
 import tensorflow as tf
 from tensorflow_probability import mcmc
+from pymc4 import trace_support
+from tensorflow_probability.python.mcmc import sample as mcmc_sample
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz
@@ -20,6 +23,7 @@ def sample(
     sample_chain_kwargs: Optional[Dict[str, Any]] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
+    debug=False,
 ):
     """
     Perform MCMC sampling using NUTS (for now).
@@ -139,7 +143,6 @@ def sample(
             pkr.inner_results.log_accept_ratio,
         ) + tuple(deterministics_callback(*current_state))
 
-    @tf.function(autograph=False)
     def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
             target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
@@ -152,8 +155,13 @@ def sample(
             step_size_setter_fn=lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
             **(adaptation_kwargs or dict()),
         )
+        if debug is True:
+            adapt_nuts_kernel.bootstrap_results = tf.function(
+                adapt_nuts_kernel.bootstrap_results, autograph=False
+            )
 
-        results, sample_stats = mcmc.sample_chain(
+        mcmc_sample.mcmc_util.trace_scan = functools.partial(trace_support.trace_scan, debug=debug)
+        results, sample_stats = mcmc_sample.sample_chain(
             num_samples,
             current_state=init,
             kernel=adapt_nuts_kernel,
@@ -163,6 +171,9 @@ def sample(
         )
 
         return results, sample_stats
+
+    if debug is False:
+        run_chains = tf.function(run_chains, autograph=False)
 
     if xla:
         results, sample_stats = tf.xla.experimental.compile(

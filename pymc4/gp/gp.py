@@ -18,8 +18,6 @@ __all__ = ["LatentGP"]
 
 class BaseGP:
     def __init__(self, cov_fn: Covariance, mean_fn: Mean = Zero(1)):
-        if mean_fn.feature_ndims != cov_fn.feature_ndims:
-            raise ValueError("The feature_ndims of mean and covariance functions should be equal")
         self.feature_ndims = mean_fn.feature_ndims
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn

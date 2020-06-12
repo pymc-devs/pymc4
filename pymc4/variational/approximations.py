@@ -2,7 +2,7 @@
 from typing import Optional, Union
 from collections import namedtuple
 
-import arviz as az
+# import arviz as az
 import tensorflow as tf
 import tensorflow_probability as tfp
 

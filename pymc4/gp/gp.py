@@ -18,7 +18,7 @@ __all__ = ["LatentGP"]
 
 class BaseGP:
     def __init__(self, cov_fn: Covariance, mean_fn: Mean = Zero(1)):
-        self.feature_ndims = mean_fn.feature_ndims
+        self.feature_ndims = max(mean_fn.feature_ndims, cov_fn.feature_ndims)
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn
 
@@ -84,7 +84,7 @@ class LatentGP(BaseGP):
 
     def _is_univariate(self, X: ArrayLike) -> bool:
         r"""Check if there is only one sample point."""
-        return X.shape[-(self.cov_fn.feature_ndims + 1)] == 1
+        return X.shape[-(self.feature_ndims + 1)] == 1
 
     def _build_prior(self, name, X: ArrayLike, **kwargs) -> tuple:
         mu = self.mean_fn(X)
@@ -120,14 +120,13 @@ class LatentGP(BaseGP):
                 f = tf.convert_to_tensor(f)
             except ValueError:
                 raise ValueError("Prior `f` must be a numpy array or tensor.")
-
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
         if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):
             f = tf.expand_dims(f, -1)
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
-        L = tf.linalg.cholesky(stabilize(Kxx, shift=1e-4))
+        L = tf.linalg.cholesky(stabilize(Kxx, shift=1e-6))
         A = tf.linalg.triangular_solve(L, Kxs, lower=True)
         # We add a `newaxis` to make the shape of mean_total(X)
         # [batch_shape, num_samples, 1] which is consistent with

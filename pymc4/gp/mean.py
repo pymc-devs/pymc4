@@ -1,4 +1,5 @@
 """Mean functions for PyMC4's Gaussian Process Module."""
+
 from typing import Union
 
 import tensorflow as tf
@@ -10,9 +11,17 @@ __all__ = ["Zero", "Constant"]
 
 
 class Mean:
-    r"""Base Class for all the mean functions in GP."""
+    r"""
+    Base Class for all the mean functions in GP.
 
-    def __init__(self, feature_ndims: int = 1):
+    Parameters
+    ----------
+    feature_ndims : int, optional
+        The number of feature dimensions to be absorbed during
+        the computation. (default=1)
+    """
+
+    def __init__(self, feature_ndims=1):
         self.feature_ndims = feature_ndims
 
     def __call__(self, X: ArrayLike) -> TfTensor:
@@ -92,7 +101,7 @@ class Zero(Mean):
     Parameters
     ----------
     feature_ndims : int, optional
-        number of rightmost dims to include in mean computation
+        number of rightmost dims to include in mean computation. (default=1)
     """
 
     @_inherit_docs(Mean.__call__)
@@ -109,9 +118,9 @@ class Constant(Mean):
     Parameters
     ----------
     coef : array_like, optional
-        co-efficient to scale the mean
+        co-efficient to scale the mean. (default=1)
     feature_ndims : int, optional
-        number of rightmost dims to include in mean computation
+        number of rightmost dims to include in mean computation. (default=1)
     """
 
     def __init__(self, coef: Union[ArrayLike, float] = 1, feature_ndims: int = 1):

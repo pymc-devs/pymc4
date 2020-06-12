@@ -69,7 +69,7 @@ class _WhiteNoise(PositiveSemidefiniteKernel):
         parameters = dict(locals())
         with tf.name_scope(name):
             dtype = util.maybe_get_common_dtype([noise])
-            self._noise = tensor_util.convert_nonref_to_tensor(noise, dtype=dtype, name="coef")
+            self._noise = tensor_util.convert_nonref_to_tensor(noise, dtype=dtype, name="noise")
         super(_WhiteNoise, self).__init__(
             feature_ndims,
             dtype=dtype,

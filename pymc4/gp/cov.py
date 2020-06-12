@@ -1,6 +1,6 @@
 """Covariance Functions for PyMC4's Gaussian Process module."""
 
-from typing import Union, Optional
+from typing import Union, Optional, Any, List
 from collections.abc import Iterable
 from numbers import Number
 from abc import abstractmethod
@@ -45,16 +45,15 @@ class Covariance:
     feature_ndims : int
         The number of dimensions to consider as features
         which will be absorbed during the computation.
-    active_dims : {int, Iterable}
+    active_dims : {int, Iterable}, optional
         A list of (list of) numbers of dimensions in each `feature_ndims`
         columns to operate on. If `None`, defaults to using all the dimensions
         of each `feature_ndims` column. If a single integer `n` is present at `i'th`
         entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
         are considered for evaluation.
-    scale_diag : {Number, array_like}
+    scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD).
-        Ignored if keyword argument ARD=False.
+        performing Automatic Relevence Detection (ARD). Ignored if keyword argument ARD=False.
 
     Other Parameters
     ----------------
@@ -63,7 +62,7 @@ class Covariance:
 
     Notes
     -----
-    ARD (automatic relevence detection) is done if the length_scale
+    ARD (automatic relevence detection) is done if the parameter `length_scale`
     is a vector or a tensor. To disable this behaviour, a keyword argument
     `ARD=False` needs to be passed.
     """
@@ -71,8 +70,8 @@ class Covariance:
     def __init__(
         self,
         feature_ndims: int,
-        active_dims: Optional[Union[int, Iterable]] = None,
-        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        active_dims: Optional[Union[int, Iterable]],
+        scale_diag: Optional[Union[ArrayLike, Number]],
         **kwargs,
     ):
         if not isinstance(feature_ndims, int) or feature_ndims <= 0:
@@ -82,8 +81,11 @@ class Covariance:
             )
         if active_dims is not None:
             noslice = slice(None, None)
-            self._list_slices = []
-            self._slices = []
+            # Tensorflow doesn't allow slicing with list indices.
+            # So, `_list_slices` holds all the list indices which
+            # will be handled differently by the `_slice` method.
+            self._list_slices: Iterable[Any] = []
+            self._slices: Iterable[Any] = []
             if isinstance(active_dims, int):
                 active_dims = (active_dims,)
             elif isinstance(active_dims, Iterable):
@@ -105,7 +107,7 @@ class Covariance:
                         self._slices.append(slice(0, dim))
                     else:
                         self._slices.append(dim)
-                    self._list_slices.append(noslice)  # type: ignore
+                    self._list_slices.append(noslice)
         self._feature_ndims = feature_ndims
         self._active_dims = active_dims
         self._scale_diag = scale_diag
@@ -145,7 +147,7 @@ class Covariance:
         return X1, X2
 
     def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
-        """Evaluate diagonal part of the full covariance matrix."""
+        """Evaluate only the diagonal part of the full covariance matrix."""
         cov = self(X1, X2)
         if to_dense:
             return cov
@@ -165,7 +167,7 @@ class Covariance:
         Returns
         -------
         cov : tensorflow.Tensor
-            Covariance between pair of points in `X1` and `X2`.
+            Covariance between each pair of points in `X1` and `X2`.
         """
         return self._kernel.apply(X1, X2, **kwargs)
 
@@ -235,6 +237,7 @@ class Covariance:
     __rmul__ = __mul__
 
     def __array_wrap__(self, result: np.ndarray) -> TfTensor:
+        """Combine cov functions with NumPy arrays on the left."""
         # we retain the original shape to reshape the result later.
         original_shape = result.shape
         # we flatten the array and re-build the left array
@@ -271,14 +274,16 @@ class Combination(Covariance):
                 self.factors.extend(factor.factors)
             else:
                 self.factors.append(factor)
-        self._feature_ndims = [
-            factor._feature_ndims if isinstance(factor, Covariance) else None for factor in factors
-        ]
+        self._feature_ndims = max(
+            [factor._feature_ndims if isinstance(factor, Covariance) else 1 for factor in factors]
+        )
         self._active_dims = [
             factor._active_dims if isinstance(factor, Covariance) else None for factor in factors
         ]
 
-    def merge_factors(self, X1, X2, diag=False, to_dense=True):
+    def merge_factors(
+        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True
+    ) -> List[TfTensor]:
         eval_factors = []
         for factor in self.factors:
             if isinstance(factor, Covariance):
@@ -350,23 +355,22 @@ class ExpQuad(Stationary):
 
     Parameters
     ----------
-    amplitude : array_like
-        The :math:`\sigma` parameter of RBF kernel, amplitude > 0
     length_scale : array_like
-        The :math:`l` parameter of the RBF kernel
-    feature_ndims : int
+        The :math:`l` parameter of the RBF kernel, length_scale > 0.
+    amplitude : array_like, optional
+        The :math:`\sigma` parameter of RBF kernel, amplitude > 0. (default=1)
+    feature_ndims : int, optional
         The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function.
-    active_dims : {int, Iterable}
+        the computation or evaluation of the covariance function. (default=1)
+    active_dims : {int, Iterable}, optional
         A list of (list of) numbers of dimensions in each `feature_ndims`
         columns to operate on. If `None`, defaults to using all the dimensions
         of each `feature_ndims` column. If a single integer `n` is present at `i'th`
         entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
         are considered for evaluation.
-    scale_diag : {Number, array_like}
+    scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD).
-        Ignored if keyword argument ARD=False.
+        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`.
 
     Other Parameters
     ----------------
@@ -446,19 +450,18 @@ class Constant(Stationary):
         The constant coefficient indicating the covariance
         between any two points. It is the constant `c` in
         the equation above.
-    feature_ndims : int
+    feature_ndims : int, optional
         The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function.
-    active_dims : {int, Iterable}
+        the computation or evaluation of the covariance function. (default=1)
+    active_dims : {int, Iterable}, optional
         A list of (list of) numbers of dimensions in each `feature_ndims`
         columns to operate on. If `None`, defaults to using all the dimensions
         of each `feature_ndims` column. If a single integer `n` is present at `i'th`
         entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
         are considered for evaluation.
-    scale_diag : {Number, array_like}
+    scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD).
-        Ignored if keyword argument ARD=False.
+        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`.
 
     Other Parameters
     ----------------
@@ -526,19 +529,18 @@ class WhiteNoise(Stationary):
     ----------
     noise : array_like
         The `noise_level` of the kernel.
-    feature_ndims : int
+    feature_ndims : int, optional
         The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function.
-    active_dims : {int, Iterable}
+        the computation or evaluation of the covariance function. (default=1)
+    active_dims : {int, Iterable}, optional
         A list of (list of) numbers of dimensions in each `feature_ndims`
         columns to operate on. If `None`, defaults to using all the dimensions
         of each `feature_ndims` column. If a single integer `n` is present at `i'th`
         entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
         are considered for evaluation.
-    scale_diag : {Number, array_like}
+    scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD).
-        Ignored if keyword argument ARD=False.
+        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`.
 
     Other Parameters
     ----------------

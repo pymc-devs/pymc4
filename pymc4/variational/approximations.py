@@ -1,6 +1,8 @@
 """Implements ADVI approximations."""
 from typing import Optional, Union
+from collections import namedtuple
 
+import arviz as az
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -10,9 +12,10 @@ from pymc4.inference.utils import initialize_sampling_state
 
 tfd = tfp.distributions
 tfb = tfp.bijectors
+ADVIFit = namedtuple("ADVIFit", "approximation, losses")
 
 
-class Approximation(object):
+class Approximation(tf.Module):
     """Base Approximation class."""
 
     def __init__(self, model: Optional[Model] = None, random_seed: Optional[int] = None):
@@ -56,12 +59,18 @@ class Approximation(object):
 
         return vectorize_logp_function(logpfn)
 
+    def _build_posterior(self):
+        raise NotImplementedError
+
     def flatten_view(self):
         """Flattened view of the variational parameters."""
         pass
 
-    def _build_posterior(self):
-        raise NotImplementedError
+    def sample(self, n):
+        """Generate samples from posterior distribution."""
+        q_samples = dict(zip(self.unobserved_keys, self.approx.sample(n, seed=self._seed)))
+        # trace = az.from_dict(q_samples, observed_data=self.state.observed_values)
+        return q_samples
 
 
 class MeanField(Approximation):
@@ -170,8 +179,8 @@ def fit(
 
     Returns
     -------
-    ELBO : list|dict
-        Negative ELBO loss depending on the `trace_fn`
+    ADVIFit : collections.namedtuple
+        Named tuple, including approximation, ELBO losses depending on the `trace_fn`
     """
     _select = dict(advi=MeanField,)
 
@@ -199,14 +208,17 @@ def fit(
     else:
         opt = tf.optimizers.Adam(learning_rate=0.1)
 
-    losses = tfp.vi.fit_surrogate_posterior(
-        target_log_prob_fn=inference.target_log_prob,
-        surrogate_posterior=inference.approx,
-        num_steps=num_steps,
-        sample_size=sample_size,
-        seed=random_seed,
-        optimizer=opt,
-        **kwargs,
-    )
+    @tf.function(autograph=False)
+    def run_approximation():
+        losses = tfp.vi.fit_surrogate_posterior(
+            target_log_prob_fn=inference.target_log_prob,
+            surrogate_posterior=inference.approx,
+            num_steps=num_steps,
+            sample_size=sample_size,
+            seed=random_seed,
+            optimizer=opt,
+            **kwargs,
+        )
+        return losses
 
-    return losses
+    return ADVIFit(inference, run_approximation())

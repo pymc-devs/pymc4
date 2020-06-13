@@ -206,6 +206,18 @@ class Distribution(Model):
     def event_shape(self):
         return self._distribution.event_shape
 
+    @property
+    def dtype(self):
+        return self._distribution.dtype
+
+    @property
+    def validate_args(self):
+        return self._distribution.validate_args
+
+    @property
+    def allow_nan_stats(self):
+        return self._distribution.allow_nan_stats
+
 
 class Potential:
     __slots__ = ("_value", "_coef")

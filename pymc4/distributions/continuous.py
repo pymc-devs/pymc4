@@ -611,6 +611,10 @@ class Gumbel(ContinuousDistribution):
         loc, scale = conditions["loc"], conditions["scale"]
         return tfd.Gumbel(loc=loc, scale=scale, **kwargs)
 
+    @property
+    def validate_args(self):
+        return self._distribution.bijector.validate_args
+
 
 class HalfCauchy(PositiveContinuousDistribution):
     r"""Half-Cauchy random variable.
@@ -784,6 +788,10 @@ class Kumaraswamy(UnitContinuousDistribution):
         return tfd.Kumaraswamy(
             concentration0=concentration0, concentration1=concentration1, **kwargs
         )
+
+    @property
+    def validate_args(self):
+        return self._distribution.bijector.validate_args
 
 
 class Laplace(ContinuousDistribution):
@@ -1033,6 +1041,10 @@ class Moyal(ContinuousDistribution):
     def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
         return tfd.Moyal(loc=loc, scale=scale, **kwargs)
+
+    @property
+    def validate_args(self):
+        return self._distribution.bijector.validate_args
 
 
 class Pareto(BoundedContinuousDistribution):
@@ -1512,5 +1524,6 @@ class Weibull(PositiveContinuousDistribution):
                 low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape), **kwargs
             ),
             bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
+            validate_args=kwargs.get("validate_args", False),
             name="Weibull",
         )

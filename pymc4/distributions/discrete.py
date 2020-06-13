@@ -252,7 +252,9 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     def _init_distribution(conditions, **kwargs):
         low, high = conditions["low"], conditions["high"]
         outcomes = tf.range(low, high + 1)
-        return tfd.FiniteDiscrete(outcomes, probs=outcomes / (high - low), **kwargs)
+        return tfd.FiniteDiscrete(
+            outcomes, probs=tf.ones_like(outcomes) / (high + 1 - low), **kwargs
+        )
 
     def lower_limit(self):
         return self._distribution.outcomes[0].numpy()

@@ -207,10 +207,6 @@ class Distribution(Model):
         return self._distribution.event_shape
 
     @property
-    def dtype(self):
-        return self._distribution.dtype
-
-    @property
     def validate_args(self):
         return self._distribution.validate_args
 

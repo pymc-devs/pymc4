@@ -126,7 +126,7 @@ class LatentGP(BaseGP):
             f = tf.expand_dims(f, -1)
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
-        L = tf.linalg.cholesky(stabilize(Kxx, shift=1e-6))
+        L = tf.linalg.cholesky(stabilize(Kxx, shift=1e-4))
         A = tf.linalg.triangular_solve(L, Kxs, lower=True)
         # We add a `newaxis` to make the shape of mean_total(X)
         # [batch_shape, num_samples, 1] which is consistent with

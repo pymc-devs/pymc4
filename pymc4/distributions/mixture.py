@@ -3,10 +3,9 @@ distributions.
 
 Wraps tfd.Mixture as pm.Mixture
 """
+
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
-
-import pymc4 as pm
 from pymc4.distributions.distribution import Distribution
 
 
@@ -37,14 +36,28 @@ class Mixture(Distribution):
         super().__init__(name, p=p, distributions=distributions, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
-        p, distributions = conditions["p"], conditions["distributions"]
-        if isinstance(p, pm.Categorical):
-            cat = p._distribution
+    def _init_distribution(conditions, **kwargs):
+        p, d = conditions["p"], conditions["distributions"]
+        # if 'd' is a list of pymc distributions, then use the underlying
+        # tfp distributions for the mixture
+        if isinstance(d, list):
+            distributions = [el._distribution for el in d]
+        # if 'd' is a pymc distribution with batch_size > 1, then build
+        # K tfp distributions for tfd.mixture
         else:
-            cat = tfd.Categorical(probs=p)
-        if isinstance(distributions, list):
-            distributions = [d._distribution for d in distributions]
-        elif isinstance(distributions, Distribution):
-            return
-        return tfd.Mixture(cat=cat, components=distributions)
+            # get class of tfd distribution, i.e. Normal/Poisson/etc.
+            ty = type(d._distribution)
+            # construct list of tfp distributions
+            distributions = []
+            for i in range(d.batch_shape[0]):
+                params = {}
+                # build parameters for every component of the mixture
+                for k, v in d.conditions.items():
+                    v = tf.convert_to_tensor(v, dtype_hint="float32")
+                    params[k] = v[i] if len(v.shape) else v
+                # create new tfd distribution with parameter
+                distributions.append(ty(**params))
+
+        return tfd.Mixture(cat=tfd.Categorical(probs=p),
+                           components=distributions,
+                           **kwargs)

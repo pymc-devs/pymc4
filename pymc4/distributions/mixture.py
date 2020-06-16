@@ -58,6 +58,4 @@ class Mixture(Distribution):
                 # create new tfd distribution with parameter
                 distributions.append(ty(**params))
 
-        return tfd.Mixture(cat=tfd.Categorical(probs=p),
-                           components=distributions,
-                           **kwargs)
+        return tfd.Mixture(cat=tfd.Categorical(probs=p), components=distributions, **kwargs)

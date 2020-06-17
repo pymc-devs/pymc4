@@ -106,9 +106,9 @@ class Zero(Mean):
 
     @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
-        dtyp = dtype_util.common_dtype([X])
-        X = tf.convert_to_tensor(X, dtype=dtyp)
-        return tf.zeros(X.shape[: -self.feature_ndims], dtype=dtyp)
+        dtype = dtype_util.common_dtype([X])
+        X = tf.convert_to_tensor(X, dtype=dtype)
+        return tf.zeros(X.shape[: -self.feature_ndims], dtype=dtype)
 
 
 class Constant(Mean):
@@ -129,6 +129,6 @@ class Constant(Mean):
 
     @_inherit_docs(Mean.__call__)
     def __call__(self, X: ArrayLike) -> TfTensor:
-        dtyp = dtype_util.common_dtype([X, self.coef])
-        X = tf.convert_to_tensor(X, dtype=dtyp)
-        return tf.ones(X.shape[: -self.feature_ndims], dtype=dtyp) * self.coef
+        dtype = dtype_util.common_dtype([X, self.coef])
+        X = tf.convert_to_tensor(X, dtype=dtype)
+        return tf.ones(X.shape[: -self.feature_ndims], dtype=dtype) * self.coef

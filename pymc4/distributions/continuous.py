@@ -1306,7 +1306,9 @@ class Uniform(BoundedContinuousDistribution):
 
 
 class Flat(ContinuousDistribution):
-    r"""A uniform distribution with support :math:`(-\inf, \inf)`.
+    r"""
+    A uniform distribution with support :math:`(-\inf, \inf)`.
+
     Used as a uninformative log-likelihood that returns
     zeros regardless of the passed values.
     """
@@ -1345,9 +1347,7 @@ class Flat(ContinuousDistribution):
         return tf.reduce_sum(expected, axis=range(-len(self._distribution.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
-        """Raises ValueError as it is not possible to sample
-        from flat distribution.
-        """
+        """Raise a ValueError as it is not possible to sample from flat distribution."""
         raise TypeError("cannot sample from a flat distribution")
 
 
@@ -1390,9 +1390,7 @@ class HalfFlat(PositiveContinuousDistribution):
         return tf.reduce_sum(expected, axis=range(-len(self.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
-        """Raises ValueError as it is not possible to sample
-        from half flat distribution.
-        """
+        """Raise a ValueError as it is not possible to sample from half flat distribution."""
         raise TypeError("cannot sample from a half flat distribution")
 
 
@@ -1501,7 +1499,7 @@ class Weibull(PositiveContinuousDistribution):
     The Weibull distribution is implemented as a standard uniform distribution transformed by the
     Inverse of the WeibullCDF bijector. The shape to broadcast the low and high parameters for the
     Uniform distribution are obtained using 
-    tensorflow_probability.python.internal.distribution_util.prefer_static_broadcast_shape()
+    `tensorflow_probability.python.internal.distribution_util.prefer_static_broadcast_shape()`.
     """
 
     def __init__(self, name, concentration, scale, **kwargs):

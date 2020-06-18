@@ -135,7 +135,8 @@ class Distribution(Model):
         return self.sample(sample_shape, seed).numpy()
 
     def get_test_sample(self, sample_shape=(), seed=None):
-        """Get the test value using a function signature similar to meth:`~.sample`
+        """
+        Get the test value using a function signature similar to meth:`~.sample`.
         
         Parameters
         ----------

@@ -32,6 +32,7 @@ __all__ = [
     "LogNormal",
     "Logistic",
     "LogitNormal",
+    "Moyal",
     "Normal",
     "Pareto",
     "StudentT",
@@ -106,9 +107,9 @@ class Normal(ContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Normal(loc=loc, scale=scale)
+        return tfd.Normal(loc=loc, scale=scale, **kwargs)
 
 
 class GeneralizedNormal(ContinuousDistribution):
@@ -127,7 +128,7 @@ class GeneralizedNormal(ContinuousDistribution):
         import matplotlib.pyplot as plt
         import numpy as np
         import scipy.stats as st
-        plt.style.use('seaborn-darkgrid')
+        plt.style.use('arviz-darkgrid')
         x = np.linspace(-4, 4, 1000)
         shapes = [0.4, 1., 2., 8.]
         for shape in shapes:
@@ -167,9 +168,9 @@ class GeneralizedNormal(ContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, power=power, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale, power = conditions["loc"], conditions["scale"], conditions["power"]
-        return tfd.GeneralizedNormal(loc=loc, scale=scale, power=power)
+        return tfd.GeneralizedNormal(loc=loc, scale=scale, power=power, **kwargs)
 
 
 class HalfNormal(PositiveContinuousDistribution):
@@ -233,9 +234,9 @@ class HalfNormal(PositiveContinuousDistribution):
         super().__init__(name, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         scale = conditions["scale"]
-        return tfd.HalfNormal(scale=scale)
+        return tfd.HalfNormal(scale=scale, **kwargs)
 
 
 class HalfStudentT(PositiveContinuousDistribution):
@@ -294,10 +295,10 @@ class HalfStudentT(PositiveContinuousDistribution):
         super().__init__(name, df=df, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         scale = conditions["scale"]
         df = conditions["df"]
-        return TFPHalfStudentT(df=df, loc=0, scale=scale)
+        return TFPHalfStudentT(df=df, loc=0, scale=scale, **kwargs)
 
 
 class Beta(UnitContinuousDistribution):
@@ -353,9 +354,9 @@ class Beta(UnitContinuousDistribution):
         )
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
-        return tfd.Beta(concentration0=concentration0, concentration1=concentration1)
+        return tfd.Beta(concentration0=concentration0, concentration1=concentration1, **kwargs)
 
 
 class Cauchy(ContinuousDistribution):
@@ -406,9 +407,9 @@ class Cauchy(ContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Cauchy(loc=loc, scale=scale)
+        return tfd.Cauchy(loc=loc, scale=scale, **kwargs)
 
 
 class Chi2(PositiveContinuousDistribution):
@@ -452,9 +453,9 @@ class Chi2(PositiveContinuousDistribution):
         super().__init__(name, df=df, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         df = conditions["df"]
-        return tfd.Chi2(df=df)
+        return tfd.Chi2(df=df, **kwargs)
 
 
 class Exponential(PositiveContinuousDistribution):
@@ -497,9 +498,9 @@ class Exponential(PositiveContinuousDistribution):
         super().__init__(name, rate=rate, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         rate = conditions["rate"]
-        return tfd.Exponential(rate=rate)
+        return tfd.Exponential(rate=rate, **kwargs)
 
 
 class Gamma(PositiveContinuousDistribution):
@@ -550,9 +551,9 @@ class Gamma(PositiveContinuousDistribution):
         super().__init__(name, concentration=concentration, rate=rate, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         concentration, rate = conditions["concentration"], conditions["rate"]
-        return tfd.Gamma(concentration=concentration, rate=rate)
+        return tfd.Gamma(concentration=concentration, rate=rate, **kwargs)
 
 
 class Gumbel(ContinuousDistribution):
@@ -606,9 +607,13 @@ class Gumbel(ContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Gumbel(loc=loc, scale=scale)
+        return tfd.Gumbel(loc=loc, scale=scale, **kwargs)
+
+    @property
+    def validate_args(self):
+        return self._distribution.bijector.validate_args
 
 
 class HalfCauchy(PositiveContinuousDistribution):
@@ -656,9 +661,9 @@ class HalfCauchy(PositiveContinuousDistribution):
         super().__init__(name, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         scale = conditions["scale"]
-        return tfd.HalfCauchy(loc=0, scale=scale)
+        return tfd.HalfCauchy(loc=0, scale=scale, **kwargs)
 
 
 class InverseGamma(PositiveContinuousDistribution):
@@ -708,9 +713,9 @@ class InverseGamma(PositiveContinuousDistribution):
         super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         concentration, scale = conditions["concentration"], conditions["scale"]
-        return tfd.InverseGamma(concentration=concentration, scale=scale)
+        return tfd.InverseGamma(concentration=concentration, scale=scale, **kwargs)
 
 
 class InverseGaussian(PositiveContinuousDistribution):
@@ -726,9 +731,9 @@ class InverseGaussian(PositiveContinuousDistribution):
         super().__init__(name, loc=loc, concentration=concentration, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, concentration = conditions["loc"], conditions["concentration"]
-        return tfd.InverseGaussian(loc=loc, concentration=concentration)
+        return tfd.InverseGaussian(loc=loc, concentration=concentration, **kwargs)
 
 
 class Kumaraswamy(UnitContinuousDistribution):
@@ -778,9 +783,15 @@ class Kumaraswamy(UnitContinuousDistribution):
         )
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
-        return tfd.Kumaraswamy(concentration0=concentration0, concentration1=concentration1)
+        return tfd.Kumaraswamy(
+            concentration0=concentration0, concentration1=concentration1, **kwargs
+        )
+
+    @property
+    def validate_args(self):
+        return self._distribution.bijector.validate_args
 
 
 class Laplace(ContinuousDistribution):
@@ -828,9 +839,9 @@ class Laplace(ContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Laplace(loc=loc, scale=scale)
+        return tfd.Laplace(loc=loc, scale=scale, **kwargs)
 
 
 class Logistic(ContinuousDistribution):
@@ -879,9 +890,9 @@ class Logistic(ContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.Logistic(loc=loc, scale=scale)
+        return tfd.Logistic(loc=loc, scale=scale, **kwargs)
 
 
 class LogitNormal(UnitContinuousDistribution):
@@ -906,9 +917,9 @@ class LogitNormal(UnitContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.LogitNormal(loc=loc, scale=scale)
+        return tfd.LogitNormal(loc=loc, scale=scale, **kwargs)
 
 
 class LogNormal(PositiveContinuousDistribution):
@@ -969,9 +980,71 @@ class LogNormal(PositiveContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, scale = conditions["loc"], conditions["scale"]
-        return tfd.LogNormal(loc=loc, scale=scale)
+        return tfd.LogNormal(loc=loc, scale=scale, **kwargs)
+
+
+class Moyal(ContinuousDistribution):
+    r"""Continuous Moyal random variable.
+
+    The pdf of this distribution is
+
+    .. math::
+
+        f(x \mid \mu, \sigma) = 
+           \frac{1}{\sqrt{2\pi}\sigma}
+           \exp\left(-\frac{1}{2}\left[\frac{x-\mu}{\sigma}+\exp\left(-\frac{x-\mu}{\sigma}\right)\right]\right)
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('arviz-darkgrid')
+        x = np.linspace(-5, 10, 1000)
+        locs = [0., 0., 0., -2.]
+        scales = [0.5, 0.6, 1., 1.]
+        for loc, scale in zip(locs, scales):
+            pdf = st.moyal.pdf(x, loc, scale)
+            plt.plot(x, pdf, label=r'$\mu$ = {}, $\sigma$ = {}'.format(loc, scale))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================================
+    Support   :math:`x \in \mathbb{R}`
+    Mean      :math:`\mu+\sigma(\gamma+ln(2))` where \gamma is the Euler-Mascheroni constant
+    Variance  :math:`\dfrac{\pi^2\sigma^2}{2}`
+    ========  ==========================================
+
+    Parameters
+    ----------
+    loc : float
+        Location parameter.
+    scale : float
+        Scale parameter.
+
+    Examples
+    --------
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.Moyal('x', loc=0, scale=10)
+    """
+
+    def __init__(self, name, loc, scale, **kwargs):
+        super().__init__(name, loc=loc, scale=scale, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions, **kwargs):
+        loc, scale = conditions["loc"], conditions["scale"]
+        return tfd.Moyal(loc=loc, scale=scale, **kwargs)
+
+    @property
+    def validate_args(self):
+        return self._distribution.bijector.validate_args
 
 
 class Pareto(BoundedContinuousDistribution):
@@ -1022,9 +1095,9 @@ class Pareto(BoundedContinuousDistribution):
         super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         concentration, scale = conditions["concentration"], conditions["scale"]
-        return tfd.Pareto(concentration=concentration, scale=scale)
+        return tfd.Pareto(concentration=concentration, scale=scale, **kwargs)
 
     def upper_limit(self):
         return float("inf")
@@ -1102,9 +1175,9 @@ class StudentT(ContinuousDistribution):
         super().__init__(name, loc=loc, scale=scale, df=df, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         df, loc, scale = conditions["df"], conditions["loc"], conditions["scale"]
-        return tfd.StudentT(df=df, loc=loc, scale=scale)
+        return tfd.StudentT(df=df, loc=loc, scale=scale, **kwargs)
 
 
 class Triangular(BoundedContinuousDistribution):
@@ -1164,9 +1237,9 @@ class Triangular(BoundedContinuousDistribution):
         super().__init__(name, low=low, peak=peak, high=high, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         low, high, peak = conditions["low"], conditions["high"], conditions["peak"]
-        return tfd.Triangular(low=low, high=high, peak=peak)
+        return tfd.Triangular(low=low, high=high, peak=peak, **kwargs)
 
     def lower_limit(self):
         return self._distribution.low
@@ -1220,9 +1293,9 @@ class Uniform(BoundedContinuousDistribution):
         super().__init__(name, low=low, high=high, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         low, high = conditions["low"], conditions["high"]
-        return tfd.Uniform(low=low, high=high)
+        return tfd.Uniform(low=low, high=high, **kwargs)
 
     # FIXME should we rename this functions as well?
     def lower_limit(self):
@@ -1242,8 +1315,8 @@ class Flat(ContinuousDistribution):
         super().__init__(name, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
-        return tfd.Uniform(low=-np.inf, high=np.inf)
+    def _init_distribution(conditions, **kwargs):
+        return tfd.Uniform(low=-np.inf, high=np.inf, **kwargs)
 
     def log_prob(self, value):
         # convert the value to tensor
@@ -1285,8 +1358,8 @@ class HalfFlat(PositiveContinuousDistribution):
         super().__init__(name, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
-        return tfd.Uniform(low=0.0, high=np.inf)
+    def _init_distribution(conditions, **kwargs):
+        return tfd.Uniform(low=0.0, high=np.inf, **kwargs)
 
     def log_prob(self, value):
         # convert the value to tensor
@@ -1370,9 +1443,9 @@ class VonMises(BoundedContinuousDistribution):
         super().__init__(name, loc=loc, concentration=concentration, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         loc, concentration = conditions["loc"], conditions["concentration"]
-        return tfd.VonMises(loc=loc, concentration=concentration)
+        return tfd.VonMises(loc=loc, concentration=concentration, **kwargs)
 
     def lower_limit(self):
         return -math.pi
@@ -1435,8 +1508,7 @@ class Weibull(PositiveContinuousDistribution):
         super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
-
+    def _init_distribution(conditions, **kwargs):
         concentration, scale = conditions["concentration"], conditions["scale"]
 
         scale_tensor, concentration_tensor = (
@@ -1448,7 +1520,10 @@ class Weibull(PositiveContinuousDistribution):
         )
 
         return tfd.TransformedDistribution(
-            distribution=tfd.Uniform(low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape)),
+            distribution=tfd.Uniform(
+                low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape), **kwargs
+            ),
             bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
+            validate_args=kwargs.get("validate_args", False),
             name="Weibull",
         )

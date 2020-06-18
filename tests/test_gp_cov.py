@@ -37,6 +37,72 @@ COV_FUNCS = [
             "feature_ndims": 1,
         },
     ),
+    (
+        "RatQuad",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "scale_mixture_rate": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.2], [0.2, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Matern12",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.05910575], [0.05910575, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Matern32",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.04397209], [0.04397209, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Matern52",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.03701404], [0.03701404, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Exponential",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.24311673], [0.24311673, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Gibbs",
+        {
+            "length_scale_fn": (lambda x: tf.ones(x.shape)),
+            "test_points": [np.array([[1.0], [3.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.13533528], [0.13533528, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
 ]
 
 

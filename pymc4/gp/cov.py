@@ -1,6 +1,6 @@
 """Covariance Functions for PyMC4's Gaussian Process module."""
 
-from typing import Union, Optional, Any, List
+from typing import Union, Optional, Any, List, Callable
 from collections.abc import Iterable
 from numbers import Number
 from abc import abstractmethod
@@ -9,39 +9,44 @@ from functools import reduce
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
+from tensorflow_probability.python.math.psd_kernels import (
+    ExponentiatedQuadratic,
+    RationalQuadratic,
+    MaternOneHalf,
+    MaternFiveHalves,
+    MaternThreeHalves,
+    ExpSinSquared,
+    PositiveSemidefiniteKernel,
+    FeatureScaled,
+    Polynomial as TFPPolynomial,
+    Linear as TFPLinear,
+)
 
-from ._kernel import _Constant, _WhiteNoise
-from .util import ArrayLike, TfTensor, _inherit_docs
+from ._kernel import _Constant, _WhiteNoise, _Exponential, _Gibbs, _Cosine
+from .util import ArrayLike, TfTensor, _inherit_docs, _build_docs
 
 
 __all__ = [
     "Constant",
     "WhiteNoise",
     "ExpQuad",
-    # "RatQuad",
-    # "Exponential",
-    # "Matern52",
-    # "Matern32",
-    # "Linear",
-    # "Polynomial",
-    # "Cosine",
-    # "Periodic",
+    "RatQuad",
+    "Exponential",
+    "Matern52",
+    "Matern32",
+    "Matern12",
+    "Linear",
+    "Polynomial",
+    "Cosine",
+    "Periodic",
     # "WarpedInput",
-    # "Gibbs",
+    "Gibbs",
     # "Coregion",
     # "ScaledCov",
     # "Kron",
 ]
 
-
-class Covariance:
-    r"""
-    Base class of all Covariance functions for Gaussian Process.
-
-    Parameters
-    ----------
-    feature_ndims : int
+_common_doc = """feature_ndims : int
         The number of dimensions to consider as features
         which will be absorbed during the computation.
     active_dims : {int, Iterable}, optional
@@ -53,6 +58,22 @@ class Covariance:
     scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
         performing Automatic Relevence Detection (ARD). Ignored if keyword argument ARD=False.
+"""
+
+_note_doc = """ARD (automatic relevence detection) is done if the parameter `length_scale`
+    is a vector or a tensor. To disable this behaviour, a keyword argument
+    `ARD=False` needs to be passed.
+"""
+
+
+@_build_docs
+class Covariance:
+    r"""
+    Base class of all Covariance functions for Gaussian Process.
+
+    Parameters
+    ----------
+    %(_common_doc)
 
     Other Parameters
     ----------------
@@ -61,9 +82,7 @@ class Covariance:
 
     Notes
     -----
-    ARD (automatic relevence detection) is done if the parameter `length_scale`
-    is a vector or a tensor. To disable this behaviour, a keyword argument
-    `ARD=False` needs to be passed.
+    %(_note_doc)
     """
 
     def __init__(
@@ -78,6 +97,7 @@ class Covariance:
                 "expected 'feature_ndims' to be an integer greater or equal to 1"
                 f" but found {feature_ndims}."
             )
+
         if active_dims is not None:
             noslice = slice(None, None)
             # Tensorflow doesn't allow slicing with list indices.
@@ -85,10 +105,12 @@ class Covariance:
             # will be handled differently by the `_slice` method.
             self._list_slices: Iterable[Any] = []
             self._slices: Iterable[Any] = []
+
             if isinstance(active_dims, int):
                 active_dims = (active_dims,)
             elif isinstance(active_dims, Iterable):
                 active_dims = tuple(active_dims)
+
             if len(active_dims) > feature_ndims:
                 raise ValueError(
                     "'active_dims' contain more entries than number of feature dimensions."
@@ -96,6 +118,7 @@ class Covariance:
                     " in 'active_dims'. expected len(active_dims) < feature_ndims but got"
                     f" {len(active_dims)} > {feature_ndims}"
                 )
+
             active_dims = active_dims + (noslice,) * (feature_ndims - len(active_dims))
             for dim in active_dims:
                 if isinstance(dim, Iterable):
@@ -107,6 +130,7 @@ class Covariance:
                     else:
                         self._slices.append(dim)
                     self._list_slices.append(noslice)
+
         self._feature_ndims = feature_ndims
         self._active_dims = active_dims
         self._scale_diag = scale_diag
@@ -117,20 +141,17 @@ class Covariance:
         if ard:
             if self._scale_diag is None:
                 self._scale_diag = 1.0
-            self._kernel = tfp.math.psd_kernels.FeatureScaled(
-                self._kernel, scale_diag=self._scale_diag
-            )
+            self._kernel = FeatureScaled(self._kernel, scale_diag=self._scale_diag)
 
     @abstractmethod
-    def _init_kernel(
-        self, feature_ndims: int, **kwargs
-    ) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
         raise NotImplementedError("Your Covariance class should override this method.")
 
     def _slice(self, X1: TfTensor, X2: TfTensor) -> TfTensor:
         if self._active_dims is None:
             return X1, X2
-        # We slice the tensors.
+
+        # We first slice the tensors using non-list indices.
         X1 = X1[..., (*self._slices)]
         X2 = X2[..., (*self._slices)]
         # Workaround for list indices as tensorflow doesn't allow
@@ -336,6 +357,7 @@ class Stationary(Covariance):
         return self._length_scale  # type: ignore
 
 
+@_build_docs
 class ExpQuad(Stationary):
     r"""
     Exponentiated Quadratic Stationary Covariance Function.
@@ -354,18 +376,7 @@ class ExpQuad(Stationary):
         The :math:`l` parameter of the RBF kernel, length_scale > 0.
     amplitude : array_like, optional
         The :math:`\sigma` parameter of RBF kernel, amplitude > 0. (default=1)
-    feature_ndims : int, optional
-        The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function. (default=1)
-    active_dims : {int, Iterable}, optional
-        A list of (list of) numbers of dimensions in each `feature_ndims`
-        columns to operate on. If `None`, defaults to using all the dimensions
-        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
-        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
-        are considered for evaluation.
-    scale_diag : {Number, array_like}, optional
-        Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`.
+    %(_common_doc)
 
     Other Parameters
     ----------------
@@ -389,9 +400,7 @@ class ExpQuad(Stationary):
 
     Notes
     -----
-    ARD (automatic relevence detection) is done if the length_scale
-    is a vector or a tensor. To disable this behaviour, a keyword argument
-    `ARD=False` needs to be passed.
+    %(_note_doc)
     """
 
     def __init__(
@@ -409,10 +418,8 @@ class ExpQuad(Stationary):
             feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
         )
 
-    def _init_kernel(
-        self, feature_ndims: int, **kwargs
-    ) -> tfp.math.psd_kernels.PositiveSemidefiniteKernel:
-        return tfp.math.psd_kernels.ExponentiatedQuadratic(
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return ExponentiatedQuadratic(
             length_scale=self._length_scale,
             amplitude=self._amplitude,
             feature_ndims=feature_ndims,
@@ -425,6 +432,7 @@ class ExpQuad(Stationary):
         return self._amplitude
 
 
+@_build_docs
 class Constant(Stationary):
     r"""
     A Constant Stationary Covariance Function.
@@ -445,18 +453,7 @@ class Constant(Stationary):
         The constant coefficient indicating the covariance
         between any two points. It is the constant `c` in
         the equation above.
-    feature_ndims : int, optional
-        The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function. (default=1)
-    active_dims : {int, Iterable}, optional
-        A list of (list of) numbers of dimensions in each `feature_ndims`
-        columns to operate on. If `None`, defaults to using all the dimensions
-        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
-        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
-        are considered for evaluation.
-    scale_diag : {Number, array_like}, optional
-        Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`.
+    %(_common_doc)
 
     Other Parameters
     ----------------
@@ -480,9 +477,7 @@ class Constant(Stationary):
 
     Notes
     -----
-    ARD (automatic relevence detection) is done if the length_scale
-    is a vector or a tensor. To disable this behaviour, a keyword argument
-    `ARD=False` needs to be passed.
+    %(_note_doc)
     """
 
     def __init__(
@@ -506,6 +501,7 @@ class Constant(Stationary):
         return self._coef
 
 
+@_build_docs
 class WhiteNoise(Stationary):
     r"""
     White-noise kernel function.
@@ -524,18 +520,7 @@ class WhiteNoise(Stationary):
     ----------
     noise : array_like
         The `noise_level` of the kernel.
-    feature_ndims : int, optional
-        The number of rightmost dimensions to be absorbed during
-        the computation or evaluation of the covariance function. (default=1)
-    active_dims : {int, Iterable}, optional
-        A list of (list of) numbers of dimensions in each `feature_ndims`
-        columns to operate on. If `None`, defaults to using all the dimensions
-        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
-        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
-        are considered for evaluation.
-    scale_diag : {Number, array_like}, optional
-        Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`.
+    %(_common_doc)
 
     Other Parameters
     ----------------
@@ -561,6 +546,8 @@ class WhiteNoise(Stationary):
     This kernel function dosn't have a point evaluation scheme.
     Hence, the `pymc4.gp.cov.WhiteNoise.evaluate_kernel` method
     raises a `NotImplementedError` when called.
+
+    %(_note_doc)
     """
 
     def __init__(
@@ -582,3 +569,376 @@ class WhiteNoise(Stationary):
     @property
     def noise(self):
         return self._noise
+
+
+class RatQuad(Stationary):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        scale_mixture_rate: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._amplitude = amplitude
+        self._length_scale = length_scale
+        self._scale_mixture_rate = scale_mixture_rate
+        super(RatQuad, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return RationalQuadratic(
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            scale_mixture_rate=self._scale_mixture_rate,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def amplitude(self) -> Union[ArrayLike, float]:
+        r"""Amplitude of the kernel function."""
+        return self._amplitude
+
+    @property
+    def scale_mixture_rate(self) -> Union[ArrayLike, float]:
+        r"""Scale Mixture Rate of the kernel."""
+        return self._scale_mixture_rate
+
+
+class Matern12(Stationary):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._amplitude = amplitude
+        self._length_scale = length_scale
+        super(Matern12, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return MaternOneHalf(
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def amplitude(self) -> Union[ArrayLike, float]:
+        r"""Amplitude of the kernel function."""
+        return self._amplitude
+
+
+class Matern32(Stationary):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._amplitude = amplitude
+        self._length_scale = length_scale
+        super(Matern32, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return MaternThreeHalves(
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def amplitude(self) -> Union[ArrayLike, float]:
+        r"""Amplitude of the kernel function."""
+        return self._amplitude
+
+
+class Matern52(Stationary):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._amplitude = amplitude
+        self._length_scale = length_scale
+        super(Matern52, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return MaternFiveHalves(
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def amplitude(self) -> Union[ArrayLike, float]:
+        r"""Amplitude of the kernel function."""
+        return self._amplitude
+
+
+class Linear(Covariance):
+    """docs."""
+
+    def __init__(
+        self,
+        bias_variance: Union[ArrayLike, float],
+        slope_variance: Union[ArrayLike, float],
+        shift: Union[ArrayLike, float],
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._bias_variance = bias_variance
+        self._slope_variance = slope_variance
+        self._shift = shift
+        super(Linear, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return TFPLinear(
+            bias_variance=self._bias_variance,
+            slope_variance=self._slope_variance,
+            shift=self._shift,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def slope_variance(self) -> Union[ArrayLike, float]:
+        r"""`slope_variance` of the kernel."""
+        return self._slope_variance
+
+    @property
+    def bias_variance(self) -> Union[ArrayLike, float]:
+        r"""`bias_variance` of the kernel."""
+        return self._bias_variance
+
+    @property
+    def shift(self) -> Union[ArrayLike, float]:
+        r"""`shift` of the kernel."""
+        return self._shift
+
+
+class Polynomial(Covariance):
+    """docs."""
+
+    def __init__(
+        self,
+        bias_variance: Union[ArrayLike, float],
+        slope_variance: Union[ArrayLike, float],
+        shift: Union[ArrayLike, float],
+        exponent: Union[ArrayLike, float],
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._bias_variance = bias_variance
+        self._slope_variance = slope_variance
+        self._shift = shift
+        self._exponent = exponent
+        super(Polynomial, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return TFPPolynomial(
+            bias_variance=self._bias_variance,
+            slope_variance=self._slope_variance,
+            shift=self._shift,
+            exponent=self._exponent,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def slope_variance(self) -> Union[ArrayLike, float]:
+        r"""`slope_variance` of the kernel."""
+        return self._slope_variance
+
+    @property
+    def bias_variance(self) -> Union[ArrayLike, float]:
+        r"""`bias_variance` of the kernel."""
+        return self._bias_variance
+
+    @property
+    def shift(self) -> Union[ArrayLike, float]:
+        r"""`shift` of the kernel."""
+        return self._shift
+
+    @property
+    def exponent(self) -> Union[ArrayLike, float]:
+        r"""`exponent` of the kernel."""
+        return self.exponent
+
+
+class Periodic(Covariance):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        period: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._amplitude = amplitude
+        self._length_scale = length_scale
+        self._period = period
+        super(Periodic, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return ExpSinSquared(
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            period=self._period,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def amplitude(self) -> Union[ArrayLike, float]:
+        r"""Amplitude of the kernel function."""
+        return self._amplitude
+
+    @property
+    def period(self) -> Union[ArrayLike, float]:
+        return self._period
+
+
+class Exponential(Stationary):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._amplitude = amplitude
+        self._length_scale = length_scale
+        super(Exponential, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return _Exponential(
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def amplitude(self) -> Union[ArrayLike, float]:
+        r"""Amplitude of the kernel function."""
+        return self._amplitude
+
+
+class Gibbs(Covariance):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale_fn: Callable,
+        fn_args: Optional[tuple] = None,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._length_scale_fn = length_scale_fn
+        if fn_args is None:
+            fn_args = tuple()
+        self._fn_args = fn_args
+        super(Gibbs, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs):
+        return _Gibbs(
+            length_scale_fn=self._length_scale_fn,
+            fn_args=self._fn_args,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+
+class Cosine(Covariance):
+    """docs."""
+
+    def __init__(
+        self,
+        length_scale: Union[ArrayLike, float],
+        amplitude: Union[ArrayLike, float] = 1.0,
+        period: Union[ArrayLike, float] = 1.0,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._amplitude = amplitude
+        self._length_scale = length_scale
+        self._period = period
+        super(Cosine, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return _Cosine(
+            length_scale=self._length_scale,
+            amplitude=self._amplitude,
+            period=self._period,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def amplitude(self) -> Union[ArrayLike, float]:
+        r"""Amplitude of the kernel function."""
+        return self._amplitude
+
+    @property
+    def period(self) -> Union[ArrayLike, float]:
+        return self._period

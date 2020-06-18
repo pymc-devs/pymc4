@@ -148,6 +148,7 @@ class Multinomial(DiscreteDistribution):
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1 along the last axis.
     """
+
     # For some ridiculous reason, tfp needs multinomial values to be floats...
     _test_value = 0.0  # type: ignore
 
@@ -298,8 +299,8 @@ class Wishart(ContinuousDistribution):
 
 
 class LKJCholesky(ContinuousDistribution):
-    r"""The LKJ (Lewandowski, Kurowicka and Joe) distribution
-    on Cholesky factors of correlation matrices.
+    r"""
+    The LKJ (Lewandowski, Kurowicka and Joe) distribution on Cholesky factors of correlation matrices.
 
     The LKJ distribution is a prior distribution over correlation matrices.
     The LKJCholesky is a distribution over the Cholesky factor L of a correlation
@@ -340,7 +341,9 @@ class LKJCholesky(ContinuousDistribution):
 
 class MvNormalCholesky(ContinuousDistribution):
     r"""
-    Multivariate normal random variable parameterized by a
+    Multivariate normal random variable.
+    
+    A Multivariate normal random variable parameterized by a
     lower triangular matrix, i.e., the Cholesky factor L of a covariance matrix
     that has real, positive entries on the diagonal.
 

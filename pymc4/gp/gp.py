@@ -1,3 +1,5 @@
+"""An Interface for creating Gaussian Process Models in PyMC4."""
+
 from typing import Union
 
 import tensorflow as tf
@@ -16,9 +18,7 @@ __all__ = ["LatentGP"]
 
 class BaseGP:
     def __init__(self, cov_fn: Covariance, mean_fn: Mean = Zero(1)):
-        if mean_fn.feature_ndims != cov_fn.feature_ndims:
-            raise ValueError("The feature_ndims of mean and covariance functions should be equal")
-        self.feature_ndims = mean_fn.feature_ndims
+        self.feature_ndims = max(mean_fn.feature_ndims, cov_fn.feature_ndims)
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn
 
@@ -38,7 +38,8 @@ class BaseGP:
 
 
 class LatentGP(BaseGP):
-    r"""Latent Gaussian process.
+    r"""
+    Latent Gaussian process.
 
     The `gp.LatentGP` class is a direct implementation of a GP.  No additive noise is assumed.
     It is called "Latent" because the underlying function values are treated as latent variables.
@@ -67,27 +68,23 @@ class LatentGP(BaseGP):
     Below is an example with ``feature_ndims=2`` , ``batch_shape=2``, 10 prior samples,
     and 5 new samples. Notice that unlike PyMC3, ``given`` in ``conditional`` method is
     NOT optional.
-    
-    .. code:: python
 
-        X = np.random.randn(2, 10, 2, 2)
-        Xnew = np.random.randn(2, 5, 2, 2)
-
-        # Let's define out GP model and its parameters
-        mean_fn = pm.gp.mean.Zero(feature_ndims=2)
-        cov_fn = pm.gp.cov.ExpQuad(1., 1., feature_ndims=2)
-        gp = pm.gp.LatentGP(mean_fn, cov_fn)
-
-        @pm.model
-        def gpmodel():
-            f = yield gp.prior('f', X)
-            fcond = yield gp.conditional('fcond', Xnew, given={'X': X, 'f': f})
-            return fcond
+    >>> X = np.random.randn(2, 10, 2, 2)
+    >>> Xnew = np.random.randn(2, 5, 2, 2)
+    >>> # Let's define out GP model and its parameters
+    ... mean_fn = pm.gp.mean.Zero(feature_ndims=2)
+    >>> cov_fn = pm.gp.cov.ExpQuad(1., 1., feature_ndims=2)
+    >>> gp = pm.gp.LatentGP(mean_fn, cov_fn)
+    >>> @pm.model
+    >>> def gpmodel():
+    ...     f = yield gp.prior('f', X)
+    ...     fcond = yield gp.conditional('fcond', Xnew, given={'X': X, 'f': f})
+    ...     return fcond
     """
 
     def _is_univariate(self, X: ArrayLike) -> bool:
-        r"""Check if there is only one sample point"""
-        return X.shape[-(self.cov_fn.feature_ndims + 1)] == 1
+        r"""Check if there is only one sample point."""
+        return X.shape[-(self.feature_ndims + 1)] == 1
 
     def _build_prior(self, name, X: ArrayLike, **kwargs) -> tuple:
         mu = self.mean_fn(X)
@@ -95,7 +92,7 @@ class LatentGP(BaseGP):
         return mu, cov
 
     def _get_given_vals(self, given: dict) -> tuple:
-        r"""Get the conditional parameters"""
+        r"""Get the conditional parameters."""
         if given is None:
             given = {}
         if "gp" in given:
@@ -123,7 +120,6 @@ class LatentGP(BaseGP):
                 f = tf.convert_to_tensor(f)
             except ValueError:
                 raise ValueError("Prior `f` must be a numpy array or tensor.")
-
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
         if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):
@@ -144,9 +140,10 @@ class LatentGP(BaseGP):
         # last dimension that we added earlier.
         return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=1e-4)
 
-    def prior(self, name: NameType, X, **kwargs) -> ContinuousDistribution:
-        r"""Returns the GP prior distribution evaluated over the input locations `X`.
-        
+    def prior(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
+        r"""
+        Evaluate the GP prior distribution evaluated over the input locations `X`.
+
         This is the prior probability over the space
         of functions described by its mean and covariance function.
 
@@ -157,14 +154,17 @@ class LatentGP(BaseGP):
         ----------
         name : string
             Name of the random variable.
-        X : tensor, array-like
+        X : array_like
             Function input values.
+
+        Other Parameters
+        ----------------
         **kwargs :
-            Extra keyword arguments that are passed to distribution constructor.
+            Extra keyword arguments that are passed to the distribution constructor.
 
         Returns
         -------
-        f : EagerTensor
+        f : tensorflow.Tensor
             Gaussian Process prior distribution.
 
         Examples
@@ -193,8 +193,9 @@ class LatentGP(BaseGP):
     def conditional(
         self, name: NameType, Xnew: ArrayLike, given: dict, **kwargs
     ) -> ContinuousDistribution:
-        r"""Returns the conditional distribution evaluated over new input
-        locations `Xnew`.
+        r"""
+        Evaluate the conditional distribution evaluated over new input locations `Xnew`.
+
         Given a set of function values `f` that
         the GP prior was over, the conditional distribution over a
         set of new points, `f_*` is
@@ -214,13 +215,16 @@ class LatentGP(BaseGP):
         given : dict
             Dictionary containing the observed data tensor `X` under the key "X" and
             prior random variable `f` under the key "f".
+
+        Other Parameters
+        ----------------
         **kwargs :
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
 
         Returns
         -------
-        fcond: EagerTensor
+        fcond : tensorflow.Tensor
             Gaussian Process Conditional Distribution
 
         Examples

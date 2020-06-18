@@ -10,7 +10,6 @@ from functools import reduce
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-from tensorflow_probability.python.math.psd_kernels.internal import util
 
 from ._kernel import _Constant, _WhiteNoise
 from .util import ArrayLike, TfTensor, _inherit_docs
@@ -136,14 +135,11 @@ class Covariance:
         X2 = X2[..., (*self._slices)]
         # Workaround for list indices as tensorflow doesn't allow
         # lists as index like numpy. It is not very efficient as
-        # `tf.stack` creates a copy instead of view.
-        for ax, l in enumerate(self._list_slices):
-            if l != slice(None, None):
-                rem = (slice(None, None),) * (self._feature_ndims - ax - 1)
-                axisX1 = X1.ndim - self._feature_ndims + ax
-                axisX2 = X2.ndim - self._feature_ndims + ax
-                X1 = tf.stack([X1[..., i, (*rem)] for i in l], axis=axisX1)
-                X2 = tf.stack([X2[..., i, (*rem)] for i in l], axis=axisX2)
+        # `tf.gather` creates a copy instead of view.
+        for ax, ind in enumerate(self._list_slices):
+            if ind != slice(None, None):
+                X1 = tf.gather(X1, indices=ind, axis=ax - self._feature_ndims)
+                X2 = tf.gather(X2, indices=ind, axis=ax - self._feature_ndims)
         return X1, X2
 
     def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
@@ -218,9 +214,8 @@ class Covariance:
             A covariance matrix with the last `feature_ndims`
             dimensions absorbed to compute the covariance.
         """
-        dtyp = util.maybe_get_common_dtype([X1, X2])
-        X1 = tf.convert_to_tensor(X1, dtype=dtyp)
-        X2 = tf.convert_to_tensor(X2, dtype=dtyp)
+        X1 = tf.convert_to_tensor(X1, dtype_hint=self._kernel.dtype)
+        X2 = tf.convert_to_tensor(X2, dtype_hint=self._kernel.dtype)
         X1, X2 = self._slice(X1, X2)
         if diag:
             return self._diag(X1, X2, to_dense=to_dense)

@@ -153,7 +153,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         betas = [6, 2]
         for a, b in zip(alphas, betas):
             pmf = st.betabinom(n, a, b).pmf(x)
-            plt.plot(x, pmf, '-o', label='low = {}, high = {}'.format(low, high))
+            plt.plot(x, pmf, '-o', label='alpha = {}, beta = {}'.format(a, b))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0, 0.4)

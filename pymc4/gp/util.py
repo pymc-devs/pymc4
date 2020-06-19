@@ -1,4 +1,5 @@
 import inspect
+import warnings
 import re
 from typing import Union
 
@@ -42,7 +43,10 @@ def _build_docs(meth_or_cls):
         try:
             docstr = getattr(modname, docname)
         except AttributeError:
-            pass
+            warnings.warn(
+                f"While documenting {meth_or_cls.__name__}, arrtibute {docname} not found."
+            )
+            continue
         docs = pattern.sub(docstr, docs, count=1)
     meth_or_cls.__doc__ = docs
     return meth_or_cls

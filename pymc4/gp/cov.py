@@ -1,6 +1,6 @@
 """Covariance Functions for PyMC4's Gaussian Process module.
 
-Wraps `tensorflow_probability.python.math.psd_kernels` module and provided
+Wraps `tensorflow_probability.python.math.psd_kernels` module and provides
 many more kernels with all necessary features to work with Gaussian processes.
 """
 
@@ -31,6 +31,7 @@ from .util import ArrayLike, TfTensor, _inherit_docs, _build_docs
 
 
 __all__ = [
+    "Covariance",
     "Constant",
     "WhiteNoise",
     "ExpQuad",
@@ -50,32 +51,34 @@ __all__ = [
     # "Kron",
 ]
 
-_common_doc = """feature_ndims : int
-        The number of dimensions to consider as features
-        which will be absorbed during the computation.
+_common_doc = """feature_ndims : int, optional
+        The number of dimensions to consider as features which will be absorbed
+        during the computation. Defaults to 1. Incresing this causes significant
+        overhead in computation. Consider using ``active_dims`` parameter alingwith
+        this parameter for beter performance.
     active_dims : {int, Iterable}, optional
-        A list of (list of) numbers of dimensions in each `feature_ndims`
-        columns to operate on. If `None`, defaults to using all the dimensions
-        of each `feature_ndims` column. If a single integer `n` is present at `i'th`
-        entry of the list, the leftmost `n` dimensions of `i'th` `feature_ndims` column
+        A list of (list of) numbers of dimensions in each ``feature_ndims``
+        columns to operate on. If ``None``, defaults to using all the dimensions
+        of each ``feature_ndims`` column. If a single integer ``n`` is present at ``i'th``
+        entry of the list, the leftmost ``n`` dimensions of ``i'th`` ``feature_ndims`` column
         are considered for evaluation.
     scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`."""
+        performing Automatic Relevence Detection (ARD). Ignored if keyword argument ``ARD=False``."""
 
-_note_doc = """ARD (automatic relevence detection) is done if the parameter `length_scale`
+_note_doc = """ARD (automatic relevence detection) is done if the parameter ``length_scale``
     is a vector or a tensor. To disable this behaviour, a keyword argument
-    `ARD=False` needs to be passed."""
+    ``ARD=False`` needs to be passed."""
 
 _ls_amp_doc = """length_scale : array_like
         The length-scale ℓ determines the length of the 'wiggles' in your function. In general,
         you won't be able to extrapolate more than ℓ units away from your data. If a float,
-        an isotropic kernel is used. If an array and `ARD=True`, an anisotropic kernel
+        an isotropic kernel is used. If an array and ``ARD=True``, an anisotropic kernel
         is used where each dimension defines the length-scale of the respective feature dimension.
     amplitude : array_like, optional
         Amplitude is a scaling factor that determines the average distance of your function away
         from your mean. Every kernel has this parameter out in its front. If a float,
-        an isotropic kernel is used. If an array and `ARD=True`, an anisotropic kernel
+        an isotropic kernel is used. If an array and ``ARD=True``, an anisotropic kernel
         is used where each dimension defines the amplitude of the respective feature dimension.
         (default=1)"""
 
@@ -83,14 +86,24 @@ _period_doc = """period : array_like, optional
         This paramerer defines the period of a periodic kernel. It controls how often your
         data repeats where data contains an axis of time and is used for time serias and
         temporal prediction tasks. If a float, an isotropic kernel is used. If an array and
-        `ARD=True`, an anisotropic kernel is used where each dimension defines the period
+        ``ARD=True``, an anisotropic kernel is used where each dimension defines the period
         of the respective feature dimension. (default=1)"""
 
-_matern_doc = """Matern family of kernels is a generalization over the RBF family of kernels.
-    The :math:`\nu` parameter controls the smoothness of the kernel function. Higher
-    values of :math:`\nu` result in a more smooth function. The most common values
-    of :math:`\nu` are 0.5, 1.5 and 2.5 as the modified Bessel's function is analytical
+_matern_doc = r"""Matern family of kernels is a generalization over the RBF family of kernels.
+    The :math:`\\nu` parameter controls the smoothness of the kernel function. Higher
+    values of :math:`\\nu` result in a more smooth function. The most common values
+    of :math:`\\nu` are 0.5, 1.5 and 2.5 as the modified Bessel's function is analytical
     there."""
+
+_linear_doc = """bias_variance : array_like
+        The bias to add in the linear equation. This parameters controls
+        how far your covarinace is from the mean value.
+    slope_variance : array_like
+        The slope of the linear equation. This parameter controls how fast
+        the covariance increases from the origin point.
+    shift : array_like
+        The amount of shift to apply to normalize the input vectors (or arrays).
+        This parameter brings all the input values closer to origin by ``shift`` units."""
 
 
 @_build_docs
@@ -105,7 +118,7 @@ class Covariance:
     Other Parameters
     ----------------
     **kwargs :
-        Keyword arguments to pass to the `_init_kernel` method.
+        Keyword arguments to pass to the ``_init_kernel`` method.
 
     Notes
     -----
@@ -128,8 +141,8 @@ class Covariance:
         if active_dims is not None:
             noslice = slice(None, None)
             # Tensorflow doesn't allow slicing with list indices.
-            # So, `_list_slices` holds all the list indices which
-            # will be handled differently by the `_slice` method.
+            # So, ``_list_slices`` holds all the list indices which
+            # will be handled differently by the ``_slice`` method.
             self._list_slices: Iterable[Any] = []
             self._slices: Iterable[Any] = []
 
@@ -183,7 +196,7 @@ class Covariance:
         X2 = X2[..., (*self._slices)]
         # Workaround for list indices as tensorflow doesn't allow
         # lists as index like numpy. It is not very efficient as
-        # `tf.gather` creates a copy instead of view.
+        # ``tf.gather`` creates a copy instead of view.
         for ax, ind in enumerate(self._list_slices):
             if ind != slice(None, None):
                 X1 = tf.gather(X1, indices=ind, axis=ax - self._feature_ndims)
@@ -211,13 +224,13 @@ class Covariance:
         Returns
         -------
         cov : tensorflow.Tensor
-            Covariance between each pair of points in `X1` and `X2`.
+            Covariance between each pair of points in ``X1`` and ``X2``.
         """
         return self._kernel.apply(X1, X2, **kwargs)
 
     @property
     def feature_ndims(self) -> int:
-        r"""`feature_ndims` parameter of the kernel."""
+        r"""``feature_ndims`` parameter of the kernel."""
         return self._feature_ndims
 
     @property
@@ -247,19 +260,19 @@ class Covariance:
             (default=False)
         to_dense : bool, optional
             If True, returns full covariance matrix with non-diagonal entries zero
-            when `diag=True`. Otherwise, only the diagonal component of the matrix
-            is returned. Ignored if `diag=False`. (default=True)
+            when ``diag=True``. Otherwise, only the diagonal component of the matrix
+            is returned. Ignored if ``diag=False``. (default=True)
 
         Other Parameters
         ----------------
         **kwargs : optional
-            Keyword arguments to be passed to the `matrix` method of the underlying
+            Keyword arguments to be passed to the ``matrix`` method of the underlying
             tfp's PSD kernels.
 
         Returns
         -------
         cov : tensorflow.Tensor
-            A covariance matrix with the last `feature_ndims`
+            A covariance matrix with the last ``feature_ndims``
             dimensions absorbed to compute the covariance.
         """
         X1 = tf.convert_to_tensor(X1, dtype_hint=self._kernel.dtype)
@@ -392,9 +405,10 @@ class ExpQuad(Stationary):
     A kernel from the Radial Basis family of kernels.
 
     .. math::
+
        k(x, x') = \sigma^2 \mathrm{exp}\left[ -\frac{(x - x')^2}{2 l^2} \right]
 
-    where :math:`\sigma` = ``amplitude``
+    where :math:`\sigma` = ``amplitude`` and
           :math:`l` = ``length_scale``
 
     Parameters
@@ -467,6 +481,7 @@ class Constant(Stationary):
     a complex function and so its gradients are faster and easier to compute.
 
     .. math::
+
         k(x, x') = c
 
     where :math:`c` = :code:`coef`
@@ -475,14 +490,14 @@ class Constant(Stationary):
     ----------
     coef : array_like
         The constant coefficient indicating the covariance
-        between any two points. It is the constant `c` in
+        between any two points. It is the constant ``c`` in
         the equation above.
     %(_common_doc)
 
     Other Parameters
     ----------------
     **kwargs:
-        Keyword arguments to pass to the `_Constant` kernel.
+        Keyword arguments to pass to the ``_Constant`` kernel.
 
     Examples
     --------
@@ -533,23 +548,24 @@ class WhiteNoise(Stationary):
     This kernel adds some noise to the covariance functions and is mostly
     used to stabilize other PSD kernels. This helps them become non-singular
     and makes cholesky decomposition possible for sampling from the
-    `MvNormalCholesky` distribution. It is recommended to use this kernel in
+    ``MvNormalCholesky`` distribution. It is recommended to use this kernel in
     combination with other covariance/kernel function when working with GP on
     large data.
 
     .. math::
+
         k(x_i, x_j') = 1 \text{ if } i = j, 0 \text{ otherwise}
 
     Parameters
     ----------
     noise : array_like
-        The `noise_level` of the kernel.
+        The ``noise_level`` of the kernel.
     %(_common_doc)
 
     Other Parameters
     ----------------
     **kwargs :
-        Keyword arguments to pass to the `_WhiteNoise` kernel.
+        Keyword arguments to pass to the ``_WhiteNoise`` kernel.
 
     Examples
     --------
@@ -568,8 +584,8 @@ class WhiteNoise(Stationary):
     Notes
     -----
     This kernel function dosn't have a point evaluation scheme.
-    Hence, the `pymc4.gp.cov.WhiteNoise.evaluate_kernel` method
-    raises a `NotImplementedError` when called.
+    Hence, the ``pymc4.gp.cov.WhiteNoise.evaluate_kernel`` method
+    raises a ``NotImplementedError`` when called.
 
     %(_note_doc)
     """
@@ -601,23 +617,24 @@ class RatQuad(Stationary):
     Rational Quadratic Kernel.
 
     This kernel belongs to the RBF Family of kernels and is a generalization
-    over the `ExpQuad` kernel. `scale_mixtue_rate` parameter controls the
+    over the ``ExpQuad`` kernel. ``scale_mixtue_rate`` parameter controls the
     mixture of length-scales to use. This kernel becomes equavalent to the
-    `ExpQuad` kernel when `scale_mixtue_rate` approaches infinity.
+    ``ExpQuad`` kernel when ``scale_mixtue_rate`` approaches infinity.
 
     .. math::
+
         k(x, x') = \sigma^2 \left(1 + \frac{\|x-x'\|^2}{2\alpha l^2}\right)^{\alpha}
 
-    where :math:`\alpha` = `scale_mixture_rate`, :math:`l` = `length_scale` and
-    :math:`\sigma` = `amplitude`.
+    where :math:`\alpha` = ``scale_mixture_rate``, :math:`l` = ``length_scale`` and
+    :math:`\sigma` = ``amplitude``.
 
     Parameters
     ----------
     %(_ls_amp_doc)
     scale_mixture_rate: array_like, optional
-        The mixture of length-scales to use. Equivalent to adding `ExpQuad`
-        kernels with different `length_scale`s. When this parameter approaches
-        infinity, it becomes equivalent to the `ExpQuad` kernel. (default=1)
+        The mixture of length-scales to use. Equivalent to adding ``ExpQuad``
+        kernels with different ``length_scale``s. When this parameter approaches
+        infinity, it becomes equivalent to the ``ExpQuad`` kernel. (default=1)
     %(_common_doc)
 
     Examples
@@ -683,6 +700,7 @@ class Matern12(Stationary):
     This kernel has the value of :math:`nu` = 0.5. It can be analytically shown as:
 
     .. math::
+
         k(x, x') = \sigma^2\mathrm{exp}\left( -\frac{\|x - x'\|^2}{\ell} \right)
 
     Parameters
@@ -745,6 +763,7 @@ class Matern32(Stationary):
     This kernel has the value of :math:`nu` = 1.5. It can be analytically shown as:
 
     .. math::
+
         k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)
                    \mathrm{exp}\left( - \frac{\sqrt{3(x - x')^2}}{\ell} \right)
 
@@ -808,6 +827,7 @@ class Matern52(Stationary):
     This kernel has the value of :math:`nu` = 2.5. It can be analytically shown as:
 
     .. math::
+
         k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} +
                    \frac{5(x-x')^2}{3\ell^2}\right)
                    \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
@@ -862,8 +882,41 @@ class Matern52(Stationary):
         return self._amplitude
 
 
+@_build_docs
 class Linear(Covariance):
-    """docs."""
+    r"""
+    Linear Kernel.
+
+    This kernel evaluates a linear function of the inputs `x` and `x'`. This means
+    it is performing Bayesian Linear Regression in :math:`\mathcal{O}(n)` time.
+
+    .. math::
+
+        k(x, x') = \sigma_b^2 + \sigma_v^2\left(x - c\right)\left(x'-c\right)
+
+    where :math:`\sigma_b` = ``bias_variance``, :math:`\sigma_v` = ``slope_variance``,
+          and :math:`c` = ``shift``.
+
+    Parameters
+    ----------
+    %(_linear_doc)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Linear
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Linear(1.5, 2., 1.)
+    >>> k(x, x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[ 6.25, 14.25],
+           [14.25, 54.25]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -893,22 +946,62 @@ class Linear(Covariance):
 
     @property
     def slope_variance(self) -> Union[ArrayLike, float]:
-        r"""`slope_variance` of the kernel."""
+        r"""``slope_variance`` parameter of the kernel."""
         return self._slope_variance
 
     @property
     def bias_variance(self) -> Union[ArrayLike, float]:
-        r"""`bias_variance` of the kernel."""
+        r"""``bias_variance`` parameter of the kernel."""
         return self._bias_variance
 
     @property
     def shift(self) -> Union[ArrayLike, float]:
-        r"""`shift` of the kernel."""
+        r"""``shift`` parameter of the kernel."""
         return self._shift
 
 
+@_build_docs
 class Polynomial(Covariance):
-    """docs."""
+    r"""
+    Polynomial Kernel.
+
+    This kernel is a generalization over the linear kernel. An extra term
+    ``exponent`` controls the degrees of the underlying polynomial function.
+    If the parameter ``slope_variance`` is a vector or a general tensor, ARD
+    is performed and each entry in the ``slope_variance`` acts like a co-efficient
+    of each feature dimension of the input array. When the ``exponent = 1``, it
+    becomes a linear kernel.
+
+    .. math::
+
+        k(x, x') = \sigma_b^2 + \sigma_v^2\left(
+                   \left(x - c\right)\left(x'-c\right)\right)^{\alpha}
+
+    where :math:`\sigma_b` = ``bias_variance``, :math:`\sigma_v` = ``slope_variance``,
+          :math:`c` = ``shift``, and :math:`\alpha` = ``exponent``.
+
+    Parameters
+    ----------
+    %(_linear_doc)
+    exponent : array_like
+        Exponent (degree) of the underlying polynomial function.
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Exponential
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Polynomial(1.5, 2., 1., 2.)
+    >>> k(x,x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[  6.25,  38.25],
+           [ 38.25, 678.25]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -941,27 +1034,61 @@ class Polynomial(Covariance):
 
     @property
     def slope_variance(self) -> Union[ArrayLike, float]:
-        r"""`slope_variance` of the kernel."""
+        r"""``slope_variance`` parameter of the kernel."""
         return self._slope_variance
 
     @property
     def bias_variance(self) -> Union[ArrayLike, float]:
-        r"""`bias_variance` of the kernel."""
+        r"""``bias_variance`` parameter of the kernel."""
         return self._bias_variance
 
     @property
     def shift(self) -> Union[ArrayLike, float]:
-        r"""`shift` of the kernel."""
+        r"""``shift`` parameter of the kernel."""
         return self._shift
 
     @property
     def exponent(self) -> Union[ArrayLike, float]:
-        r"""`exponent` of the kernel."""
+        r"""``exponent`` parameter of the kernel."""
         return self.exponent
 
 
+@_build_docs
 class Periodic(Covariance):
-    """docs."""
+    r"""
+    Periodic aka Exponential Sine Squared Kernel.
+
+    Periodic kernel comes from Periodic Family of kernels. This kernels occilates
+    in space with a period of ``T`` as a function of ``sin`` wave. This kernel is used
+    mostly for time-series and other temporal prediction tasks. This kernel can be
+    expressed as:
+
+    .. math::
+
+        k(x, x') = \sigma^2 \exp\left(-\frac{\sin^2\left(\frac{\pi\|x-x'\|^2}
+                   {T}\right)}{2\ell^2}\right)
+
+    Parameters
+    ----------
+    %(_ls_amp_doc)
+    %(_period_doc)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Periodic
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Periodic(1., 1., 1.)
+    >>> k(x,x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1., 1.],
+           [1., 1.]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -999,8 +1126,33 @@ class Periodic(Covariance):
         return self._period
 
 
+@_build_docs
 class Exponential(Stationary):
-    """docs."""
+    r"""Exponential Kernel.
+
+    This kernel is used as an alternative to the ``ExpQuad`` kernel.
+    TODO: add more discription later...
+
+    Parameters
+    ----------
+    %(_ls_amp_doc)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Exponential
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Exponential(1., 1.)
+    >>> k(x,x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[0.9999995 , 0.24311674],
+           [0.24311674, 0.9999995 ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -1031,8 +1183,49 @@ class Exponential(Stationary):
         return self._amplitude
 
 
+@_build_docs
 class Gibbs(Covariance):
-    """docs."""
+    r"""
+    Gibbs Non-Stationary kernel.
+
+    This kernel uses length-scales that are function of the input.
+    Hence, this comes from the family of non-stationary kernels. It
+    is computationally expensive but provides a very flexible function
+    using which very complex data can be modelled.
+
+    .. math::
+
+        k(x, x') = \sqrt{\frac{2\ell(x)\ell(x')}{\ell^2(x) + \ell^2(x')}}
+                   \mathrm{exp}\left( -\frac{(x - x')^2}
+                   {\ell^2(x) + \ell^2(x')} \right)
+
+    Parameters
+    ----------
+    length_scale_fn : callable
+        This is a function of the inputs which outputs a ``array_like``
+        object which are the length-scales to be used for that particular
+        input. The output must have the same shape or a broadcastable shape
+        with the input.
+    fn_args : tuple, optional
+        A tuple of other arguments to be passed to the function. If None,
+        defaults to passing no extra arguments.
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Gibbs
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Gibbs(lambda x: tf.ones(x.shape))
+    >>> k(x,x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1.        , 0.01831564],
+           [0.01831564, 1.        ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -1060,8 +1253,35 @@ class Gibbs(Covariance):
         )
 
 
+@_build_docs
 class Cosine(Covariance):
-    """docs."""
+    r"""
+    Cosine kernel.
+
+    This kernel is a part of the Periodic Kenrels. It evaluates a cosine
+    function to evauluate the covariance function.
+
+    Parameters
+    ----------
+    %(_ls_amp_doc)
+    %(_period_doc)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Cosine
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Cosine(1.)
+    >>> k(x,x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1.        , 0.47307032],
+           [0.47307032, 1.        ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,

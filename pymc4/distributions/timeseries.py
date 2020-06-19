@@ -27,10 +27,9 @@ class AR(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.AR('x', num_timesteps=50, coefficients=[0.2, -0.8], level_scale=-0.2)
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.AR('x', num_timesteps=50, coefficients=[0.2, -0.8], level_scale=-0.2)
     """
 
     def __init__(

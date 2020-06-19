@@ -16,58 +16,62 @@ __all__ = ["HalfStudentT"]
 
 
 class HalfStudentT(distribution.Distribution):
-    """Half-Student's t distribution.
+    r"""
+    Half-Student's t distribution.
 
-    The half-Student's t distribution is parameterized by degree of freedom `df,
-    location `loc`, and `scale`. It represents the right half of the two symmetric
-    halves in a
-    [Student's t distribution](https://en.wikipedia.org/wiki/Student%27s_t-distribution).
+    The half-Student's t distribution is parameterized by degree of freedom ``df``,
+    location ``loc``, and ``scale``. It represents the right half of the two symmetric
+    halves in a [Student's t distribution](https://en.wikipedia.org/wiki/Student%27s_t-distribution).
 
-    #### Mathematical Details
     The probability density function (pdf) for the half-Student's t distribution
     is given by
 
-    ```none
-    pdf(x; df, loc, scale) = 2 (1 + y**2 / df)**(-0.5 (df + 1)) / Z
-    where,
-    y = (x - loc) / scale
-    Z = abs(scale) sqrt(df pi) Gamma(0.5 df) / Gamma(0.5 (df + 1))
-    ```
+    .. math::
 
-    where `Gamma` is the
-    [gamma function](https://en.wikipedia.org/wiki/Gamma_function).
+        pdf(x \mid \nu, \mu, \sigma) = 2 \frac{(\frac{1 + y^2}{\nu})^{-0.5 (\nu + 1)}}{Z}
 
-    The support of the distribution is given by the interval `[loc, infinity)`.
+    where
+    :math:`y = \frac{x - \mu}{\sigma}`,
+    :math:`Z = \|\sigma\| \sqrt(\nu \pi) \Gamma(0.5 \nu) / \Gamma(0.5 (\nu + 1))`
 
+    where :math:`\Gamma` is the [gamma function](https://en.wikipedia.org/wiki/Gamma_function).
+
+    The support of the distribution is given by the interval :math:`[loc, infinity)`.
     """
 
     def __init__(
         self, df, loc, scale, validate_args=False, allow_nan_stats=True, name="HalfStudentT"
     ):
-        """Construct a half-Student's t distribution with `df`, `loc` and `scale`.
+        r"""
+        Construct a half-Student's t distribution with ``df``, ``loc`` and ``scale``.
 
-        Args
-        ----
-            df: Floating-point `Tensor`. The degrees of freedom of the
-                distribution(s). `df` must contain only positive values.
-            loc: Floating-point `Tensor`; the location(s) of the distribution(s).
-            scale: Floating-point `Tensor`; the scale(s) of the distribution(s).
-                Must contain only positive values.
-            validate_args: Python `bool`, default `False`. When `True` distribution
-                parameters are checked for validity despite possibly degrading runtime
-                performance. When `False` invalid inputs may silently render incorrect
-                outputs. Default value: `False` (i.e. do not validate args).
-            allow_nan_stats: Python `bool`, default `True`. When `True`, statistics
-                (e.g., mean, mode, variance) use the value "`NaN`" to indicate the
-                result is undefined. When `False`, an exception is raised if one or
-                more of the statistic's batch members are undefined.
-                Default value: `True`.
-            name: Python `str` name prefixed to Ops created by this class.
-                Default value: 'HalfStudentT'.
+        Parameters
+        ----------
+        df: Floating-point ``Tensor``
+            The degrees of freedom of the distribution(s).
+            ``df`` must contain only positive values.
+        loc: Floating-point ``Tensor``
+            The location(s) of the distribution(s).
+        scale: Floating-point ``Tensor``
+            The scale(s) of the distribution(s).
+            Must contain only positive values.
+        validate_args: bool, optional
+            When ``True`` distribution parameters are checked for validity despite
+            possibly degrading runtime performance. When ``False`` invalid inputs
+            may silently render incorrect outputs.
+            Default value: ``False`` (i.e. do not validate args).
+        allow_nan_stats: bool, optional
+            When ``True``, statistics (e.g., mean, mode, variance) use the value
+            "``NaN``" to indicate the result is undefined. When ``False``, an
+            exception is raised if one or more of the statistic's batch members
+            are undefined. Default value: ``True``.
+        name: str, optional
+            Name prefixed to Ops created by this class.
+            Default value: 'HalfStudentT'.
 
         Raises
         ------
-            TypeError: if `df`, loc`, or `scale` are different dtypes
+            TypeError: if ``df``, ``loc``, or ``scale`` are different dtypes
         """
 
         parameters = dict(locals())
@@ -182,12 +186,15 @@ class HalfStudentT(distribution.Distribution):
         return tf.where(x < loc, dtype_util.as_numpy_dtype(self.dtype)(-np.inf), 2.0 - 2 * neg_cdf)
 
     @distribution_util.AppendDocstring(
-        """The mean of half Student's T equals
-        ```
-        2 sigma sqrt(df / pi) Gamma((df + 1) / 2) / (Gamma(df/2)(df - 1))
-        ```
-        if `df > 1`, otherwise it is `NaN`. If `self.allow_nan_stats=True`, then
-        an exception will be raised rather than returning `NaN`."""
+        r"""
+        The mean of half Student's T equals
+
+        .. math::
+
+            2 \\sigma \\frac{\\sqrt(\\frac{\\nu}{pi})\\Gamma(\\frac{df + 1}{2})}{\\(Gamma(df/2 (df - 1))}
+
+        if ``df > 1``, otherwise it is ``NaN``. If ``self.allow_nan_stats=True``, then
+        an exception will be raised rather than returning ``NaN``."""
     )
     def _mean(self):
         df = tf.convert_to_tensor(self.df)
@@ -218,15 +225,14 @@ class HalfStudentT(distribution.Distribution):
 
     @distribution_util.AppendDocstring(
         """
-      The variance for half Student's T equals
+        The variance for half Student's T equals
 
-      ```
-      scale^2 (df / (df - 2) - 4 df / (pi (df - 1)^2)(Gamma((df + 1) / 2)) / Gamma(df / 2))^2),
-        when df > 2
-      infinity, when 1 < df <= 2
-      NaN, when df <= 1
-      ```
-      """
+        ``scale^2 (df / (df - 2) - 4 df / (pi (df - 1)^2)(Gamma((df + 1) / 2)) / Gamma(df / 2))^2)``
+
+        when ``df > 2``
+        ``infinity``, when ``1 < df <= 2``
+        ``NaN``, when ``df <= 1``
+        """
     )
     def _variance(self):
         df = tf.convert_to_tensor(self.df)

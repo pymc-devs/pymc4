@@ -97,11 +97,6 @@ class LKJ(ContinuousDistribution):
         "Generating random correlation matrices based on vines and
         extended onion method." Journal of multivariate analysis,
         100(9), pp.1989-2001.
-
-    Developer Notes
-    ---------------
-    Unlike PyMC3's implementation, the LKJ distribution in PyMC4 returns fully
-    populated covariance matrices, rather than upper triangle matrices.
     """
 
     def __init__(self, name, dimension, concentration, **kwargs):
@@ -191,13 +186,6 @@ class MvNormal(ContinuousDistribution):
         covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
         mu = np.zeros(2)
         vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
-
-    Developer Notes
-    ---------------
-    ``MvNormal`` is based on TensorFlow Probability's
-    ``MultivariateNormalTriL``, in which the lower triangular cholesky
-    decomposition of the full covariance matrix is used but full covariance
-    must be specified.
     """
 
     def __init__(self, name, loc, covariance_matrix, **kwargs):
@@ -320,7 +308,7 @@ class LKJCholesky(ContinuousDistribution):
 
     References
     ----------
-    .. [LKJ2009] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+    .. [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
         "Generating random correlation matrices based on vines and
         extended onion method." Journal of multivariate analysis,
         100(9), pp.1989-2001.
@@ -375,11 +363,6 @@ class MvNormalCholesky(ContinuousDistribution):
         chol_factor = np.linalg.cholesky(covariance_matrix)
         mu = np.zeros(2)
         vals = pm.MvNormalCholesky('vals', loc=loc, scale=chol_factor)
-
-    Developer Notes
-    ---------------
-    ``MvNormalCholesky`` is based on TensorFlow Probability's
-    ``MultivariateNormalTriL``.
     """
 
     def __init__(self, name, loc, scale_tril, **kwargs):

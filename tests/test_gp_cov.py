@@ -103,6 +103,55 @@ COV_FUNCS = [
             "feature_ndims": 1,
         },
     ),
+    (
+        "Linear",
+        {
+            "bias_variance": 1.0,
+            "slope_variance": 1.0,
+            "shift": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[2.0, 4.0], [4.0, 14.0]], dtype=np.float32),
+            "expected_point": np.array([2.0, 14.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Polynomial",
+        {
+            "bias_variance": 1.0,
+            "slope_variance": 1.0,
+            "shift": 1.0,
+            "exponent": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[2.0, 4.0], [4.0, 14.0]], dtype=np.float32),
+            "expected_point": np.array([2.0, 14.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Cosine",
+        {
+            "length_scale": 1.0,
+            "amplitude": 1.0,
+            "period": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.47307032], [0.47307032, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Periodic",
+        {
+            "length_scale": 1.0,
+            "amplitude": 1.0,
+            "period": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 1.0], [1.0, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
 ]
 
 

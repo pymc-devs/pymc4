@@ -1,4 +1,8 @@
-"""Covariance Functions for PyMC4's Gaussian Process module."""
+"""Covariance Functions for PyMC4's Gaussian Process module.
+
+Wraps `tensorflow_probability.python.math.psd_kernels` module and provided
+many more kernels with all necessary features to work with Gaussian processes.
+"""
 
 from typing import Union, Optional, Any, List, Callable
 from collections.abc import Iterable
@@ -57,13 +61,36 @@ _common_doc = """feature_ndims : int
         are considered for evaluation.
     scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD). Ignored if keyword argument ARD=False.
-"""
+        performing Automatic Relevence Detection (ARD). Ignored if keyword argument `ARD=False`."""
 
 _note_doc = """ARD (automatic relevence detection) is done if the parameter `length_scale`
     is a vector or a tensor. To disable this behaviour, a keyword argument
-    `ARD=False` needs to be passed.
-"""
+    `ARD=False` needs to be passed."""
+
+_ls_amp_doc = """length_scale : array_like
+        The length-scale ℓ determines the length of the 'wiggles' in your function. In general,
+        you won't be able to extrapolate more than ℓ units away from your data. If a float,
+        an isotropic kernel is used. If an array and `ARD=True`, an anisotropic kernel
+        is used where each dimension defines the length-scale of the respective feature dimension.
+    amplitude : array_like, optional
+        Amplitude is a scaling factor that determines the average distance of your function away
+        from your mean. Every kernel has this parameter out in its front. If a float,
+        an isotropic kernel is used. If an array and `ARD=True`, an anisotropic kernel
+        is used where each dimension defines the amplitude of the respective feature dimension.
+        (default=1)"""
+
+_period_doc = """period : array_like, optional
+        This paramerer defines the period of a periodic kernel. It controls how often your
+        data repeats where data contains an axis of time and is used for time serias and
+        temporal prediction tasks. If a float, an isotropic kernel is used. If an array and
+        `ARD=True`, an anisotropic kernel is used where each dimension defines the period
+        of the respective feature dimension. (default=1)"""
+
+_matern_doc = """Matern family of kernels is a generalization over the RBF family of kernels.
+    The :math:`\nu` parameter controls the smoothness of the kernel function. Higher
+    values of :math:`\nu` result in a more smooth function. The most common values
+    of :math:`\nu` are 0.5, 1.5 and 2.5 as the modified Bessel's function is analytical
+    there."""
 
 
 @_build_docs
@@ -372,10 +399,7 @@ class ExpQuad(Stationary):
 
     Parameters
     ----------
-    length_scale : array_like
-        The :math:`l` parameter of the RBF kernel, length_scale > 0.
-    amplitude : array_like, optional
-        The :math:`\sigma` parameter of RBF kernel, amplitude > 0. (default=1)
+    %(_ls_amp_doc)
     %(_common_doc)
 
     Other Parameters
@@ -393,8 +417,8 @@ class ExpQuad(Stationary):
     >>> kernel(X1, X2)
     <tf.Tensor: shape=(3, 3), dtype=float32, numpy=
     array([[0.13533528, 0.60653067, 1.        ],
-        [0.60653067, 1.        , 0.60653067],
-        [1.        , 0.60653067, 0.13533528]], dtype=float32)>
+           [0.60653067, 1.        , 0.60653067],
+           [1.        , 0.60653067, 0.13533528]], dtype=float32)>
     >>> kernel.evaluate_kernel(X1, X2)
     <tf.Tensor: shape=(3,), dtype=float32, numpy=array([0.13533528, 1.        , 0.13533528], dtype=float32)>
 
@@ -472,8 +496,8 @@ class Constant(Stationary):
     >>> k(X1, X2)
     <tf.Tensor: shape=(3, 3), dtype=float32, numpy=
     array([[5., 5., 5.],
-        [5., 5., 5.],
-        [5., 5., 5.]], dtype=float32)>
+           [5., 5., 5.],
+           [5., 5., 5.]], dtype=float32)>
 
     Notes
     -----
@@ -539,7 +563,7 @@ class WhiteNoise(Stationary):
     >>> k(X1, X2)
     <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
     array([[1.e-04, 0.e+00],
-        [0.e+00, 1.e-04]], dtype=float32)>
+           [0.e+00, 1.e-04]], dtype=float32)>
 
     Notes
     -----
@@ -571,8 +595,46 @@ class WhiteNoise(Stationary):
         return self._noise
 
 
+@_build_docs
 class RatQuad(Stationary):
-    """docs."""
+    r"""
+    Rational Quadratic Kernel.
+
+    This kernel belongs to the RBF Family of kernels and is a generalization
+    over the `ExpQuad` kernel. `scale_mixtue_rate` parameter controls the
+    mixture of length-scales to use. This kernel becomes equavalent to the
+    `ExpQuad` kernel when `scale_mixtue_rate` approaches infinity.
+
+    .. math::
+        k(x, x') = \sigma^2 \left(1 + \frac{\|x-x'\|^2}{2\alpha l^2}\right)^{\alpha}
+
+    where :math:`\alpha` = `scale_mixture_rate`, :math:`l` = `length_scale` and
+    :math:`\sigma` = `amplitude`.
+
+    Parameters
+    ----------
+    %(_ls_amp_doc)
+    scale_mixture_rate: array_like, optional
+        The mixture of length-scales to use. Equivalent to adding `ExpQuad`
+        kernels with different `length_scale`s. When this parameter approaches
+        infinity, it becomes equivalent to the `ExpQuad` kernel. (default=1)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import RatQuad
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = RatQuad(length_scale=1.)
+    >>> k(x, x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1.        , 0.19999999],
+           [0.19999999, 1.        ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -611,8 +673,38 @@ class RatQuad(Stationary):
         return self._scale_mixture_rate
 
 
+@_build_docs
 class Matern12(Stationary):
-    """docs."""
+    r"""
+    Matern 1/2 kernel.
+
+    %(_matern_doc)
+
+    This kernel has the value of :math:`nu` = 0.5. It can be analytically shown as:
+
+    .. math::
+        k(x, x') = \sigma^2\mathrm{exp}\left( -\frac{\|x - x'\|^2}{\ell} \right)
+
+    Parameters
+    ----------
+    %(_ls_amp_doc)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Matern12
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Matern12(1.)
+    >>> k(x, x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1.        , 0.05910575],
+           [0.05910575, 1.        ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -643,8 +735,39 @@ class Matern12(Stationary):
         return self._amplitude
 
 
+@_build_docs
 class Matern32(Stationary):
-    """docs."""
+    r"""
+    Matern 3/2 kernel.
+
+    %(_matern_doc)
+
+    This kernel has the value of :math:`nu` = 1.5. It can be analytically shown as:
+
+    .. math::
+        k(x, x') = \left(1 + \frac{\sqrt{3(x - x')^2}}{\ell}\right)
+                   \mathrm{exp}\left( - \frac{\sqrt{3(x - x')^2}}{\ell} \right)
+
+    Parameters
+    ----------
+    %(_ls_amp_doc)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Matern32
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Matern32(1.)
+    >>> k(x, x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1.        , 0.0439721],
+           [0.0439721, 1.        ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,
@@ -675,8 +798,40 @@ class Matern32(Stationary):
         return self._amplitude
 
 
+@_build_docs
 class Matern52(Stationary):
-    """docs."""
+    r"""
+    Matern 5/2 kernel.
+
+    %(_matern_doc)
+
+    This kernel has the value of :math:`nu` = 2.5. It can be analytically shown as:
+
+    .. math::
+        k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} +
+                   \frac{5(x-x')^2}{3\ell^2}\right)
+                   \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
+
+    Parameters
+    ----------
+    %(_ls_amp_doc)
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import Matern52
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k = Matern52(1.)
+    >>> k(x, x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[1.        , 0.03701403],
+           [0.03701403, 1.        ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
 
     def __init__(
         self,

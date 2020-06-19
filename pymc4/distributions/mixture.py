@@ -4,6 +4,8 @@ distributions.
 Wraps tfd.Mixture as pm.Mixture
 """
 
+import collections.abc
+
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import Distribution
@@ -38,24 +40,19 @@ class Mixture(Distribution):
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         p, d = conditions["p"], conditions["distributions"]
-        # if 'd' is a list of pymc distributions, then use the underlying
+        # if 'd' is a sequence of pymc distributions, then use the underlying
         # tfp distributions for the mixture
-        if isinstance(d, list):
-            distributions = [el._distribution for el in d]
-        # if 'd' is a pymc distribution with batch_size > 1, then build
-        # K tfp distributions for tfd.mixture
+        if isinstance(d, (list, tuple)):
+            if any(not isinstance(el, Distribution) for el in d):
+                raise TypeError(
+                    "every element in 'distribution' needs to be a pymc4.Distribution object"
+                )
+            distr, mixture = [el._distribution for el in d], tfd.Mixture
+        # else if 'd' is a pymc distribution with batch_size > 1
+        elif isinstance(d, Distribution):
+            distr, mixture = d._distribution, tfd.MixtureSameFamily
         else:
-            # get class of tfd distribution, i.e. Normal/Poisson/etc.
-            ty = type(d._distribution)
-            # construct list of tfp distributions
-            distributions = []
-            for i in range(d.batch_shape[0]):
-                params = {}
-                # build parameters for every component of the mixture
-                for k, v in d.conditions.items():
-                    v = tf.convert_to_tensor(v, dtype_hint="float32")
-                    params[k] = v[i] if len(v.shape) else v
-                # create new tfd distribution with parameter
-                distributions.append(ty(**params))
-
-        return tfd.Mixture(cat=tfd.Categorical(probs=p), components=distributions, **kwargs)
+            raise TypeError(
+                "'distribution' needs to be a pymc4.Distribution object or a list of distributions"
+            )
+        return mixture(tfd.Categorical(probs=p), distr, **kwargs)

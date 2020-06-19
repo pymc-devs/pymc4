@@ -4,10 +4,8 @@ distributions.
 Wraps tfd.Mixture as pm.Mixture
 """
 
-import collections.abc
-
-import tensorflow as tf
 from tensorflow_probability import distributions as tfd
+
 from pymc4.distributions.distribution import Distribution
 
 

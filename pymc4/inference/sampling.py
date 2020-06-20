@@ -1,4 +1,5 @@
 import functools
+import logging
 from typing import Optional, Dict, Any
 import tensorflow as tf
 from tensorflow_probability import mcmc
@@ -6,8 +7,17 @@ from pymc4.inference import trace_support
 from tensorflow_probability.python.mcmc import sample as mcmc_sample
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz
+from pymc4.inference.utils import (
+    initialize_sampling_state,
+    trace_to_arviz,
+    vectorize_logp_function,
+    tile_init,
+)
 from pymc4.utils import NameParts
+from pymc4.inference import smc
+
+_log = logging.getLogger('pymc3')
+
 
 
 def sample(
@@ -16,11 +26,13 @@ def sample(
     num_chains: int = 10,
     burn_in: int = 100,
     step_size: float = 0.1,
+    initialize_smc=False,
     observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
     nuts_kwargs: Optional[Dict[str, Any]] = None,
     adaptation_kwargs: Optional[Dict[str, Any]] = None,
     sample_chain_kwargs: Optional[Dict[str, Any]] = None,
+    smc_kwargs: Optional[Dict[str, Any]] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
     progressbar=False,
@@ -180,7 +192,13 @@ def sample(
         return results, sample_stats
 
     if progressbar is False:
-        run_chains = tf.function(run_chains, autograph=True, experimental_compile=xla)
+        run_chains = tf.function(run_chains, autograph=False, experimental_compile=xla)
+
+    if initialize_smc is True:
+        _log.info("Starting SMC initialization")
+        final_state = smc.sample_smc(model, **(smc_kwargs or dict()))
+        step_size = [tf.math.reduce_std(x) for x in final_state]
+        _log.info("SMC initialization completed")
 
     if xla:
         results, sample_stats = tf.xla.experimental.compile(
@@ -218,7 +236,9 @@ def build_logp_and_deterministic_functions(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
 
-    state, deterministic_names = initialize_sampling_state(model, observed=observed, state=state)
+    state, deterministic_names = initialize_sampling_state(
+        model, observed=observed, state=state, num_chains=None
+    )
 
     if not state.all_unobserved_values:
         raise ValueError(
@@ -228,19 +248,7 @@ def build_logp_and_deterministic_functions(
     observed_var = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
-    if collect_reduced_log_prob:
-
-        @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-            _, st = flow.evaluate_model_transformed(model, state=st)
-            return st.collect_log_prob()
-
-    else:
+    if not collect_reduced_log_prob:
         # When we use manual batching, we need to manually tile the chains axis
         # to the left of the observed tensors
         if num_chains is not None:
@@ -254,15 +262,15 @@ def build_logp_and_deterministic_functions(
                 o = tf.tile(o[None, ...], [num_chains] + [1] * o.ndim)
                 observed[k] = o
 
-        @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-            _, st = flow.evaluate_model_transformed(model, state=st)
-            return st.collect_unreduced_log_prob()
+    @tf.function(autograph=False)
+    def logpfn(*values, **kwargs):
+        if kwargs and values:
+            raise TypeError("Either list state should be passed or a dict one")
+        elif values:
+            kwargs = dict(zip(unobserved_keys, values))
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        _, st = flow.evaluate_model_transformed(model, state=st)
+        return st.collect_log_prob(is_reduced=collect_reduced_log_prob)
 
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):
@@ -284,15 +292,3 @@ def build_logp_and_deterministic_functions(
         deterministic_names,
         state,
     )
-
-
-def vectorize_logp_function(logpfn):
-    # TODO: vectorize with dict
-    def vectorized_logpfn(*state):
-        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
-
-    return vectorized_logpfn
-
-
-def tile_init(init, num_repeats):
-    return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]

@@ -61,7 +61,7 @@ class BatchStacker(distribution_lib.Distribution):
     --------------------
     The probability function is,
 
-    .. math:: 
+    .. math::
         p(x) = prod{ p(x[i]) : i = 0, ..., (n - 1) }
 
     Examples
@@ -78,7 +78,7 @@ class BatchStacker(distribution_lib.Distribution):
     >>> lp = s.log_prob(x)
     >>> lp.shape.as_list()
     [5]
-    
+
     Example 2: `[5, 4]`-draws of a bivariate Normal.
 
     >>> s = tfd.BatchStacker(
@@ -211,7 +211,7 @@ def _kl_sample(a: BatchStacker, b: BatchStacker, name: str = "kl_sample") -> tf.
         KL(BatchStacker(a) || BatchStacker(b)) = \sum(KL(a || b))
 
     where the :math:`\sum` is over the ``batch_stack`` dims.
-    
+
     Parameters
     ----------
     a : BatchStacker

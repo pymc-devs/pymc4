@@ -1,4 +1,5 @@
 import types
+import functools
 from typing import Any, Tuple, Dict, Union, List, Optional, Set, Mapping
 from collections import ChainMap
 import itertools
@@ -97,11 +98,16 @@ class SamplingState:
     __slots__ = (
         "transformed_values",
         "untransformed_values",
+        "transformed_values_batched",
+        "untransformed_values_batched",
         "observed_values",
         "posterior_predictives",
         "all_values",
         "all_unobserved_values",
+        "all_unobserved_values_batched",
         "distributions",
+        "prior_distributions",
+        "lkh_distributions",
         "potentials",
         "deterministics",
     )
@@ -115,6 +121,8 @@ class SamplingState:
         potentials: List[distribution.Potential] = None,
         deterministics: Dict[str, Any] = None,
         posterior_predictives: Optional[Set[str]] = None,
+        transformed_values_batched: Dict[str, Any] = None,
+        untransformed_values_batched: Dict[str, Any] = None,
     ) -> None:
         # verbose __init__
         if transformed_values is None:
@@ -125,6 +133,14 @@ class SamplingState:
             untransformed_values = dict()
         else:
             untransformed_values = untransformed_values.copy()
+        if transformed_values_batched is None:
+            transformed_values_batched = dict()
+        else:
+            transformed_values_batched = transformed_values_batched.copy()
+        if untransformed_values_batched is None:
+            untransformed_values_batched = dict()
+        else:
+            untransformed_values_batched = untransformed_values_batched.copy()
         if observed_values is None:
             observed_values = dict()
         else:
@@ -148,11 +164,23 @@ class SamplingState:
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
+
+        self.transformed_values_batched = transformed_values_batched
+        self.untransformed_values_batched = untransformed_values_batched
+
         self.all_values = ChainMap(
             self.untransformed_values, self.transformed_values, self.observed_values
         )
-        self.all_unobserved_values = ChainMap(self.transformed_values, self.untransformed_values)
+
+        self.all_unobserved_values = ChainMap(self.untransformed_values, self.transformed_values)
+        self.all_unobserved_values_batched = ChainMap(
+            self.transformed_values_batched, self.untransformed_values_batched
+        )
+
         self.distributions = distributions
+        self.prior_distributions = {}
+        self.lkh_distributions = {}
+
         self.potentials = potentials
         self.deterministics = deterministics
         self.posterior_predictives = posterior_predictives
@@ -163,11 +191,51 @@ class SamplingState:
             (p.value for p in self.potentials),
         )
 
-    def collect_log_prob(self):
-        return sum(map(tf.reduce_sum, self.collect_log_prob_elemwise()))
+    def collect_log_prob(self, is_reduced=True):
+        if is_reduced:
+            return sum(map(tf.reduce_sum, self.collect_log_prob_elemwise()))
+        else:
+            return sum(self.collect_log_prob_elemwise())
 
-    def collect_unreduced_log_prob(self):
-        return sum(self.collect_log_prob_elemwise())
+    def collect_log_prob_elemwise_lp(self, distrs, is_prior=False):
+        if is_prior is True:
+            # TODO: better logic here
+            return (
+                tf.reduce_sum(
+                    dist.log_prob(
+                        tf.transpose(
+                            self.all_values[name],
+                            [1, 0, *[i_ for i_ in range(2, len(self.all_values[name].shape))]],
+                        )
+                    ),
+                    axis=[0, *[i_ for i_ in range(2, len(self.all_values[name].shape))]],
+                )
+                for name, dist in distrs.items()
+            )
+        return (dist.log_prob(self.all_values[name]) for name, dist in distrs.items())
+
+    def collect_log_prob_smc(self, is_prior, is_reduced=True):
+        def reduce_sum_smc(value):
+            shape = value.shape
+            # Because of the different logic with reduce sum
+            # it is not possible to merge two log prob ops
+            # so for now we are separating them with the logic
+            # of executing smc log ops and sampling log prob ops
+            return tf.reduce_sum(value, axis=range(1, len(shape)))
+
+        if is_prior is True:
+            distrs = self.prior_distributions
+            log_prob_elemwise = self.collect_log_prob_elemwise_lp(distrs)
+        else:
+            distrs = self.lkh_distributions
+            temp_elemw = self.collect_log_prob_elemwise_lp(distrs, is_prior=True)
+            log_prob_elemwise = itertools.chain(temp_elemw, (p.value for p in self.potentials))
+
+        if is_prior:
+            log_prob = sum(map(reduce_sum_smc, log_prob_elemwise))
+        else:
+            log_prob = sum(log_prob_elemwise)
+        return log_prob
 
     def __repr__(self):
         # display keys only
@@ -180,6 +248,15 @@ class SamplingState:
         distributions = [
             "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
         ]
+
+        prior_distributions = [
+            "{}:{}".format(d.__class__.__name__, k) for k, d in self.prior_distributions.items()
+        ]
+
+        lkh_distributions = [
+            "{}:{}".format(d.__class__.__name__, k) for k, d in self.lkh_distributions.items()
+        ]
+
         # be less verbose here
         num_potentials = len(self.potentials)
         indent = 4 * " "
@@ -194,6 +271,10 @@ class SamplingState:
             + indent
             + "distributions: {}\n"
             + indent
+            + "prior_distributions: {}\n"
+            + indent
+            + "lkh_distributions: {}\n"
+            + indent
             + "num_potentials={}\n"
             + indent
             + "deterministics: {}\n"
@@ -205,6 +286,8 @@ class SamplingState:
             transformed_values,
             observed_values,
             distributions,
+            prior_distributions,
+            lkh_distributions,
             num_potentials,
             deterministics,
             posterior_predictives,
@@ -218,6 +301,8 @@ class SamplingState:
             return cls(observed_values=observed_values)
         transformed_values = dict()
         untransformed_values = dict()
+        transformed_values_batched = dict()
+        untransformed_values_batched = dict()
         # split by `nest/name` or `nest/__transform_name`
         for fullname in values:
             namespec = utils.NameParts.from_name(fullname)
@@ -225,7 +310,13 @@ class SamplingState:
                 transformed_values[fullname] = values[fullname]
             else:
                 untransformed_values[fullname] = values[fullname]
-        return cls(transformed_values, untransformed_values, observed_values)
+        return cls(
+            transformed_values,
+            untransformed_values,
+            observed_values,
+            transformed_values_batched=transformed_values_batched,
+            untransformed_values_batched=untransformed_values_batched,
+        )
 
     def clone(self) -> "SamplingState":
         return self.__class__(
@@ -238,7 +329,7 @@ class SamplingState:
             posterior_predictives=self.posterior_predictives,
         )
 
-    def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":
+    def as_sampling_state(self, first_smc_run=False) -> "Tuple[SamplingState, List[str]]":
         """Create a sampling state that should be used within MCMC sampling.
 
         There are some principles that hold for the state.
@@ -290,6 +381,8 @@ class SamplingState:
             self.__class__(
                 transformed_values=transformed_values,
                 untransformed_values=untransformed_values,
+                transformed_values_batched=self.transformed_values_batched.copy(),
+                untransformed_values_batched=self.untransformed_values_batched.copy(),
                 observed_values=observed_values,
             ),
             need_to_transform_after,
@@ -306,6 +399,9 @@ class SamplingExecutor:
     This executor performs model evaluation in the untransformed space. Class structure is convenient since its
     subclass :class:`TransformedSamplingExecutor` will reuse some parts from parent class and extending functionality.
     """
+
+    def __init__(self):
+        self.mode = "base"
 
     def validate_return_object(self, return_object: Any):
         if isinstance(return_object, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
@@ -332,6 +428,8 @@ class SamplingExecutor:
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
+        num_chains: Optional[int] = 1,
+        first_smc_run: Optional[bool] = False,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -484,14 +582,22 @@ class SamplingExecutor:
                     elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(
-                                dist, state, sample_shape=sample_shape
+                                dist,
+                                state,
+                                sample_shape=sample_shape,
+                                num_chains=num_chains,
+                                first_smc_run=first_smc_run,
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
-                            dist, state=state, _validate_state=False, sample_shape=sample_shape
+                            dist,
+                            state=state,
+                            _validate_state=False,
+                            sample_shape=sample_shape,
+                            num_chains=num_chains,
                         )
                     else:
                         err = EvaluationError(
@@ -535,6 +641,10 @@ class SamplingExecutor:
         return SamplingState.from_values(values=values, observed_values=observed)
 
     def validate_state(self, state):
+        """
+            TODO: we can move all the logic from transformed_exector.py
+            here but then additional statement will be added
+        """
         if state.transformed_values:
             raise ValueError(
                 "untransformed executor should not contain "
@@ -551,8 +661,14 @@ class SamplingExecutor:
         dist: distribution.Distribution,
         state: SamplingState,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
+        num_chains: Optional[int] = 1,
+        first_smc_run: Optional[bool] = False,
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
+        sample_func = dist.sample
+        if self.mode == "meta":
+            sample_func = dist.get_test_sample
+
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")
         scoped_name = scopes.variable_name(dist.name)
@@ -577,11 +693,20 @@ class SamplingExecutor:
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
                     if dist.is_root:
-                        return_value = state.untransformed_values[scoped_name] = dist.sample(
-                            sample_shape=sample_shape
+                        if first_smc_run:
+                            state.untransformed_values_batched[scoped_name] = sample_func(
+                                sample_shape=(num_chains,) + sample_shape
+                                if num_chains
+                                else sample_shape
+                            )
+                        return_value = state.untransformed_values[scoped_name] = sample_func(
+                            sample_shape
                         )
                     else:
-                        return_value = state.untransformed_values[scoped_name] = dist.sample()
+                        state.untransformed_values_batched[scoped_name] = sample_func(
+                            (num_chains,) if num_chains else ()
+                        )
+                        return_value = state.untransformed_values[scoped_name] = sample_func()
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -596,17 +721,25 @@ class SamplingExecutor:
                             scoped_name
                         )
                     )
-                assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
+                # assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
                 return_value = state.observed_values[scoped_name] = observed_variable
+            state.lkh_distributions[scoped_name] = dist
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
+            state.prior_distributions[scoped_name] = dist
         else:
             if dist.is_root:
-                return_value = state.untransformed_values[scoped_name] = dist.sample(
-                    sample_shape=sample_shape
-                )
+                if first_smc_run:
+                    state.untransformed_values_batched[scoped_name] = sample_func(
+                        sample_shape=(num_chains,) + sample_shape if num_chains else sample_shape
+                    )
+                return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
             else:
-                return_value = state.untransformed_values[scoped_name] = dist.sample()
+                state.untransformed_values_batched[scoped_name] = sample_func(
+                    (num_chains,) if num_chains else ()
+                )
+                return_value = state.untransformed_values[scoped_name] = sample_func()
+            state.prior_distributions[scoped_name] = dist
         state.distributions[scoped_name] = dist
         return return_value, state
 
@@ -677,7 +810,7 @@ def assert_values_compatible_with_distribution(
     scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
-    
+
     A distribution's shape, ``dist_shape``, is made up by the sum of
     the ``batch_shape`` and the ``event_shape``.
 
@@ -755,6 +888,7 @@ def assert_values_compatible_with_distribution_shape(
     dist_shape = batch_shape + event_shape
     value_rank = value_shape.rank
     dist_rank = dist_shape.rank
+
     # TODO: Make the or condition less ugly but at the same time compatible with
     # tf.function. tf.math.maximum makes things kind of weird and raises errors
     if (

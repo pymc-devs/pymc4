@@ -19,5 +19,7 @@ from .forward_sampling import sample_prior_predictive, sample_posterior_predicti
 from .inference.sampling import sample
 from . import gp
 from .inference import trace_support
-
+from .inference.smc import sample_smc
+from .inference import smc
+from .inference import sampling
 __version__ = "4.0a2"

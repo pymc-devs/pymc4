@@ -2,13 +2,17 @@
 from typing import Optional, Union
 from collections import namedtuple
 
-# import arviz as az
+import arviz as az
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 from pymc4 import flow
 from pymc4.coroutine_model import Model
+from pymc4.distributions.transforms import JacobianPreference
 from pymc4.inference.utils import initialize_sampling_state
+from pymc4.utils import NameParts
+from pymc4.variational import updates
 
 tfd = tfp.distributions
 tfb = tfp.bijectors
@@ -68,9 +72,22 @@ class Approximation(tf.Module):
 
     def sample(self, n):
         """Generate samples from posterior distribution."""
-        q_samples = dict(zip(self.unobserved_keys, self.approx.sample(n, seed=self._seed)))
-        # trace = az.from_dict(q_samples, observed_data=self.state.observed_values)
-        return q_samples
+        q_samples = dict(zip(self.unobserved_keys, self.approx.sample(n)))
+
+        # For all transformed_variables, apply inverse of bijector to sampled values to match support in constraint space.
+        _, st = flow.evaluate_model(self.model)
+        for transformed_name in self.state.transformed_values:
+            untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
+            transform = st.distributions[untransformed_name].transform
+            if transform.JacobianPreference == JacobianPreference.Forward:
+                q_samples[untransformed_name] = transform.forward(q_samples[transformed_name])
+            else:
+                q_samples[untransformed_name] = transform.inverse(q_samples[transformed_name])
+
+        # Add a new axis so as n_chains=1 for InferenceData: handles shape issues
+        trace = {k: v.numpy()[np.newaxis] for k, v in q_samples.items()}
+        trace = az.from_dict(trace, observed_data=self.state.observed_values)
+        return trace
 
 
 class MeanField(Approximation):
@@ -95,7 +112,7 @@ class MeanField(Approximation):
         # As per `tfp.vi.fit_surrogate_posterior` docs, use `TransformedVariable` or `DeferredTensor`
         # to ensure all ops invoke gradients while applying transformation.
         scale = tfp.util.TransformedVariable(
-            tf.fill(shape, value=tf.constant(0.02, dtype=dtype)),
+            tf.fill(shape, value=tf.constant(1, dtype=dtype)),
             tfb.Softplus(),  # For positive values of scale
             name=f"{name}/sigma",
         )
@@ -171,7 +188,7 @@ def fit(
         Number of Monte Carlo samples used for approximation
     random_seed : Optional[int]
         Seed for tensorflow random number generator
-    optimizer : TF1-style or TF2-style optimizer
+    optimizer : TF1-style | TF2-style | from pymc4/variational/updates
         Tensorflow optimizer to use
     kwargs : Optional[Dict[str, Any]]
         Pass extra non-default arguments to
@@ -203,10 +220,12 @@ def fit(
             "method should be one of %s or Approximation instance" % set(_select.keys())
         )
 
+    # Defining `opt = optimizer or updates.adam()`
+    # leads to optimizer initialization issues from tf.
     if optimizer:
         opt = optimizer
     else:
-        opt = tf.optimizers.Adam(learning_rate=0.1)
+        opt = updates.adam()
 
     @tf.function(autograph=False)
     def run_approximation():

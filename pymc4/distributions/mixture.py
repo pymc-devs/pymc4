@@ -4,8 +4,8 @@ distributions.
 Wraps tfd.Mixture as pm.Mixture
 """
 
+import collections
 from tensorflow_probability import distributions as tfd
-
 from pymc4.distributions.distribution import Distribution
 
 
@@ -24,12 +24,14 @@ class Mixture(Distribution):
 
     Parameters
     ----------
-    p : array of floats
+    p : array of floats|tensor
         p >= 0 and p <= 1
-        the mixture weights, in the form of probabilities, must sum to one.
-    distributions : multidimensional PyMC4 distribution (e.g. `pm.Poisson(...)`)
-        or iterable of one-dimensional PyMC4 distributions the
-        component distributions :math:`f_1, \ldots, f_n`
+        The mixture weights, in the form of probabilities,
+        must sum to one on the last (i.e. right-most) axis.
+    distributions : PyMC4 distribution|sequence of PyMC4 distributions
+        Multi-dimensional PyMC4 distribution (e.g. `pm.Poisson(...)`)
+        or iterable of one-dimensional PyMC4 distributions
+        :math:`f_1, \ldots, f_n`
     """
 
     def __init__(self, name, p, distributions, **kwargs):
@@ -40,7 +42,7 @@ class Mixture(Distribution):
         p, d = conditions["p"], conditions["distributions"]
         # if 'd' is a sequence of pymc distributions, then use the underlying
         # tfp distributions for the mixture
-        if isinstance(d, (list, tuple)):
+        if isinstance(d, collections.abc.Sequence):
             if any(not isinstance(el, Distribution) for el in d):
                 raise TypeError(
                     "every element in 'distribution' needs to be a pymc4.Distribution object"
@@ -51,6 +53,6 @@ class Mixture(Distribution):
             distr, mixture = d._distribution, tfd.MixtureSameFamily
         else:
             raise TypeError(
-                "'distribution' needs to be a pymc4.Distribution object or a list of distributions"
+                "'distribution' needs to be a pymc4.Distribution object or a sequence of distributions"
             )
-        return mixture(tfd.Categorical(probs=p), distr, **kwargs)
+        return mixture(tfd.Categorical(probs=p, **kwargs), distr, **kwargs)

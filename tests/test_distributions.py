@@ -546,39 +546,3 @@ def test_extra_parameters(tf_seed, distribution_extra_parameters):
     if distribution_name not in ["Flat", "HalfFlat"]:
         # Test that a sample can be drawn using the alternative extra parameters values
         dist.sample()
-
-
-@pytest.fixture(scope="function", ids=str)
-def mixture():
-    @pm.model
-    def mix_a():
-        p = [0.5, 0.5]
-        m = yield pm.Normal("means", loc=[0.0, 0.0], scale=1.0)
-        components = pm.Normal("components", [m[0], m[1]], scale=1.0)
-        obs = yield pm.Mixture("mix", p=p, distributions=components)
-        return obs
-
-    @pm.model
-    def mix_b():
-        p = [0.5, 0.5]
-        m = yield pm.Normal("means", loc=[0.0, 0.0], scale=1.0)
-        comp1 = pm.Normal("comp1", m[0], scale=1.0)
-        comp2 = pm.Normal("comp2", m[1], scale=1.0)
-        obs = yield pm.Mixture("mix", p=p, distributions=[comp1, comp2])
-        return obs
-
-    return {"mix_a": mix_a, "mix_b": mix_b}
-
-
-def test_mixture(mixture):
-    with pytest.raises(TypeError, match=r"list of distributions"):
-        pm.Mixture("mix", p=[0.5, 0.5], distributions="not a distribution")
-    with pytest.raises(TypeError, match=r"every element in 'distribution' "):
-        pm.Mixture(
-            "mix",
-            p=[0.5, 0.5],
-            distributions=[pm.Normal("comp1", loc=0.0, scale=1.0), "not a distribution"],
-        )
-
-    pm.sample(mixture["mix_a"](), 10).posterior["mix_a/means"]
-    pm.sample(mixture["mix_b"](), 10).posterior["mix_b/means"]

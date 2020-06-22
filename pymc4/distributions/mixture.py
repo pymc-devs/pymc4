@@ -5,6 +5,7 @@ Wraps tfd.Mixture as pm.Mixture
 """
 
 import collections
+import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import Distribution
 
@@ -24,11 +25,11 @@ class Mixture(Distribution):
 
     Parameters
     ----------
-    p : array of floats|tensor
+    p : tf.Tensor
         p >= 0 and p <= 1
         The mixture weights, in the form of probabilities,
         must sum to one on the last (i.e., right-most) axis.
-    distributions : PyMC4 distribution|sequence of PyMC4 distributions
+    distributions : pm.Distribution|sequence of pm.Distribution
         Multi-dimensional PyMC4 distribution (e.g. `pm.Poisson(...)`)
         or iterable of one-dimensional PyMC4 distributions
         :math:`f_1, \ldots, f_n`
@@ -37,12 +38,12 @@ class Mixture(Distribution):
     --------
     Let's define a simple two-component Gaussian mixture:
 
-    >>> import numpy as np
+    >>> import tensorflow as tf
     >>> import pymc4 as pm
     >>> @pm.model
     ... def mixture(dat):
-    ...     p = np.array([0.5, 0.5])
-    ...     m = yield pm.Normal("means", loc=np.array([0.0, 0.0]), scale=1.0)
+    ...     p = tf.constant([0.5, 0.5])
+    ...     m = yield pm.Normal("means", loc=tf.constant([0.0, 0.0]), scale=1.0)
     ...     comps = pm.Normal("comps", m, scale=1.0)
     ...     obs = yield pm.Mixture("mix", p=p, distributions=comps, observed=dat)
     ...     return obs
@@ -52,8 +53,8 @@ class Mixture(Distribution):
 
     >>> @pm.model
     ... def mixture(dat):
-    ...     p = np.array([0.5, 0.5])
-    ...     m = yield pm.Normal("means", loc=np.array([0.0, 0.0]), scale=1.0)
+    ...     p = tf.constant([0.5, 0.5])
+    ...     m = yield pm.Normal("means", loc=tf.constant([0.0, 0.0]), scale=1.0)
     ...     comp1 = pm.Normal("comp1", m[..., 0], scale=1.0)
     ...     comp2 = pm.StudentT("comp2", m[..., 1], scale=1.0, df=3)
     ...     obs = yield pm.Mixture("mix", p=p, distributions=[comp1, comp2], observed=dat)
@@ -63,8 +64,8 @@ class Mixture(Distribution):
 
     >>> @pm.model
     ... def mixture(dat):
-    ...     p = np.array([[0.8, 0.2], [0.4, 0.6], [0.5, 0.5]])
-    ...     m = yield pm.Normal("means", loc=[[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], scale=1.0)
+    ...     p = tf.constant([[0.8, 0.2], [0.4, 0.6], [0.5, 0.5]])
+    ...     m = yield pm.Normal("means", loc=tf.constant([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]), scale=1.0)
     ...     comp1 = pm.Normal("d1", m[..., 0], scale=1.0)
     ...     comp2 = pm.StudentT("d2", m[..., 1], scale=1.0, df=3)
     ...     obs = yield pm.Mixture("mix", p=p, distributions=[comp1, comp2], observed=dat)
@@ -74,7 +75,7 @@ class Mixture(Distribution):
     on the right-most axis (to ensure correct parameterization use `validate_args=True`)
     """
 
-    def __init__(self, name, p, distributions, **kwargs):
+    def __init__(self, name: str, p: tf.Tensor, distributions, **kwargs):
         super().__init__(name, p=p, distributions=distributions, **kwargs)
 
     @staticmethod

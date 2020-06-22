@@ -52,24 +52,30 @@ def mixture_components(request):
 def _mixture(k, p, loc, scale, dat):
     m = yield pm.Normal("means", loc=loc, scale=scale)
     distributions = [pm.Normal("d" + str(i), loc=m[..., i], scale=scale) for i in range(k)]
-    obs = yield pm.Mixture("mix", p=p, distributions=distributions, validate_args=True, dat=dat)
+    obs = yield pm.Mixture(
+        "mixture", p=p, distributions=distributions, validate_args=True, observed=dat
+    )
     return obs
 
 
 def _mixture_same_family(k, p, loc, scale, dat):
     m = yield pm.Normal("means", loc=loc, scale=scale)
     distribution = pm.Normal("d", loc=m, scale=scale)
-    obs = yield pm.Mixture("mix", p=p, distributions=distribution, validate_args=True, dat=dat)
+    obs = yield pm.Mixture(
+        "mixture", p=p, distributions=distribution, validate_args=True, observed=dat
+    )
     return obs
 
 
-@pytest.fixture(scope="function", params=[_mixture, _mixture_same_family], ids=str)
+@pytest.fixture(scope="function", params=[_mixture_same_family, _mixture], ids=str)
 def mixture(mixture_components, request):
     n, k, p, loc, scale = mixture_components
-    dat = tfd.Normal(loc=np.zeros(n), scale=1).sample(100).numpy().reshape(-1)
+    dat = tfd.Normal(loc=np.zeros(n), scale=1).sample(100).numpy()
+    if n == 1:
+        dat = dat.reshape(-1)
     model = ModelTemplate(request.param, name="mixture", keep_auxiliary=True, keep_return=True)
     model = model(k, p, loc, scale, dat)
-    return model
+    return model, n, k
 
 
 def test_wrong_distribution_argument_batched_fails():
@@ -86,10 +92,29 @@ def test_wrong_distribution_argument_in_list_fails():
         )
 
 
+def test_sampling(mixture):
+    model, n, k = mixture
+    trace = pm.sample(model, num_samples=100, num_chains=2)
+    if n == 1:
+        assert trace.posterior["mixture/means"].shape == (2, 100, k)
+    else:
+        assert trace.posterior["mixture/means"].shape == (2, 100, n, k)
+
+
 def test_prior_predictive(mixture):
-    pm.sample_prior_predictive(mixture, sample_shape=100)
+    model, n, _ = mixture
+    ppc = pm.sample_prior_predictive(model, sample_shape=100).prior_predictive
+    if n == 1:
+        assert ppc["mixture/mixture"].shape == (1, 100)
+    else:
+        assert ppc["mixture/mixture"].shape == (1, 100, n)
 
 
 def test_posterior_predictive(mixture):
-    trace = pm.sample(mixture, num_samples=100, num_chains=2)
-    pm.sample_posterior_predictive(mixture, trace)
+    model, n, _ = mixture
+    trace = pm.sample(model, num_samples=100, num_chains=2)
+    ppc = pm.sample_posterior_predictive(model, trace).posterior_predictive
+    if n == 1:
+        assert ppc["mixture/mixture"].shape == (2, 100, 100)
+    else:
+        assert ppc["mixture/mixture"].shape == (2, 100, 100, n)

@@ -148,7 +148,7 @@ class Covariance:
         # Wrap the kernel in FeatureScaled kernel for ARD.
         if self._ard:
             if self._scale_diag is None:
-                self._scale_diag = 1.0
+                self._scale_diag = tf.Variable(1.0, dtype=self._kernel.dtype)
             self._kernel = FeatureScaled(self._kernel, scale_diag=self._scale_diag)
 
     @abstractmethod

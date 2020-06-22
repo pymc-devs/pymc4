@@ -5,6 +5,8 @@ Wraps tfd.Mixture as pm.Mixture
 """
 
 import collections
+from typing import Union, Tuple, List
+
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import Distribution
@@ -75,7 +77,13 @@ class Mixture(Distribution):
     on the right-most axis (to ensure correct parameterization use `validate_args=True`)
     """
 
-    def __init__(self, name: str, p: tf.Tensor, distributions, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        p: tf.Tensor,
+        distributions: Union[Distribution, List[Distribution], Tuple[Distribution]],
+        **kwargs,
+    ):
         super().__init__(name, p=p, distributions=distributions, **kwargs)
 
     @staticmethod

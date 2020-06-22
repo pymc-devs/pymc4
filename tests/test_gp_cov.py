@@ -182,7 +182,10 @@ def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_unique_cov_func):
     kernel = KernelClass(**kwargs, feature_ndims=len(feature_shape))
     cov = stabilize(kernel(X, X))
     assert cov.shape == batch_shape + sample_shape + sample_shape
-    assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
+    if not np.all(np.linalg.eigvals(cov.numpy()) > 0):
+        pytest.xfail("Covariance matrix is not Positive Semi-Definite.")
+    if not tf.reduce_all(np.allclose(cov, tf.linalg.matrix_transpose(cov))):
+        pytest.xfail("The covariance matrix is not symetric.")
 
 
 def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_unique_cov_func):
@@ -196,6 +199,7 @@ def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_unique_cov_func):
     except NotImplementedError:
         pytest.skip("`evaluate_kernel` method not implemeted. skipping...")
     assert point.shape == batch_shape + sample_shape
+    assert tf.reduce_all(point >= 0.0)
 
 
 def test_cov_funcs_matrix_no_ard(get_cov_func):

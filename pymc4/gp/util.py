@@ -16,7 +16,7 @@ def stabilize(K, shift=None):
     r"""Add a diagonal shift to a covarience matrix."""
     diag = tf.linalg.diag_part(K)
     if shift is None:
-        shifted = tf.math.nextafter(diag, diag + 1.0)
+        shifted = tf.math.nextafter(diag, np.inf)
         return tf.linalg.set_diag(K, shifted)
     return tf.linalg.set_diag(K, diag + shift)
 

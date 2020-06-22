@@ -26,7 +26,9 @@ from tensorflow_probability.python.math.psd_kernels import (
     Linear as TFPLinear,
 )
 
-from ._kernel import _Constant, _WhiteNoise, _Exponential, _Gibbs, _Cosine
+# from tensorflow_probability.python.math.psd_kernels.internal import util
+
+from ._kernel import _Constant, _WhiteNoise, _Exponential, _Gibbs, _Cosine, _ScaledCov
 from .util import ArrayLike, TfTensor, _inherit_docs, _build_docs
 
 
@@ -47,7 +49,7 @@ __all__ = [
     # "WarpedInput",
     "Gibbs",
     # "Coregion",
-    # "ScaledCov",
+    "ScaledCov",
     # "Kron",
 ]
 
@@ -69,41 +71,6 @@ _common_doc = """feature_ndims : int, optional
 _note_doc = """ARD (automatic relevence detection) is done if the parameter ``length_scale``
     is a vector or a tensor. To disable this behaviour, a keyword argument
     ``ARD=False`` needs to be passed."""
-
-_ls_amp_doc = """length_scale : array_like
-        The length-scale ℓ determines the length of the 'wiggles' in your function. In general,
-        you won't be able to extrapolate more than ℓ units away from your data. If a float,
-        an isotropic kernel is used. If an array and ``ARD=True``, an anisotropic kernel
-        is used where each dimension defines the length-scale of the respective feature dimension.
-    amplitude : array_like, optional
-        Amplitude is a scaling factor that determines the average distance of your function away
-        from your mean. Every kernel has this parameter out in its front. If a float,
-        an isotropic kernel is used. If an array and ``ARD=True``, an anisotropic kernel
-        is used where each dimension defines the amplitude of the respective feature dimension.
-        (default=1)"""
-
-_period_doc = """period : array_like, optional
-        This paramerer defines the period of a periodic kernel. It controls how often your
-        data repeats where data contains an axis of time and is used for time serias and
-        temporal prediction tasks. If a float, an isotropic kernel is used. If an array and
-        ``ARD=True``, an anisotropic kernel is used where each dimension defines the period
-        of the respective feature dimension. (default=1)"""
-
-_matern_doc = r"""Matern family of kernels is a generalization over the RBF family of kernels.
-    The :math:`\\nu` parameter controls the smoothness of the kernel function. Higher
-    values of :math:`\\nu` result in a more smooth function. The most common values
-    of :math:`\\nu` are 0.5, 1.5 and 2.5 as the modified Bessel's function is analytical
-    there."""
-
-_linear_doc = """bias_variance : array_like
-        The bias to add in the linear equation. This parameters controls
-        how far your covarinace is from the mean value.
-    slope_variance : array_like
-        The slope of the linear equation. This parameter controls how fast
-        the covariance increases from the origin point.
-    shift : array_like
-        The amount of shift to apply to normalize the input vectors (or arrays).
-        This parameter brings all the input values closer to origin by ``shift`` units."""
 
 
 @_build_docs
@@ -174,11 +141,11 @@ class Covariance:
         self._feature_ndims = feature_ndims
         self._active_dims = active_dims
         self._scale_diag = scale_diag
-        ard = kwargs.pop("ARD", True)
+        self._ard = kwargs.pop("ARD", True)
         # Initialize Kernel.
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
         # Wrap the kernel in FeatureScaled kernel for ARD.
-        if ard:
+        if self._ard:
             if self._scale_diag is None:
                 self._scale_diag = 1.0
             self._kernel = FeatureScaled(self._kernel, scale_diag=self._scale_diag)
@@ -192,8 +159,10 @@ class Covariance:
             return X1, X2
 
         # We first slice the tensors using non-list indices.
+        # This is fast and creates a view instead of a copy.
         X1 = X1[..., (*self._slices)]
         X2 = X2[..., (*self._slices)]
+
         # Workaround for list indices as tensorflow doesn't allow
         # lists as index like numpy. It is not very efficient as
         # ``tf.gather`` creates a copy instead of view.
@@ -240,20 +209,25 @@ class Covariance:
 
     @property
     def scale_diag(self) -> Union[Number, ArrayLike]:
-        """Scaling parameter of length scale for performing ARD."""
+        r"""Scaling parameter of length scale for performing ARD."""
         return self._scale_diag
+
+    @property
+    def ard(self) -> bool:
+        r"""Weather ARD is enabled or not."""
+        return self._ard
 
     def __call__(
         self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
     ) -> TfTensor:
         r"""
-        Evaluate the covariance matrix between the points X1 and X2.
+        Evaluate the covariance matrix between the points ``X1`` and ``X2``.
 
         Parameters
         ----------
-        X1 : (..., feature_ndims) array_like
+        X1 : array_like of shape ``(..., feature_ndims)``
             A tensor of points.
-        X2 : (..., feature_ndims) array_like
+        X2 : array_like of shape ``(..., feature_ndims)``
             A tensor of other points.
         diag : bool, optional
             If true, only evaulates the diagonal of the full covariance matrix.
@@ -267,7 +241,7 @@ class Covariance:
         ----------------
         **kwargs : optional
             Keyword arguments to be passed to the ``matrix`` method of the underlying
-            tfp's PSD kernels.
+            tfp's PSD kernels. Ignored if ``ARD=True``.
 
         Returns
         -------
@@ -275,12 +249,20 @@ class Covariance:
             A covariance matrix with the last ``feature_ndims``
             dimensions absorbed to compute the covariance.
         """
-        X1 = tf.convert_to_tensor(X1, dtype_hint=self._kernel.dtype)
-        X2 = tf.convert_to_tensor(X2, dtype_hint=self._kernel.dtype)
-        X1, X2 = self._slice(X1, X2)
-        if diag:
-            return self._diag(X1, X2, to_dense=to_dense)
-        return self._kernel.matrix(X1, X2, **kwargs)
+        with self._kernel._name_and_control_scope("call"):
+            X1 = tf.convert_to_tensor(X1, dtype_hint=self._kernel.dtype)
+            X2 = tf.convert_to_tensor(X2, dtype_hint=self._kernel.dtype)
+            X1, X2 = self._slice(X1, X2)
+            # if self._ard and not diag:
+            #     X1 = util.pad_shape_with_ones(X1, ndims=1, start=-(self.feature_ndims + 1))
+            #     X2 = util.pad_shape_with_ones(X2, ndims=1, start=-(self.feature_ndims + 2))
+            #     try:
+            #         return self._kernel._apply(X1, X2, example_ndims=0)
+            #     except NotImplementedError:
+            #         return self._kernel.matrix(X1, X2, **kwargs)
+            if diag:
+                return self._diag(X1, X2, to_dense=to_dense)
+            return self._kernel.matrix(X1, X2, **kwargs)
 
     def __add__(self, cov2):
         return _Add(self, cov2)
@@ -293,19 +275,15 @@ class Covariance:
     __rmul__ = __mul__
 
     def __array_wrap__(self, result: np.ndarray) -> TfTensor:
-        """Combine cov functions with NumPy arrays on the left."""
-        # we retain the original shape to reshape the result later.
+        r"""Combine cov functions with NumPy arrays on the left."""
         original_shape = result.shape
-        # we flatten the array and re-build the left array
-        # using the ``.cov2`` attribute of combined kernels.
         result = result.ravel()
         left_array = np.zeros(result.shape, dtype=np.float32)
+
         for i in range(result.size):
             left_array[i] = result[i].factors[1]
-        # reshape the array to its original shape
         left_array = left_array.reshape(original_shape)
-        # now, we can put the left array on the right side
-        # to create the final combination.
+
         if isinstance(result[0], _Add):
             return result[0].factors[0] + left_array
         elif isinstance(result[0], _Prod):
@@ -395,6 +373,19 @@ class Stationary(Covariance):
     def length_scale(self) -> Union[ArrayLike, float]:
         r"""Length scale of the covariance function."""
         return self._length_scale  # type: ignore
+
+
+_ls_amp_doc = """length_scale : array_like
+        The length-scale ℓ determines the length of the 'wiggles' in your function. In general,
+        you won't be able to extrapolate more than ℓ units away from your data. If a float,
+        an isotropic kernel is used. If an array and ``ARD=True``, an anisotropic kernel
+        is used where each dimension defines the length-scale of the respective feature dimension.
+    amplitude : array_like, optional
+        Amplitude is a scaling factor that determines the average distance of your function away
+        from your mean. Every kernel has this parameter out in its front. If a float,
+        an isotropic kernel is used. If an array and ``ARD=True``, an anisotropic kernel
+        is used where each dimension defines the amplitude of the respective feature dimension.
+        (default=1)"""
 
 
 @_build_docs
@@ -690,6 +681,13 @@ class RatQuad(Stationary):
         return self._scale_mixture_rate
 
 
+_matern_doc = r"""Matern family of kernels is a generalization over the RBF family of kernels.
+    The :math:`\\nu` parameter controls the smoothness of the kernel function. Higher
+    values of :math:`\\nu` result in a more smooth function. The most common values
+    of :math:`\\nu` are 0.5, 1.5 and 2.5 as the modified Bessel's function is analytical
+    there."""
+
+
 @_build_docs
 class Matern12(Stationary):
     r"""
@@ -882,6 +880,17 @@ class Matern52(Stationary):
         return self._amplitude
 
 
+_linear_doc = """bias_variance : array_like
+        The bias to add in the linear equation. This parameters controls
+        how far your covarinace is from the mean value.
+    slope_variance : array_like
+        The slope of the linear equation. This parameter controls how fast
+        the covariance increases from the origin point.
+    shift : array_like
+        The amount of shift to apply to normalize the input vectors (or arrays).
+        This parameter brings all the input values closer to origin by ``shift`` units."""
+
+
 @_build_docs
 class Linear(Covariance):
     r"""
@@ -1051,6 +1060,14 @@ class Polynomial(Covariance):
     def exponent(self) -> Union[ArrayLike, float]:
         r"""``exponent`` parameter of the kernel."""
         return self.exponent
+
+
+_period_doc = """period : array_like, optional
+        This paramerer defines the period of a periodic kernel. It controls how often your
+        data repeats where data contains an axis of time and is used for time serias and
+        temporal prediction tasks. If a float, an isotropic kernel is used. If an array and
+        ``ARD=True``, an anisotropic kernel is used where each dimension defines the period
+        of the respective feature dimension. (default=1)"""
 
 
 @_build_docs
@@ -1317,3 +1334,78 @@ class Cosine(Covariance):
     @property
     def period(self) -> Union[ArrayLike, float]:
         return self._period
+
+
+@_build_docs
+class ScaledCov(Covariance):
+    r"""
+    Scaled Covariance Kernel.
+
+    This kernel scales the covarince matrix given a scaling function and the kernel to scale.
+    It can be used to create non-stationary kernels from stationary and periodic kernels.
+
+    Parameters
+    ----------
+    kernel : pm.gp.cov.Covariance
+        The covariance function to scale.
+    scaling_fn : callable
+        The scaling function.
+    fn_args : tuple, optional
+        Extra arguments to pass to the scaling function.
+    %(_common_doc)
+
+    Examples
+    --------
+    >>> import tensorflow as tf
+    >>> from pymc4.gp.cov import ExpQuad, ScaledCov
+    >>> k = ExpQuad(1.)
+    >>> fn = lambda x : tf.ones(x.shape)
+    >>> k_scal = ScaledCov(k, fn)
+    >>> x = tf.constant([[1., 2.], [3., 4.]])
+    >>> k_scal(x, x)
+    <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
+    array([[2.        , 0.03663128],
+           [0.03663128, 2.        ]], dtype=float32)>
+
+    Notes
+    -----
+    %(_note_doc)
+    """
+
+    def __init__(
+        self,
+        kernel: Covariance,
+        scaling_fn: Callable,
+        fn_args: Optional[tuple] = None,
+        feature_ndims: int = 1,
+        active_dims: Optional[Union[int, Iterable]] = None,
+        scale_diag: Optional[Union[ArrayLike, Number]] = None,
+        **kwargs,
+    ):
+        self._kernel = kernel
+        self._scaling_fn = scaling_fn
+        self._fn_args = fn_args
+        super(ScaledCov, self).__init__(
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
+        return _ScaledCov(
+            kernel=self._kernel._kernel,
+            scaling_fn=self._scaling_fn,
+            fn_args=self._fn_args,
+            feature_ndims=feature_ndims,
+            **kwargs,
+        )
+
+    @property
+    def kernel(self):
+        return self._kernel
+
+    @property
+    def scaling_fn(self):
+        return self._scaling_fn
+
+    @property
+    def fn_args(self):
+        return self._fn_args

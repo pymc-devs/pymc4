@@ -362,3 +362,122 @@ class _Cosine(PositiveSemidefiniteKernel):
                     )
                 )
         return assertions
+
+
+# class Coregion(PositiveSemidefiniteKernel):
+#     def __init__(
+#         self, W=None, kappa=None, B=None, feature_ndims=None, validate_args=False, name="Coregion"
+#     ):
+#         parameters = locals()
+#         with tf.name_scope(name):
+#             dtype = util.maybe_get_common_dtype([W, kappa, B])
+#             self._W = tensor_util.convert_nonref_to_tensor(W)
+#             self._kappa = tensor_util.convert_nonref_to_tensor(kappa)
+#             if B is not None:
+#                 self._B = tensor_util.convert_nonref_to_tensor(B)
+#             else:
+#                 self._B = tf.linalg.matmul(self._W, self._W, transpose_b=True) + tf.linalg.diag(
+#                     self._kappa
+#                 )
+#         super().__init__(
+#             feature_ndims=feature_ndims,
+#             dtype=dtype,
+#             name=name,
+#             validate_args=validate_args,
+#             parameters=parameters,
+#         )
+
+#     @property
+#     def W(self):
+#         return self._W
+
+#     @property
+#     def B(self):
+#         return self._B
+
+#     @property
+#     def kappa(self):
+#         return self._kappa
+
+#     def _apply(self, x1, x2, example_ndims=0):
+#         raise NotImplementedError("Coregion doesn't have a point evaluation scheme")
+
+#     def _matrix(self, x1, x2):
+#         x1_idx = tf.cast(x1, tf.int32)
+#         x2_idx = tf.cast(x2, tf.int32).T
+#         return tf.gather_nd(self._B,)
+
+
+class _ScaledCov(PositiveSemidefiniteKernel):
+    def __init__(
+        self,
+        kernel=None,
+        scaling_fn=None,
+        fn_args=None,
+        feature_ndims=1,
+        validate_args=False,
+        name="ScaledCov",
+    ):
+        parameters = locals()
+        with tf.name_scope(name):
+            self._kernel = kernel
+            self._scaling_fn = scaling_fn
+            if fn_args is None:
+                fn_args = tuple()
+            self._fn_args = fn_args
+        super(_ScaledCov, self).__init__(
+            feature_ndims=feature_ndims,
+            dtype=kernel.dtype,
+            name=name,
+            validate_args=validate_args,
+            parameters=parameters,
+        )
+
+    @property
+    def kernel(self):
+        return self._kernel
+
+    @property
+    def scaling_fn(self):
+        return self._scaling_fn
+
+    @property
+    def fn_Args(self):
+        return self._fn_args
+
+    def _apply(self, x1, x2, example_ndims=0):
+        cov = self._kernel._apply(x1, x2, example_ndims)
+        if self._scaling_fn is not None:
+            scal_x1 = tf.convert_to_tensor(self._scaling_fn(x1, *self._fn_args))
+            scal_x2 = tf.convert_to_tensor(self._scaling_fn(x2, *self._fn_args))
+            scal = util.sum_rightmost_ndims_preserving_shape(scal_x1 * scal_x2, self._feature_ndims)
+            return scal * cov
+        return cov
+
+    def _matrix(self, x1, x2):
+        cov = self._kernel._matrix(x1, x2)
+        if self._scaling_fn is not None:
+            scal_x1 = util.pad_shape_with_ones(
+                tf.convert_to_tensor(self._scaling_fn(x1, *self._fn_args)),
+                ndims=1,
+                start=-(self._feature_ndims + 1),
+            )
+            scal_x2 = util.pad_shape_with_ones(
+                tf.convert_to_tensor(self._scaling_fn(x2, *self._fn_args)),
+                ndims=1,
+                start=-(self._feature_ndims + 2),
+            )
+            scal = util.sum_rightmost_ndims_preserving_shape(
+                scal_x1 * scal_x2, ndims=self._feature_ndims
+            )
+            return scal * cov
+        return cov
+
+    def _batch_shape(self):
+        return self._kernel.batch_shape
+
+    def _batch_shape_tensor(self):
+        return self._kernel._batch_shape_tensor()
+
+    def _parameter_control_dependencies(self, is_init):
+        return self._kernel._parameter_control_dependencies(is_init)

@@ -22,4 +22,5 @@ from .inference import trace_support
 from .inference.smc import sample_smc
 from .inference import smc
 from .inference import sampling
+
 __version__ = "4.0a2"

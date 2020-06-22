@@ -198,23 +198,24 @@ class SamplingState:
             return sum(self.collect_log_prob_elemwise())
 
     def collect_log_prob_elemwise_lp(self, distrs, is_prior=False):
-        if is_prior is True:
-            # TODO: better logic here
+        if is_prior is False:
+            # TODO
             return (
                 tf.reduce_sum(
                     dist.log_prob(
                         tf.transpose(
                             self.all_values[name],
-                            [1, 0, *[i_ for i_ in range(2, len(self.all_values[name].shape))]],
+                            list(range(2, len(self.all_values[name].shape))) + [0, 1],
                         )
                     ),
-                    axis=[0, *[i_ for i_ in range(2, len(self.all_values[name].shape))]],
+                    axis=list(range(0, len(self.all_values[name].shape) - 2)) + [-1],
                 )
                 for name, dist in distrs.items()
             )
-        return (dist.log_prob(self.all_values[name]) for name, dist in distrs.items())
+        else:
+            return (dist.log_prob(self.all_values[name]) for name, dist in distrs.items())
 
-    def collect_log_prob_smc(self, is_prior, is_reduced=True):
+    def collect_log_prob_smc(self, is_prior):
         def reduce_sum_smc(value):
             shape = value.shape
             # Because of the different logic with reduce sum
@@ -225,15 +226,17 @@ class SamplingState:
 
         if is_prior is True:
             distrs = self.prior_distributions
-            log_prob_elemwise = self.collect_log_prob_elemwise_lp(distrs)
+            log_prob_elemwise = self.collect_log_prob_elemwise_lp(distrs, is_prior=is_prior)
         else:
             distrs = self.lkh_distributions
-            temp_elemw = self.collect_log_prob_elemwise_lp(distrs, is_prior=True)
+            temp_elemw = self.collect_log_prob_elemwise_lp(distrs, is_prior=is_prior)
             log_prob_elemwise = itertools.chain(temp_elemw, (p.value for p in self.potentials))
 
         if is_prior:
             log_prob = sum(map(reduce_sum_smc, log_prob_elemwise))
         else:
+            import pdb
+            pdb.set_trace()
             log_prob = sum(log_prob_elemwise)
         return log_prob
 
@@ -329,7 +332,7 @@ class SamplingState:
             posterior_predictives=self.posterior_predictives,
         )
 
-    def as_sampling_state(self, first_smc_run=False) -> "Tuple[SamplingState, List[str]]":
+    def as_sampling_state(self, smc_run=False) -> "Tuple[SamplingState, List[str]]":
         """Create a sampling state that should be used within MCMC sampling.
 
         There are some principles that hold for the state.
@@ -429,7 +432,8 @@ class SamplingExecutor:
         observed: Dict[str, Any] = None,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
         num_chains: Optional[int] = 1,
-        first_smc_run: Optional[bool] = False,
+        draws: Optional[int] = 1,
+        smc_run: Optional[bool] = False,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -586,7 +590,8 @@ class SamplingExecutor:
                                 state,
                                 sample_shape=sample_shape,
                                 num_chains=num_chains,
-                                first_smc_run=first_smc_run,
+                                draws=draws,
+                                smc_run=smc_run,
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
@@ -598,6 +603,8 @@ class SamplingExecutor:
                             _validate_state=False,
                             sample_shape=sample_shape,
                             num_chains=num_chains,
+                            draws=draws,
+                            smc_run=smc_run,
                         )
                     else:
                         err = EvaluationError(
@@ -630,7 +637,8 @@ class SamplingExecutor:
                 return e.args, state
             except StopIteration as stop_iteration:
                 self.validate_return_value(stop_iteration.args[:1])
-                return self.finalize_control_flow(stop_iteration, model_info, state)
+                asdd = self.finalize_control_flow(stop_iteration, model_info, state)
+                return asdd
         return return_value, state
 
     __call__ = evaluate_model
@@ -641,10 +649,6 @@ class SamplingExecutor:
         return SamplingState.from_values(values=values, observed_values=observed)
 
     def validate_state(self, state):
-        """
-            TODO: we can move all the logic from transformed_exector.py
-            here but then additional statement will be added
-        """
         if state.transformed_values:
             raise ValueError(
                 "untransformed executor should not contain "
@@ -661,11 +665,17 @@ class SamplingExecutor:
         dist: distribution.Distribution,
         state: SamplingState,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
+        *,
+        draws: Optional[int] = 1,
         num_chains: Optional[int] = 1,
-        first_smc_run: Optional[bool] = False,
+        smc_run: Optional[bool] = False,
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         sample_func = dist.sample
+
+        # We are adding the condition to have separate implementation for
+        # the type of the sampler. Mayve overriding the function in subclass
+        # is better design but we remove heavy repitition by doing this
         if self.mode == "meta":
             sample_func = dist.get_test_sample
 
@@ -685,6 +695,32 @@ class SamplingExecutor:
                     scoped_name
                 )
             )
+
+        def sample_unobserved(
+            dist, state, scoped_name, sample_func, num_chains, draws, sample_shape, smc_run
+        ):
+            # we have smc_run flag for the SMC graph evaluation
+            # for SMC we need to store batch values in the state object
+            # alongside the single batch values to not expose batch shape
+            # and draws shape to the user
+            if dist.is_root:
+                sample_shape = (draws, num_chains,) + sample_shape if smc_run else (sample_shape)
+                state.untransformed_values_batched[scoped_name] = sample_func(sample_shape)
+                reduced_value = state.untransformed_values_batched[scoped_name]
+                if smc_run:
+                    # remove first two dims for chains and draws
+                    reduced_value = reduced_value
+                return_value = state.untransformed_values[scoped_name] = reduced_value
+            else:
+                sample_shape = (draws, num_chains,) if smc_run else ()
+                state.untransformed_values_batched[scoped_name] = sample_func(sample_shape)
+                reduced_value = state.untransformed_values_batched[scoped_name]
+                if smc_run:
+                    # remove first two dims for chains and draws
+                    reduced_value = reduced_value
+                return_value = state.untransformed_values[scoped_name] = reduced_value
+            return state, return_value
+
         if scoped_name in state.observed_values or dist.is_observed:
             observed_variable = observed_value_in_evaluation(scoped_name, dist, state)
             if observed_variable is None:
@@ -692,21 +728,16 @@ class SamplingExecutor:
                 # might be posterior predictive or programmatically override to exchange observed variable to latent
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
-                    if dist.is_root:
-                        if first_smc_run:
-                            state.untransformed_values_batched[scoped_name] = sample_func(
-                                sample_shape=(num_chains,) + sample_shape
-                                if num_chains
-                                else sample_shape
-                            )
-                        return_value = state.untransformed_values[scoped_name] = sample_func(
-                            sample_shape
-                        )
-                    else:
-                        state.untransformed_values_batched[scoped_name] = sample_func(
-                            (num_chains,) if num_chains else ()
-                        )
-                        return_value = state.untransformed_values[scoped_name] = sample_func()
+                    state, return_value = sample_unobserved(
+                        dist,
+                        state,
+                        scoped_name,
+                        sample_func,
+                        num_chains,
+                        draws,
+                        sample_shape,
+                        smc_run,
+                    )
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -722,23 +753,25 @@ class SamplingExecutor:
                         )
                     )
                 # assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
+                if smc_run:
+                    # TODO: we are tiling every graph execution.
+                    # for now I don't see any solution from the issue
+                    observed_variable = tf.tile(
+                        observed_variable[None, None, :],
+                        [draws, num_chains, *[1 for _ in range(len(observed_variable.shape))]],
+                    )
                 return_value = state.observed_values[scoped_name] = observed_variable
+                if smc_run:
+                    return_value = return_value
             state.lkh_distributions[scoped_name] = dist
         elif scoped_name in state.untransformed_values:
+            # we have already initialized the model with scoped_name variable
             return_value = state.untransformed_values[scoped_name]
             state.prior_distributions[scoped_name] = dist
         else:
-            if dist.is_root:
-                if first_smc_run:
-                    state.untransformed_values_batched[scoped_name] = sample_func(
-                        sample_shape=(num_chains,) + sample_shape if num_chains else sample_shape
-                    )
-                return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
-            else:
-                state.untransformed_values_batched[scoped_name] = sample_func(
-                    (num_chains,) if num_chains else ()
-                )
-                return_value = state.untransformed_values[scoped_name] = sample_func()
+            state, return_value = sample_unobserved(
+                dist, state, scoped_name, sample_func, num_chains, draws, sample_shape, smc_run
+            )
             state.prior_distributions[scoped_name] = dist
         state.distributions[scoped_name] = dist
         return return_value, state

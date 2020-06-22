@@ -10,9 +10,10 @@ def initialize_sampling_state(
     model: Model,
     observed: Optional[dict] = None,
     state: Optional[flow.SamplingState] = None,
-    num_chains: Optional[int] = None,
+    num_chains: Optional[int] = 1,
+    draws: Optional[int] = 1,
     is_smc: Optional[bool] = False,
-    first_smc_run: Optional[bool] = False,
+    smc_run: Optional[bool] = False,
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initialize the model provided state and/or observed variables.
@@ -34,11 +35,11 @@ def initialize_sampling_state(
     if is_smc is False:
         eval_func = flow.evaluate_meta_model
     _, state = eval_func(
-        model, observed=observed, state=state, num_chains=num_chains, first_smc_run=first_smc_run
+        model, observed=observed, state=state, num_chains=num_chains, draws=draws, smc_run=smc_run
     )
     deterministic_names = list(state.deterministics)
 
-    state, transformed_names = state.as_sampling_state(first_smc_run=first_smc_run)
+    state, transformed_names = state.as_sampling_state(smc_run=smc_run)
     return state, deterministic_names + transformed_names
 
 

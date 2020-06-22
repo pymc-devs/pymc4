@@ -16,8 +16,7 @@ from pymc4.inference.utils import (
 from pymc4.utils import NameParts
 from pymc4.inference import smc
 
-_log = logging.getLogger('pymc3')
-
+_log = logging.getLogger("pymc3")
 
 
 def sample(
@@ -195,10 +194,10 @@ def sample(
         run_chains = tf.function(run_chains, autograph=False, experimental_compile=xla)
 
     if initialize_smc is True:
-        _log.info("Starting SMC initialization")
-        final_state = smc.sample_smc(model, **(smc_kwargs or dict()))
+        # _log.info("Starting SMC initialization")
+        final_state = smc.sample_smc(model, xla=xla, **(smc_kwargs or dict()))
         step_size = [tf.math.reduce_std(x) for x in final_state]
-        _log.info("SMC initialization completed")
+        # _log.info("SMC initialization completed")
 
     if xla:
         results, sample_stats = tf.xla.experimental.compile(

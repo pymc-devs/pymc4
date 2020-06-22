@@ -22,6 +22,7 @@ from tensorflow_probability.python.math.psd_kernels import (
     ExpSinSquared,
     PositiveSemidefiniteKernel,
     FeatureScaled,
+    FeatureTransformed,
     Polynomial as TFPPolynomial,
     Linear as TFPLinear,
 )
@@ -46,7 +47,7 @@ __all__ = [
     "Polynomial",
     "Cosine",
     "Periodic",
-    # "WarpedInput",
+    "WarpedInput",
     "Gibbs",
     # "Coregion",
     "ScaledCov",
@@ -1352,7 +1353,6 @@ class ScaledCov(Covariance):
         The scaling function.
     fn_args : tuple, optional
         Extra arguments to pass to the scaling function.
-    %(_common_doc)
 
     Examples
     --------
@@ -1373,20 +1373,16 @@ class ScaledCov(Covariance):
     """
 
     def __init__(
-        self,
-        kernel: Covariance,
-        scaling_fn: Callable,
-        fn_args: Optional[tuple] = None,
-        feature_ndims: int = 1,
-        active_dims: Optional[Union[int, Iterable]] = None,
-        scale_diag: Optional[Union[ArrayLike, Number]] = None,
-        **kwargs,
+        self, kernel: Covariance, scaling_fn: Callable, fn_args: Optional[tuple] = None, **kwargs,
     ):
         self._kernel = kernel
         self._scaling_fn = scaling_fn
         self._fn_args = fn_args
         super(ScaledCov, self).__init__(
-            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag
+            feature_ndims=kernel._feature_ndims,
+            active_dims=kernel._active_dims,
+            scale_diag=kernel._scale_diag,
+            **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -1405,6 +1401,66 @@ class ScaledCov(Covariance):
     @property
     def scaling_fn(self):
         return self._scaling_fn
+
+    @property
+    def fn_args(self):
+        return self._fn_args
+
+
+class WarpedInput(Covariance):
+    r"""
+    Warped Input Kernel.
+
+    Warp the inputs of any kernel using an arbitrary function defined
+    using TensorFlow.
+
+    .. math::
+       k(x, x') = k(w(x), w(x'))
+
+    Parameters
+    ----------
+    kernel : pm.gp.cov.Covariance
+        The kernel function to warp
+    warp_fn : callable
+        TensorFlow function of ``X`` and additional optional arguments.
+    fn_args : tuple, optional
+        Additional inputs (besides X or Xs) to warp_func.
+
+    Examples
+    --------
+    TODO
+
+    Notes
+    -----
+    %(_note_doc)
+    """
+
+    def __init__(
+        self, kernel: Covariance, warp_fn: Callable, fn_args: Optional[tuple] = None, **kwargs,
+    ):
+        self._kernel = kernel
+        self._warp_fn = warp_fn
+        if fn_args is None:
+            fn_args = tuple()
+        self._fn_args = fn_args
+        super(WarpedInput, self).__init__(
+            feature_ndims=kernel._feature_ndims,
+            active_dims=kernel._active_dims,
+            scale_diag=kernel._scale_diag,
+            **kwargs,
+        )
+
+    def _init_kernel(self, feature_ndims: int, **kwargs):
+        fn = lambda x, _, __: self._warp_fn(x, *self._fn_args)
+        return FeatureTransformed(kernel=self._kernel._kernel, transformation_fn=fn, **kwargs)
+
+    @property
+    def kernel(self):
+        return self._kernel
+
+    @property
+    def warp_fn(self):
+        return self._warp_fn
 
     @property
     def fn_args(self):

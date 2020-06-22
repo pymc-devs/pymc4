@@ -339,7 +339,7 @@ def test_scaled_cov_kernel_shapes_and_psd(tf_seed, get_data):
     batch_shape, sample_shape, feature_shape, X = get_data
     k = pm.gp.cov.ExpQuad(1.0, feature_ndims=len(feature_shape))
     scal_fn = lambda x: tf.ones(x.shape)
-    k_scal = pm.gp.cov.ScaledCov(k, scal_fn, feature_ndims=len(feature_shape))
+    k_scal = pm.gp.cov.ScaledCov(k, scal_fn)
 
     cov = k_scal(X, X)
     assert cov.shape == batch_shape + sample_shape + sample_shape
@@ -357,4 +357,29 @@ def test_scaled_cov():
 
     cov = k_scal(x, x)
     expected = tf.constant([[2.0, 0.03663128], [0.03663128, 2.0]], dtype=np.float32)
+    assert np.allclose(cov, expected)
+
+
+def test_warped_cov_kernel_shapes_and_psd(tf_seed, get_data):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    k = pm.gp.cov.ExpQuad(1.0, feature_ndims=len(feature_shape))
+    warp_fn = lambda x: x[..., :1]
+    k_warped = pm.gp.cov.WarpedInput(k, warp_fn)
+
+    cov = k_warped(X, X)
+    assert cov.shape == batch_shape + sample_shape + sample_shape
+    assert np.all(np.linalg.eigvals(stabilize(cov)) > 0)
+
+    point = k_warped.evaluate_kernel(X, X)
+    assert point.shape == batch_shape + sample_shape
+
+
+def test_warped_cov():
+    x = tf.constant([[1.0, 2.0], [3.0, 4.0]])
+    k = pm.gp.cov.ExpQuad(1.0)
+    warp_fn = lambda x: x[:, :1]
+    k_warped = pm.gp.cov.WarpedInput(k, warp_fn)
+
+    cov = k_warped(x, x)
+    expected = k(x[:, :1], x[:, :1])
     assert np.allclose(cov, expected)

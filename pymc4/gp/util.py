@@ -16,7 +16,8 @@ def stabilize(K, shift=None):
     r"""Add a diagonal shift to a covarience matrix."""
     diag = tf.linalg.diag_part(K)
     if shift is None:
-        shift = tf.math.nextafter(diag, np.inf)
+        shifted = tf.math.nextafter(diag, diag + 1.0)
+        return tf.linalg.set_diag(K, shifted)
     return tf.linalg.set_diag(K, diag + shift)
 
 
@@ -44,9 +45,13 @@ def _build_docs(meth_or_cls):
             docstr = getattr(modname, docname)
         except AttributeError:
             warnings.warn(
-                f"While documenting {meth_or_cls.__name__}, arrtibute {docname} not found."
+                f"While documenting {meth_or_cls.__name__}, arrtibute {docname} not found.",
+                SyntaxWarning,
             )
-            continue
+            # FIXME: This should continue execution by skipping
+            # the docs not found. Instead, currently, it just stops
+            # execution!
+            break
         docs = pattern.sub(docstr, docs, count=1)
     meth_or_cls.__doc__ = docs
     return meth_or_cls

@@ -57,7 +57,7 @@ __all__ = [
 _common_doc = """feature_ndims : int, optional
         The number of dimensions to consider as features which will be absorbed
         during the computation. Defaults to 1. Incresing this causes significant
-        overhead in computation. Consider using ``active_dims`` parameter alingwith
+        overhead in computation. Consider using ``active_dims`` parameter alongwith
         this parameter for beter performance.
     active_dims : {int, Iterable}, optional
         A list of (list of) numbers of dimensions in each ``feature_ndims``
@@ -829,7 +829,7 @@ class Matern52(Stationary):
 
         k(x, x') = \left(1 + \frac{\sqrt{5(x - x')^2}}{\ell} +
                    \frac{5(x-x')^2}{3\ell^2}\right)
-                   \mathrm{exp}\left[ - \frac{\sqrt{5(x - x')^2}}{\ell} \right]
+                   \mathrm{exp}\left( - \frac{\sqrt{5(x - x')^2}}{\ell} \right)
 
     Parameters
     ----------
@@ -1065,7 +1065,7 @@ class Polynomial(Covariance):
 
 _period_doc = """period : array_like, optional
         This paramerer defines the period of a periodic kernel. It controls how often your
-        data repeats where data contains an axis of time and is used for time serias and
+        data repeats where data contains an axis of time. It is used for time serias and
         temporal prediction tasks. If a float, an isotropic kernel is used. If an array and
         ``ARD=True``, an anisotropic kernel is used where each dimension defines the period
         of the respective feature dimension. (default=1)"""
@@ -1149,7 +1149,6 @@ class Exponential(Stationary):
     r"""Exponential Kernel.
 
     This kernel is used as an alternative to the ``ExpQuad`` kernel.
-    TODO: add more discription later...
 
     Parameters
     ----------
@@ -1277,12 +1276,17 @@ class Cosine(Covariance):
     Cosine kernel.
 
     This kernel is a part of the Periodic Kenrels. It evaluates a cosine
-    function to evauluate the covariance function.
+    function to compute the covariance function.
+
+    .. math::
+
+        k(x,x') = \sigma^2\cos\left(\frac{2\pi\|x-x'\|^2}{\ell^2}\right)
+
+    where :math:`\sigma` is the ``amplitude`` and :math:`\ell` is the ``length_scale``.
 
     Parameters
     ----------
     %(_ls_amp_doc)
-    %(_period_doc)
     %(_common_doc)
 
     Examples
@@ -1305,7 +1309,6 @@ class Cosine(Covariance):
         self,
         length_scale: Union[ArrayLike, float],
         amplitude: Union[ArrayLike, float] = 1.0,
-        period: Union[ArrayLike, float] = 1.0,
         feature_ndims: int = 1,
         active_dims: Optional[Union[int, Iterable]] = None,
         scale_diag: Optional[Union[ArrayLike, Number]] = None,
@@ -1313,7 +1316,6 @@ class Cosine(Covariance):
     ):
         self._amplitude = amplitude
         self._length_scale = length_scale
-        self._period = period
         super(Cosine, self).__init__(
             feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs
         )
@@ -1322,7 +1324,6 @@ class Cosine(Covariance):
         return _Cosine(
             length_scale=self._length_scale,
             amplitude=self._amplitude,
-            period=self._period,
             feature_ndims=feature_ndims,
             **kwargs,
         )
@@ -1331,10 +1332,6 @@ class Cosine(Covariance):
     def amplitude(self) -> Union[ArrayLike, float]:
         r"""Amplitude of the kernel function."""
         return self._amplitude
-
-    @property
-    def period(self) -> Union[ArrayLike, float]:
-        return self._period
 
 
 @_build_docs

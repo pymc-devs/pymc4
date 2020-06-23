@@ -274,17 +274,15 @@ class _Cosine(PositiveSemidefiniteKernel):
         self,
         length_scale=None,
         amplitude=None,
-        period=None,
         feature_ndims=1,
         validate_args=False,
         name="Cosine",
     ):
         parameters = locals()
         with tf.name_scope(name):
-            dtype = util.maybe_get_common_dtype([length_scale, amplitude, period])
+            dtype = util.maybe_get_common_dtype([length_scale, amplitude])
             self._length_scale = tensor_util.convert_nonref_to_tensor(length_scale, dtype=dtype)
             self._amplitude = tensor_util.convert_nonref_to_tensor(amplitude, dtype=dtype)
-            self._period = tensor_util.convert_nonref_to_tensor(period, dtype=dtype)
         super(_Cosine, self).__init__(
             feature_ndims=feature_ndims,
             dtype=dtype,
@@ -301,10 +299,6 @@ class _Cosine(PositiveSemidefiniteKernel):
     def amplitude(self):
         return self._amplitude
 
-    @property
-    def period(self):
-        return self._period
-
     def _apply(self, x1, x2, example_ndims=0):
         component = (
             2.0
@@ -319,10 +313,6 @@ class _Cosine(PositiveSemidefiniteKernel):
             length_scale = tf.convert_to_tensor(self._length_scale)
             length_scale = util.pad_shape_with_ones(length_scale, example_ndims)
             component /= length_scale ** 2
-        if self.period is not None:
-            period = tf.convert_to_tensor(self._period)
-            period = util.pad_shape_with_ones(period, example_ndims)
-            component /= period
         if self.amplitude is not None:
             amplitude = tf.convert_to_tensor(self._amplitude)
             amplitude = util.pad_shape_with_ones(amplitude, example_ndims)
@@ -364,6 +354,8 @@ class _Cosine(PositiveSemidefiniteKernel):
         return assertions
 
 
+# FIXME: This kernel is not implemented currently as tensorflow doesn't allow
+#        slicing with tensors or arrays. Any help would be appriciated.
 # class Coregion(PositiveSemidefiniteKernel):
 #     def __init__(
 #         self, W=None, kappa=None, B=None, feature_ndims=None, validate_args=False, name="Coregion"
@@ -480,4 +472,4 @@ class _ScaledCov(PositiveSemidefiniteKernel):
         return self._kernel._batch_shape_tensor()
 
     def _parameter_control_dependencies(self, is_init):
-        return self._kernel._parameter_control_dependencies(is_init)
+        return self._kernel._parameter_control_dependencies(is_init=is_init)

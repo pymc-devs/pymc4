@@ -4,18 +4,56 @@ import numpy as np
 
 
 @pytest.fixture(scope="function")
-def normal_model():
-    mean, var = 3, 5
-    data = np.random.normal(mean, var, size=200)
+def simple_model():
+    unknown_mean = -5
+    known_sigma = 3
+    data_points = 1000
+    data = np.random.normal(unknown_mean, known_sigma, size=data_points)
+    prior_mean = 4
+    prior_sigma = 2
+
+    # References - http://patricklam.org/teaching/conjugacy_print.pdf
+    precision = 1 / prior_sigma ** 2 + data_points / known_sigma ** 2
+    estimated_mean = (
+        prior_mean / prior_sigma ** 2 + (data_points * np.mean(data) / known_sigma ** 2)
+    ) / precision
 
     @pm.model
-    def normal_model():
-        mu = yield pm.Normal("mu", 0, 10)
-        sigma = yield pm.Exponential("sigma", 1)
-        likelihood = yield pm.Normal("ll", mu, sigma, observed=data)
-        return likelihood
+    def model():
+        mu = yield pm.Normal("mu", prior_mean, prior_sigma)
+        ll = yield pm.Normal("ll", mu, known_sigma, observed=data)
 
-    return mean, var, normal_model
+    return dict(data_points=data_points, data=data, estimated_mean=estimated_mean, model=model)
+
+
+# fmt: off
+_test_kwargs = {
+    "ADVI": {
+        "method": pm.MeanField, 
+        "fit_kwargs": {}
+    }
+}
+
+
+@pytest.fixture(scope="function", params=list(_test_kwargs), ids=str)
+def approximation(request):
+    return request.param
+
+
+def test_fit(approximation, simple_model):
+    model = simple_model["model"]()
+    approx = _test_kwargs[approximation]
+    advi = pm.fit(method=approx["method"](model), **approx["fit_kwargs"])
+    assert advi is not None
+    assert advi.losses.numpy().shape == (approx["fit_kwargs"].get("num_steps") or 10000,)
+
+    q_samples = advi.approximation.sample(10000)
+    estimated_mean = simple_model["estimated_mean"]
+    np.testing.assert_allclose(
+        np.mean(np.squeeze(q_samples.posterior["model/mu"].values, axis=0)),
+        estimated_mean,
+        rtol=0.05,
+    )
 
 
 @pytest.fixture(scope="function")
@@ -31,31 +69,9 @@ def bivariate_gaussian():
     return bivariate_gaussian
 
 
-def test_fit(normal_model):
-
-    mean, var, normal_model = normal_model
-    mean_field = pm.MeanField(normal_model())
-    track = {param.name: param for param in mean_field.trainable_variables}
-
-    def trace_fn(traceable_quantities):
-        return {"loss": traceable_quantities.loss, **track}
-
-    advi = pm.fit(method=mean_field, num_steps=40000, trace_fn=trace_fn)
-    assert advi is not None
-
-    samples = advi.approximation.sample(10000)
-    free_rvs = ["normal_model/mu", "normal_model/__log_sigma", "normal_model/sigma"]
-    for rv in free_rvs:
-        assert samples.posterior[rv].values.shape == (1, 10000)
-    for rv_track in advi.losses:
-        assert advi.losses[rv_track].numpy().shape == (40000,)
-    np.testing.assert_allclose(mean, mean_field.approx.mean()[0], atol=0.5)
-    np.testing.assert_allclose(var, np.exp(mean_field.approx.mean()[1]), atol=0.5)
-
-
 def test_bivariate_shapes(bivariate_gaussian):
-    advi = pm.fit(bivariate_gaussian())
-    assert advi.losses.numpy().shape == (10000, 2)
+    advi = pm.fit(bivariate_gaussian(), num_steps=5000)
+    assert advi.losses.numpy().shape == (5000, 2)
 
     samples = advi.approximation.sample(5000)
     assert samples.posterior["bivariate_gaussian/density"].values.shape == (1, 5000, 2)

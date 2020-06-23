@@ -74,6 +74,7 @@ class Approximation(tf.Module):
         """Generate samples from posterior distribution."""
         q_samples = dict(zip(self.unobserved_keys, self.approx.sample(n)))
 
+        # TODO - Account for deterministics as well.
         # For all transformed_variables, apply inverse of bijector to sampled values to match support in constraint space.
         _, st = flow.evaluate_model(self.model)
         for transformed_name in self.state.transformed_values:
@@ -137,26 +138,26 @@ class FullRank(Approximation):
     """Full Rank Automatic Differential Variational Inference(Full Rank ADVI)."""
 
     def _build_loc(self):
-        pass
+        raise NotImplementedError
 
     def _build_cov_matrix(self):
-        pass
+        raise NotImplementedError
 
     def _build_posterior(self):
-        pass
+        raise NotImplementedError
 
 
 class LowRank(Approximation):
     """Low Rank Automatic Differential Variational Inference(Low Rank ADVI)."""
 
     def _build_loc(self):
-        pass
+        raise NotImplementedError
 
     def _build_cov_matrix(self):
-        pass
+        raise NotImplementedError
 
     def _build_posterior(self):
-        pass
+        raise NotImplementedError
 
 
 def fit(

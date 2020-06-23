@@ -9,7 +9,7 @@ from collections.abc import Iterable
 from numbers import Number
 from abc import abstractmethod
 import operator
-from functools import reduce
+from functools import reduce, partial
 
 import numpy as np
 import tensorflow as tf
@@ -148,7 +148,7 @@ class Covariance:
         # Wrap the kernel in FeatureScaled kernel for ARD.
         if self._ard:
             if self._scale_diag is None:
-                self._scale_diag = tf.Variable(1.0, dtype=self._kernel.dtype)
+                self._scale_diag = tf.constant(1, dtype=self._kernel.dtype)
             self._kernel = FeatureScaled(self._kernel, scale_diag=self._scale_diag)
 
     @abstractmethod
@@ -316,19 +316,19 @@ class Combination(Covariance):
             factor._active_dims if isinstance(factor, Covariance) else None for factor in factors
         ]
 
+    def _eval_factor(self, factor, X1, X2, diag=False, to_dense=False):
+        if isinstance(factor, Covariance):
+            return factor(X1, X2, diag=diag, to_dense=to_dense)
+        if diag:
+            return tf.linalg.diag(tf.linalg.diag_part(factor))
+        else:
+            return factor
+
     def merge_factors(
         self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True
     ) -> List[TfTensor]:
-        eval_factors = []
-        for factor in self.factors:
-            if isinstance(factor, Covariance):
-                eval_factors.append(factor(X1, X2, diag=diag, to_dense=to_dense))
-            else:
-                if diag:
-                    eval_factors.append(tf.linalg.diag(tf.linalg.diag_part(factor)))
-                else:
-                    eval_factors.append(factor)
-        return eval_factors
+        fn = partial(self._eval_factor, X1=X1, X2=X2, diag=diag, to_dense=to_dense)
+        return tf.nest.map_structure(fn, self.factors)
 
 
 class _Add(Combination):

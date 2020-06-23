@@ -186,9 +186,12 @@ class LatentGP(BaseGP):
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                dtype=self.cov_fn._kernel.dtype,
                 **kwargs,
             )
-        return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
+        return MvNormal(
+            name, loc=mu, covariance_matrix=cov, dtype=self.cov_fn._kernel.dtype, **kwargs
+        )
 
     def conditional(
         self, name: NameType, Xnew: ArrayLike, given: dict, **kwargs
@@ -249,6 +252,9 @@ class LatentGP(BaseGP):
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                dtype=self.cov_fn._kernel.dtype,
                 **kwargs,
             )
-        return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)
+        return MvNormal(
+            name=name, loc=mu, covariance_matrix=cov, dtype=self.cov_fn._kernel.dtype, **kwargs
+        )

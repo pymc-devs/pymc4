@@ -179,7 +179,7 @@ class MvNormal(ContinuousDistribution):
     ----------
     loc : array
         Vector of means.
-    cov : array
+    covariance_matrix : array
         Covariance matrix.
 
     Examples

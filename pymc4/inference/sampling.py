@@ -55,7 +55,7 @@ def sample(
         WARNING: This is an advanced user feature. If you are not sure how to use this, please use
         the default ``True`` value.
         If ``True``, the model's total ``log_prob`` will be automatically vectorized to work across
-        multiple indepedent chains using ``tf.vectorized_map``. If ``False``, the model is assumed
+        multiple independent chains using ``tf.vectorized_map``. If ``False``, the model is assumed
         be defined in vectorized way. This means that every distribution has the proper
         ``batch_shape`` and ``event_shape``s so that all the outputs from each distribution's
         ``log_prob`` will broadcast with each other, and that the forward passes through the model

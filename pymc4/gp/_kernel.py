@@ -224,7 +224,7 @@ class _Gibbs(PositiveSemidefiniteKernel):
         loglx1 = tf.math.log(lx1)
         loglx2 = tf.math.log(lx2)
         lognum = util.sum_rightmost_ndims_preserving_shape(
-            loglx1 + loglx2 + tf.math.log(2.0), self.feature_ndims
+            loglx1 + loglx2 + math.log(2.0), self.feature_ndims
         )
         logdenom = util.sum_rightmost_ndims_preserving_shape(
             tf.math.log(lx1 ** 2 + lx2 ** 2), self.feature_ndims
@@ -419,7 +419,7 @@ class _ScaledCov(PositiveSemidefiniteKernel):
             self._fn_args = fn_args
         super(_ScaledCov, self).__init__(
             feature_ndims=feature_ndims,
-            dtype=kernel.dtype,
+            dtype=kernel._dtype,
             name=name,
             validate_args=validate_args,
             parameters=parameters,

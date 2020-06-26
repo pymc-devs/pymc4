@@ -1,4 +1,9 @@
+<<<<<<< HEAD:pymc4/mcmc/utils.py
 import collections
+=======
+import tensorflow as tf
+from typing import Optional, Tuple, List
+>>>>>>> 2328bdbe7ec259cd682ea1604c89c1ad423dd43c:pymc4/inference/utils.py
 import numpy as np
 import arviz as az
 from typing import Optional, Tuple, List
@@ -11,7 +16,12 @@ from pymc4 import Model, flow
 
 
 def initialize_sampling_state(
-    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None
+    model: Model,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
+    num_chains: Optional[int] = None,
+    is_smc: Optional[bool] = False,
+    first_smc_run: Optional[bool] = False,
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initialize the model provided state and/or observed variables.
@@ -29,9 +39,19 @@ def initialize_sampling_state(
     deterministic_names: List[str]
         The list of names of the model's deterministics
     """
-    _, state = flow.evaluate_meta_model(model, observed=observed, state=state)
+    eval_func = flow.evaluate_model_transformed
+    if is_smc is False:
+        eval_func = flow.evaluate_meta_model
+    _, state = eval_func(
+        model, observed=observed, state=state, num_chains=num_chains, first_smc_run=first_smc_run
+    )
     deterministic_names = list(state.deterministics)
+<<<<<<< HEAD:pymc4/mcmc/utils.py
     state, transformed_names = state.as_sampling_state()
+=======
+
+    state, transformed_names = state.as_sampling_state(first_smc_run=first_smc_run)
+>>>>>>> 2328bdbe7ec259cd682ea1604c89c1ad423dd43c:pymc4/inference/utils.py
     return state, deterministic_names + transformed_names
 
 
@@ -119,3 +139,15 @@ def trace_to_arviz(
         posterior_predictive=posterior_predictive,
         observed_data=observed_data,
     )
+
+
+def vectorize_logp_function(logpfn):
+    # TODO: vectorize with dict
+    def vectorized_logpfn(*state):
+        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+
+    return vectorized_logpfn
+
+
+def tile_init(init, num_repeats):
+    return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]

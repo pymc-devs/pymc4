@@ -6,16 +6,6 @@ Specifically, we wish to extract:
 - All observed, deterministic, and unobserved variables (both transformed and
 untransformed.
 """
-from typing import Tuple, Any, Union
-import tensorflow as tf
-from pymc4 import scopes
-from pymc4.distributions import distribution
-from pymc4.flow.executor import (
-    SamplingState,
-    EvaluationError,
-    observed_value_in_evaluation,
-    assert_values_compatible_with_distribution,
-)
 from pymc4.flow.transformed_executor import TransformedSamplingExecutor
 from pymc4.flow.posterior_predictive_executor import PosteriorPredictiveSamplingExecutor
 
@@ -24,20 +14,11 @@ __all__ = ["MetaSamplingExecutor", "MetaPosteriorPredictiveSamplingExecutor"]
 
 
 class MetaSamplingExecutor(TransformedSamplingExecutor):
-    """Do a forward pass through the model only using distribution test values."""
+    """
+        Do a forward pass through the model only using distribution test values.
+    """
 
-    def proceed_distribution(
-        self,
-        dist: distribution.Distribution,
-        state: SamplingState,
-        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
-    ) -> Tuple[Any, SamplingState]:
-        if dist.is_anonymous:
-            raise EvaluationError("Attempting to create an anonymous Distribution")
-        scoped_name = scopes.variable_name(dist.name)
-        if scoped_name is None:
-            raise EvaluationError("Attempting to create an anonymous Distribution")
-
+<<<<<<< HEAD
         if (
             scoped_name in state.discrete_distributions
             or scoped_name in state.continuous_distributions
@@ -97,14 +78,24 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
         else:
             state.discrete_distributions[scoped_name] = dist
         return return_value, state
+=======
+    def __init__(self):
+        self.mode = "meta"
+>>>>>>> 2328bdbe7ec259cd682ea1604c89c1ad423dd43c
 
 
 class MetaPosteriorPredictiveSamplingExecutor(
     MetaSamplingExecutor, PosteriorPredictiveSamplingExecutor
 ):
+<<<<<<< HEAD
     """Do a forward pass through the model only using distribution test values.
 
     Also modify the distributions to make them suitable for posterior predictive sampling.
+=======
+    """
+        Do a forward pass through the model only using distribution test values.
+        Also modify the distributions to make them suitable for posterior predictive sampling.
+>>>>>>> 2328bdbe7ec259cd682ea1604c89c1ad423dd43c
     """
 
     # Everything is done in the parent classes

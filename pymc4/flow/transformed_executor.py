@@ -22,6 +22,10 @@ from pymc4.flow.executor import (
 class TransformedSamplingExecutor(SamplingExecutor):
     """Perform inference in an unconstrained space."""
 
+    def __init__(self):
+        super().__init__()
+        self.mode = "transformed"
+
     def validate_state(self, state):
         """Validate that the model is not in a bad state."""
         return
@@ -49,7 +53,12 @@ def make_untransformed_model(dist, transform, state):
     # already stored untransformed value via yield
     # state.values[scoped_name] = sampled_untransformed_value
     transformed_scoped_name = scopes.transformed_variable_name(transform.name, dist.name)
+    scoped_name = scopes.variable_name(dist.name)
     state.transformed_values[transformed_scoped_name] = sampled_transformed_value
+    sampled_transformed_value_batched = transform.forward(
+        state.untransformed_values_batched[scoped_name]
+    )
+    state.transformed_values_batched[transformed_scoped_name] = sampled_transformed_value_batched
     # 2. increment the potential
     if transform.jacobian_preference == JacobianPreference.Forward:
         potential_fn = functools.partial(

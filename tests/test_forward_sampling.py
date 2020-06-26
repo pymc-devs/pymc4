@@ -293,7 +293,7 @@ def test_sample_posterior_predictive(posterior_predictive_fixture):
 
 def test_sample_ppc_var_names(model_fixture):
     model, observed = model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             "model/sd": tf.ones((10, 1), dtype="float32"),
             "model/y": tf.convert_to_tensor(observed[:, None]),
@@ -325,9 +325,9 @@ def test_sample_ppc_corrupt_trace():
         x = yield pm.Normal("x", tf.ones(5), 1, reinterpreted_batch_ndims=1)
         y = yield pm.Normal("y", x, 1)
 
-    trace1 = pm.inference.utils.trace_to_arviz({"model/x": tf.ones((7, 1), dtype="float32")})
+    trace1 = pm.mcmc.utils.trace_to_arviz({"model/x": tf.ones((7, 1), dtype="float32")})
 
-    trace2 = pm.inference.utils.trace_to_arviz(
+    trace2 = pm.mcmc.utils.trace_to_arviz(
         {"model/x": tf.ones((1, 5), dtype="float32"), "model/y": tf.zeros((1, 1), dtype="float32")}
     )
     with pytest.raises(EvaluationError):
@@ -381,7 +381,7 @@ def test_vectorized_sample_posterior_predictive(
     vectorized_model_fixture, use_auto_batching_fixture, sample_shape_fixture
 ):
     model, is_vectorized_model, core_shapes = vectorized_model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
@@ -414,7 +414,7 @@ def test_sample_posterior_predictive_on_glm(
     glm_model_fixture, use_auto_batching_fixture, sample_shape_fixture
 ):
     model, is_vectorized_model, core_shapes = glm_model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
@@ -475,7 +475,7 @@ def test_posterior_predictive_on_root_variable(use_auto_batching_fixture):
             "obs", mu, 1, observed=np.ones(n_obs, dtype="float32"), reinterpreted_batch_ndims=1
         )
 
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             "model/beta": tf.zeros((n_samples, n_chains), dtype="float32"),
             "model/bias": tf.zeros((n_samples, n_chains), dtype="float32"),

@@ -5,6 +5,7 @@ from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
 )
+from pymc4.distributions.state_functions import categorical_uniform_fn, bernoulli_uniform_fn
 
 __all__ = [
     "Bernoulli",
@@ -58,13 +59,20 @@ class Bernoulli(BoundedDiscreteDistribution):
         Probability of success (0 < probs < 1).
     """
 
+    _grad_support = False
+
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        self._default_new_state_part = bernoulli_uniform_fn
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         probs = conditions["probs"]
+<<<<<<< HEAD
         return tfd.Bernoulli(probs=probs, **kwargs)
+=======
+        return tfd.Bernoulli(probs=probs, dtype=tf.float32)
+>>>>>>> master
 
     def lower_limit(self):
         return 0
@@ -244,6 +252,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     high : int
         Upper limit (high > low).
     """
+    _grad_support = False
 
     def __init__(self, name, low, high, **kwargs):
         super().__init__(name, low=low, high=high, **kwargs)
@@ -251,10 +260,15 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         low, high = conditions["low"], conditions["high"]
+<<<<<<< HEAD
         outcomes = tf.range(low, high + 1)
         return tfd.FiniteDiscrete(
             outcomes, probs=tf.ones_like(outcomes) / (high + 1 - low), **kwargs
         )
+=======
+        outcomes = tf.range(low, high + 1, dtype=tf.float32)
+        return tfd.FiniteDiscrete(outcomes, probs=outcomes / (high - low))
+>>>>>>> master
 
     def lower_limit(self):
         return self._distribution.outcomes[0].numpy()
@@ -295,15 +309,22 @@ class Categorical(BoundedDiscreteDistribution):
     probs : array of floats
         probs > 0 and the elements of probs must sum to 1.
     """
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        self._default_new_state_part = categorical_uniform_fn
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         probs = tf.convert_to_tensor(conditions["probs"])
+<<<<<<< HEAD
         outcomes = tf.range(probs.shape[-1])
         return tfd.FiniteDiscrete(outcomes, probs=probs, **kwargs)
+=======
+        outcomes = tf.range(probs.shape[-1], dtype=tf.float32)
+        return tfd.FiniteDiscrete(outcomes, probs=probs)
+>>>>>>> master
 
     def lower_limit(self):
         return 0
@@ -350,6 +371,7 @@ class Geometric(BoundedDiscreteDistribution):
     """
     # Another example for a wrong type used on the tensorflow side
     _test_value = 2.0  # type: ignore
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
@@ -707,6 +729,7 @@ class Zipf(PositiveDiscreteDistribution):
     power : float
         Exponent parameter (power > 1).
     """
+    _grad_support = False
 
     def __init__(self, name, power, **kwargs):
         super().__init__(name, power=power, **kwargs)

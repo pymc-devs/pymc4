@@ -1,6 +1,11 @@
-from typing import Optional, Tuple, List
+import collections
 import numpy as np
 import arviz as az
+from typing import Optional, Tuple, List
+
+KERNEL_KWARGS_SET = collections.namedtuple(
+    "KERNEL_ARGS_SET", ["kernel", "adaptive_kernel", "kernel_kwargs", "adaptive_kwargs"]
+)
 
 from pymc4 import Model, flow
 
@@ -26,9 +31,46 @@ def initialize_sampling_state(
     """
     _, state = flow.evaluate_meta_model(model, observed=observed, state=state)
     deterministic_names = list(state.deterministics)
-
     state, transformed_names = state.as_sampling_state()
     return state, deterministic_names + transformed_names
+
+
+def initialize_state(
+    model: Model,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
+    return_non_sampling_state=False,
+) -> Tuple[flow.SamplingState, List[str], List[str], Optional[flow.SamplingState]]:
+    """
+    Get list of discrete/continuous distributions
+
+    Parameters
+    ----------
+    model : pymc4.Model
+
+    Returns
+    -------
+    state: Model
+        Unsampled version of sample object
+    free_discrete_names: List[str]
+        The list of free discrete variables
+    free_continuous_names: List[str]
+        The list of free continuous variables
+    sampling_state:
+        The model's sampling state
+    """
+    _, state = flow.evaluate_model_transformed(model)
+    free_discrete_names, free_continuous_names = (
+        list(state.discrete_distributions),
+        list(state.continuous_distributions),
+    )
+    observed_rvs = list(state.observed_values.keys())
+    free_discrete_names = list(filter(lambda x: x not in observed_rvs, free_discrete_names))
+    free_continuous_names = list(filter(lambda x: x not in observed_rvs, free_continuous_names))
+    sampling_state = None
+    if return_non_sampling_state is True:
+        sampling_state, _ = state.as_sampling_state()
+    return state, free_discrete_names, free_continuous_names, sampling_state
 
 
 def trace_to_arviz(

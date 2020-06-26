@@ -19,6 +19,7 @@ However, expect things to break or change without warning.
 See here for an example: https://github.com/pymc-devs/pymc4/blob/master/notebooks/radon_hierarchical.ipynb
 See here for the design document: https://github.com/pymc-devs/pymc4/blob/master/notebooks/pymc4_design_guide.ipynb
 
+<<<<<<< HEAD
 ## Develop
 
 One easy way of developing on PyMC4 is to take advantage of the development containers! 
@@ -45,3 +46,5 @@ Because the repo will be cloned into an ephemeral repo,
 Then follow the usual pull request workflow back into PyMC4.
 
 We hope you enjoy the time saved on setting up your development environment!
+=======
+>>>>>>> master

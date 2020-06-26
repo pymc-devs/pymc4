@@ -101,7 +101,8 @@ class SamplingState:
         "posterior_predictives",
         "all_values",
         "all_unobserved_values",
-        "distributions",
+        "discrete_distributions",
+        "continuous_distributions",
         "potentials",
         "deterministics",
     )
@@ -111,7 +112,8 @@ class SamplingState:
         transformed_values: Dict[str, Any] = None,
         untransformed_values: Dict[str, Any] = None,
         observed_values: Dict[str, Any] = None,
-        distributions: Dict[str, distribution.Distribution] = None,
+        discrete_distributions: Dict[str, distribution.Distribution] = None,
+        continuous_distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
         deterministics: Dict[str, Any] = None,
         posterior_predictives: Optional[Set[str]] = None,
@@ -129,10 +131,14 @@ class SamplingState:
             observed_values = dict()
         else:
             observed_values = observed_values.copy()
-        if distributions is None:
-            distributions = dict()
+        if discrete_distributions is None:
+            discrete_distributions = dict()
         else:
-            distributions = distributions.copy()
+            discrete_distributions = discrete_distributions.copy()
+        if continuous_distributions is None:
+            continuous_distributions = dict()
+        else:
+            continuous_distributions = continuous_distributions.copy()
         if potentials is None:
             potentials = list()
         else:
@@ -152,14 +158,20 @@ class SamplingState:
             self.untransformed_values, self.transformed_values, self.observed_values
         )
         self.all_unobserved_values = ChainMap(self.transformed_values, self.untransformed_values)
-        self.distributions = distributions
+        self.discrete_distributions = discrete_distributions
+        self.continuous_distributions = continuous_distributions
         self.potentials = potentials
         self.deterministics = deterministics
         self.posterior_predictives = posterior_predictives
 
     def collect_log_prob_elemwise(self):
         return itertools.chain(
-            (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
+            (
+                dist.log_prob(self.all_values[name])
+                for name, dist in itertools.chain(
+                    self.discrete_distributions.items(), self.continuous_distributions.items()
+                )
+            ),
             (p.value for p in self.potentials),
         )
 
@@ -177,8 +189,13 @@ class SamplingState:
         deterministics = list(self.deterministics)
         posterior_predictives = list(self.posterior_predictives)
         # format like dist:name
-        distributions = [
-            "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
+        discrete_distributions = [
+            "{}:{}".format(d.__class__.__name__, k) for k, d in self.discrete_distributions.items()
+        ]
+        # continuous case
+        continuous_distributions = [
+            "{}:{}".format(d.__class__.__name__, k)
+            for k, d in self.continuous_distributions.items()
         ]
         # be less verbose here
         num_potentials = len(self.potentials)
@@ -192,7 +209,9 @@ class SamplingState:
             + indent
             + "observed_values: {}\n"
             + indent
-            + "distributions: {}\n"
+            + "discrete_distributions: {}\n"
+            + indent
+            + "continuous_distributions: {}\n"
             + indent
             + "num_potentials={}\n"
             + indent
@@ -204,7 +223,8 @@ class SamplingState:
             untransformed_values,
             transformed_values,
             observed_values,
-            distributions,
+            discrete_distributions,
+            continuous_distributions,
             num_potentials,
             deterministics,
             posterior_predictives,
@@ -232,7 +252,8 @@ class SamplingState:
             transformed_values=self.transformed_values,
             untransformed_values=self.untransformed_values,
             observed_values=self.observed_values,
-            distributions=self.distributions,
+            discrete_distributions=self.discrete_distributions,
+            continuous_distributions=self.continuous_distributions,
             potentials=self.potentials,
             deterministics=self.deterministics,
             posterior_predictives=self.posterior_predictives,
@@ -248,7 +269,7 @@ class SamplingState:
             3. Remove untransformed values if transformed are present
             4. Remove all other irrelevant values
         """
-        if not self.distributions:
+        if not self.discrete_distributions and not self.continuous_distributions:
             raise TypeError(
                 "No distributions found in the state. "
                 "the model you evaluated is empty and does not yield any PyMC4 distribution"
@@ -258,7 +279,9 @@ class SamplingState:
         need_to_transform_after = list()
         observed_values = dict()
 
-        for name, dist in self.distributions.items():
+        for name, dist in itertools.chain(
+            self.discrete_distributions.items(), self.continuous_distributions.items()
+        ):
             namespec = utils.NameParts.from_name(name)
             if dist.transform is not None and name not in self.observed_values:
                 transformed_namespec = namespec.replace_transform(dist.transform.name)
@@ -559,7 +582,11 @@ class SamplingExecutor:
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if (
+            scoped_name in state.discrete_distributions
+            or scoped_name in state.continuous_distributions
+            or scoped_name in state.deterministics
+        ):
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -607,7 +634,10 @@ class SamplingExecutor:
                 )
             else:
                 return_value = state.untransformed_values[scoped_name] = dist.sample()
-        state.distributions[scoped_name] = dist
+        if dist._grad_support:
+            state.continuous_distributions[scoped_name] = dist
+        else:
+            state.discrete_distributions[scoped_name] = dist
         return return_value, state
 
     def proceed_deterministic(
@@ -619,7 +649,11 @@ class SamplingExecutor:
         scoped_name = scopes.variable_name(deterministic.name)
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if (
+            scoped_name in state.discrete_distributions
+            or scoped_name in state.continuous_distributions
+            or scoped_name in state.deterministics
+        ):
             raise EvaluationError(
                 "Attempting to create a duplicate deterministic {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -677,7 +711,7 @@ def assert_values_compatible_with_distribution(
     scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
-    
+
     A distribution's shape, ``dist_shape``, is made up by the sum of
     the ``batch_shape`` and the ``event_shape``.
 

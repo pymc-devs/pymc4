@@ -69,7 +69,7 @@ class BatchStacker(distribution_lib.Distribution):
     Example 1: Five scalar draws.
 
     >>> from tensorflow_probability import distributions as tfd
-    >>> s = tfd.BatchStacker(
+    >>> s = BatchStacker(
     ...     tfd.Normal(loc=0, scale=1),
     ...     batch_stack=5)
     >>> x = s.sample()
@@ -81,7 +81,7 @@ class BatchStacker(distribution_lib.Distribution):
 
     Example 2: `[5, 4]`-draws of a bivariate Normal.
 
-    >>> s = tfd.BatchStacker(
+    >>> s = BatchStacker(
     ...     tfd.Independent(tfd.Normal(loc=tf.zeros([3, 2]), scale=1),
     ...                     reinterpreted_batch_ndims=1),
     ...     batch_stack=[5, 4])

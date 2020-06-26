@@ -62,9 +62,9 @@ class Bernoulli(BoundedDiscreteDistribution):
         super().__init__(name, probs=probs, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         probs = conditions["probs"]
-        return tfd.Bernoulli(probs=probs)
+        return tfd.Bernoulli(probs=probs, **kwargs)
 
     def lower_limit(self):
         return 0
@@ -119,9 +119,9 @@ class Binomial(BoundedDiscreteDistribution):
         super().__init__(name, total_count=total_count, probs=probs, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         total_count, probs = conditions["total_count"], conditions["probs"]
-        return tfd.Binomial(total_count=total_count, probs=probs)
+        return tfd.Binomial(total_count=total_count, probs=probs, **kwargs)
 
     def lower_limit(self):
         return 0
@@ -186,14 +186,17 @@ class BetaBinomial(BoundedDiscreteDistribution):
         )
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         total_count, concentration0, concentration1 = (
             conditions["total_count"],
             conditions["concentration0"],
             conditions["concentration1"],
         )
         return tfd.BetaBinomial(
-            total_count=total_count, concentration0=concentration0, concentration1=concentration1
+            total_count=total_count,
+            concentration0=concentration0,
+            concentration1=concentration1,
+            **kwargs,
         )
 
     def lower_limit(self):
@@ -246,10 +249,12 @@ class DiscreteUniform(BoundedDiscreteDistribution):
         super().__init__(name, low=low, high=high, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         low, high = conditions["low"], conditions["high"]
         outcomes = tf.range(low, high + 1)
-        return tfd.FiniteDiscrete(outcomes, probs=outcomes / (high - low))
+        return tfd.FiniteDiscrete(
+            outcomes, probs=tf.ones_like(outcomes) / (high + 1 - low), **kwargs
+        )
 
     def lower_limit(self):
         return self._distribution.outcomes[0].numpy()
@@ -295,10 +300,10 @@ class Categorical(BoundedDiscreteDistribution):
         super().__init__(name, probs=probs, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         probs = tf.convert_to_tensor(conditions["probs"])
         outcomes = tf.range(probs.shape[-1])
-        return tfd.FiniteDiscrete(outcomes, probs=probs)
+        return tfd.FiniteDiscrete(outcomes, probs=probs, **kwargs)
 
     def lower_limit(self):
         return 0
@@ -350,9 +355,9 @@ class Geometric(BoundedDiscreteDistribution):
         super().__init__(name, probs=probs, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         probs = conditions["probs"]
-        return tfd.Geometric(probs=probs)
+        return tfd.Geometric(probs=probs, **kwargs)
 
     def lower_limit(self):
         return 1
@@ -420,9 +425,9 @@ class NegativeBinomial(PositiveDiscreteDistribution):
         super().__init__(name, total_count=total_count, probs=probs, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         total_count, probs = conditions["total_count"], conditions["probs"]
-        return tfd.NegativeBinomial(total_count=total_count, probs=probs)
+        return tfd.NegativeBinomial(total_count=total_count, probs=probs, **kwargs)
 
 
 class Poisson(PositiveDiscreteDistribution):
@@ -474,9 +479,9 @@ class Poisson(PositiveDiscreteDistribution):
         super().__init__(name, rate=rate, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         rate = conditions["rate"]
-        return tfd.Poisson(rate=rate)
+        return tfd.Poisson(rate=rate, **kwargs)
 
 
 # TODO: Implement this
@@ -707,9 +712,9 @@ class Zipf(PositiveDiscreteDistribution):
         super().__init__(name, power=power, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         power = conditions["power"]
-        return tfd.Zipf(power=power)
+        return tfd.Zipf(power=power, **kwargs)
 
 
 class OrderedLogistic(BoundedDiscreteDistribution):
@@ -743,10 +748,10 @@ class OrderedLogistic(BoundedDiscreteDistribution):
         super().__init__(name, loc=loc, cutpoints=cutpoints, **kwargs)
 
     @staticmethod
-    def _init_distribution(conditions):
+    def _init_distribution(conditions, **kwargs):
         cutpoints = tf.convert_to_tensor(conditions["cutpoints"])
         loc = conditions["loc"]
-        return tfd.OrderedLogistic(cutpoints=cutpoints, loc=loc)
+        return tfd.OrderedLogistic(cutpoints=cutpoints, loc=loc, **kwargs)
 
     def lower_limit(self):
         return 0

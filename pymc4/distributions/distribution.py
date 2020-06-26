@@ -1,6 +1,7 @@
 import abc
 import copy
-from typing import Optional, Union, Any
+import warnings
+from typing import Optional, Union, Any, Tuple
 
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
@@ -29,6 +30,7 @@ class Distribution(Model):
     """Statistical distribution."""
 
     _test_value = 0.0
+    _base_parameters = ["dtype", "validate_args", "allow_nan_stats"]
 
     def __init__(
         self,
@@ -40,10 +42,15 @@ class Distribution(Model):
         event_stack=None,
         conditionally_independent=False,
         reinterpreted_batch_ndims=0,
+        dtype=None,
+        validate_args=False,
+        allow_nan_stats=False,
         **kwargs,
     ):
-        self.conditions = self.unpack_conditions(**kwargs)
-        self._distribution = self._init_distribution(self.conditions)
+        self.conditions, self.base_parameters = self.unpack_conditions(
+            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs
+        )
+        self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )
@@ -71,7 +78,7 @@ class Distribution(Model):
         return self._distribution.dtype
 
     @staticmethod
-    def _init_distribution(conditions: dict) -> tfd.Distribution:
+    def _init_distribution(conditions: dict, **kwargs) -> tfd.Distribution:
         ...
 
     def _init_transform(self, transform):
@@ -80,15 +87,19 @@ class Distribution(Model):
     def unpack_distribution(self):
         return unpack(self)
 
-    @staticmethod
-    def unpack_conditions(**kwargs) -> dict:
+    @classmethod
+    def unpack_conditions(cls, **kwargs) -> Tuple[dict, dict]:
         """
         Parse arguments.
 
         This is used to form :attr:`conditions` for a distributions, as
         one may desire to have different parametrizations, this all should be done there
         """
-        return kwargs
+        base_parameters = {k: v for k, v in kwargs.items() if k in cls._base_parameters}
+        if base_parameters["dtype"] is None:
+            del base_parameters["dtype"]
+        conditions = {k: v for k, v in kwargs.items() if k not in cls._base_parameters}
+        return conditions, base_parameters
 
     @property
     def test_value(self):
@@ -195,6 +206,14 @@ class Distribution(Model):
     def event_shape(self):
         return self._distribution.event_shape
 
+    @property
+    def validate_args(self):
+        return self._distribution.validate_args
+
+    @property
+    def allow_nan_stats(self):
+        return self._distribution.allow_nan_stats
+
 
 class Potential:
     __slots__ = ("_value", "_coef")
@@ -238,6 +257,18 @@ class Deterministic(Model):
 
 class ContinuousDistribution(Distribution):
     _test_value = 0.0
+
+    @classmethod
+    def unpack_conditions(cls, **kwargs):
+        conditions, base_parameters = super().unpack_conditions(**kwargs)
+        dtype = base_parameters.pop("dtype", None)
+        if dtype is not None:
+            warnings.warn(
+                f"At the moment, the continuous distributions of the backend used by pymc4 "
+                f"(tensorflow_probability) do not accept an explicit `dtype`. The supplied "
+                f"dtype={dtype} will be ignored."
+            )
+        return conditions, base_parameters
 
 
 class DiscreteDistribution(Distribution):

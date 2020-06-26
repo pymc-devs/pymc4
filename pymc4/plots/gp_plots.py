@@ -13,9 +13,10 @@ def plot_gp_dist(
     fill_kwargs=None,
     samples_kwargs=None,
 ):
-    """ A helper function for plotting 1D GP posteriors from trace 
-    
-        Parameters
+    """
+    Plot 1D GP posteriors from trace.
+
+    Parameters
     ----------
     ax : axes
         Matplotlib axes.
@@ -35,6 +36,7 @@ def plot_gp_dist(
         Additional arguments for posterior interval fill (fill_between).
     samples_kwargs : dict
         Additional keyword arguments for samples plot.
+
     Returns
     -------
     ax : Matplotlib axes

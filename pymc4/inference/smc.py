@@ -15,20 +15,39 @@ sample_sequential_monte_carlo_chain = tfp.experimental.mcmc.sample_sequential_mo
 def sample_smc(
     model: Model,
     draws: int = 5000,
-    num_chains: int = 10,
+    num_chains: int = 1,  # TODO: for now is not used
     state: Optional[flow.SamplingState] = None,
     observed: Optional[Dict[str, Any]] = None,
     xla: bool = False,
 ):
     """
-    Perform SMC
-    TODO: Add docs
+    Perform SMC algorithm
+
+    Parameters:
+    ----------
+    model : pymc4.Model
+        Model to sample posterior for
+    draws : int
+        Population size
+    num_chains : int
+        Num chains to run
+    state : Optional[pymc4.flow.SamplingState]
+        Alternative way to pass specify initial values and observed values
+    observed : Optional[Dict[str, Any]]
+        New observed values (optional)
+    xla : bool
+        Enable experimental XLA
+
+    Returns
+    -------
+    Final state : Tensor
+        Posterior samples
     """
     (logpfn_prior, logpfn_lkh, init, state_,) = _build_logp_smc(
-        model, num_chains=num_chains, draws=draws, state=state, observed=observed,
+        model, draws=draws, state=state, observed=observed,
     )
-    for k in init.keys():
-        init[k] = state_.all_unobserved_values_batched[k]
+    for _ in init.keys():
+        init[_] = state_.all_unobserved_values_batched[_]
     init_state = list(init.values())
 
     parallel_logpfn_prior = logpfn_prior
@@ -53,11 +72,7 @@ def sample_smc(
 
 
 def _build_logp_smc(
-    model,
-    num_chains,
-    draws,
-    observed: Optional[dict] = None,
-    state: Optional[flow.SamplingState] = None,
+    model, draws, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
 ):
     # TODO: modified, merged with the sampling implementation
     # there is a better logic in more samplers implementation
@@ -72,13 +87,7 @@ def _build_logp_smc(
         raise ValueError("Can't use both `state` and `observed` arguments")
 
     state, _ = initialize_sampling_state(
-        model,
-        observed=observed,
-        state=state,
-        num_chains=num_chains,
-        draws=draws,
-        is_smc=True,
-        smc_run=True,
+        model, observed=observed, state=state, num_chains=draws, is_smc=True, first_smc_run=True,
     )
 
     if not state.all_unobserved_values:
@@ -88,6 +97,16 @@ def _build_logp_smc(
 
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
+    obs = state.observed_values
+    if observed is not None:
+        obs.update(observed)
+    else:
+        observed = obs
+    for k, o in obs.items():
+        o = tf.convert_to_tensor(o)
+        o = tf.tile(o[None, ...], [draws] + [1] * o.ndim)
+        observed[k] = o
+
     @tf.function(autograph=False)
     def logpfn_likelihood(*values, **kwargs):
         if kwargs and values:
@@ -95,9 +114,7 @@ def _build_logp_smc(
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(
-            model, state=st, num_chains=num_chains, draws=draws, smc_run=True
-        )
+        _, st = flow.evaluate_model_transformed(model, state=st)
         return st.collect_log_prob_smc(is_prior=False)
 
     @tf.function(autograph=False)
@@ -107,9 +124,7 @@ def _build_logp_smc(
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(
-            model, state=st, num_chains=num_chains, draws=draws, smc_run=True
-        )
+        _, st = flow.evaluate_model_transformed(model, state=st)
         return st.collect_log_prob_smc(is_prior=True)
 
     return (

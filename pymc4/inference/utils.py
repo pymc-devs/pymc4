@@ -77,3 +77,15 @@ def trace_to_arviz(
         posterior_predictive=posterior_predictive,
         observed_data=observed_data,
     )
+
+
+def vectorize_logp_function(logpfn):
+    # TODO: vectorize with dict
+    def vectorized_logpfn(*state):
+        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+
+    return vectorized_logpfn
+
+
+def tile_init(init, num_repeats):
+    return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]

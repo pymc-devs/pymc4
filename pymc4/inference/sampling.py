@@ -1,22 +1,15 @@
-import functools
 import logging
 from typing import Optional, Dict, Any
 import tensorflow as tf
 from tensorflow_probability import mcmc
-from pymc4.inference import trace_support
-from tensorflow_probability.python.mcmc import sample as mcmc_sample
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import (
-    initialize_sampling_state,
-    trace_to_arviz,
-    vectorize_logp_function,
-    tile_init,
-)
+from pymc4.inference.utils import initialize_sampling_state, trace_to_arviz, vectorize_logp_function, tile_init
 from pymc4.utils import NameParts
 from pymc4.inference import smc
 
-_log = logging.getLogger("pymc4")
+_log = logging.getLogger('pymc4')
+_log.setLevel(logging.INFO)
 
 
 def sample(
@@ -38,6 +31,7 @@ def sample(
 ):
     """
     Perform MCMC sampling using NUTS (for now).
+
     Parameters
     ----------
     model : pymc4.Model
@@ -69,7 +63,7 @@ def sample(
         WARNING: This is an advanced user feature. If you are not sure how to use this, please use
         the default ``True`` value.
         If ``True``, the model's total ``log_prob`` will be automatically vectorized to work across
-        multiple indepedent chains using ``tf.vectorized_map``. If ``False``, the model is assumed
+        multiple independent chains using ``tf.vectorized_map``. If ``False``, the model is assumed
         be defined in vectorized way. This means that every distribution has the proper
         ``batch_shape`` and ``event_shape``s so that all the outputs from each distribution's
         ``log_prob`` will broadcast with each other, and that the forward passes through the model
@@ -77,35 +71,48 @@ def sample(
         ``batch_shape``. Achieving this is a hard task, but it enables the model to be safely
         evaluated in parallel across all chains in MCMC, so sampling will be faster than in the
         automatically batched scenario.
+
     Returns
     -------
     Trace : InferenceDataType
         An ArviZ's InferenceData object with the groups: posterior, sample_stats and observed_data
+
     Examples
     --------
     Let's start with a simple model. We'll need some imports to experiment with it.
+
     >>> import pymc4 as pm
     >>> import numpy as np
+
     This particular model has a latent variable `sd`
+
     >>> @pm.model
     ... def nested_model(cond):
     ...     sd = yield pm.HalfNormal("sd", 1.)
     ...     norm = yield pm.Normal("n", cond, sd, observed=np.random.randn(10))
     ...     return norm
+
     Now, we may want to perform sampling from this model. We already observed some variables and we
     now need to fix the condition.
+
     >>> conditioned = nested_model(cond=2.)
+
     Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling.
     Nothing special is required but passing the model to ``pm.sample``, the rest configuration is
     held by PyMC4.
+
     >>> trace = sample(conditioned)
+
     Notes
     -----
     Things that are considered to be under discussion are overriding observed variables. The API
     for that may look like
+
     >>> new_observed = {"nested_model/n": np.random.randn(10) + 1}
     >>> trace = sample(conditioned, observed=new_observed)
+
     This will give a trace with new observed variables. This way is considered to be explicit.
+
     """
     (
         logpfn,
@@ -131,7 +138,6 @@ def sample(
         deterministics_callback = _deterministics_callback
         init_state = tile_init(init_state, num_chains)
 
-    @tf.function(autograph=False)
     def trace_fn(current_state, pkr):
         return (
             pkr.inner_results.target_log_prob,
@@ -141,6 +147,7 @@ def sample(
             pkr.inner_results.log_accept_ratio,
         ) + tuple(deterministics_callback(*current_state))
 
+    @tf.function(autograph=False)
     def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
             target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
@@ -154,18 +161,7 @@ def sample(
             **(adaptation_kwargs or dict()),
         )
 
-        if progressbar is True:
-            # to avoid warnings of repeated tracing for
-            # the second call of sampling function
-            adapt_nuts_kernel.bootstrap_results = tf.function(
-                adapt_nuts_kernel.bootstrap_results, autograph=False, experimental_compile=xla
-            )
-
-        mcmc_sample.mcmc_util.trace_scan = functools.partial(
-            trace_support.trace_scan, progressbar=progressbar, xla=xla,
-        )
-
-        results, sample_stats = mcmc_sample.sample_chain(
+        results, sample_stats = mcmc.sample_chain(
             num_samples,
             current_state=init,
             kernel=adapt_nuts_kernel,
@@ -176,14 +172,11 @@ def sample(
 
         return results, sample_stats
 
-    if progressbar is False:
-        run_chains = tf.function(run_chains, autograph=False, experimental_compile=xla)
-
     if initialize_smc is True:
-        _log.info("Starting SMC initialization")
-        final_state = smc.sample_smc(model, xla=xla, **(smc_kwargs or dict()))
+        _log.info("Posterior calculation with SMC")
+        final_state, _ = smc.sample_smc(model, xla=xla, **(smc_kwargs or dict()))
         step_size = [tf.math.reduce_std(x) for x in final_state]
-        _log.info("SMC initialization completed")
+        _log.info("Posterior samples are calculated")
 
     if xla:
         results, sample_stats = tf.xla.experimental.compile(
@@ -221,9 +214,7 @@ def build_logp_and_deterministic_functions(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
 
-    state, deterministic_names = initialize_sampling_state(
-        model, observed=observed, state=state, num_chains=None
-    )
+    state, deterministic_names = initialize_sampling_state(model, observed=observed, state=state)
 
     if not state.all_unobserved_values:
         raise ValueError(
@@ -233,7 +224,19 @@ def build_logp_and_deterministic_functions(
     observed_var = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
-    if not collect_reduced_log_prob:
+    if collect_reduced_log_prob:
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+            _, st = flow.evaluate_model_transformed(model, state=st)
+            return st.collect_log_prob()
+
+    else:
         # When we use manual batching, we need to manually tile the chains axis
         # to the left of the observed tensors
         if num_chains is not None:
@@ -247,15 +250,15 @@ def build_logp_and_deterministic_functions(
                 o = tf.tile(o[None, ...], [num_chains] + [1] * o.ndim)
                 observed[k] = o
 
-    @tf.function(autograph=False)
-    def logpfn(*values, **kwargs):
-        if kwargs and values:
-            raise TypeError("Either list state should be passed or a dict one")
-        elif values:
-            kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(model, state=st)
-        return st.collect_log_prob(is_reduced=collect_reduced_log_prob)
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+            _, st = flow.evaluate_model_transformed(model, state=st)
+            return st.collect_unreduced_log_prob()
 
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):

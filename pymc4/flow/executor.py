@@ -115,8 +115,7 @@ class SamplingState:
         transformed_values: Dict[str, Any] = None,
         untransformed_values: Dict[str, Any] = None,
         observed_values: Dict[str, Any] = None,
-        discrete_distributions: Dict[str, distribution.Distribution] = None,
-        continuous_distributions: Dict[str, distribution.Distribution] = None,
+        distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
         deterministics: Dict[str, Any] = None,
         posterior_predictives: Optional[Set[str]] = None,
@@ -144,14 +143,10 @@ class SamplingState:
             observed_values = dict()
         else:
             observed_values = observed_values.copy()
-        if discrete_distributions is None:
-            discrete_distributions = dict()
+        if distributions is None:
+            distributions = dict()
         else:
-            discrete_distributions = discrete_distributions.copy()
-        if continuous_distributions is None:
-            continuous_distributions = dict()
-        else:
-            continuous_distributions = continuous_distributions.copy()
+            distributions = distributions.copy()
         if potentials is None:
             potentials = list()
         else:
@@ -174,6 +169,7 @@ class SamplingState:
         self.all_values = ChainMap(
             self.untransformed_values, self.transformed_values, self.observed_values
         )
+
         self.all_unobserved_values = ChainMap(self.untransformed_values, self.transformed_values)
         self.all_unobserved_values_batched = ChainMap(
             self.transformed_values_batched, self.untransformed_values_batched
@@ -182,18 +178,14 @@ class SamplingState:
         self.distributions = distributions
         self.prior_distributions = {}
         self.lkh_distributions = {}
+
         self.potentials = potentials
         self.deterministics = deterministics
         self.posterior_predictives = posterior_predictives
 
     def collect_log_prob_elemwise(self):
         return itertools.chain(
-            (
-                dist.log_prob(self.all_values[name])
-                for name, dist in itertools.chain(
-                    self.discrete_distributions.items(), self.continuous_distributions.items()
-                )
-            ),
+            (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
             (p.value for p in self.potentials),
         )
 
@@ -204,25 +196,80 @@ class SamplingState:
             return sum(self.collect_log_prob_elemwise())
 
     def collect_log_prob_elemwise_lp_prior(self, distrs, is_prior=False):
-        return (dist.log_prob(self.all_values[name]) for name, dist in distrs.items())
+        def reduce_sum_smc(value, ind_exclude):
+            ndim = len(value.shape)
+            return tf.reduce_sum(
+                value, axis=[*range(0, ind_exclude), *range(ind_exclude + 1, ndim)]
+            )
+
+        for name, dist in distrs.items():
+            # TODO: for now if we are setting explicit batch dim in SMC and
+            # distribution has plate parameter (batch_stack in pymc4) then the distribution
+            # expects the sample of shape: [*batch_stack, draws, *event_shape] for `log_prob`
+            # but the values are stored as [draws,...] because of the sequential_monte_carlo
+            # op design in tfp. For now we can only check for batch_stack in distribution,
+            # transpose the value and set correct axises to apply `reduce_sum`
+            # This potentially can be solved with the additional argument passed to the
+            # distribution initialization alongside the `batch_stack` for the BatchStacker.
+            value = self.all_values[name]
+            val_ndim = len(value.shape)
+            int_exclude = 0
+            if dist.batch_stack:
+                bs = 1 if isinstance(dist.batch_stack, int) else len(dist.batch_stack)
+                value = tf.transpose(value, [*range(1, bs + 1), 0, *range(bs + 1, val_ndim)])
+                int_exclude = bs
+            yield reduce_sum_smc(dist.log_prob(value), ind_exclude=int_exclude)
 
     def collect_log_prob_elemwise_lp_lkh(self, distrs, is_prior=False):
         for name, dist in distrs.items():
-            rht_inds = [_ for _ in range(2, self.all_values[name].ndim)]
+            # For SMC we need to move first axis (draws axis) to the right position
+            # so that the shapes of distribution parameters and value can be broadcasted
+            value_st = self.all_values[name]
+            val_dims, val_ndim = value_st.shape, value_st.ndim
+            dist_ndim = dist.batch_shape.rank + dist.event_shape.rank
+            ndim_diff = tf.abs(val_ndim - dist_ndim)
+
+            # if...else supported by tf.function
+            if val_ndim > dist_ndim:
+                # If value ndim is larger thatn ndim of distribution params then
+                # we are transposing the value tensor
+                axis_transpose = tf.concat(
+                    [
+                        tf.range(1, ndim_diff + 1),
+                        tf.constant([0]),
+                        tf.range(ndim_diff + 1, val_ndim),
+                    ],
+                    axis=0,
+                )
+                value = tf.transpose(value_st, axis_transpose)
+                reduce_axis = tf.concat(
+                    [tf.range(0, ndim_diff), tf.range(ndim_diff + 1, val_ndim)], axis=0
+                )
+            elif val_ndim < dist_ndim:
+                # Otherwise we are reshaping the value tensor to make it broadcastable
+                shape_ = tf.concat(
+                    [
+                        tf.constant([val_dims[0]]),
+                        tf.ones(ndim_diff, dtype=tf.int32),
+                        tf.constant([*val_dims[1:]], dtype=tf.int32),
+                    ],
+                    axis=0,
+                )
+                value = tf.reshape(value_st, shape=shape_)
+                reduce_axis = tf.range(1, dist_ndim)
+            else:
+                reduce_axis = tf.range(1, val_ndim)
+                value = value_st
+
             yield tf.reduce_sum(
-                dist.log_prob(tf.transpose(self.all_values[name], [1, 0, *rht_inds],)),
-                axis=[0, *rht_inds],
+                dist.log_prob(value), axis=reduce_axis,
             )
 
     def collect_log_prob_smc(self, is_prior):
-        def reduce_sum_smc(value):
-            shape = value.shape
-            # Because of the different logic with reduce sum
-            # it is not possible to merge two log prob ops
-            # so for now we are separating them with the logic
-            # of executing smc log ops and sampling log prob ops
-            return tf.reduce_sum(value, axis=range(1, len(shape)))
-
+        # Because of the different logic with reduce sum
+        # it is not possible to merge two log prob ops
+        # so for now we are separating them with the logic
+        # of executing smc log ops and sampling log prob ops
         if is_prior is True:
             distrs = self.prior_distributions
             log_prob_elemwise = self.collect_log_prob_elemwise_lp_prior(distrs)
@@ -232,11 +279,7 @@ class SamplingState:
             log_prob_elemwise = itertools.chain(
                 log_prob_elemwise, (p.value for p in self.potentials)
             )
-
-        if is_prior:
-            log_prob = sum(map(reduce_sum_smc, log_prob_elemwise))
-        else:
-            log_prob = sum(log_prob_elemwise)
+        log_prob = sum(log_prob_elemwise)
         return log_prob
 
     def __repr__(self):
@@ -247,13 +290,8 @@ class SamplingState:
         deterministics = list(self.deterministics)
         posterior_predictives = list(self.posterior_predictives)
         # format like dist:name
-        discrete_distributions = [
-            "{}:{}".format(d.__class__.__name__, k) for k, d in self.discrete_distributions.items()
-        ]
-        # continuous case
-        continuous_distributions = [
-            "{}:{}".format(d.__class__.__name__, k)
-            for k, d in self.continuous_distributions.items()
+        distributions = [
+            "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
         ]
 
         prior_distributions = [
@@ -276,9 +314,7 @@ class SamplingState:
             + indent
             + "observed_values: {}\n"
             + indent
-            + "discrete_distributions: {}\n"
-            + indent
-            + "continuous_distributions: {}\n"
+            + "distributions: {}\n"
             + indent
             + "prior_distributions: {}\n"
             + indent
@@ -332,8 +368,7 @@ class SamplingState:
             transformed_values=self.transformed_values,
             untransformed_values=self.untransformed_values,
             observed_values=self.observed_values,
-            discrete_distributions=self.discrete_distributions,
-            continuous_distributions=self.continuous_distributions,
+            distributions=self.distributions,
             potentials=self.potentials,
             deterministics=self.deterministics,
             posterior_predictives=self.posterior_predictives,
@@ -347,7 +382,7 @@ class SamplingState:
             3. Remove untransformed values if transformed are present
             4. Remove all other irrelevant values
         """
-        if not self.discrete_distributions and not self.continuous_distributions:
+        if not self.distributions:
             raise TypeError(
                 "No distributions found in the state. "
                 "the model you evaluated is empty and does not yield any PyMC4 distribution"
@@ -357,9 +392,7 @@ class SamplingState:
         need_to_transform_after = list()
         observed_values = dict()
 
-        for name, dist in itertools.chain(
-            self.discrete_distributions.items(), self.continuous_distributions.items()
-        ):
+        for name, dist in self.distributions.items():
             namespec = utils.NameParts.from_name(name)
             if dist.transform is not None and name not in self.observed_values:
                 transformed_namespec = namespec.replace_transform(dist.transform.name)
@@ -438,7 +471,8 @@ class SamplingExecutor:
         observed: Dict[str, Any] = None,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
         num_chains: Optional[int] = 1,
-        first_smc_run: Optional[bool] = False,
+        is_smc: bool = False,
+        first_smc_run: bool = False,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -595,6 +629,7 @@ class SamplingExecutor:
                                 state,
                                 sample_shape=sample_shape,
                                 num_chains=num_chains,
+                                is_smc=is_smc,
                                 first_smc_run=first_smc_run,
                             )
                         except EvaluationError as error:
@@ -671,7 +706,8 @@ class SamplingExecutor:
         state: SamplingState,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
         num_chains: Optional[int] = None,
-        first_smc_run: Optional[bool] = False,
+        is_smc: bool = False,
+        first_smc_run: bool = False,
     ) -> Tuple[Any, SamplingState]:
         # TODO: docs
         sample_func = dist.sample
@@ -684,11 +720,7 @@ class SamplingExecutor:
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
-        if (
-            scoped_name in state.discrete_distributions
-            or scoped_name in state.continuous_distributions
-            or scoped_name in state.deterministics
-        ):
+        if scoped_name in state.distributions or scoped_name in state.deterministics:
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -698,28 +730,33 @@ class SamplingExecutor:
                     scoped_name
                 )
             )
+
+        def sample_unobserved(dist, state, scoped_name, sample_func, num_chains, sample_shape):
+            # we have smc_run flag for the SMC graph evaluation
+            # for SMC we need to store batch values in the state object
+            # alongside the single batch values to not expose batch shape
+            if dist.is_root:
+                if first_smc_run:
+                    sample_ = sample_func(
+                        sample_shape=(num_chains,) + sample_shape if num_chains else sample_shape
+                    )
+                    state.untransformed_values_batched[scoped_name] = sample_
+                return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
+            else:
+                sample_ = sample_func((num_chains,) if num_chains else ())
+                state.untransformed_values_batched[scoped_name] = sample_
+                return_value = state.untransformed_values[scoped_name] = sample_func()
+            return state, return_value
+
         if scoped_name in state.observed_values or dist.is_observed:
             observed_variable = observed_value_in_evaluation(scoped_name, dist, state)
             if observed_variable is None:
                 # None indicates we pass None to the state.observed_values dict,
                 # might be posterior predictive or programmatically override to exchange observed variable to latent
                 if scoped_name not in state.untransformed_values:
-                    # posterior predictive
-                    if dist.is_root:
-                        if first_smc_run:
-                            state.untransformed_values_batched[scoped_name] = sample_func(
-                                sample_shape=(num_chains,) + sample_shape
-                                if num_chains
-                                else sample_shape
-                            )
-                        return_value = state.untransformed_values[scoped_name] = sample_func(
-                            sample_shape
-                        )
-                    else:
-                        state.untransformed_values_batched[scoped_name] = sample_func(
-                            (num_chains,) if num_chains else ()
-                        )
-                        return_value = state.untransformed_values[scoped_name] = sample_func()
+                    state, return_value = sample_unobserved(
+                        dist, state, scoped_name, sample_func, num_chains, sample_shape,
+                    )
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -734,27 +771,18 @@ class SamplingExecutor:
                             scoped_name
                         )
                     )
-                if num_chains is None:
-                    # TODO: For now num_chains=None means that were are
-                    # using mcmc sampling
-                    assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
+                assert_values_compatible_with_distribution(
+                    scoped_name, observed_variable, dist, is_smc=is_smc
+                )
                 return_value = state.observed_values[scoped_name] = observed_variable
             state.lkh_distributions[scoped_name] = dist
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
             state.prior_distributions[scoped_name] = dist
         else:
-            if dist.is_root:
-                if first_smc_run:
-                    state.untransformed_values_batched[scoped_name] = sample_func(
-                        sample_shape=(num_chains,) + sample_shape if num_chains else sample_shape
-                    )
-                return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
-            else:
-                state.untransformed_values_batched[scoped_name] = sample_func(
-                    (num_chains,) if num_chains else ()
-                )
-                return_value = state.untransformed_values[scoped_name] = sample_func()
+            state, return_value = sample_unobserved(
+                dist, state, scoped_name, sample_func, num_chains, sample_shape,
+            )
             state.prior_distributions[scoped_name] = dist
         state.distributions[scoped_name] = dist
         return return_value, state
@@ -768,11 +796,7 @@ class SamplingExecutor:
         scoped_name = scopes.variable_name(deterministic.name)
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
-        if (
-            scoped_name in state.discrete_distributions
-            or scoped_name in state.continuous_distributions
-            or scoped_name in state.deterministics
-        ):
+        if scoped_name in state.distributions or scoped_name in state.deterministics:
             raise EvaluationError(
                 "Attempting to create a duplicate deterministic {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -827,7 +851,7 @@ def observed_value_in_evaluation(
 
 
 def assert_values_compatible_with_distribution(
-    scoped_name: str, values: Any, dist: distribution.Distribution
+    scoped_name: str, values: Any, dist: distribution.Distribution, is_smc: bool = False
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
     A distribution's shape, ``dist_shape``, is made up by the sum of
@@ -859,11 +883,17 @@ def assert_values_compatible_with_distribution(
     """
     event_shape = dist.event_shape
     batch_shape = dist.batch_shape
-    assert_values_compatible_with_distribution_shape(scoped_name, values, batch_shape, event_shape)
+    assert_values_compatible_with_distribution_shape(
+        scoped_name, values, batch_shape, event_shape, is_smc
+    )
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape
+    scoped_name: str,
+    values: Any,
+    batch_shape: tf.TensorShape,
+    event_shape: tf.TensorShape,
+    is_smc: bool,
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
     A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of
@@ -898,6 +928,11 @@ def assert_values_compatible_with_distribution_shape(
     dist_shape = batch_shape + event_shape
     value_rank = value_shape.rank
     dist_rank = dist_shape.rank
+
+    if is_smc:
+        # If we are running SMC algorithm, then draws dim should be discarded
+        value_shape = value_shape[1:]
+        dist_shape = dist_shape[1:]
 
     # TODO: Make the or condition less ugly but at the same time compatible with
     # tf.function. tf.math.maximum makes things kind of weird and raises errors

@@ -44,6 +44,7 @@ def sample_smc(
     (logpfn_prior, logpfn_lkh, init, state_,) = _build_logp_smc(
         model, draws=draws, state=state, observed=observed,
     )
+    state_keys = list(init.keys())
     for _ in init.keys():
         init[_] = state_.all_unobserved_values_batched[_]
     init_state = list(init.values())
@@ -66,7 +67,8 @@ def sample_smc(
         _, final_state, _ = tf.xla.experimental.compile(run_smc, inputs=[init_state])
     else:
         _, final_state, _ = run_smc(init_state)
-    return final_state
+    mapped_samples = {name:value for name, value in zip(state_keys, final_state)}
+    return final_state, mapped_samples
 
 
 def _build_logp_smc(
@@ -112,7 +114,7 @@ def _build_logp_smc(
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(model, state=st)
+        _, st = flow.evaluate_model_transformed(model, state=st, is_smc=True)
         return st.collect_log_prob_smc(is_prior=False)
 
     @tf.function(autograph=False)
@@ -122,7 +124,7 @@ def _build_logp_smc(
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(model, state=st)
+        _, st = flow.evaluate_model_transformed(model, state=st, is_smc=True)
         return st.collect_log_prob_smc(is_prior=True)
 
     return (

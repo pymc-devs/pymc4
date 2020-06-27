@@ -1,7 +1,8 @@
 """Miscellaneous utility functions."""
 import functools
 import re
-from typing import Callable, Sequence, Optional
+from typing import Callable, Sequence, Optional, Tuple
+import itertools
 import io
 import pkgutil
 import os

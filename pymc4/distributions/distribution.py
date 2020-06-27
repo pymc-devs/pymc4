@@ -136,14 +136,14 @@ class Distribution(Model):
 
     def get_test_sample(self, sample_shape=(), seed=None):
         """Get the test value using a function signature similar to meth:`~.sample`
-        
+
         Parameters
         ----------
         sample_shape : tuple
             sample shape
         seed : int | None
             ignored. Is only present to match the signature of meth:`~.sample`
-        
+
         Returns
         -------
         The distribution's ``test_value`` broadcasted to

@@ -43,34 +43,12 @@ class Approximation(tf.Module):
         self.approx = self._build_posterior()
 
     def _build_logfn(self):
-        """Build vectorized logp function."""
-
-        @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(self.unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs)
-            _, st = flow.evaluate_model_transformed(self.model, state=st)
-            return st.collect_log_prob()
-
-        def vectorize_logp_function(logpfn):
-            def vectorized_logpfn(*q_samples):
-                return tf.vectorized_map(lambda samples: logpfn(*samples), q_samples)
-
-            return vectorized_logpfn
-
-        return vectorize_logp_function(logpfn)
+        raise NotImplementedError
 
     def _build_posterior(self):
         raise NotImplementedError
 
-    def flatten_view(self):
-        """Flattened view of the variational parameters."""
-        pass
-
-    def sample(self, n):
+    def sample(self, n: int) -> az.InferenceData:
         """Generate samples from posterior distribution."""
         q_samples = dict(zip(self.unobserved_keys, self.approx.sample(n)))
 
@@ -105,6 +83,27 @@ class MeanField(Approximation):
     Inference. arXiv preprint arXiv:1603.00788.
     """
 
+    def _build_logfn(self):
+        """Build vectorized logp function."""
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(self.unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs)
+            _, st = flow.evaluate_model_transformed(self.model, state=st)
+            return st.collect_log_prob()
+
+        def vectorize_logp_function(logpfn):
+            def vectorized_logpfn(*q_samples):
+                return tf.vectorized_map(lambda samples: logpfn(*samples), q_samples)
+
+            return vectorized_logpfn
+
+        return vectorize_logp_function(logpfn)
+
     def _build_loc(self, shape, dtype, name):
         loc = tf.Variable(tf.random.normal(shape, seed=self._seed), name=f"{name}/mu", dtype=dtype)
         return loc
@@ -135,20 +134,85 @@ class MeanField(Approximation):
 
 
 class FullRank(Approximation):
-    """Full Rank Automatic Differential Variational Inference(Full Rank ADVI)."""
+    """
+    Full Rank ADVI.
 
-    def _build_loc(self):
-        raise NotImplementedError
+    This class implements Full Rank Automatic Differentiation Variational Inference. It posits Multivariate 
+    Gaussian family to fit posterior. And estimates a full covariance matrix. As a result, it comes with
+    higher computation costs.
 
-    def _build_cov_matrix(self):
-        raise NotImplementedError
+    References
+    ----------
+    -   Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+    and Blei, D. M. (2016). Automatic Differentiation Variational
+    Inference. arXiv preprint arXiv:1603.00788.
+    """
+
+    def _build_logfn(self):
+        """Build flat logp function."""
+
+        @tf.function(autograph=False)
+        def logpfn(*values, **kwargs):
+            if kwargs and values:
+                raise TypeError("Either list state should be passed or a dict one")
+            elif values:
+                kwargs = dict(zip(self.unobserved_keys, values))
+            st = flow.SamplingState.from_values(kwargs)
+            flat_state = dict()
+            for key, value in kwargs.items():
+                shape = self.state.all_unobserved_values[key].shape
+                flat_state[key] = tf.reshape(value, shape)
+            _, st = flow.evaluate_meta_model(self.model, values=flat_state)
+            return st.collect_log_prob()
+
+        def vectorize_logp_function(logpfn):
+            def vectorized_logpfn(*q_samples):
+                return tf.vectorized_map(lambda samples: logpfn(*samples), q_samples)
+
+            return vectorized_logpfn
+
+        return vectorize_logp_function(logpfn)
+
+    def _build_loc(self, ndim, dtype, name):
+        loc = tf.Variable(tf.random.normal([ndim], seed=self._seed), name=f"{name}/mu", dtype=dtype)
+        return loc
+
+    def _build_cov_matrix(self, ndim, dtype, name):
+        scale_tril = tfb.FillScaleTriL(
+            diag_bijector=tfb.Chain(
+                [
+                    tfb.Shift(tf.cast(1e-3, dtype)),  # diagonal offset
+                    tfb.Softplus(),
+                    tfb.Shift(tf.cast(np.log(np.expm1(1.0)), dtype)),  # initial scale
+                ]
+            ),
+            diag_shift=None,
+        )
+
+        cov_matrix = tfp.util.TransformedVariable(
+            tf.eye(ndim, dtype=dtype), scale_tril, name=f"{name}/sigma"
+        )
+        return cov_matrix
 
     def _build_posterior(self):
-        raise NotImplementedError
+        def apply_normal(dist_name):
+            unobserved_value = self.state.all_unobserved_values[dist_name]
+            ndim = np.int32(np.prod(unobserved_value.shape.as_list()))
+            dtype = unobserved_value.dtype
+            return tfd.MultivariateNormalTriL(
+                loc=self._build_loc(ndim, dtype, dist_name),
+                scale_tril=self._build_cov_matrix(ndim, dtype, dist_name),
+            )
+
+        variational_params = tf.nest.map_structure(apply_normal, self.unobserved_keys)
+        return tfd.JointDistributionSequential(variational_params)
 
 
 class LowRank(Approximation):
     """Low Rank Automatic Differential Variational Inference(Low Rank ADVI)."""
+
+    def _build_logfn(self):
+        raise NotImplementedError
 
     def _build_loc(self):
         raise NotImplementedError
@@ -162,7 +226,7 @@ class LowRank(Approximation):
 
 def fit(
     model: Optional[Model] = None,
-    method: Union[str, MeanField] = "advi",
+    method: Union[str, MeanField, FullRank] = "advi",
     num_steps: int = 10000,
     sample_size: int = 1,
     random_seed: Optional[int] = None,
@@ -200,7 +264,7 @@ def fit(
     ADVIFit : collections.namedtuple
         Named tuple, including approximation, ELBO losses depending on the `trace_fn`
     """
-    _select = dict(advi=MeanField,)
+    _select = dict(advi=MeanField, fullrank=FullRank)
 
     if isinstance(method, str):
         # Here we assume that `model` parameter is provided by the user.

@@ -22,6 +22,7 @@ def simple_model():
     def model():
         mu = yield pm.Normal("mu", prior_mean, prior_sigma)
         ll = yield pm.Normal("ll", mu, known_sigma, observed=data)
+        return ll
 
     return dict(data_points=data_points, data=data, estimated_mean=estimated_mean, model=model)
 
@@ -30,6 +31,10 @@ def simple_model():
 _test_kwargs = {
     "ADVI": {
         "method": pm.MeanField, 
+        "fit_kwargs": {}
+    },
+    "FullRank ADVI": {
+        "method": pm.FullRank,
         "fit_kwargs": {}
     }
 }

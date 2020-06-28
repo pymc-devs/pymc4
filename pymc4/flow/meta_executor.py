@@ -27,6 +27,4 @@ class MetaPosteriorPredictiveSamplingExecutor(
         Do a forward pass through the model only using distribution test values.
         Also modify the distributions to make them suitable for posterior predictive sampling.
     """
-
-    # Everything is done in the parent classes
     pass

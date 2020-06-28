@@ -68,6 +68,13 @@ class EvaluationError(RuntimeError):
         "    value_shape[(len(values.shape) - len(dist_shape)):]"
         ")"
     )
+    DUPLICATE_VARIABLE = (
+        "Attempting to create a duplicate variable {!r}, "
+        "this may happen if you forget to use `pm.name_scope()` when calling same "
+        "model/function twice without providing explicit names. If you see this "
+        "error message and the function being called is not wrapped with "
+        "`pm.model`, you should better wrap it to provide explicit name for this model"
+    )
     ...
 
 
@@ -196,14 +203,19 @@ class SamplingState:
             return sum(self.collect_log_prob_elemwise())
 
     def collect_log_prob_elemwise_lp_prior(self, distrs, is_prior=False):
+        """
+            Collects log probabilities for prior variables in sMC
+        """
         def reduce_sum_smc(value, ind_exclude):
+            # `ind_exluce` argument determines the index that
+            # should be kept when reducing `value` tensor.
             ndim = len(value.shape)
             return tf.reduce_sum(
                 value, axis=[*range(0, ind_exclude), *range(ind_exclude + 1, ndim)]
             )
 
         for name, dist in distrs.items():
-            # TODO: for now if we are setting explicit batch dim in SMC and
+            # TODO: for now if we are setting explicit batch dim in sMC and
             # distribution has plate parameter (batch_stack in pymc4) then the distribution
             # expects the sample of shape: [*batch_stack, draws, *event_shape] for `log_prob`
             # but the values are stored as [draws,...] because of the sequential_monte_carlo
@@ -222,7 +234,7 @@ class SamplingState:
 
     def collect_log_prob_elemwise_lp_lkh(self, distrs, is_prior=False):
         for name, dist in distrs.items():
-            # For SMC we need to move first axis (draws axis) to the right position
+            # For sMC we need to move first axis (draws axis) to the right position
             # so that the shapes of distribution parameters and value can be broadcasted
             value_st = self.all_values[name]
             val_dims, val_ndim = value_st.shape, value_st.ndim
@@ -267,6 +279,12 @@ class SamplingState:
             )
 
     def collect_log_prob_smc(self, is_prior):
+        """
+            Collects log probabilities for likelihood variables in sMC.
+            Since sMC requires the `draws` dimension to be kept explicitly
+            while the graph is evaluated, we can't combine sMC prbability
+            collection with the NUTS log probability collection.
+        """
         # Because of the different logic with reduce sum
         # it is not possible to merge two log prob ops
         # so for now we are separating them with the logic
@@ -290,18 +308,13 @@ class SamplingState:
         observed_values = list(self.observed_values)
         deterministics = list(self.deterministics)
         posterior_predictives = list(self.posterior_predictives)
-        # format like dist:name
-        distributions = [
-            "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
-        ]
 
-        prior_distributions = [
-            "{}:{}".format(d.__class__.__name__, k) for k, d in self.prior_distributions.items()
-        ]
+        def get_distribution_class_names(distribution_dict):
+            return "{}:{}".format(d.__class__.__name__, k) for k, d in distribution_dict.items()
 
-        lkh_distributions = [
-            "{}:{}".format(d.__class__.__name__, k) for k, d in self.lkh_distributions.items()
-        ]
+        # format like dist:name prior_distribution, likelihood_distribution
+        prior_distributions =  get_distribution_class_names(self.prior_distributions)
+        lkh_distributions =  get_distribution_class_names(self.lkh_distributions)
 
         # be less verbose here
         num_potentials = len(self.potentials)
@@ -315,11 +328,9 @@ class SamplingState:
             + indent
             + "observed_values: {}\n"
             + indent
-            + "distributions: {}\n"
-            + indent
             + "prior_distributions: {}\n"
             + indent
-            + "lkh_distributions: {}\n"
+            + "likelihood_distributions: {}\n"
             + indent
             + "num_potentials={}\n"
             + indent
@@ -331,7 +342,6 @@ class SamplingState:
             untransformed_values,
             transformed_values,
             observed_values,
-            distributions,
             prior_distributions,
             lkh_distributions,
             num_potentials,
@@ -687,8 +697,7 @@ class SamplingExecutor:
 
     def validate_state(self, state):
         """
-            TODO: we can move all the logic from transformed_exector.py
-            here but then additional statement will be added
+            TODO: #229
         """
         if state.transformed_values:
             raise ValueError(
@@ -699,6 +708,9 @@ class SamplingExecutor:
     def modify_distribution(
         self, dist: ModelType, model_info: Mapping[str, Any], state: SamplingState
     ) -> ModelType:
+        """
+            TODO: #229
+        """
         return dist
 
     def proceed_distribution(
@@ -710,7 +722,9 @@ class SamplingExecutor:
         is_smc: bool = False,
         first_smc_run: bool = False,
     ) -> Tuple[Any, SamplingState]:
-        # TODO: docs
+        """
+            TODO: #229
+        """
         sample_func = dist.sample
         if self.mode == "meta":
             sample_func = dist.get_test_sample
@@ -722,19 +736,11 @@ class SamplingExecutor:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
         if scoped_name in state.distributions or scoped_name in state.deterministics:
-            raise EvaluationError(
-                "Attempting to create a duplicate variable {!r}, "
-                "this may happen if you forget to use `pm.name_scope()` when calling same "
-                "model/function twice without providing explicit names. If you see this "
-                "error message and the function being called is not wrapped with "
-                "`pm.model`, you should better wrap it to provide explicit name for this model".format(
-                    scoped_name
-                )
-            )
+            raise EvaluationError(EvaluationError.DUPLICATE_VARIABLE.format(scoped_name))
 
         def sample_unobserved(dist, state, scoped_name, sample_func, num_chains, sample_shape):
-            # we have smc_run flag for the SMC graph evaluation
-            # for SMC we need to store batch values in the state object
+            # we have smc_run flag for the sMC graph evaluation
+            # for sMC we need to store batch values in the state object
             # alongside the single batch values to not expose batch shape
             if dist.is_root:
                 if first_smc_run:
@@ -791,22 +797,16 @@ class SamplingExecutor:
     def proceed_deterministic(
         self, deterministic: distribution.Deterministic, state: SamplingState
     ) -> Tuple[Any, SamplingState]:
-        # TODO: docs
+        """
+            TODO: #229
+        """
         if deterministic.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
         scoped_name = scopes.variable_name(deterministic.name)
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
         if scoped_name in state.distributions or scoped_name in state.deterministics:
-            raise EvaluationError(
-                "Attempting to create a duplicate deterministic {!r}, "
-                "this may happen if you forget to use `pm.name_scope()` when calling same "
-                "model/function twice without providing explicit names. If you see this "
-                "error message and the function being called is not wrapped with "
-                "`pm.model`, you should better wrap it to provide explicit name for this model".format(
-                    scoped_name
-                )
-            )
+            raise EvaluationError(EvaluationError.DUPLICATE_VARIABLE.format(scoped_name))
         state.deterministics[scoped_name] = return_value = deterministic.get_value()
         return return_value, state
 
@@ -931,7 +931,7 @@ def assert_values_compatible_with_distribution_shape(
     dist_rank = dist_shape.rank
 
     if is_smc:
-        # If we are running SMC algorithm, then draws dim should be discarded
+        # If we are running sMC algorithm, then draws dim should be discarded
         value_shape = value_shape[1:]
         dist_shape = dist_shape[1:]
 

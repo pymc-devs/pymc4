@@ -233,17 +233,18 @@ class SamplingState:
             if val_ndim > dist_ndim:
                 # If value ndim is larger thatn ndim of distribution params then
                 # we are transposing the value tensor
+                min_diff_ndim = tf.minimum(ndim_diff + 1, val_ndim)
                 axis_transpose = tf.concat(
                     [
-                        tf.range(1, ndim_diff + 1),
+                        tf.range(1, min_diff_ndim),
                         tf.constant([0]),
-                        tf.range(ndim_diff + 1, val_ndim),
+                        tf.range(min_diff_ndim, val_ndim),
                     ],
                     axis=0,
                 )
                 value = tf.transpose(value_st, axis_transpose)
                 reduce_axis = tf.concat(
-                    [tf.range(0, ndim_diff), tf.range(ndim_diff + 1, val_ndim)], axis=0
+                    [tf.range(0, min_diff_ndim - 1), tf.range(min_diff_ndim, val_ndim)], axis=0
                 )
             elif val_ndim < dist_ndim:
                 # Otherwise we are reshaping the value tensor to make it broadcastable

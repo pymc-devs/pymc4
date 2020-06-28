@@ -52,7 +52,7 @@ def sample_smc(
     parallel_logpfn_prior = logpfn_prior
     parallel_logpfn_lkh = logpfn_lkh
 
-    @tf.function(autograph=False)
+    # @tf.function(autograph=False)
     def run_smc(init):
         n_stage, final_state, final_kernel_results = sample_sequential_monte_carlo_chain(
             parallel_logpfn_prior,
@@ -67,7 +67,7 @@ def sample_smc(
         _, final_state, _ = tf.xla.experimental.compile(run_smc, inputs=[init_state])
     else:
         _, final_state, _ = run_smc(init_state)
-    mapped_samples = {name:value for name, value in zip(state_keys, final_state)}
+    mapped_samples = {name: value for name, value in zip(state_keys, final_state)}
     return final_state, mapped_samples
 
 
@@ -107,7 +107,7 @@ def _build_logp_smc(
         o = tf.tile(o[None, ...], [draws] + [1] * o.ndim)
         observed[k] = o
 
-    @tf.function(autograph=False)
+    # @tf.function(autograph=False)
     def logpfn_likelihood(*values, **kwargs):
         if kwargs and values:
             raise TypeError("Either list state should be passed or a dict one")
@@ -117,7 +117,7 @@ def _build_logp_smc(
         _, st = flow.evaluate_model_transformed(model, state=st, is_smc=True)
         return st.collect_log_prob_smc(is_prior=False)
 
-    @tf.function(autograph=False)
+    # @tf.function(autograph=False)
     def logpfn_prior(*values, **kwargs):
         if kwargs and values:
             raise TypeError("Either list state should be passed or a dict one")

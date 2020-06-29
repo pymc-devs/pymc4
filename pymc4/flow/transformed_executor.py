@@ -69,7 +69,7 @@ def make_untransformed_model(dist, transform, state):
             transform.inverse_log_det_jacobian, sampled_transformed_value
         )
         coef = 1.0
-    yield distributions.Potential(potential_fn, coef=coef)
+    yield distributions.Potential(potential_fn, coef=coef, name=scoped_name)
     # 3. return value to the user
     return sampled_untransformed_value
 

@@ -5,6 +5,7 @@ from collections import ChainMap
 import itertools
 
 import tensorflow as tf
+from tensorflow_probability.python.internal import prefer_static
 
 import pymc4 as pm
 from pymc4 import coroutine_model
@@ -112,7 +113,7 @@ class SamplingState:
         "all_unobserved_values_batched",
         "distributions",
         "prior_distributions",
-        "lkh_distributions",
+        "likelihood_distributions",
         "potentials",
         "deterministics",
     )
@@ -184,7 +185,7 @@ class SamplingState:
 
         self.distributions = distributions
         self.prior_distributions = {}
-        self.lkh_distributions = {}
+        self.likelihood_distributions = {}
 
         self.potentials = potentials
         self.deterministics = deterministics
@@ -198,19 +199,20 @@ class SamplingState:
 
     def collect_log_prob(self, is_reduced=True):
         if is_reduced:
-            return sum(map(tf.reduce_sum, self.collect_log_prob_elemwise()))
+            return sum(map(prefer_static.reduce_sum, self.collect_log_prob_elemwise()))
         else:
             return sum(self.collect_log_prob_elemwise())
 
-    def collect_log_prob_elemwise_lp_prior(self, distrs, is_prior=False):
+    def _collect_log_prob_elemwise_lp_prior(self, distrs, is_prior=False):
         """
             Collects log probabilities for prior variables in sMC
         """
+
         def reduce_sum_smc(value, ind_exclude):
             # `ind_exluce` argument determines the index that
             # should be kept when reducing `value` tensor.
             ndim = len(value.shape)
-            return tf.reduce_sum(
+            return prefer_static.reduce_sum(
                 value, axis=[*range(0, ind_exclude), *range(ind_exclude + 1, ndim)]
             )
 
@@ -232,49 +234,53 @@ class SamplingState:
                 int_exclude = bs
             yield reduce_sum_smc(dist.log_prob(value), ind_exclude=int_exclude)
 
-    def collect_log_prob_elemwise_lp_lkh(self, distrs, is_prior=False):
+    def _collect_log_prob_elemwise_lp_lkh(self, distrs, is_prior=False):
         for name, dist in distrs.items():
             # For sMC we need to move first axis (draws axis) to the right position
             # so that the shapes of distribution parameters and value can be broadcasted
             value_st = self.all_values[name]
             val_dims, val_ndim = value_st.shape, value_st.ndim
             dist_ndim = dist.batch_shape.rank + dist.event_shape.rank
-            ndim_diff = tf.abs(val_ndim - dist_ndim)
+            ndim_diff = prefer_static.abs(val_ndim - dist_ndim)
 
             # if...else supported by tf.function
             if val_ndim > dist_ndim:
                 # If value ndim is larger thatn ndim of distribution params then
                 # we are transposing the value tensor
-                min_diff_ndim = tf.minimum(ndim_diff + 1, val_ndim)
-                axis_transpose = tf.concat(
+                min_diff_ndim = prefer_static.minimum(ndim_diff + 1, val_ndim)
+                axis_transpose = prefer_static.concat(
                     [
-                        tf.range(1, min_diff_ndim),
+                        prefer_static.range(1, min_diff_ndim),
                         tf.constant([0]),
-                        tf.range(min_diff_ndim, val_ndim),
+                        prefer_static.range(min_diff_ndim, val_ndim),
                     ],
                     axis=0,
                 )
                 value = tf.transpose(value_st, axis_transpose)
-                reduce_axis = tf.concat(
-                    [tf.range(0, min_diff_ndim - 1), tf.range(min_diff_ndim, val_ndim)], axis=0
+                reduce_axis = prefer_static.concat(
+                    [
+                        prefer_static.range(0, min_diff_ndim - 1),
+                        prefer_static.range(min_diff_ndim, val_ndim),
+                    ],
+                    axis=0,
                 )
             elif val_ndim < dist_ndim:
                 # Otherwise we are reshaping the value tensor to make it broadcastable
-                shape_ = tf.concat(
+                shape_ = prefer_static.concat(
                     [
                         tf.constant([val_dims[0]]),
-                        tf.ones(ndim_diff, dtype=tf.int32),
+                        prefer_static.ones(ndim_diff, dtype=tf.int32),  # indices are int32
                         tf.constant([*val_dims[1:]], dtype=tf.int32),
                     ],
                     axis=0,
                 )
-                value = tf.reshape(value_st, shape=shape_)
-                reduce_axis = tf.range(1, dist_ndim)
+                value = prefer_static.reshape(value_st, shape=shape_)
+                reduce_axis = prefer_static.range(1, dist_ndim)
             else:
-                reduce_axis = tf.range(1, val_ndim)
+                reduce_axis = prefer_static.range(1, val_ndim)
                 value = value_st
 
-            yield tf.reduce_sum(
+            yield prefer_static.reduce_sum(
                 dist.log_prob(value), axis=reduce_axis,
             )
 
@@ -291,10 +297,10 @@ class SamplingState:
         # of executing smc log ops and sampling log prob ops
         if is_prior is True:
             distrs = self.prior_distributions
-            log_prob_elemwise = self.collect_log_prob_elemwise_lp_prior(distrs)
+            log_prob_elemwise = self._collect_log_prob_elemwise_lp_prior(distrs)
         else:
-            distrs = self.lkh_distributions
-            log_prob_elemwise = self.collect_log_prob_elemwise_lp_lkh(distrs)
+            distrs = self.likelihood_distributions
+            log_prob_elemwise = self._collect_log_prob_elemwise_lp_lkh(distrs)
             log_prob_elemwise = itertools.chain(
                 log_prob_elemwise, (p.value for p in self.potentials)
             )
@@ -302,22 +308,21 @@ class SamplingState:
         return log_prob
 
     def __repr__(self):
+        def get_distribution_class_names(distribution_dict):
+            return ["{}:{}".format(d.__class__.__name__, k) for k, d in distribution_dict.items()]
+
         # display keys only
         untransformed_values = list(self.untransformed_values)
         transformed_values = list(self.transformed_values)
         observed_values = list(self.observed_values)
         deterministics = list(self.deterministics)
         posterior_predictives = list(self.posterior_predictives)
-
-        def get_distribution_class_names(distribution_dict):
-            return "{}:{}".format(d.__class__.__name__, k) for k, d in distribution_dict.items()
-
         # format like dist:name prior_distribution, likelihood_distribution
-        prior_distributions =  get_distribution_class_names(self.prior_distributions)
-        lkh_distributions =  get_distribution_class_names(self.lkh_distributions)
-
+        prior_distributions = get_distribution_class_names(self.prior_distributions)
+        likelihood_distributions = get_distribution_class_names(self.likelihood_distributions)
         # be less verbose here
         num_potentials = len(self.potentials)
+
         indent = 4 * " "
         return (
             "{}(\n"
@@ -343,7 +348,7 @@ class SamplingState:
             transformed_values,
             observed_values,
             prior_distributions,
-            lkh_distributions,
+            likelihood_distributions,
             num_potentials,
             deterministics,
             posterior_predictives,
@@ -385,7 +390,7 @@ class SamplingState:
             posterior_predictives=self.posterior_predictives,
         )
 
-    def as_sampling_state(self, first_smc_run=False) -> "Tuple[SamplingState, List[str]]":
+    def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":
         """Create a sampling state that should be used within MCMC sampling.
         There are some principles that hold for the state.
             1. Check there is at least one distribution
@@ -483,7 +488,6 @@ class SamplingExecutor:
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
         num_chains: Optional[int] = 1,
         is_smc: bool = False,
-        first_smc_run: bool = False,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -641,7 +645,6 @@ class SamplingExecutor:
                                 sample_shape=sample_shape,
                                 num_chains=num_chains,
                                 is_smc=is_smc,
-                                first_smc_run=first_smc_run,
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
@@ -720,7 +723,6 @@ class SamplingExecutor:
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
         num_chains: Optional[int] = None,
         is_smc: bool = False,
-        first_smc_run: bool = False,
     ) -> Tuple[Any, SamplingState]:
         """
             TODO: #229
@@ -743,11 +745,10 @@ class SamplingExecutor:
             # for sMC we need to store batch values in the state object
             # alongside the single batch values to not expose batch shape
             if dist.is_root:
-                if first_smc_run:
-                    sample_ = sample_func(
-                        sample_shape=(num_chains,) + sample_shape if num_chains else sample_shape
-                    )
-                    state.untransformed_values_batched[scoped_name] = sample_
+                sample_ = sample_func(
+                    sample_shape=(num_chains,) + sample_shape if num_chains else sample_shape
+                )
+                state.untransformed_values_batched[scoped_name] = sample_
                 return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
             else:
                 sample_ = sample_func((num_chains,) if num_chains else ())
@@ -782,7 +783,7 @@ class SamplingExecutor:
                     scoped_name, observed_variable, dist, is_smc=is_smc
                 )
                 return_value = state.observed_values[scoped_name] = observed_variable
-            state.lkh_distributions[scoped_name] = dist
+            state.likelihood_distributions[scoped_name] = dist
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
             state.prior_distributions[scoped_name] = dist

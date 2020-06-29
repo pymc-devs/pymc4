@@ -15,7 +15,7 @@ def num_observed_samples(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=[2000, 5000])
+@pytest.fixture(scope="module", params=[5000])
 def draws(request):
     return request.param
 
@@ -30,7 +30,8 @@ def batch_stack(request):
 def simple_model(request, num_observed_samples, draws):
     seed = request.param
     tf.random.set_seed(seed)
-    observed = tf.random.normal((num_observed_samples,))
+    mean = np.random.random()
+    observed = tf.random.normal((num_observed_samples,)) + mean
 
     @pm.model
     def simple_model():
@@ -38,44 +39,50 @@ def simple_model(request, num_observed_samples, draws):
         lkh = yield pm.Normal("lkh", 0, 1, observed=observed)
         return lkh
 
-    return simple_model
+    return simple_model, mean
 
 
 @pytest.fixture(scope="module", params=range(10, 13))
-def model_conditioned(request, num_observed_samples, draws):
+def model_conditioned(request, num_observed_samples):
     seed = request.param
     tf.random.set_seed(seed)
-    observed = tf.random.normal((num_observed_samples,))
+    mean = np.random.random()
+    observed = tf.random.normal((num_observed_samples,)) + mean
+    prior = "pr"
 
     @pm.model
     def model_conditioned():
-        pr = yield pm.Normal("pr", 0, 1)
+        pr = yield pm.Normal(prior, 0, 1)
         lkh = yield pm.Normal("lkh", pr, 1, observed=observed)
         return lkh
 
-    return model_conditioned
+    return model_conditioned, mean, prior
 
 
 @pytest.fixture(scope="module", params=range(10, 13))
-def model_batch_stack_prior(request, num_observed_samples, draws, batch_stack):
+def model_batch_stack_prior(request, num_observed_samples, batch_stack):
     seed = request.param
     tf.random.set_seed(seed)
-    observed = tf.random.normal((num_observed_samples,))
+    mean = np.random.random(batch_stack)
+    observed = tf.random.normal((num_observed_samples, batch_stack)) + mean
+    prior = "pr"
 
     @pm.model
     def model_conditioned():
-        pr = yield pm.Normal("pr", 0, 1, batch_stack=batch_stack)
+        pr = yield pm.Normal(prior, 0, 1, batch_stack=batch_stack)
         lkh = yield pm.Normal("lkh", pr, 1, observed=observed)
         return lkh
 
-    return model_conditioned
+    return model_conditioned, mean, prior
 
 
 @pytest.fixture(scope="module", params=range(10, 13))
-def model_batch_stack_lkh(request, num_observed_samples, draws, batch_stack):
+def model_batch_stack_lkh(request, num_observed_samples, batch_stack):
     seed = request.param
     tf.random.set_seed(seed)
-    observed = tf.random.normal((num_observed_samples,))
+    mean = np.random.random(batch_stack)
+    observed = tf.random.normal((num_observed_samples, batch_stack)) + mean
+    prior = "pr"
 
     @pm.model
     def model_conditioned():
@@ -83,7 +90,7 @@ def model_batch_stack_lkh(request, num_observed_samples, draws, batch_stack):
         lkh = yield pm.Normal("lkh", pr, 1, batch_stack=batch_stack, observed=observed)
         return lkh
 
-    return model_conditioned
+    return model_conditioned, mean, prior
 
 
 @pytest.fixture(scope="module")
@@ -113,8 +120,32 @@ def xla_fixture(request):
 
 
 def test_simple_model(simple_model, xla_fixture, draws):
-    model = simple_model()
-    samples, map_ = pm.sample_smc(model, draws=draws)
+    model, mean = simple_model
+    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
 
 
-# TODO, should think more on the comprehensive testing
+def test_model_batch_stack_prior(model_batch_stack_prior, xla_fixture, draws):
+    model, mean, prior = model_batch_stack_prior
+    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
+    mean_posterior = tf.reduce_mean(samples[0])
+    np.testing.assert_allclose(mean_posterior, mean, rtol=1e-1)
+
+
+def test_model_conditioned(model_batch_stack_lkh, xla_fixture, draws):
+    model, mean, prior = model_batch_stack_lkh
+    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
+    mean_posterior = tf.reduce_mean(samples[0], 0)
+    np.testing.assert_allclose(mean_posterior, mean, rtol=3e-1)
+
+
+def test_model_conditioned(model_conditioned, xla_fixture, draws):
+    model, mean, prior = model_conditioned
+    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
+    mean_posterior = tf.reduce_mean(samples[0], 0)
+    np.testing.assert_allclose(mean_posterior, mean, rtol=3e-1)
+
+
+def test_model_no_observed(model_no_observed):
+    model = model_no_observed()
+    with pytest.raises(ValueError):
+        samples, map_ = pm.sample_smc(model)

@@ -86,9 +86,12 @@ def _build_logp_smc(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
 
-    state, _ = initialize_sampling_state(
-        model, observed=observed, state=state, num_chains=draws, is_smc=True, first_smc_run=True,
+    state, _, lkh_n, prior_n = initialize_sampling_state(
+        model, observed=observed, state=state, smc_draws=draws, is_smc=True,
     )
+
+    if lkh_n == 0 or prior_n == 0:
+        raise ValueError(f"Can not run SMC: the model should contain both likelihood and prior")
 
     if not state.all_unobserved_values:
         raise ValueError(

@@ -23,7 +23,7 @@ def sample(
     num_chains: int = 10,
     burn_in: int = 100,
     step_size: float = 0.1,
-    initialize_smc=False,
+    initialize_smc: bool = False,
     observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
     nuts_kwargs: Optional[Dict[str, Any]] = None,
@@ -49,6 +49,8 @@ def sample(
         Length of burn-in period
     step_size : float
         Initial step size
+    initialize_smc : bool
+        Initialize NUTS with SMC samples
     observed : Optional[Dict[str, Any]]
         New observed values (optional)
     state : Optional[pymc4.flow.SamplingState]
@@ -62,6 +64,9 @@ def sample(
     sample_chain_kwargs : Optional[Dict[str, Any]]
         Pass non-default values for nuts kernel, see
         ``tensorflow_probability.mcmc.sample_chain`` for options
+    smc_kwargs : Optional[Dict[str, Any] = None
+        Pass non-default values for SMC, see
+        ```pymc4.inference.smc.sample_smc```
     xla : bool
         Enable experimental XLA
     use_auto_batching : bool

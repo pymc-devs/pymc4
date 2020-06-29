@@ -216,11 +216,20 @@ class Distribution(Model):
 
 
 class Potential:
-    __slots__ = ("_value", "_coef")
+    __slots__ = ("_name", "_value", "_coef")
 
-    def __init__(self, value, coef=1.0):
+    def __init__(self, value, name=None, coef=1.0):
+        self._name = name
         self._value = value
         self._coef = coef
+
+    @property
+    def name(self):
+        """
+            name is used in sMC method. This way we can determine
+            whenever the potential is used with the prior or likelihood
+        """
+        return self._name
 
     @property
     def value(self):

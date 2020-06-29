@@ -87,7 +87,7 @@ def _build_logp_smc(
         raise ValueError("Can't use both `state` and `observed` arguments")
 
     state, _, lkh_n, prior_n = initialize_sampling_state_smc(
-        model, observed=observed, state=state, smc_draws=draws, is_smc=True,
+        model, observed=observed, state=state, smc_draws=draws
     )
 
     if lkh_n == 0 or prior_n == 0:
@@ -117,7 +117,7 @@ def _build_logp_smc(
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(model, state=st, is_smc=True)
+        _, st = flow.evaluate_model_smc(model, state=st)
         return st.collect_log_prob_smc(is_prior=False)
 
     @tf.function(autograph=False)
@@ -127,7 +127,7 @@ def _build_logp_smc(
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-        _, st = flow.evaluate_model_transformed(model, state=st, is_smc=True)
+        _, st = flow.evaluate_model_smc(model, state=st)
         return st.collect_log_prob_smc(is_prior=True)
 
     return (

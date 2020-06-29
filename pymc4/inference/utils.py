@@ -24,9 +24,7 @@ def initialize_sampling_state(
         The list of names of the model's deterministics
     """
     eval_func = flow.evaluate_meta_model
-    _, state = eval_func(
-        model, observed=observed, state=state, num_chains=smc_draws, is_smc=is_smc,
-    )
+    _, state = eval_func(model, observed=observed, state=state, num_chains=smc_draws)
     deterministic_names = list(state.deterministics)
     lkh_distrs_n = len(state.likelihood_distributions)
     prior_distrs_n = len(state.prior_distributions)
@@ -40,7 +38,6 @@ def initialize_sampling_state_smc(
     state: Optional[flow.SamplingState] = None,
     *,
     smc_draws: Optional[int] = None,
-    is_smc: Optional[bool] = False,
 ) -> Tuple[flow.SamplingState, List[str], List[Any], List[Any]]:
     """
     Initialize the model provided state and/or observed variables.
@@ -50,7 +47,6 @@ def initialize_sampling_state_smc(
     observed : Optional[dict]
     state : Optional[flow.SamplingState]
     smc_draws: Optional[int]
-    is_smc: Optional[int]
     Returns
     -------
     state: pymc4.flow.SamplingState
@@ -59,7 +55,7 @@ def initialize_sampling_state_smc(
         The list of names of the model's deterministics
     """
     eval_func = flow.evaluate_model_smc
-    _, state = eval_func(model, observed=observed, state=state, num_chains=smc_draws, is_smc=True,)
+    _, state = eval_func(model, observed=observed, state=state, num_chains=smc_draws)
     deterministic_names = list(state.deterministics)
     lkh_distrs_n = len(state.likelihood_distributions)
     prior_distrs_n = len(state.prior_distributions)

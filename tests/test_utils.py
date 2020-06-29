@@ -4,21 +4,6 @@ Test PyMC4 Utils
 
 import pymc4 as pm
 import pytest
-from mock import Mock
-
-
-@pytest.fixture(scope="function")
-def mock_biwrap_functools_call(monkeypatch):
-    """Mock functools partial to test execution path of pm.model decorator when used
-    in both the called and uncalled configuration"""
-    _functools = Mock()
-
-    def _partial(*args, **kwargs):
-        raise Exception("Mocked functools partial")
-
-    _functools.partial = _partial
-
-    monkeypatch.setattr(pm.utils, "functools", _functools)
 
 
 def test_biwrap_and_mocked_functools_raises_exception_with_called_decorator(

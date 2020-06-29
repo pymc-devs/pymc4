@@ -9,198 +9,28 @@ from tensorflow_probability import bijectors as bij
 from pymc4 import distributions as dist
 from pymc4.flow.executor import EvaluationError
 
-
-TEST_SHAPES = [(), (1,), (3,), (1, 1), (1, 3), (5, 3)]
-
-
-@pytest.fixture(scope="module", params=TEST_SHAPES, ids=str)
-def fixture_batch_shapes(request):
-    return request.param
+from .fixtures.fixtures_models import simple_model, simple_model_dist, simple_model_class
+from .fixtures.fixtures_executor import sample_shapes, batch_shapes, distribution_parameters, pm_model_decorate, complex_model, complex_model_with_observed, model_with_deterministics, transformed_model, transformed_model_with_observed, fixture_model_with_stacks, deterministics_in_nested_models
 
 
-@pytest.fixture(scope="module", params=TEST_SHAPES, ids=str)
-def fixture_sample_shapes(request):
-    return request.param
-
-
-@pytest.fixture(scope="module")
-def fixture_distribution_parameters(fixture_batch_shapes, fixture_sample_shapes):
-    observed = np.random.randn(*(fixture_sample_shapes + fixture_batch_shapes))
-    return fixture_batch_shapes, observed
-
-
-@pytest.fixture(scope="module", params=["decorate_model", "use_plain_function"], ids=str)
-def fixture_pm_model_decorate(request):
-    return request.param == "decorate_model"
-
-
-@pytest.fixture(scope="module")
-def complex_model():
-    @pm.model
-    def nested_model(cond):
-        norm = yield dist.HalfNormal("n", cond ** 2, transform=dist.transforms.Log())
-        return norm
-
-    @pm.model(keep_return=False)
-    def complex_model():
-        norm = yield dist.Normal("n", 0, 1)
-        result = yield nested_model(norm, name="a")
-        return result
-
-    return complex_model
-
-
-@pytest.fixture(scope="module")
-def complex_model_with_observed():
-    @pm.model
-    def nested_model(cond):
-        norm = yield dist.HalfNormal(
-            "n", cond ** 2, observed=np.ones(10), transform=dist.transforms.Log()
-        )
-        return norm
-
-    @pm.model(keep_return=False)
-    def complex_model():
-        norm = yield dist.Normal("n", 0, 1)
-        result = yield nested_model(norm, name="a")
-        return result
-
-    return complex_model
-
-
-@pytest.fixture(scope="module")
-def simple_model():
-    def simple_model():
-        norm = yield dist.Normal("n", 0, 1)
-        return norm
-
-    return simple_model
-
-
-@pytest.fixture(scope="module")
-def transformed_model():
-    def transformed_model():
-        norm = yield dist.HalfNormal("n", 1, transform=dist.transforms.Log())
-        return norm
-
-    return transformed_model
-
-
-@pytest.fixture(scope="module")
-def transformed_model_with_observed():
-    def transformed_model_with_observed():
-        norm = yield dist.HalfNormal("n", 1, transform=dist.transforms.Log(), observed=1.0)
-        return norm
-
-    return transformed_model_with_observed
-
-
-@pytest.fixture(scope="module")
-def class_model():
-    class ClassModel:
-        @pm.model(method=True)
-        def class_model_method(self):
-            norm = yield pm.Normal("n", 0, 1)
-            return norm
-
-    return ClassModel()
-
-
-@pytest.fixture(scope="module")
-def fixture_model_with_stacks(fixture_distribution_parameters, fixture_pm_model_decorate):
-    batch_shape, observed = fixture_distribution_parameters
-    expected_obs_shape = (
-        ()
-        if isinstance(observed, float)
-        else observed.shape[: len(observed.shape) - len(batch_shape)]
-    )
-    if fixture_pm_model_decorate:
-        expected_rv_shapes = {"model/loc": (), "model/obs": expected_obs_shape}
-    else:
-        expected_rv_shapes = {"loc": (), "obs": expected_obs_shape}
-
-    def model():
-        loc = yield pm.Normal("loc", 0, 1)
-        obs = yield pm.Normal("obs", loc, 1, event_stack=batch_shape, observed=observed)
-        return obs
-
-    if fixture_pm_model_decorate:
-        model = pm.model(model)
-
-    return model, expected_rv_shapes
-
-
-@pytest.fixture(scope="module")
-def model_with_deterministics():
-    expected_deterministics = ["model/abs_norm", "model/sine_norm", "model/norm_copy"]
-    expected_ops = [np.abs, np.sin, lambda x: x]
-    expected_ops_inputs = [["model/norm"], ["model/norm"], ["model/norm"]]
-
-    @pm.model
-    def model():
-        norm = yield dist.Normal("norm", 0, 1)
-        abs_norm = yield dist.Deterministic("abs_norm", tf.abs(norm))
-        sine_norm = yield dist.Deterministic("sine_norm", tf.sin(norm))
-        norm_copy = yield dist.Deterministic("norm_copy", norm)
-        obs = yield dist.Normal("obs", 0, abs_norm)
-
-    return model, expected_deterministics, expected_ops, expected_ops_inputs
-
-
-@pytest.fixture(scope="function")
-def deterministics_in_nested_models():
-    @pm.model
-    def nested_model(cond):
-        x = yield pm.Normal("x", cond, 1)
-        dx = yield pm.Deterministic("dx", x + 1)
-        return dx
-
-    @pm.model
-    def outer_model():
-        cond = yield pm.HalfNormal("cond", 1, conditionally_independent=True)
-        dcond = yield pm.Deterministic("dcond", cond * 2)
-        dx = yield nested_model(dcond)
-        ddx = yield pm.Deterministic("ddx", dx)
-        return ddx
-
-    expected_untransformed = {"outer_model/cond", "outer_model/nested_model/x"}
-    expected_transformed = {"outer_model/__log_cond"}
-    expected_deterministics = {
-        "outer_model/dcond",
-        "outer_model/ddx",
-        "outer_model/nested_model/dx",
-        "outer_model/nested_model",
-        "outer_model",
-    }
-    deterministic_mapping = {
-        "outer_model/dcond": (["outer_model/cond"], lambda x: x * 2),
-        "outer_model/ddx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model": (["outer_model/nested_model/x"], lambda x: x + 1),
-    }
-
-    return (
-        outer_model,
-        expected_untransformed,
-        expected_transformed,
-        expected_deterministics,
-        deterministic_mapping,
-    )
-
-
-def test_class_model(class_model):
+def test_class_model(simple_model_class):
     """Test that model can be defined as method in an object definition"""
-    _, state = pm.evaluate_model(class_model.class_model_method())
-    assert "class_model_method/n" in state.untransformed_values
+    _, state = pm.evaluate_model(simple_model_class.class_model_method())
+    assert "class_model_method/norm" in state.untransformed_values
+    assert not state.observed_values
+    assert not state.transformed_values
+
+## This one I added for completeness - it might not make sense
+def test_simple_model(simple_model):
+    _, state = pm.evaluate_model(simple_model())
+    assert "simple_model/norm" in state.untransformed_values
     assert not state.observed_values
     assert not state.transformed_values
 
 
-def test_simple_model(simple_model):
-    _, state = pm.evaluate_model(simple_model())
-    assert "n" in state.untransformed_values
+def test_simple_model_dist(simple_model_dist):
+    _, state = pm.evaluate_model(simple_model_dist())
+    assert "norm" in state.untransformed_values
     assert not state.observed_values
     assert not state.transformed_values
 
@@ -676,7 +506,7 @@ def test_incompatible_observed_shape():
         pm.evaluate_model(model(observed_value))
 
 
-def test_unreduced_log_prob(fixture_batch_shapes):
+def test_unreduced_log_prob(batch_shapes):
     observed_value = np.ones(10, dtype="float32")
 
     @pm.model
@@ -686,30 +516,30 @@ def test_unreduced_log_prob(fixture_batch_shapes):
         c = yield pm.Normal("c", loc=a, scale=b, event_stack=len(observed_value))
 
     values = {
-        "model/a": np.zeros(fixture_batch_shapes, dtype="float32"),
-        "model/b": np.ones(fixture_batch_shapes, dtype="float32"),
+        "model/a": np.zeros(batch_shapes, dtype="float32"),
+        "model/b": np.ones(batch_shapes, dtype="float32"),
     }
     observed = {
-        "model/c": np.broadcast_to(observed_value, fixture_batch_shapes + observed_value.shape)
+        "model/c": np.broadcast_to(observed_value, batch_shapes + observed_value.shape)
     }
     state = pm.evaluate_model(model(), values=values, observed=observed)[1]
     unreduced_log_prob = state.collect_unreduced_log_prob()
-    assert unreduced_log_prob.numpy().shape == fixture_batch_shapes
+    assert unreduced_log_prob.numpy().shape == batch_shapes
     np.testing.assert_allclose(tf.reduce_sum(unreduced_log_prob), state.collect_log_prob())
 
 
-def test_executor_on_conditionally_independent(fixture_batch_shapes):
+def test_executor_on_conditionally_independent(batch_shapes):
     @pm.model
     def model():
         a = yield pm.Normal("a", 0, 1, conditionally_independent=True)
         b = yield pm.Normal("b", a, 1)
 
-    _, state = pm.evaluate_model(model(), sample_shape=fixture_batch_shapes)
-    assert state.untransformed_values["model/a"].shape == fixture_batch_shapes
-    assert state.untransformed_values["model/b"].shape == fixture_batch_shapes
+    _, state = pm.evaluate_model(model(), sample_shape=batch_shapes)
+    assert state.untransformed_values["model/a"].shape == batch_shapes
+    assert state.untransformed_values["model/b"].shape == batch_shapes
 
 
-def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
+def test_meta_executor(deterministics_in_nested_models, batch_shapes):
     (
         model,
         expected_untransformed,
@@ -717,7 +547,7 @@ def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
         expected_deterministics,
         deterministic_mapping,
     ) = deterministics_in_nested_models
-    _, state = pm.evaluate_meta_model(model(), sample_shape=fixture_batch_shapes)
+    _, state = pm.evaluate_meta_model(model(), sample_shape=batch_shapes)
     assert set(state.untransformed_values) == set(expected_untransformed)
     assert set(state.transformed_values) == set(expected_transformed)
     assert set(state.deterministics) == set(expected_deterministics)
@@ -728,7 +558,7 @@ def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
         )
     for rv_name, value in state.untransformed_values.items():
         dist = state.distributions[rv_name]
-        sample_shape = fixture_batch_shapes if dist.is_root else ()
+        sample_shape = batch_shapes if dist.is_root else ()
         np.testing.assert_allclose(
             value.numpy(), dist.get_test_sample(sample_shape=sample_shape).numpy()
         )

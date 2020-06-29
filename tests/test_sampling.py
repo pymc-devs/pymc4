@@ -4,11 +4,16 @@ import numpy as np
 from scipy import stats
 import tensorflow as tf
 
+from .fixtures.fixtures_models import simple_model, simple_model_dist, simple_model_class, simple_model_no_free_rvs, simple_model_with_deterministic, unvectorized_model, deterministics_in_nested_models
+from .fixtures.fixtures_sampling import sample_shape, vectorized_model_fixture, sampling_core_shapes
+# TODO - I'm not sure what the best way of importing this many objects
+# I thought * but I got deprication warnings
+# In some ways - I think given how many fixtures will be named similarly perhaps * isn't a good idea
 
-def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
+def test_sample_deterministics(simple_model_with_deterministic, use_xla):
     model = simple_model_with_deterministic()
     trace = pm.sample(
-        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=use_xla
     )
     norm = "simple_model_with_deterministic/simple_model/norm"
     determ = "simple_model_with_deterministic/determ"
@@ -59,7 +64,7 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
 
 
 def test_sampling_with_deterministics_in_nested_models(
-    deterministics_in_nested_models, xla_fixture
+    deterministics_in_nested_models, use_xla
 ):
     (
         model,
@@ -69,7 +74,7 @@ def test_sampling_with_deterministics_in_nested_models(
         deterministic_mapping,
     ) = deterministics_in_nested_models
     trace = pm.sample(
-        model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+        model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=use_xla
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
@@ -83,11 +88,12 @@ def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
         trace = pm.sample(model=model, num_samples=1, num_chains=1, burn_in=1)
 
 
-def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_batching_fixture):
-    model, is_vectorized_model, core_shapes = vectorized_model_fixture
+def test_sample_auto_batching(vectorized_model_fixture, use_xla, use_auto_batching, sampling_core_shapes):
+    model, is_vectorized_model = vectorized_model_fixture
+    core_shapes = sampling_core_shapes
     num_samples = 10
     num_chains = 4
-    if not is_vectorized_model and not use_auto_batching_fixture:
+    if not is_vectorized_model and not use_auto_batching:
         with pytest.raises(Exception):
             pm.inference.sampling.sample(
                 model=model(),
@@ -95,8 +101,8 @@ def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_ba
                 num_chains=num_chains,
                 burn_in=1,
                 step_size=0.1,
-                xla=xla_fixture,
-                use_auto_batching=use_auto_batching_fixture,
+                xla=use_xla,
+                use_auto_batching=use_auto_batching,
             )
     else:
         trace = pm.inference.sampling.sample(
@@ -105,8 +111,8 @@ def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_ba
             num_chains=num_chains,
             burn_in=1,
             step_size=0.1,
-            xla=xla_fixture,
-            use_auto_batching=use_auto_batching_fixture,
+            xla=use_xla,
+            use_auto_batching=use_auto_batching,
         )
         posterior = trace.posterior
         for rv_name, core_shape in core_shapes.items():

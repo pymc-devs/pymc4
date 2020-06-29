@@ -4,32 +4,8 @@ import numpy as np
 import pymc4 as pm
 
 import pytest
-
-# Test all the mean functions in pm.gp module
-MEAN_FUNCS = [
-    (
-        "Zero",
-        {
-            "test_point": np.array([[1.0], [2.0]], dtype=np.float64),
-            "expected": np.array([0.0, 0.0], dtype=np.float64),
-            "feature_ndims": 1,
-        },
-    ),
-    (
-        "Constant",
-        {
-            "coef": 5.0,
-            "test_point": np.array([[1.0], [2.0]], dtype=np.float64),
-            "expected": np.array([5.0, 5.0], dtype=np.float64),
-            "feature_ndims": 1,
-        },
-    ),
-]
-
-
-@pytest.fixture(scope="module", params=MEAN_FUNCS, ids=str)
-def get_mean_func(request):
-    return request.param
+from .fixtures.fixtures_gp import get_data, get_batch_shape, get_sample_shape, get_feature_shape
+from .fixtures.fixtures_gp import get_gp_model, get_mean_func, get_cov_func, get_unique_cov_func, get_all_cov_func
 
 
 def test_mean_funcs(tf_seed, get_data, get_mean_func):

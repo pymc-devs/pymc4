@@ -6,21 +6,8 @@ import pymc4 as pm
 
 import pytest
 
-# Test all the GP models only using a particular
-# mean and covariance functions but varying tensor shapes
-# NOTE: the mean and covariance functions used here
-# must be present in `MEAN_FUNCS` and `COV_FUNCS` resp.
-GP_MODELS = [
-    (
-        "LatentGP",
-        {"mean_fn": ("Zero", {}), "cov_fn": ("ExpQuad", {"amplitude": 1.0, "length_scale": 1.0})},
-    ),
-]
-
-
-@pytest.fixture(scope="module", params=GP_MODELS, ids=str)
-def get_gp_model(request):
-    return request.param
+from .fixtures.fixtures_gp import get_data, get_batch_shape, get_sample_shape, get_feature_shape 
+from .fixtures.fixtures_gp import get_gp_model, get_mean_func, get_cov_func, get_unique_cov_func, get_all_cov_func
 
 
 def build_model(model_name, model_kwargs, feature_ndims):

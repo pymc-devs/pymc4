@@ -2,53 +2,10 @@ import numpy as np
 import tensorflow as tf
 import pymc4 as pm
 from pymc4.gp.util import stabilize
-
 import pytest
 
-# Test all the covariance functions in pm.gp module
-COV_FUNCS = [
-    (
-        "ExpQuad",
-        {
-            "amplitude": 1.0,
-            "length_scale": 1.0,
-            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.01831564], [0.01831564, 1.0]], dtype=np.float32),
-            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
-            "feature_ndims": 1,
-        },
-    ),
-    (
-        "Constant",
-        {
-            "coef": 1.0,
-            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 1.0], [1.0, 1.0]], dtype=np.float32),
-            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
-            "feature_ndims": 1,
-        },
-    ),
-    (
-        "WhiteNoise",
-        {
-            "noise": 1e-4,
-            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1e-4, 0.0], [0.0, 1e-4]], dtype=np.float32),
-            "feature_ndims": 1,
-        },
-    ),
-]
-
-
-@pytest.fixture(scope="function", params=COV_FUNCS, ids=str)
-def get_cov_func(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=set(k[0] for k in COV_FUNCS), ids=str)
-def get_unique_cov_func(request):
-    return request.param
-
+from .fixtures.fixtures_gp import get_data, get_batch_shape, get_sample_shape, get_feature_shape
+from .fixtures.fixtures_gp import get_gp_model, get_mean_func, get_cov_func, get_unique_cov_func, get_all_cov_func
 
 def build_class_and_get_test_points(name, kwargs):
     test_points = kwargs.pop("test_points")
@@ -59,9 +16,10 @@ def build_class_and_get_test_points(name, kwargs):
     return test_points, expected_matrix, expected_point, feature_ndims, KernelClass
 
 
-def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_unique_cov_func):
+def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_all_cov_func, get_unique_cov_func):
     attr_name = get_unique_cov_func
     batch_shape, sample_shape, feature_shape, X = get_data
+    COV_FUNCS = get_all_cov_func
     kwargs = dict(COV_FUNCS)[attr_name].copy()
     _, _, _, _, KernelClass = build_class_and_get_test_points(attr_name, kwargs)
     kernel = KernelClass(**kwargs, feature_ndims=len(feature_shape))
@@ -70,9 +28,10 @@ def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_unique_cov_func):
     assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
 
 
-def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_unique_cov_func):
+def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_cov_func, get_unique_cov_func, get_all_cov_func):
     attr_name = get_unique_cov_func
     batch_shape, sample_shape, feature_shape, X = get_data
+    COV_FUNCS = get_all_cov_func
     kwargs = dict(COV_FUNCS)[attr_name].copy()
     _, _, _, _, KernelClass = build_class_and_get_test_points(attr_name, kwargs)
     kernel = KernelClass(**kwargs, feature_ndims=len(feature_shape))

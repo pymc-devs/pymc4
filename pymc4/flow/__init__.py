@@ -1,5 +1,6 @@
 """Functions for evaluating log probabilities."""
-from .executor import SamplingExecutor, SamplingState
+from .state import SamplingState, SMCSamplingState
+from .executor import SamplingExecutor
 from .transformed_executor import TransformedSamplingExecutor
 from .posterior_predictive_executor import PosteriorPredictiveSamplingExecutor
 from .meta_executor import MetaSamplingExecutor, MetaPosteriorPredictiveSamplingExecutor

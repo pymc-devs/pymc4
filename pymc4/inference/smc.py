@@ -116,7 +116,7 @@ def _build_logp_smc(
             raise TypeError("Either list state should be passed or a dict one")
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        st = flow.SMCSamplingState.from_values(kwargs, observed_values=observed)
         _, st = flow.evaluate_model_smc(model, state=st)
         return st.collect_log_prob_smc(is_prior=False)
 
@@ -126,7 +126,7 @@ def _build_logp_smc(
             raise TypeError("Either list state should be passed or a dict one")
         elif values:
             kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        st = flow.SMCSamplingState.from_values(kwargs, observed_values=observed)
         _, st = flow.evaluate_model_smc(model, state=st)
         return st.collect_log_prob_smc(is_prior=True)
 

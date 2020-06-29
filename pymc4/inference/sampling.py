@@ -256,7 +256,7 @@ def build_logp_and_deterministic_functions(
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
         _, st = flow.evaluate_model_transformed(model, state=st)
-        return st.collect_log_prob()
+        return st.collect_log_prob(is_reduced=collect_reduced_log_prob)
 
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):

@@ -58,7 +58,7 @@ def initialize_sampling_state_smc(
     deterministic_names: List[str]
         The list of names of the model's deterministics
     """
-    eval_func = flow.evaluate_model_transformed
+    eval_func = flow.evaluate_model_smc
     _, state = eval_func(model, observed=observed, state=state, num_chains=smc_draws, is_smc=True,)
     deterministic_names = list(state.deterministics)
     lkh_distrs_n = len(state.likelihood_distributions)

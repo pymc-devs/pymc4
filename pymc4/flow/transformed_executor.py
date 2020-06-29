@@ -21,10 +21,6 @@ from pymc4.flow.executor import (
 class TransformedSamplingExecutor(SamplingExecutor):
     """Perform inference in an unconstrained space."""
 
-    def __init__(self):
-        super().__init__()
-        self.mode = "transformed"
-
     def validate_state(self, state):
         """Validate that the model is not in a bad state."""
         return

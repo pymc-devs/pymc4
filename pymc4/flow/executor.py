@@ -457,10 +457,6 @@ class SamplingExecutor:
     This executor performs model evaluation in the untransformed space. Class structure is convenient since its
     subclass :class:`TransformedSamplingExecutor` will reuse some parts from parent class and extending functionality.
     """
-
-    def __init__(self):
-        self.mode = "base"
-
     def validate_return_object(self, return_object: Any):
         if isinstance(return_object, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
             raise EvaluationError(
@@ -476,6 +472,12 @@ class SamplingExecutor:
 
     def validate_return_value(self, return_value: Any):
         pm.utils.map_nested(self.validate_return_object, return_value)
+
+    def _dist_get_sampling_func(self, dist):
+        """
+            Determines the type of sampling function used in forward.
+        """
+        return dist.sample
 
     def evaluate_model(
         self,
@@ -727,9 +729,7 @@ class SamplingExecutor:
         """
             TODO: #229
         """
-        sample_func = dist.sample
-        if self.mode == "meta":
-            sample_func = dist.get_test_sample
+        sample_func = self._dist_get_sampling_func(dist)
 
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")

@@ -1,5 +1,5 @@
 import tensorflow as tf
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Any
 import numpy as np
 import arviz as az
 
@@ -7,13 +7,41 @@ from pymc4 import Model, flow
 
 
 def initialize_sampling_state(
+    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
+) -> Tuple[flow.SamplingState, List[str]]:
+    """
+    Initialize the model provided state and/or observed variables.
+    Parameters
+    ----------
+    model : pymc4.Model
+    observed : Optional[dict]
+    state : Optional[flow.SamplingState]
+    Returns
+    -------
+    state: pymc4.flow.SamplingState
+        The model's sampling state
+    deterministic_names: List[str]
+        The list of names of the model's deterministics
+    """
+    eval_func = flow.evaluate_meta_model
+    _, state = eval_func(
+        model, observed=observed, state=state, num_chains=smc_draws, is_smc=is_smc,
+    )
+    deterministic_names = list(state.deterministics)
+    lkh_distrs_n = len(state.likelihood_distributions)
+    prior_distrs_n = len(state.prior_distributions)
+    state, transformed_names = state.as_sampling_state()
+    return state, deterministic_names + transformed_names
+
+
+def initialize_sampling_state_smc(
     model: Model,
     observed: Optional[dict] = None,
     state: Optional[flow.SamplingState] = None,
     *,
     smc_draws: Optional[int] = None,
     is_smc: Optional[bool] = False,
-) -> Tuple[flow.SamplingState, List[str]]:
+) -> Tuple[flow.SamplingState, List[str], List[Any], List[Any]]:
     """
     Initialize the model provided state and/or observed variables.
     Parameters
@@ -31,18 +59,12 @@ def initialize_sampling_state(
         The list of names of the model's deterministics
     """
     eval_func = flow.evaluate_model_transformed
-    if is_smc is False:
-        eval_func = flow.evaluate_meta_model
-    _, state = eval_func(
-        model, observed=observed, state=state, num_chains=smc_draws, is_smc=is_smc,
-    )
+    _, state = eval_func(model, observed=observed, state=state, num_chains=smc_draws, is_smc=True,)
     deterministic_names = list(state.deterministics)
     lkh_distrs_n = len(state.likelihood_distributions)
     prior_distrs_n = len(state.prior_distributions)
     state, transformed_names = state.as_sampling_state()
-    if is_smc:
-        return state, deterministic_names + transformed_names, lkh_distrs_n, prior_distrs_n
-    return state, deterministic_names + transformed_names
+    return state, deterministic_names + transformed_names, lkh_distrs_n, prior_distrs_n
 
 
 def trace_to_arviz(

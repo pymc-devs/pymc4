@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import initialize_sampling_state, vectorize_logp_function
+from pymc4.inference.utils import initialize_sampling_state_smc, vectorize_logp_function
 
 from tensorflow_probability.python.experimental.mcmc.sample_sequential_monte_carlo import (
     make_rwmh_kernel_fn,
@@ -86,7 +86,7 @@ def _build_logp_smc(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
 
-    state, _, lkh_n, prior_n = initialize_sampling_state(
+    state, _, lkh_n, prior_n = initialize_sampling_state_smc(
         model, observed=observed, state=state, smc_draws=draws, is_smc=True,
     )
 

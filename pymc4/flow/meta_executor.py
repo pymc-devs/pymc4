@@ -15,9 +15,9 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
     """
         Do a forward pass through the model only using distribution test values.
     """
+    def _dist_get_sampling_func(self, dist):
+        return dist.get_test_sample
 
-    def __init__(self):
-        self.mode = "meta"
 
 
 class MetaPosteriorPredictiveSamplingExecutor(

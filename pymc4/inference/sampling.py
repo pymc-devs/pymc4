@@ -234,19 +234,7 @@ def build_logp_and_deterministic_functions(
     observed_var = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
 
-    if collect_reduced_log_prob:
-
-        @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-            _, st = flow.evaluate_model_transformed(model, state=st)
-            return st.collect_log_prob()
-
-    else:
+    if not collect_reduced_log_prob:
         # When we use manual batching, we need to manually tile the chains axis
         # to the left of the observed tensors
         if num_chains is not None:
@@ -260,15 +248,15 @@ def build_logp_and_deterministic_functions(
                 o = tf.tile(o[None, ...], [num_chains] + [1] * o.ndim)
                 observed[k] = o
 
-        @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-            _, st = flow.evaluate_model_transformed(model, state=st)
-            return st.collect_unreduced_log_prob()
+    @tf.function(autograph=False)
+    def logpfn(*values, **kwargs):
+        if kwargs and values:
+            raise TypeError("Either list state should be passed or a dict one")
+        elif values:
+            kwargs = dict(zip(unobserved_keys, values))
+        st = flow.SamplingState.from_values(kwargs, observed_values=observed)
+        _, st = flow.evaluate_model_transformed(model, state=st)
+        return st.collect_log_prob()
 
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):

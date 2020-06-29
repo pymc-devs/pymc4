@@ -264,7 +264,7 @@ def fit(
     ADVIFit : collections.namedtuple
         Named tuple, including approximation, ELBO losses depending on the `trace_fn`
     """
-    _select = dict(advi=MeanField, fullrank=FullRank)
+    _select = dict(advi=MeanField, fullrank_advi=FullRank)
 
     if isinstance(method, str):
         # Here we assume that `model` parameter is provided by the user.

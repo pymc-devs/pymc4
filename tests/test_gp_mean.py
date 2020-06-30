@@ -5,7 +5,13 @@ import pymc4 as pm
 
 import pytest
 from .fixtures.fixtures_gp import get_data, get_batch_shape, get_sample_shape, get_feature_shape
-from .fixtures.fixtures_gp import get_gp_model, get_mean_func, get_cov_func, get_unique_cov_func, get_all_cov_func
+from .fixtures.fixtures_gp import (
+    get_gp_model,
+    get_mean_func,
+    get_cov_func,
+    get_unique_cov_func,
+    get_all_cov_func,
+)
 
 
 def test_mean_funcs(tf_seed, get_data, get_mean_func):

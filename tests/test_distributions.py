@@ -6,7 +6,14 @@ import pytest
 import numpy as np
 
 import pymc4 as pm
-from .fixtures.fixtures_distributions import distribution, distribution_conditions, distribution_extra_parameters, broadcast_distribution, check_broadcast
+from .fixtures.fixtures_distributions import (
+    distribution,
+    distribution_conditions,
+    distribution_extra_parameters,
+    broadcast_distribution,
+    check_broadcast,
+)
+
 
 def test_rvs_logp_and_forward_sample(tf_seed, distribution_conditions):
     """Test forward sampling and evaluating the logp for all random variables."""

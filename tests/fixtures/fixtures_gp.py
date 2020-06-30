@@ -17,9 +17,11 @@ GP_MODELS = [
     ),
 ]
 
+
 @pytest.fixture(scope="module", params=GP_MODELS, ids=str)
 def get_gp_model(request):
     return request.param
+
 
 # Test all the mean functions in pm.gp module
 MEAN_FUNCS = [
@@ -45,6 +47,7 @@ MEAN_FUNCS = [
 # Tensor shapes on which the GP model will be tested
 BATCH_AND_FEATURE_SHAPES = [(1,), (2,), (2, 2,)]
 SAMPLE_SHAPE = [(1,), (3,)]
+
 
 @pytest.fixture(scope="module", params=MEAN_FUNCS, ids=str)
 def get_mean_func(request):
@@ -85,9 +88,11 @@ COV_FUNCS = [
     ),
 ]
 
+
 @pytest.fixture(scope="function", params=COV_FUNCS, ids=str)
 def get_cov_func(request):
     return request.param
+
 
 # TODO - this is a bit hacky
 @pytest.fixture(scope="function", ids=str)
@@ -98,6 +103,7 @@ def get_all_cov_func(request):
 @pytest.fixture(scope="function", params=set(k[0] for k in COV_FUNCS), ids=str)
 def get_unique_cov_func(request):
     return request.param
+
 
 @pytest.fixture(scope="module", params=BATCH_AND_FEATURE_SHAPES, ids=str)
 def get_batch_shape(request):

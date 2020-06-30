@@ -38,4 +38,3 @@ def mock_biwrap_functools_call(monkeypatch):
     _functools.partial = _partial
 
     monkeypatch.setattr(pm.utils, "functools", _functools)
-

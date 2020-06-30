@@ -2,7 +2,7 @@ import pytest
 import pymc4 as pm
 import numpy as np
 
-from .fixtures.fixtures_models import  simple_model2, bivariate_gaussian
+from .fixtures.fixtures_models import simple_model2, bivariate_gaussian
 
 
 # fmt: off

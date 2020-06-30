@@ -7,7 +7,17 @@ import pymc4 as pm
 from pymc4 import forward_sampling
 from pymc4.flow.executor import EvaluationError
 
-from .fixtures.fixtures_sampling import sample_shape, vectorized_model_fixture, forward_sampling_core_shapes, sample_from_observed, model_fixture, model_with_observed, posterior_predictive, glm_model
+from .fixtures.fixtures_sampling import (
+    sample_shape,
+    vectorized_model_fixture,
+    forward_sampling_core_shapes,
+    sample_from_observed,
+    model_fixture,
+    model_with_observed,
+    posterior_predictive,
+    glm_model,
+)
+
 
 def test_sample_prior_predictive(model_fixture, sample_shape, sample_from_observed):
     model, observed = model_fixture
@@ -196,16 +206,12 @@ def test_vectorized_sample_prior_predictive(
             assert prior[k].shape == (1,) + sample_shape + v
 
 
-def test_sample_prior_predictive_on_glm(
-    glm_model, use_auto_batching, sample_shape
-):
+def test_sample_prior_predictive_on_glm(glm_model, use_auto_batching, sample_shape):
     model, is_vectorized_model, core_shapes = glm_model
     if not use_auto_batching and not is_vectorized_model and len(sample_shape) > 0:
         with pytest.raises(AssertionError):
             prior = forward_sampling.sample_prior_predictive(
-                model(),
-                sample_shape=sample_shape,
-                use_auto_batching=use_auto_batching,
+                model(), sample_shape=sample_shape, use_auto_batching=use_auto_batching,
             ).prior_predictive
             for k, v in core_shapes.items():
                 # The (1,) comes from trace_to_arviz imposed chain axis
@@ -229,9 +235,7 @@ def test_vectorized_sample_posterior_predictive(
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
             # instead of (num_samples, num_chains, ...)
-            k: tf.zeros(
-                (sample_shape[1], sample_shape[0]) + sample_shape[2:] + v
-            )
+            k: tf.zeros((sample_shape[1], sample_shape[0]) + sample_shape[2:] + v)
             for k, v in core_shapes.items()
             if k not in ["model/x"]
         }
@@ -253,18 +257,14 @@ def test_vectorized_sample_posterior_predictive(
             assert v.shape == sample_shape + core_shapes[k]
 
 
-def test_sample_posterior_predictive_on_glm(
-    glm_model, use_auto_batching, sample_shape
-):
+def test_sample_posterior_predictive_on_glm(glm_model, use_auto_batching, sample_shape):
     model, is_vectorized_model, core_shapes = glm_model
     trace = pm.inference.utils.trace_to_arviz(
         {
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
             # instead of (num_samples, num_chains, ...)
-            k: tf.zeros(
-                (sample_shape[1], sample_shape[0]) + sample_shape[2:] + v
-            )
+            k: tf.zeros((sample_shape[1], sample_shape[0]) + sample_shape[2:] + v)
             for k, v in core_shapes.items()
             if k not in ["model/y"]
         }

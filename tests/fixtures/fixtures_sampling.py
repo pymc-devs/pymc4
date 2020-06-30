@@ -6,9 +6,11 @@ import pymc4 as pm
 import numpy as np
 import tensorflow as tf
 
+
 @pytest.fixture(scope="module", params=[(1, 0), (1, 1), (1, 2), (1, 1, 1), (1, 3, 7)], ids=str)
 def sample_shape(request):
     return request.param
+
 
 # Previously called vectorized_model_fixture in conftest.py and test_forward_sampling.py
 # Combined into one which required moving out "core_shapes" - see below
@@ -47,11 +49,13 @@ def vectorized_model_fixture(request):
 
     return model, is_vectorized_model
 
+
 @pytest.fixture(scope="module", params=["NoResampleObserved", "ResampleObserveds"], ids=str)
 def sample_from_observed(request):
     return request.param == "ResampleObserveds"
 
-# TODO 
+
+# TODO
 # This is the only difference between the sampling / forward sampling model in the vectorized models
 # so moving this out until I understand the difference in the two use cases and how to refactor to suit
 @pytest.fixture(scope="function")
@@ -68,9 +72,10 @@ def forward_sampling_core_shapes():
     core_shapes = {
         "model/mu": (4,),
         "model/scale": (),  # for forward sampling only
-        "model/x": (5, 4), # for forward sampling only
+        "model/x": (5, 4),  # for forward sampling only
     }
     return core_shapes
+
 
 # Previously called model_fixture in test_forward_sampling.py
 # Suggest could be called something better?
@@ -87,6 +92,7 @@ def model_fixture():
         dy = yield pm.Deterministic("dy", 2 * y)
 
     return model, observed
+
 
 # Previously called model_with_observed_fixture in test_forward_sampling.py
 # Suggest could be called something better?
@@ -120,6 +126,7 @@ def model_with_observed(request):
 
     return model, observed, core_ppc_shapes, observed_in_RV
 
+
 # Previously called posterior_predictive_fixture in test_forward_sampling.py
 @pytest.fixture(scope="module")
 def posterior_predictive(model_with_observed):
@@ -128,6 +135,7 @@ def posterior_predictive(model_with_observed):
     (model, observed, core_ppc_shapes, observed_in_RV) = model_with_observed
     trace = pm.sample(model(), num_samples=num_samples, num_chains=num_chains, observed=observed)
     return model, observed, core_ppc_shapes, observed_in_RV, trace, num_samples, num_chains
+
 
 # Previously called glm_model_fixture in test_forward_sampling.py
 @pytest.fixture(scope="module", params=["unvectorized_model", "vectorized_model"], ids=str)
@@ -172,4 +180,3 @@ def glm_model(request):
             y = yield pm.Normal("y", mu, scale, observed=observed)
 
     return model, is_vectorized_model, core_shapes
-

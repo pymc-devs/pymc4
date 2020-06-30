@@ -4,11 +4,21 @@ import numpy as np
 from scipy import stats
 import tensorflow as tf
 
-from .fixtures.fixtures_models import simple_model, simple_model_dist, simple_model_class, simple_model_no_free_rvs, simple_model_with_deterministic, unvectorized_model, deterministics_in_nested_models
+from .fixtures.fixtures_models import (
+    simple_model,
+    simple_model_dist,
+    simple_model_class,
+    simple_model_no_free_rvs,
+    simple_model_with_deterministic,
+    unvectorized_model,
+    deterministics_in_nested_models,
+)
 from .fixtures.fixtures_sampling import sample_shape, vectorized_model_fixture, sampling_core_shapes
+
 # TODO - I'm not sure what the best way of importing this many objects
 # I thought * but I got deprication warnings
 # In some ways - I think given how many fixtures will be named similarly perhaps * isn't a good idea
+
 
 def test_sample_deterministics(simple_model_with_deterministic, use_xla):
     model = simple_model_with_deterministic()
@@ -63,9 +73,7 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
     np.testing.assert_allclose(logpfn_output, expected_log_prob, rtol=1e-5)
 
 
-def test_sampling_with_deterministics_in_nested_models(
-    deterministics_in_nested_models, use_xla
-):
+def test_sampling_with_deterministics_in_nested_models(deterministics_in_nested_models, use_xla):
     (
         model,
         expected_untransformed,
@@ -88,7 +96,9 @@ def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
         trace = pm.sample(model=model, num_samples=1, num_chains=1, burn_in=1)
 
 
-def test_sample_auto_batching(vectorized_model_fixture, use_xla, use_auto_batching, sampling_core_shapes):
+def test_sample_auto_batching(
+    vectorized_model_fixture, use_xla, use_auto_batching, sampling_core_shapes
+):
     model, is_vectorized_model = vectorized_model_fixture
     core_shapes = sampling_core_shapes
     num_samples = 10

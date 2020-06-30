@@ -436,9 +436,6 @@ for distribution in _distribution_conditions:
     _distribution_extra_parameters[distribution] = extra_parameters
 
 
-
-
-
 @pytest.fixture(scope="function", params=list(_distribution_conditions), ids=str)
 def distribution(request):
     return request.param

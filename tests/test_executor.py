@@ -10,7 +10,19 @@ from pymc4 import distributions as dist
 from pymc4.flow.executor import EvaluationError
 
 from .fixtures.fixtures_models import simple_model, simple_model_dist, simple_model_class
-from .fixtures.fixtures_executor import sample_shapes, batch_shapes, distribution_parameters, pm_model_decorate, complex_model, complex_model_with_observed, model_with_deterministics, transformed_model, transformed_model_with_observed, fixture_model_with_stacks, deterministics_in_nested_models
+from .fixtures.fixtures_executor import (
+    sample_shapes,
+    batch_shapes,
+    distribution_parameters,
+    pm_model_decorate,
+    complex_model,
+    complex_model_with_observed,
+    model_with_deterministics,
+    transformed_model,
+    transformed_model_with_observed,
+    fixture_model_with_stacks,
+    deterministics_in_nested_models,
+)
 
 
 def test_class_model(simple_model_class):
@@ -19,6 +31,7 @@ def test_class_model(simple_model_class):
     assert "class_model_method/norm" in state.untransformed_values
     assert not state.observed_values
     assert not state.transformed_values
+
 
 ## This one I added for completeness - it might not make sense
 def test_simple_model(simple_model):
@@ -519,9 +532,7 @@ def test_unreduced_log_prob(batch_shapes):
         "model/a": np.zeros(batch_shapes, dtype="float32"),
         "model/b": np.ones(batch_shapes, dtype="float32"),
     }
-    observed = {
-        "model/c": np.broadcast_to(observed_value, batch_shapes + observed_value.shape)
-    }
+    observed = {"model/c": np.broadcast_to(observed_value, batch_shapes + observed_value.shape)}
     state = pm.evaluate_model(model(), values=values, observed=observed)[1]
     unreduced_log_prob = state.collect_unreduced_log_prob()
     assert unreduced_log_prob.numpy().shape == batch_shapes

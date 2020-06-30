@@ -5,7 +5,14 @@ from pymc4.gp.util import stabilize
 import pytest
 
 from .fixtures.fixtures_gp import get_data, get_batch_shape, get_sample_shape, get_feature_shape
-from .fixtures.fixtures_gp import get_gp_model, get_mean_func, get_cov_func, get_unique_cov_func, get_all_cov_func
+from .fixtures.fixtures_gp import (
+    get_gp_model,
+    get_mean_func,
+    get_cov_func,
+    get_unique_cov_func,
+    get_all_cov_func,
+)
+
 
 def build_class_and_get_test_points(name, kwargs):
     test_points = kwargs.pop("test_points")
@@ -28,7 +35,9 @@ def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_all_cov_func, get_uni
     assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
 
 
-def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_cov_func, get_unique_cov_func, get_all_cov_func):
+def test_cov_funcs_point_eval_shape(
+    tf_seed, get_data, get_cov_func, get_unique_cov_func, get_all_cov_func
+):
     attr_name = get_unique_cov_func
     batch_shape, sample_shape, feature_shape, X = get_data
     COV_FUNCS = get_all_cov_func

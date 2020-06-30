@@ -9,6 +9,7 @@ import tensorflow as tf
 from pymc4 import distributions as dist
 import itertools
 
+
 @pytest.fixture(scope="function")
 def simple_model():
     @pm.model()
@@ -18,7 +19,8 @@ def simple_model():
 
     return simple_model
 
-# previously called simple_model in test_executor 
+
+# previously called simple_model in test_executor
 # main difference is no @pm.model() and we use dist.Normal rather than pm.Normal
 @pytest.fixture(scope="function")
 def simple_model_dist():
@@ -28,6 +30,7 @@ def simple_model_dist():
 
     return simple_model
 
+
 @pytest.fixture(scope="module")
 def simple_model_class():
     class ClassModel:
@@ -36,7 +39,8 @@ def simple_model_class():
             norm = yield pm.Normal("norm", 0, 1)
             return norm
 
-    return ClassModel()    
+    return ClassModel()
+
 
 @pytest.fixture(scope="function")
 def simple_model_with_deterministic(simple_model):
@@ -115,6 +119,7 @@ def bivariate_gaussian():
         return density
 
     return bivariate_gaussian
+
 
 # TODO - lots of code duplication with fixtures_executors.deterministics_in_nested_models
 @pytest.fixture(scope="function")

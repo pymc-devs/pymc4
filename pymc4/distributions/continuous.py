@@ -355,7 +355,10 @@ class Beta(UnitContinuousDistribution):
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
-        concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
+        concentration0, concentration1 = (
+            conditions["concentration0"],
+            conditions["concentration1"],
+        )
         return tfd.Beta(concentration0=concentration0, concentration1=concentration1, **kwargs)
 
 
@@ -784,7 +787,10 @@ class Kumaraswamy(UnitContinuousDistribution):
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
-        concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
+        concentration0, concentration1 = (
+            conditions["concentration0"],
+            conditions["concentration1"],
+        )
         return tfd.Kumaraswamy(
             concentration0=concentration0, concentration1=concentration1, **kwargs
         )

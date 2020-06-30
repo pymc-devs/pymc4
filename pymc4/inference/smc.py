@@ -45,16 +45,20 @@ def sample_smc(
         model, draws=draws, state=state, observed=observed,
     )
     state_keys = list(init.keys())
+
+    # we have stores samples alongside draws dim to avoid singularity of
+    # sample points, now we need to replace the values in init state
     for _ in init.keys():
         init[_] = state_.all_unobserved_values_batched[_]
     init_state = list(init.values())
 
-    parallel_logpfn_prior = logpfn_prior
-    parallel_logpfn_lkh = logpfn_lkh
+    # vectorize alongside both draws and chains dim
+    parallel_logpfn_prior = vectorize_logp_function(logpfn_prior)
+    parallel_logpfn_lkh = vectorize_logp_function(logpfn_lkh)
 
     @tf.function(autograph=False)
     def run_smc(init):
-        n_stage, final_state, final_kernel_results = sample_sequential_monte_carlo_chain(
+        (n_stage, final_state, final_kernel_results,) = sample_sequential_monte_carlo_chain(
             parallel_logpfn_prior,
             parallel_logpfn_lkh,
             init,
@@ -74,9 +78,6 @@ def sample_smc(
 def _build_logp_smc(
     model, draws, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
 ):
-    # TODO: modified, merged with the sampling implementation
-    # there is a better logic in more samplers implementation
-    # leave for now
     if not isinstance(model, Model):
         raise TypeError(
             "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
@@ -99,16 +100,6 @@ def _build_logp_smc(
         )
 
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
-
-    obs = state.observed_values
-    if observed is not None:
-        obs.update(observed)
-    else:
-        observed = obs
-    for k, o in obs.items():
-        o = tf.convert_to_tensor(o)
-        o = tf.tile(o[None, ...], [draws] + [1] * o.ndim)
-        observed[k] = o
 
     @tf.function(autograph=False)
     def logpfn_likelihood(*values, **kwargs):

@@ -33,10 +33,12 @@ class TransformedSamplingExecutor(SamplingExecutor):
         if not isinstance(dist, distribution.Distribution):
             return dist
 
-        return transform_dist_if_necessary(dist, state, allow_transformed_and_untransformed=True)
+        return transform_dist_if_necessary(
+            dist, state, allow_transformed_and_untransformed=True, is_smc=False
+        )
 
 
-def make_untransformed_model(dist, transform, state):
+def make_untransformed_model(dist, transform, state, is_smc):
     # we gonna sample here, but logp should be computed for the transformed space
     # 0. as explained above we indicate we already performed autotransform
     dist.model_info["autotransformed"] = True
@@ -50,10 +52,13 @@ def make_untransformed_model(dist, transform, state):
     transformed_scoped_name = scopes.transformed_variable_name(transform.name, dist.name)
     scoped_name = scopes.variable_name(dist.name)
     state.transformed_values[transformed_scoped_name] = sampled_transformed_value
-    sampled_transformed_value_batched = transform.forward(
-        state.untransformed_values_batched[scoped_name]
-    )
-    state.transformed_values_batched[transformed_scoped_name] = sampled_transformed_value_batched
+    if is_smc:
+        sampled_transformed_value_batched = transform.forward(
+            state.untransformed_values_batched[scoped_name]
+        )
+        state.transformed_values_batched[
+            transformed_scoped_name
+        ] = sampled_transformed_value_batched
     # 2. increment the potential
     if transform.jacobian_preference == JacobianPreference.Forward:
         potential_fn = functools.partial(
@@ -65,12 +70,12 @@ def make_untransformed_model(dist, transform, state):
             transform.inverse_log_det_jacobian, sampled_transformed_value
         )
         coef = 1.0
-    yield distributions.Potential(potential_fn, coef=coef, name=scoped_name)
+    yield distributions.Potential(potential_fn, coef=coef)
     # 3. return value to the user
     return sampled_untransformed_value
 
 
-def make_transformed_model(dist, transform, state):
+def make_transformed_model(dist, transform, state, is_smc):
     # 1. now compute all the variables: in the transformed and untransformed space
     scoped_name = scopes.variable_name(dist.name)
     transformed_scoped_name = scopes.transformed_variable_name(transform.name, dist.name)
@@ -98,7 +103,7 @@ def make_transformed_model(dist, transform, state):
         coef = -1.0
     else:
         potential_fn = functools.partial(
-            transform.inverse_log_det_jacobian, state.transformed_values[transformed_scoped_name]
+            transform.inverse_log_det_jacobian, state.transformed_values[transformed_scoped_name],
         )
         coef = 1.0
     yield distributions.Potential(potential_fn, coef=coef)
@@ -108,7 +113,7 @@ def make_transformed_model(dist, transform, state):
     return (yield dist)
 
 
-def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransformed):
+def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransformed, is_smc):
     if dist.transform is None or dist.model_info.get("autotransformed", False):
         return dist
     scoped_name = scopes.variable_name(dist.name)
@@ -136,6 +141,6 @@ def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransfor
     if transformed_scoped_name in state.transformed_values:
         if (not allow_transformed_and_untransformed) and scoped_name in state.untransformed_values:
             state.untransformed_values.pop(scoped_name)
-        return make_transformed_model(dist, transform, state)
+        return make_transformed_model(dist, transform, state, is_smc)
     else:
-        return make_untransformed_model(dist, transform, state)
+        return make_untransformed_model(dist, transform, state, is_smc)

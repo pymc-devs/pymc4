@@ -48,7 +48,7 @@ class Distribution(Model):
         **kwargs,
     ):
         self.conditions, self.base_parameters = self.unpack_conditions(
-            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs
+            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs,
         )
         self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
         super().__init__(
@@ -216,20 +216,11 @@ class Distribution(Model):
 
 
 class Potential:
-    __slots__ = ("_name", "_value", "_coef")
+    __slots__ = ("_value", "_coef")
 
     def __init__(self, value, name=None, coef=1.0):
-        self._name = name
         self._value = value
         self._coef = coef
-
-    @property
-    def name(self):
-        """
-            name is used in sMC method. This way we can determine
-            whenever the potential is used with the prior or likelihood
-        """
-        return self._name
 
     @property
     def value(self):

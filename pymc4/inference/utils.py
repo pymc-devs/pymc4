@@ -24,10 +24,8 @@ def initialize_sampling_state(
         The list of names of the model's deterministics
     """
     eval_func = flow.evaluate_meta_model
-    _, state = eval_func(model, observed=observed, state=state, num_chains=smc_draws)
+    _, state = eval_func(model, observed=observed, state=state)
     deterministic_names = list(state.deterministics)
-    lkh_distrs_n = len(state.likelihood_distributions)
-    prior_distrs_n = len(state.prior_distributions)
     state, transformed_names = state.as_sampling_state()
     return state, deterministic_names + transformed_names
 

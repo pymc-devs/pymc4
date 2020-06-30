@@ -246,7 +246,10 @@ class VonMisesFisher(ContinuousDistribution):
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
-        mean_direction, concentration = conditions["mean_direction"], conditions["concentration"]
+        mean_direction, concentration = (
+            conditions["mean_direction"],
+            conditions["concentration"],
+        )
         return tfd.VonMisesFisher(
             mean_direction=mean_direction, concentration=concentration, **kwargs
         )

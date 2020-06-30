@@ -160,7 +160,7 @@ def sample(
     @tf.function(autograph=False)
     def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
-            target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict())
+            target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict()),
         )
         adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
             inner_kernel=nuts_kernel,
@@ -256,7 +256,7 @@ def build_logp_and_deterministic_functions(
             kwargs = dict(zip(unobserved_keys, values))
         st = flow.SamplingState.from_values(kwargs, observed_values=observed)
         _, st = flow.evaluate_model_transformed(model, state=st)
-        return st.collect_log_prob(is_reduced=collect_reduced_log_prob)
+        return st.collect_log_prob()
 
     @tf.function(autograph=False)
     def deterministics_callback(*values, **kwargs):

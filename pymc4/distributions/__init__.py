@@ -4,3 +4,4 @@ from .multivariate import *
 from .timeseries import *
 from .distribution import Potential, Deterministic
 from . import transforms
+from .mixture import *

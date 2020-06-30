@@ -353,18 +353,9 @@ class SamplingExecutor:
             TODO: #229
             also typing
         """
-        # we have smc_run flag for the sMC graph evaluation
-        # for sMC we need to store batch values in the state object
-        # alongside the single batch values to not expose batch shape
         if dist.is_root:
-            sample_ = sample_func(
-                sample_shape=(num_chains,) + sample_shape if num_chains else sample_shape
-            )
-            state.untransformed_values_batched[scoped_name] = sample_
             return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
         else:
-            sample_ = sample_func((num_chains,) if num_chains else ())
-            state.untransformed_values_batched[scoped_name] = sample_
             return_value = state.untransformed_values[scoped_name] = sample_func()
         return state, return_value
 
@@ -413,10 +404,7 @@ class SamplingExecutor:
                         )
                     )
                 assert_values_compatible_with_distribution(
-                    scoped_name,
-                    observed_variable,
-                    dist,
-                    shape_modify_fn=self._modify_distribution_value_shapes_before_assert,
+                    scoped_name, observed_variable, dist,
                 )
                 return_value = state.observed_values[scoped_name] = observed_variable
             state.likelihood_distributions[scoped_name] = dist
@@ -448,7 +436,7 @@ class SamplingExecutor:
         return return_value, state
 
     def prepare_model_control_flow(
-        self, model: coroutine_model.Model, model_info: Dict[str, Any], state: SamplingState
+        self, model: coroutine_model.Model, model_info: Dict[str, Any], state: SamplingState,
     ):
         control_flow: types.GeneratorType = model.control_flow()
         model_name = model_info["name"]
@@ -465,7 +453,7 @@ class SamplingExecutor:
         return control_flow
 
     def finalize_control_flow(
-        self, stop_iteration: StopIteration, model_info: Dict[str, Any], state: SamplingState
+        self, stop_iteration: StopIteration, model_info: Dict[str, Any], state: SamplingState,
     ):
         if stop_iteration.args:
             return_value = stop_iteration.args[0]
@@ -481,9 +469,6 @@ class SamplingExecutor:
             state.deterministics[return_name] = return_value
         return return_value, state
 
-    def _modify_distribution_value_shapes_before_assert(self, dist_shape, value_shape):
-        pass
-
 
 def observed_value_in_evaluation(
     scoped_name: str, dist: distribution.Distribution, state: SamplingState
@@ -492,7 +477,7 @@ def observed_value_in_evaluation(
 
 
 def assert_values_compatible_with_distribution(
-    scoped_name: str, values: Any, dist: distribution.Distribution, shape_modify_fn
+    scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
     A distribution's shape, ``dist_shape``, is made up by the sum of
@@ -524,17 +509,11 @@ def assert_values_compatible_with_distribution(
     """
     event_shape = dist.event_shape
     batch_shape = dist.batch_shape
-    assert_values_compatible_with_distribution_shape(
-        scoped_name, values, batch_shape, event_shape, shape_modify_fn
-    )
+    assert_values_compatible_with_distribution_shape(scoped_name, values, batch_shape, event_shape)
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str,
-    values: Any,
-    batch_shape: tf.TensorShape,
-    event_shape: tf.TensorShape,
-    shape_modify_fn,
+    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape,
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
     A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of
@@ -569,9 +548,6 @@ def assert_values_compatible_with_distribution_shape(
     dist_shape = batch_shape + event_shape
     value_rank = value_shape.rank
     dist_rank = dist_shape.rank
-
-    # If we are running sMC algorithm, then draws dim should be discarded
-    value_shape, dist_shape = shape_modify_fn(value_shape, dist_shape)
 
     # TODO: Make the or condition less ugly but at the same time compatible with
     # tf.function. tf.math.maximum makes things kind of weird and raises errors

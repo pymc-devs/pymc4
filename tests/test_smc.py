@@ -15,7 +15,7 @@ def num_observed_samples(request):
 
 
 @pytest.fixture(scope="module", params=[5000])
-def draws(request):
+def replicas(request):
     return request.param
 
 
@@ -26,7 +26,7 @@ def batch_stack(request):
 
 
 @pytest.fixture(scope="module", params=range(10, 12))
-def simple_model(request, num_observed_samples, draws):
+def simple_model(request, num_observed_samples, replicas):
     seed = request.param
     tf.random.set_seed(seed)
     mean = np.random.random()
@@ -118,28 +118,28 @@ def xla_fixture(request):
     return request.param == "XLA"
 
 
-def test_simple_model(simple_model, xla_fixture, draws):
+def test_simple_model(simple_model, xla_fixture, replicas):
     model, mean = simple_model
-    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
+    samples, map_ = pm.sample_smc(model(), replicas=replicas, xla=xla_fixture)
 
 
-def test_model_batch_stack_prior(model_batch_stack_prior, xla_fixture, draws):
+def test_model_batch_stack_prior(model_batch_stack_prior, xla_fixture, replicas):
     model, mean, prior = model_batch_stack_prior
-    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
+    samples, map_ = pm.sample_smc(model(), replicas=replicas, xla=xla_fixture)
     mean_posterior = tf.reduce_mean(samples[0])
     np.testing.assert_allclose(mean_posterior, mean, rtol=5e-1)
 
 
-def test_model_conditioned(model_batch_stack_lkh, xla_fixture, draws):
+def test_model_conditioned(model_batch_stack_lkh, xla_fixture, replicas):
     model, mean, prior = model_batch_stack_lkh
-    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
+    samples, map_ = pm.sample_smc(model(), replicas=replicas, xla=xla_fixture)
     mean_posterior = tf.reduce_mean(samples[0], [0, 1])
     np.testing.assert_allclose(mean_posterior, mean, rtol=5e-1)
 
 
-def test_model_conditioned(model_conditioned, xla_fixture, draws):
+def test_model_conditioned(model_conditioned, xla_fixture, replicas):
     model, mean, prior = model_conditioned
-    samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
+    samples, map_ = pm.sample_smc(model(), replicas=replicas, xla=xla_fixture)
     mean_posterior = tf.reduce_mean(samples[0], [0, 1])
     np.testing.assert_allclose(mean_posterior, mean, rtol=5e-1)
 

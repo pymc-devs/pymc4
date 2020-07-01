@@ -1,5 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, Optional, Mapping
+from typing import Any, Tuple, Dict, Union, Optional, Mapping, Callable
 
 import tensorflow as tf
 import pymc4 as pm
@@ -123,7 +123,8 @@ class SamplingExecutor:
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
-        num_chains: Optional[int] = 1,
+        draws: Optional[int] = None,
+        kd=0,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -276,7 +277,7 @@ class SamplingExecutor:
                     elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(
-                                dist, state, sample_shape=sample_shape, num_chains=num_chains,
+                                dist, state, sample_shape=sample_shape, draws=draws,
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
@@ -287,7 +288,8 @@ class SamplingExecutor:
                             state=state,
                             _validate_state=False,
                             sample_shape=sample_shape,
-                            num_chains=num_chains,
+                            draws=draws,
+                            kd=kd + 1,
                         )
                     else:
                         err = EvaluationError(
@@ -320,7 +322,8 @@ class SamplingExecutor:
                 return e.args, state
             except StopIteration as stop_iteration:
                 self.validate_return_value(stop_iteration.args[:1])
-                return self.finalize_control_flow(stop_iteration, model_info, state)
+                add = self.finalize_control_flow(stop_iteration, model_info, state)
+                return add
         return return_value, state
 
     __call__ = evaluate_model
@@ -331,9 +334,6 @@ class SamplingExecutor:
         return SamplingState.from_values(values=values, observed_values=observed)
 
     def validate_state(self, state):
-        """
-            TODO: #229
-        """
         if state.transformed_values:
             raise ValueError(
                 "untransformed executor should not contain "
@@ -343,16 +343,23 @@ class SamplingExecutor:
     def modify_distribution(
         self, dist: ModelType, model_info: Mapping[str, Any], state: SamplingState
     ) -> ModelType:
-        """
-            TODO: #229
-        """
         return dist
 
-    def _sample_unobserved(self, dist, state, scoped_name, sample_func, num_chains, sample_shape):
-        """
-            TODO: #229
-            also typing
-        """
+    def _sample_unobserved(
+        self,
+        dist: ModelType,
+        state: SamplingState,
+        scoped_name: str,
+        sample_func: Callable,
+        *,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
+        draws: int = None,
+    ) -> Tuple[SamplingState, Any]:
+        # For the first run of the graph execution we are sampling values
+        # from the distribution `dist` and save it to the `state` object.
+        # `sample_func` is the the sampler function used to sample variables.
+        # For meta execution we are usin test values that are defined separately
+        # for each type of distribution.
         if dist.is_root:
             return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
         else:
@@ -364,11 +371,34 @@ class SamplingExecutor:
         dist: distribution.Distribution,
         state: SamplingState,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
-        num_chains: Optional[int] = None,
+        draws: Optional[int] = None,
     ) -> Tuple[Any, SamplingState]:
         """
-            TODO: #229
+        Process the ``Distribution`` instance by sampling the variable
+        and adding it to the current state.
+        Parameters
+        ----------
+        dist: ModelType
+            The yielded ``Distribution`` instance which is used to sample variables
+        state: pymc4.flow.SamplingState
+            The current ``SamplingState`` state of the model
+        sample_shape: Union[int, Tuple[int], tf.TensorShape]
+            The sample shape for the sampled variable. We can manually pass
+            `is_root` argument to the ``Distribution`` instance to have control
+            over the variable shape.
+        draws: int
+            The number of draws for the variable. Used by SMC to avoid singularity
+            of sampled points when applying tiling over the first dimension.
+
+        Returns
+        ------
+        return_value : Any
+            The sampled value
+        state : SamplingState
+            The current state after sampled variable from `dist` is added to the state
         """
+        # TODO: not sure if this should be documented. But if we give opportunity to the
+        # final user to add custom executors, then sure.
         sample_func = self._dist_get_sampling_func(dist)
 
         if dist.is_anonymous:
@@ -387,7 +417,12 @@ class SamplingExecutor:
                 # might be posterior predictive or programmatically override to exchange observed variable to latent
                 if scoped_name not in state.untransformed_values:
                     state, return_value = self._sample_unobserved(
-                        dist, state, scoped_name, sample_func, num_chains, sample_shape,
+                        dist,
+                        state,
+                        scoped_name,
+                        sample_func,
+                        sample_shape=sample_shape,
+                        draws=draws,
                     )
                 else:
                     # replace observed variable with a custom one
@@ -413,7 +448,7 @@ class SamplingExecutor:
             state.prior_distributions[scoped_name] = dist
         else:
             state, return_value = self._sample_unobserved(
-                dist, state, scoped_name, sample_func, num_chains, sample_shape,
+                dist, state, scoped_name, sample_func, sample_shape=sample_shape, draws=draws,
             )
             state.prior_distributions[scoped_name] = dist
         state.distributions[scoped_name] = dist

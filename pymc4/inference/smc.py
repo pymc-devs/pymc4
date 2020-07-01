@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import initialize_sampling_state_smc, vectorize_logp_function
+from pymc4.inference.utils import initialize_sampling_state_smc, tile_init
 
 from tensorflow_probability.python.experimental.mcmc.sample_sequential_monte_carlo import (
     make_rwmh_kernel_fn,
@@ -15,7 +15,7 @@ sample_sequential_monte_carlo_chain = tfp.experimental.mcmc.sample_sequential_mo
 def sample_smc(
     model: Model,
     draws: int = 5000,
-    num_chains: int = 1,  # TODO: for now is not used
+    num_chains: int = 10,
     state: Optional[flow.SamplingState] = None,
     observed: Optional[Dict[str, Any]] = None,
     xla: bool = False,
@@ -52,6 +52,9 @@ def sample_smc(
         init[_] = state_.all_unobserved_values_batched[_]
     init_state = list(init.values())
 
+    # add chain dim
+    init_state = tile_init(init_state, num_chains, 1)
+
     # vectorize alongside both draws and chains dim
     parallel_logpfn_prior = vectorize_logp_function(logpfn_prior)
     parallel_logpfn_lkh = vectorize_logp_function(logpfn_lkh)
@@ -72,6 +75,7 @@ def sample_smc(
     else:
         _, final_state, _ = run_smc(init_state)
     mapped_samples = {name: value for name, value in zip(state_keys, final_state)}
+    # TODO: transform values
     return final_state, mapped_samples
 
 
@@ -127,3 +131,15 @@ def _build_logp_smc(
         dict(state.all_unobserved_values),
         state,
     )
+
+
+def vectorize_logp_function(logpfn):
+    def vectorized_logpfn(*state):
+        # vectorize the list of tensors on the `draws` dimension
+        def separete_chains(mini_state):
+            # vectorize the list of tensors on the `chains` dimension
+            return tf.vectorized_map(lambda mini_state_chain: logpfn(*mini_state_chain), mini_state)
+
+        return tf.vectorized_map(separete_chains, state)
+
+    return vectorized_logpfn

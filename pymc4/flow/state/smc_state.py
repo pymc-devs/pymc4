@@ -5,7 +5,9 @@ from .state import SamplingState
 
 class SMCSamplingState(SamplingState):
     """
-        TODO: #229
+        Subclass of `SamplingState` which adds the support of
+        log probability collection separately for likelihood and
+        prior.
     """
 
     __slots__ = ()

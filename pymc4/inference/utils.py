@@ -53,7 +53,11 @@ def initialize_sampling_state_smc(
         The list of names of the model's deterministics
     """
     eval_func = flow.evaluate_model_smc
-    _, state = eval_func(model, observed=observed, state=state, num_chains=smc_draws)
+    _, state = eval_func(model, observed=observed, state=state, draws=smc_draws)
+    print("FUCKKKKKKKKKKKkkkk")
+    import pdb
+
+    pdb.set_trace()
     deterministic_names = list(state.deterministics)
     lkh_distrs_n = len(state.likelihood_distributions)
     prior_distrs_n = len(state.prior_distributions)
@@ -106,13 +110,15 @@ def trace_to_arviz(
     )
 
 
-def vectorize_logp_function(logpfn):
-    # TODO: vectorize with dict
-    def vectorized_logpfn(*state):
-        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
-
-    return vectorized_logpfn
-
-
-def tile_init(init, num_repeats):
-    return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]
+def tile_init(init, num_repeats, expand_ind=0):
+    """
+        expand_ind: For SMC we are tiling the second dim, so we can have
+        zero draws dim
+    """
+    return [
+        tf.tile(
+            tf.expand_dims(tens, expand_ind),
+            [1] * expand_ind + [num_repeats] + [1] * (tens.ndim - expand_ind),
+        )
+        for tens in init
+    ]

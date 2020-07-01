@@ -51,7 +51,7 @@ class SamplingState:
         transformed_values_batched: Dict[str, Any] = None,
         untransformed_values_batched: Dict[str, Any] = None,
     ) -> None:
-        # verbose __init__
+        # TODO: verbose __init__
         if transformed_values is None:
             transformed_values = dict()
         else:

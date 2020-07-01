@@ -21,6 +21,10 @@ from pymc4.flow.executor import (
 class TransformedSamplingExecutor(SamplingExecutor):
     """Perform inference in an unconstrained space."""
 
+    def __init__(self):
+        super().__init__()
+        self.transform_dist_if_necessary = transform_dist_if_necessary
+
     def validate_state(self, state):
         """Validate that the model is not in a bad state."""
         return
@@ -33,8 +37,8 @@ class TransformedSamplingExecutor(SamplingExecutor):
         if not isinstance(dist, distribution.Distribution):
             return dist
 
-        return transform_dist_if_necessary(
-            dist, state, allow_transformed_and_untransformed=True, is_smc=False
+        return self.transform_dist_if_necessary(
+            dist, state, allow_transformed_and_untransformed=True
         )
 
 
@@ -113,7 +117,7 @@ def make_transformed_model(dist, transform, state, is_smc):
     return (yield dist)
 
 
-def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransformed, is_smc):
+def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransformed, is_smc=False):
     if dist.transform is None or dist.model_info.get("autotransformed", False):
         return dist
     scoped_name = scopes.variable_name(dist.name)

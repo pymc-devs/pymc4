@@ -7,7 +7,6 @@ from pymc4 import flow
 from pymc4.inference.utils import (
     initialize_sampling_state,
     trace_to_arviz,
-    vectorize_logp_function,
     tile_init,
 )
 from pymc4.utils import NameParts
@@ -278,3 +277,11 @@ def build_logp_and_deterministic_functions(
         deterministic_names,
         state,
     )
+
+
+def vectorize_logp_function(logpfn):
+    # TODO: vectorize with dict
+    def vectorized_logpfn(*state):
+        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+
+    return vectorized_logpfn

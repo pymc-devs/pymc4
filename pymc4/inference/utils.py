@@ -54,10 +54,6 @@ def initialize_sampling_state_smc(
     """
     eval_func = flow.evaluate_model_smc
     _, state = eval_func(model, observed=observed, state=state, draws=smc_draws)
-    print("FUCKKKKKKKKKKKkkkk")
-    import pdb
-
-    pdb.set_trace()
     deterministic_names = list(state.deterministics)
     lkh_distrs_n = len(state.likelihood_distributions)
     prior_distrs_n = len(state.prior_distributions)

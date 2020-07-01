@@ -218,7 +218,7 @@ class Distribution(Model):
 class Potential:
     __slots__ = ("_value", "_coef")
 
-    def __init__(self, value, name=None, coef=1.0):
+    def __init__(self, value, coef=1.0):
         self._value = value
         self._coef = coef
 

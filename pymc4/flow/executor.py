@@ -457,9 +457,6 @@ class SamplingExecutor:
     def proceed_deterministic(
         self, deterministic: distribution.Deterministic, state: SamplingState
     ) -> Tuple[Any, SamplingState]:
-        """
-            TODO: #229
-        """
         if deterministic.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
         scoped_name = scopes.variable_name(deterministic.name)

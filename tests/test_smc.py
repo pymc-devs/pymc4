@@ -10,7 +10,7 @@ def array(*args, **kwargs):
     return np.array(*args, **kwargs)
 
 
-@pytest.fixture(scope="module", params=[200, 300])
+@pytest.fixture(scope="module", params=[200])
 def num_observed_samples(request):
     return request.param
 
@@ -26,7 +26,7 @@ def batch_stack(request):
     return [1] * (ri + 1)
 
 
-@pytest.fixture(scope="module", params=range(10, 13))
+@pytest.fixture(scope="module", params=range(10, 12))
 def simple_model(request, num_observed_samples, draws):
     seed = request.param
     tf.random.set_seed(seed)
@@ -42,7 +42,7 @@ def simple_model(request, num_observed_samples, draws):
     return simple_model, mean
 
 
-@pytest.fixture(scope="module", params=range(10, 13))
+@pytest.fixture(scope="module", params=range(10, 12))
 def model_conditioned(request, num_observed_samples):
     seed = request.param
     tf.random.set_seed(seed)
@@ -59,12 +59,12 @@ def model_conditioned(request, num_observed_samples):
     return model_conditioned, mean, prior
 
 
-@pytest.fixture(scope="module", params=range(10, 13))
+@pytest.fixture(scope="module", params=range(10, 12))
 def model_batch_stack_prior(request, num_observed_samples, batch_stack):
     seed = request.param
     tf.random.set_seed(seed)
-    mean = np.random.random(batch_stack)
-    observed = tf.random.normal((num_observed_samples, batch_stack)) + mean
+    mean = tf.random.normal((*batch_stack,))
+    observed = tf.random.normal((num_observed_samples, *batch_stack)) + mean
     prior = "pr"
 
     @pm.model
@@ -76,12 +76,12 @@ def model_batch_stack_prior(request, num_observed_samples, batch_stack):
     return model_conditioned, mean, prior
 
 
-@pytest.fixture(scope="module", params=range(10, 13))
+@pytest.fixture(scope="module", params=range(10, 12))
 def model_batch_stack_lkh(request, num_observed_samples, batch_stack):
     seed = request.param
     tf.random.set_seed(seed)
-    mean = np.random.random(batch_stack)
-    observed = tf.random.normal((num_observed_samples, batch_stack)) + mean
+    mean = tf.random.normal((*batch_stack,))
+    observed = tf.random.normal((num_observed_samples, *batch_stack)) + mean
     prior = "pr"
 
     @pm.model

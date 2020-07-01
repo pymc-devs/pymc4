@@ -2,7 +2,7 @@ import itertools
 from typing import Any, Dict, List, Optional, Set, Tuple
 from collections import ChainMap
 from pymc4.distributions import distribution
-from tensorflow_probability.python.internal import prefer_static
+import tensorflow as tf
 
 from pymc4 import utils
 
@@ -118,11 +118,11 @@ class SamplingState:
             (p.value for p in self.potentials),
         )
 
-    def collect_log_prob(self, is_reduced=True):
-        if is_reduced:
-            return sum(map(prefer_static.reduce_sum, self.collect_log_prob_elemwise()))
-        else:
-            return sum(self.collect_log_prob_elemwise())
+    def collect_log_prob(self):
+        return sum(map(tf.reduce_sum, self.collect_log_prob_elemwise()))
+
+    def collect_unreduced_log_prob(self):
+        return sum(self.collect_log_prob_elemwise())
 
     def __repr__(self):
         def get_distribution_class_names(distribution_dict):

@@ -14,7 +14,7 @@ sample_sequential_monte_carlo_chain = tfp.experimental.mcmc.sample_sequential_mo
 
 def sample_smc(
     model: Model,
-    draws: int = 5000,
+    replicas: int = 5000,
     num_chains: int = 10,
     state: Optional[flow.SamplingState] = None,
     observed: Optional[Dict[str, Any]] = None,
@@ -26,7 +26,7 @@ def sample_smc(
     ----------
     model : pymc4.Model
         Model to sample posterior for
-    draws : int
+    replicas : int
         Population size
     num_chains : int
         Num chains to run
@@ -42,11 +42,11 @@ def sample_smc(
         Posterior samples
     """
     (logpfn_prior, logpfn_lkh, init, state_,) = _build_logp_smc(
-        model, draws=draws, state=state, observed=observed,
+        model, replicas=replicas, state=state, observed=observed,
     )
     state_keys = list(init.keys())
 
-    # we have stores samples alongside draws dim to avoid singularity of
+    # we have stores samples alongside replicas dim to avoid singularity of
     # sample points, now we need to replace the values in init state
     for _ in init.keys():
         init[_] = state_.all_unobserved_values_batched[_]
@@ -55,7 +55,7 @@ def sample_smc(
     # add chain dim
     init_state = tile_init(init_state, num_chains, 1)
 
-    # vectorize alongside both draws and chains dim
+    # vectorize alongside both replicas and chains dim
     parallel_logpfn_prior = vectorize_logp_function(logpfn_prior)
     parallel_logpfn_lkh = vectorize_logp_function(logpfn_lkh)
 
@@ -80,7 +80,7 @@ def sample_smc(
 
 
 def _build_logp_smc(
-    model, draws, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
+    model, replicas, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
 ):
     if not isinstance(model, Model):
         raise TypeError(
@@ -92,7 +92,7 @@ def _build_logp_smc(
         raise ValueError("Can't use both `state` and `observed` arguments")
 
     state, _, lkh_n, prior_n = initialize_sampling_state_smc(
-        model, observed=observed, state=state, smc_draws=draws
+        model, observed=observed, state=state, smc_replicas=replicas
     )
 
     if lkh_n == 0 or prior_n == 0:
@@ -135,7 +135,7 @@ def _build_logp_smc(
 
 def vectorize_logp_function(logpfn):
     def vectorized_logpfn(*state):
-        # vectorize the list of tensors on the `draws` dimension
+        # vectorize the list of tensors on the `replicas` dimension
         def separete_chains(mini_state):
             # vectorize the list of tensors on the `chains` dimension
             return tf.vectorized_map(lambda mini_state_chain: logpfn(*mini_state_chain), mini_state)

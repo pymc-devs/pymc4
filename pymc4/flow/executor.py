@@ -123,7 +123,7 @@ class SamplingExecutor:
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
         sample_shape: Union[Tuple[int], tf.TensorShape] = (),
-        draws: int = 1,
+        replicas: int = 1,
         kd=0,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
@@ -277,7 +277,7 @@ class SamplingExecutor:
                     elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(
-                                dist, state, sample_shape=sample_shape, draws=draws,
+                                dist, state, sample_shape=sample_shape, replicas=replicas,
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
@@ -288,7 +288,7 @@ class SamplingExecutor:
                             state=state,
                             _validate_state=False,
                             sample_shape=sample_shape,
-                            draws=draws,
+                            replicas=replicas,
                             kd=kd + 1,
                         )
                     else:
@@ -353,7 +353,7 @@ class SamplingExecutor:
         sample_func: Callable,
         *,
         sample_shape: Union[Tuple[int], tf.TensorShape] = (),
-        draws: int = 1,
+        replicas: int = 1,
     ) -> Tuple[SamplingState, Any]:
         # For the first run of the graph execution we are sampling values
         # from the distribution `dist` and save it to the `state` object.
@@ -371,7 +371,7 @@ class SamplingExecutor:
         dist: distribution.Distribution,
         state: SamplingState,
         sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
-        draws: int = 1,
+        replicas: int = 1,
     ) -> Tuple[Any, SamplingState]:
         """
         Process the ``Distribution`` instance by sampling the variable
@@ -386,8 +386,8 @@ class SamplingExecutor:
             The sample shape for the sampled variable. We can manually pass
             `is_root` argument to the ``Distribution`` instance to have control
             over the variable shape.
-        draws: int
-            The number of draws for the variable. Used by SMC to avoid singularity
+        replicas: int
+            The number of replicas for the variable. Used by SMC to avoid singularity
             of sampled points when applying tiling over the first dimension.
 
         Returns
@@ -422,7 +422,7 @@ class SamplingExecutor:
                         scoped_name,
                         sample_func,
                         sample_shape=sample_shape,
-                        draws=draws,
+                        replicas=replicas,
                     )
                 else:
                     # replace observed variable with a custom one
@@ -448,7 +448,7 @@ class SamplingExecutor:
             state.prior_distributions[scoped_name] = dist
         else:
             state, return_value = self._sample_unobserved(
-                dist, state, scoped_name, sample_func, sample_shape=sample_shape, draws=draws,
+                dist, state, scoped_name, sample_func, sample_shape=sample_shape, replicas=replicas,
             )
             state.prior_distributions[scoped_name] = dist
         state.distributions[scoped_name] = dist

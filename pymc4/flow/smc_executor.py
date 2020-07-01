@@ -35,16 +35,16 @@ class SMCSamplingExecutor(TransformedSamplingExecutor):
         sample_func: Callable,
         *,
         sample_shape: Union[Tuple[int], tf.TensorShape] = (),
-        draws: int = 1,
+        replicas: int = 1,
     ) -> Tuple[SamplingState, Any]:
         # For sMC run we need to store batch values in the state object
         # to avoid singularity of prior samples when tiling (mcmc)
         if dist.is_root:
-            sample_ = sample_func(sample_shape=(draws,) + sample_shape)
+            sample_ = sample_func(sample_shape=(replicas,) + sample_shape)
             state.untransformed_values_batched[scoped_name] = sample_
             return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
         else:
-            sample_ = sample_func(sample_shape=(draws,))
+            sample_ = sample_func(sample_shape=(replicas,))
             state.untransformed_values_batched[scoped_name] = sample_
             return_value = state.untransformed_values[scoped_name] = sample_func()
         return state, return_value

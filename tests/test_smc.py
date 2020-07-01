@@ -127,21 +127,21 @@ def test_model_batch_stack_prior(model_batch_stack_prior, xla_fixture, draws):
     model, mean, prior = model_batch_stack_prior
     samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
     mean_posterior = tf.reduce_mean(samples[0])
-    np.testing.assert_allclose(mean_posterior, mean, rtol=1e-1)
+    np.testing.assert_allclose(mean_posterior, mean, rtol=5e-1)
 
 
 def test_model_conditioned(model_batch_stack_lkh, xla_fixture, draws):
     model, mean, prior = model_batch_stack_lkh
     samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
-    mean_posterior = tf.reduce_mean(samples[0], 0)
-    np.testing.assert_allclose(mean_posterior, mean, rtol=3e-1)
+    mean_posterior = tf.reduce_mean(samples[0], [0,1])
+    np.testing.assert_allclose(mean_posterior, mean, rtol=5e-1)
 
 
 def test_model_conditioned(model_conditioned, xla_fixture, draws):
     model, mean, prior = model_conditioned
     samples, map_ = pm.sample_smc(model(), draws=draws, xla=xla_fixture)
-    mean_posterior = tf.reduce_mean(samples[0], 0)
-    np.testing.assert_allclose(mean_posterior, mean, rtol=3e-1)
+    mean_posterior = tf.reduce_mean(samples[0], [0,1])
+    np.testing.assert_allclose(mean_posterior, mean, rtol=5e-1)
 
 
 def test_model_no_observed(model_no_observed):

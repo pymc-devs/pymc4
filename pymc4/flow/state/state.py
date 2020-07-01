@@ -1,5 +1,5 @@
 import itertools
-from typing import Any, Tuple, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from collections import ChainMap
 from pymc4.distributions import distribution
 from tensorflow_probability.python.internal import prefer_static
@@ -105,8 +105,8 @@ class SamplingState:
         )
 
         self.distributions = distributions
-        self.prior_distributions = {}
-        self.likelihood_distributions = {}
+        self.prior_distributions: Dict[str, distribution.Distribution] = {}
+        self.likelihood_distributions: Dict[str, distribution.Distribution] = {}
 
         self.potentials = potentials
         self.deterministics = deterministics
@@ -179,8 +179,6 @@ class SamplingState:
             return cls(observed_values=observed_values)
         transformed_values = dict()
         untransformed_values = dict()
-        transformed_values_batched = dict()
-        untransformed_values_batched = dict()
         # split by `nest/name` or `nest/__transform_name`
         for fullname in values:
             namespec = utils.NameParts.from_name(fullname)
@@ -192,8 +190,8 @@ class SamplingState:
             transformed_values,
             untransformed_values,
             observed_values,
-            transformed_values_batched=transformed_values_batched,
-            untransformed_values_batched=untransformed_values_batched,
+            transformed_values_batched=dict(),
+            untransformed_values_batched=dict(),
         )
 
     def clone(self) -> "SamplingState":

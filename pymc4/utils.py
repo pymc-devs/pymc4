@@ -1,8 +1,7 @@
 """Miscellaneous utility functions."""
 import functools
 import re
-from typing import Callable, Sequence, Optional, Tuple
-import itertools
+from typing import Callable, Sequence, Optional
 import io
 import pkgutil
 import os
@@ -274,17 +273,3 @@ def get_data(filename):
     """
     data_pkg = "notebooks"
     return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join("data", filename)))
-
-
-def broadcast_shapes(*shapes: Tuple[int]) -> Tuple[int]:
-    """Apply numpy broadcasting rules to shapes."""
-    result = []
-    for dims in itertools.zip_longest(*map(reversed, shapes), fillvalue=1):
-        dim: int = 1
-        for d in dims:
-            if dim != 1 and d != 1 and d != dim:
-                raise ValueError("Shapes can't be broadcasted")
-            elif d > dim:
-                dim = d
-        result.append(dim)
-    return tuple(reversed(result))

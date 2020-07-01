@@ -1,7 +1,4 @@
-from pymc4 import utils
 from pymc4.distributions.distribution import Distribution
-from tensorflow_probability import distributions as tfd
-from collections.abc import Iterable
 
 
 __all__ = ["Mixture", "NormalMixture"]
@@ -25,43 +22,7 @@ class Mixture(Distribution):
         or iterable of one-dimensional PyMC4 distributions the
         component distributions :math:`f_1, \ldots, f_n`
     """
-
-    def __init__(self, name, p, distributions, **kwargs):
-        super().__init__(name, p=p, distributions=distributions, **kwargs)
-
-    def _init_distribution(self, conditions, **kwargs):
-        p, distributions = conditions["p"], conditions["distributions"]
-
-        if not (
-            (
-                isinstance(distributions, Iterable)
-                and all((isinstance(c, Distribution) for c in distributions))
-            )
-            or isinstance(distributions, Distribution)
-        ):
-            raise TypeError(
-                "Supplied Mixture distributions must be a "
-                "Distribution or an iterable of "
-                "Distributions. Got {} instead.".format(
-                    type(distributions)
-                    if not isinstance(distributions, Iterable)
-                    else [type(c) for c in distributions]
-                )
-            )
-
-        if p.shape[:-1] != tuple(distributions[0]._distribution.batch_shape):
-            raise ValueError(
-                "`batch_shape` of categorical and component distributions should be equal"
-            )
-
-        if isinstance(distributions, Iterable):
-            distributions = [_._distribution for _ in distributions]
-            return tfd.Mixture(cat=tfd.Categorical(probs=p), components=distributions)
-        else:
-            return tfd.MixtureSameFamily(
-                mixture_distribution=tfd.Categorical(probs=p),
-                components_distribution=distributions._distribution,
-            )
+    pass
 
 
 class NormalMixture(Distribution):
@@ -84,19 +45,4 @@ class NormalMixture(Distribution):
     scale : array of floats
         the component standard deviations
     """
-
-    def __init__(self, name, w, loc, scale, **kwargs):
-        super().__init__(name, w=w, loc=loc, scale=scale, **kwargs)
-
-    def _init_distribution(self, conditions, **kwargs):
-        w, loc, scale = conditions["w"], conditions["loc"], conditions["scale"]
-
-        if w.shape != loc.shape or w.shape != scale.shape:
-            raise ValueError(
-                "`batch_shape` of categorical and component distributions should be equal"
-            )
-
-        return tfd.MixtureSameFamily(
-            mixture_distribution=tfd.Categorical(probs=w),
-            components_distribution=tfd.Normal(loc=loc, scale=scale),
-        )
+    pass

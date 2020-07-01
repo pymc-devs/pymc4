@@ -7,7 +7,8 @@ import functools
 import tensorflow as tf
 from typing import Any, Callable, Tuple, Union
 from pymc4.flow.transformed_executor import TransformedSamplingExecutor, transform_dist_if_necessary
-from pymc4.flow.executor import ModelType, SamplingState
+from pymc4.flow.executor import SamplingState
+from pymc4.distributions import distribution
 
 
 __all__ = ["SMCSamplingExecutor"]
@@ -28,13 +29,13 @@ class SMCSamplingExecutor(TransformedSamplingExecutor):
 
     def _sample_unobserved(
         self,
-        dist: ModelType,
+        dist: distribution.Distribution,
         state: SamplingState,
         scoped_name: str,
         sample_func: Callable,
         *,
-        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
-        draws: int = None,
+        sample_shape: Union[Tuple[int], tf.TensorShape] = (),
+        draws: int = 1,
     ) -> Tuple[SamplingState, Any]:
         # For sMC run we need to store batch values in the state object
         # to avoid singularity of prior samples when tiling (mcmc)

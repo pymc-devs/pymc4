@@ -1,5 +1,5 @@
 import types
-from typing import Any, Tuple, Dict, Union, Optional, Mapping, Callable
+from typing import Any, Tuple, Dict, Union, Mapping, Callable
 
 import tensorflow as tf
 import pymc4 as pm
@@ -122,8 +122,8 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
-        sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
-        draws: Optional[int] = None,
+        sample_shape: Union[Tuple[int], tf.TensorShape] = (),
+        draws: int = 1,
         kd=0,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
@@ -347,13 +347,13 @@ class SamplingExecutor:
 
     def _sample_unobserved(
         self,
-        dist: ModelType,
+        dist: distribution.Distribution,
         state: SamplingState,
         scoped_name: str,
         sample_func: Callable,
         *,
-        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
-        draws: int = None,
+        sample_shape: Union[Tuple[int], tf.TensorShape] = (),
+        draws: int = 1,
     ) -> Tuple[SamplingState, Any]:
         # For the first run of the graph execution we are sampling values
         # from the distribution `dist` and save it to the `state` object.
@@ -370,8 +370,8 @@ class SamplingExecutor:
         self,
         dist: distribution.Distribution,
         state: SamplingState,
-        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
-        draws: Optional[int] = None,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
+        draws: int = 1,
     ) -> Tuple[Any, SamplingState]:
         """
         Process the ``Distribution`` instance by sampling the variable

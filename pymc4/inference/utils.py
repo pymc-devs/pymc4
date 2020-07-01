@@ -1,5 +1,5 @@
 import tensorflow as tf
-from typing import Optional, Tuple, List, Any
+from typing import Optional, Tuple, List
 import numpy as np
 import arviz as az
 
@@ -35,8 +35,8 @@ def initialize_sampling_state_smc(
     observed: Optional[dict] = None,
     state: Optional[flow.SamplingState] = None,
     *,
-    smc_draws: Optional[int] = None,
-) -> Tuple[flow.SamplingState, List[str], List[Any], List[Any]]:
+    smc_draws: int = 1,
+) -> Tuple[flow.SamplingState, List[str], int, int]:
     """
     Initialize the model provided state and/or observed variables.
     Parameters

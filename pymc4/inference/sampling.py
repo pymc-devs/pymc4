@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Union
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.coroutine_model import Model
@@ -21,7 +21,7 @@ def sample(
     num_samples: int = 1000,
     num_chains: int = 10,
     burn_in: int = 100,
-    step_size: float = 0.1,
+    step_size: Union[List[float], float] = 0.1,
     initialize_smc: bool = False,
     observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
@@ -31,7 +31,7 @@ def sample(
     smc_kwargs: Optional[Dict[str, Any]] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
-    progressbar=False,
+    progressbar: bool = False,
 ):
     """
     Perform MCMC sampling using NUTS (for now).

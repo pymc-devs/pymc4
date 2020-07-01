@@ -174,7 +174,7 @@ class SamplingState:
     @classmethod
     def from_values(
         cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None
-    ) -> SamplingState:
+    ) -> "SamplingState":
         if values is None:
             return cls(observed_values=observed_values)
         transformed_values = dict()
@@ -194,7 +194,7 @@ class SamplingState:
             untransformed_values_batched=dict(),
         )
 
-    def clone(self) -> SamplingState:
+    def clone(self) -> "SamplingState":
         return self.__class__(
             transformed_values=self.transformed_values,
             untransformed_values=self.untransformed_values,
@@ -205,7 +205,7 @@ class SamplingState:
             posterior_predictives=self.posterior_predictives,
         )
 
-    def as_sampling_state(self) -> Tuple[SamplingState, List[str]]:
+    def as_sampling_state(self) -> Tuple["SamplingState", List[str]]:
         """Create a sampling state that should be used within MCMC sampling.
         There are some principles that hold for the state.
             1. Check there is at least one distribution

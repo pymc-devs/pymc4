@@ -35,7 +35,7 @@ def initialize_sampling_state_smc(
     observed: Optional[dict] = None,
     state: Optional[flow.SamplingState] = None,
     *,
-    smc_draws: int = 1,
+    smc_replicas: int = 1,
 ) -> Tuple[flow.SamplingState, List[str], int, int]:
     """
     Initialize the model provided state and/or observed variables.
@@ -44,7 +44,7 @@ def initialize_sampling_state_smc(
     model : pymc4.Model
     observed : Optional[dict]
     state : Optional[flow.SamplingState]
-    smc_draws: Optional[int]
+    smc_replicas: Optional[int]
     Returns
     -------
     state: pymc4.flow.SamplingState
@@ -53,7 +53,7 @@ def initialize_sampling_state_smc(
         The list of names of the model's deterministics
     """
     eval_func = flow.evaluate_model_smc
-    _, state = eval_func(model, observed=observed, state=state, draws=smc_draws)
+    _, state = eval_func(model, observed=observed, state=state, replicas=smc_replicas)
     deterministic_names = list(state.deterministics)
     lkh_distrs_n = len(state.likelihood_distributions)
     prior_distrs_n = len(state.prior_distributions)
@@ -109,7 +109,7 @@ def trace_to_arviz(
 def tile_init(init, num_repeats, expand_ind=0):
     """
         expand_ind: For SMC we are tiling the second dim, so we can have
-        zero draws dim
+        zero `replicas` dim
     """
     return [
         tf.tile(

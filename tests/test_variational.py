@@ -76,7 +76,7 @@ def bivariate_gaussian():
 
 def test_bivariate_shapes(bivariate_gaussian):
     advi = pm.fit(bivariate_gaussian(), num_steps=5000)
-    assert advi.losses.numpy().shape == (5000, 2)
+    assert advi.losses.numpy().shape == (5000, )
 
     samples = advi.approximation.sample(5000)
     assert samples.posterior["bivariate_gaussian/density"].values.shape == (1, 5000, 2)

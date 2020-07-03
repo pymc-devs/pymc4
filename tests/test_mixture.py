@@ -4,7 +4,6 @@ Tests for PyMC4 mixture distribution
 
 import numpy as np
 import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import pymc4 as pm
@@ -50,11 +49,6 @@ def mixture_components(request):
     return par["n"], par["k"], par["p"], par["loc"], par["scale"]
 
 
-@pytest.fixture(scope="function", params=[True, False], ids=str)
-def xla(request):
-    return request.param
-
-
 def _mixture(k, p, loc, scale, dat):
     m = yield pm.Normal("means", loc=loc, scale=scale)
     distributions = [pm.Normal("d" + str(i), loc=m[..., i], scale=scale) for i in range(k)]
@@ -98,13 +92,9 @@ def test_wrong_distribution_argument_in_list_fails():
         )
 
 
-def test_sampling(mixture, xla):
+def test_sampling(mixture, xla_fixture):
     model, n, k = mixture
-    if xla and not tf.test.is_gpu_available():
-        # just skip the test if xla is not available
-        return
-
-    trace = pm.sample(model, num_samples=100, num_chains=2, xla=xla)
+    trace = pm.sample(model, num_samples=100, num_chains=2, xla=xla_fixture)
     if n == 1:
         assert trace.posterior["mixture/means"].shape == (2, 100, k)
     else:

@@ -52,13 +52,12 @@ def _make_summary_statistic(attr):  # noqa
 
 
 class BatchStacker(distribution_lib.Distribution):
-    """BatchStacker distribution via independent draws.
+    r"""
+    BatchStacker distribution via independent draws.
 
     This distribution is useful for stacking collections of independent,
     identical draws. It is otherwise identical to the input distribution.
 
-    Mathematical Details
-    --------------------
     The probability function is,
 
     .. math:: 
@@ -91,7 +90,6 @@ class BatchStacker(distribution_lib.Distribution):
     >>> lp = s.log_prob(x)
     >>> lp.shape.as_list()
     [6, 1, 5, 4, 3]
-
     """
 
     def __init__(
@@ -101,7 +99,8 @@ class BatchStacker(distribution_lib.Distribution):
         validate_args: bool = False,
         name: Optional[str] = None,
     ):
-        """Construct the `BatchStacker` distribution.
+        r"""
+        Construct the `BatchStacker` distribution.
 
         Parameters
         ----------
@@ -204,20 +203,22 @@ class BatchStacker(distribution_lib.Distribution):
 
 @kullback_leibler.RegisterKL(BatchStacker, BatchStacker)
 def _kl_sample(a: BatchStacker, b: BatchStacker, name: str = "kl_sample") -> tf.Tensor:
-    r"""Batched KL divergence :math:`KL(a || b)` for :class:`~.BatchStacker`` distributions.
+    r"""
+    Batched KL divergence :math:`KL(a || b)` for :class:`~.BatchStacker` distributions.
 
     We can leverage the fact that:
+
     .. math::
         KL(BatchStacker(a) || BatchStacker(b)) = \sum(KL(a || b))
 
     where the :math:`\sum` is over the ``batch_stack`` dims.
-    
+
     Parameters
     ----------
     a : BatchStacker
-        Instance of `BatchStacker` distribution.
+        Instance of ``BatchStacker`` distribution.
     b : BatchStacker
-        Instance of `BatchStacker` distribution.
+        Instance of ``BatchStacker`` distribution.
     name : str
         Name to use for created ops.
 

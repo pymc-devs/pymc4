@@ -131,7 +131,7 @@ class Binomial(BoundedDiscreteDistribution):
 
 
 class BetaBinomial(BoundedDiscreteDistribution):
-    r"""Bounded Discrete compound Beta-Binomial Random Variable
+    r"""Bounded Discrete compound Beta-Binomial Random Variable.
 
     The pmf of this distribution is
 
@@ -153,7 +153,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         betas = [6, 2]
         for a, b in zip(alphas, betas):
             pmf = st.betabinom(n, a, b).pmf(x)
-            plt.plot(x, pmf, '-o', label='low = {}, high = {}'.format(low, high))
+            plt.plot(x, pmf, '-o', label='alpha = {}, beta = {}'.format(a, b))
         plt.xlabel('x', fontsize=12)
         plt.ylabel('f(x)', fontsize=12)
         plt.ylim(0, 0.4)
@@ -313,7 +313,8 @@ class Categorical(BoundedDiscreteDistribution):
 
 
 class Geometric(BoundedDiscreteDistribution):
-    r"""Geometric random variable.
+    r"""
+    Geometric random variable.
 
     The probability that the first success in a sequence of Bernoulli
     trials occurs on the x'th trial.
@@ -348,6 +349,7 @@ class Geometric(BoundedDiscreteDistribution):
     probs : float
         Probability of success on an individual trial (0 < probs <= 1).
     """
+
     # Another example for a wrong type used on the tensorflow side
     _test_value = 2.0  # type: ignore
 
@@ -367,7 +369,8 @@ class Geometric(BoundedDiscreteDistribution):
 
 
 class NegativeBinomial(PositiveDiscreteDistribution):
-    r"""Negative binomial random variable.
+    r"""
+    Negative binomial random variable.
 
     The negative binomial distribution describes a Poisson random variable
     whose rate parameter is gamma distributed.
@@ -418,6 +421,7 @@ class NegativeBinomial(PositiveDiscreteDistribution):
     probs : float
         Probability of success on an individual trial (0 < probs <= 1).
     """
+
     # For some ridiculous reason, tfp needs negative binomial values to be floats...
     _test_value = 0.0  # type: ignore
 
@@ -431,7 +435,8 @@ class NegativeBinomial(PositiveDiscreteDistribution):
 
 
 class Poisson(PositiveDiscreteDistribution):
-    r"""Poisson random variable.
+    r"""
+    Poisson random variable.
 
     Often used to model the number of events occurring in a fixed period
     of time when the times at which events occur are independent.
@@ -472,6 +477,7 @@ class Poisson(PositiveDiscreteDistribution):
     The Poisson distribution can be derived as a limiting case of the
     binomial distribution.
     """
+
     # For some ridiculous reason, tfp needs poisson values to be floats...
     _test_value = 0.0  # type: ignore
 

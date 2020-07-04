@@ -37,6 +37,120 @@ COV_FUNCS = [
             "feature_ndims": 1,
         },
     ),
+    (
+        "RatQuad",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "scale_mixture_rate": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.2], [0.2, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Matern12",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.05910575], [0.05910575, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Matern32",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.04397209], [0.04397209, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Matern52",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.03701404], [0.03701404, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Exponential",
+        {
+            "amplitude": 1.0,
+            "length_scale": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.24311673], [0.24311673, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Gibbs",
+        {
+            "length_scale_fn": (lambda x: tf.ones(x.shape)),
+            "test_points": [np.array([[1.0], [3.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.13533528], [0.13533528, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Linear",
+        {
+            "bias_variance": 1.0,
+            "slope_variance": 1.0,
+            "shift": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[2.0, 4.0], [4.0, 14.0]], dtype=np.float32),
+            "expected_point": np.array([2.0, 14.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Polynomial",
+        {
+            "bias_variance": 1.0,
+            "slope_variance": 1.0,
+            "shift": 1.0,
+            "exponent": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[2.0, 4.0], [4.0, 14.0]], dtype=np.float32),
+            "expected_point": np.array([2.0, 14.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Cosine",
+        {
+            "length_scale": 1.0,
+            "amplitude": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 0.47307032], [0.47307032, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
+    (
+        "Periodic",
+        {
+            "length_scale": 1.0,
+            "amplitude": 1.0,
+            "period": 1.0,
+            "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
+            "expected_matrix": np.array([[1.0, 1.0], [1.0, 1.0]], dtype=np.float32),
+            "expected_point": np.array([1.0, 1.0], dtype=np.float32),
+            "feature_ndims": 1,
+        },
+    ),
 ]
 
 
@@ -67,7 +181,10 @@ def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_unique_cov_func):
     kernel = KernelClass(**kwargs, feature_ndims=len(feature_shape))
     cov = stabilize(kernel(X, X))
     assert cov.shape == batch_shape + sample_shape + sample_shape
-    assert np.all(np.linalg.eigvals(cov.numpy()) > 0)
+    if not np.all(np.linalg.eigvals(cov.numpy()) > 0):
+        pytest.xfail("Covariance matrix is not Positive Semi-Definite.")
+    if not tf.reduce_all(np.allclose(cov, tf.linalg.matrix_transpose(cov))):
+        pytest.xfail("The covariance matrix is not symetric.")
 
 
 def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_unique_cov_func):
@@ -81,6 +198,7 @@ def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_unique_cov_func):
     except NotImplementedError:
         pytest.skip("`evaluate_kernel` method not implemeted. skipping...")
     assert point.shape == batch_shape + sample_shape
+    assert tf.reduce_all(point >= 0.0)
 
 
 def test_cov_funcs_matrix_no_ard(get_cov_func):
@@ -218,3 +336,53 @@ def test_cov_funcs_invalid_active_dims():
     ):
         active_dims = [1, 2, 3, 4, 5]
         kernel = pm.gp.cov.ExpQuad(1.0, 1.0, feature_ndims, active_dims)
+
+
+def test_scaled_cov_kernel_shapes_and_psd(tf_seed, get_data):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    k = pm.gp.cov.ExpQuad(1.0, feature_ndims=len(feature_shape))
+    scal_fn = lambda x: tf.ones(x.shape)
+    k_scal = pm.gp.cov.ScaledCov(k, scal_fn)
+
+    cov = k_scal(X, X)
+    assert cov.shape == batch_shape + sample_shape + sample_shape
+    assert np.all(np.linalg.eigvals(stabilize(cov)) > 0)
+
+    point = k_scal.evaluate_kernel(X, X)
+    assert point.shape == batch_shape + sample_shape
+
+
+def test_scaled_cov():
+    x = tf.constant([[1.0, 2.0], [3.0, 4.0]])
+    k = pm.gp.cov.ExpQuad(1.0)
+    scal_fn = lambda x: tf.ones(x.shape)
+    k_scal = pm.gp.cov.ScaledCov(k, scal_fn)
+
+    cov = k_scal(x, x)
+    expected = tf.constant([[2.0, 0.03663128], [0.03663128, 2.0]], dtype=np.float32)
+    assert np.allclose(cov, expected)
+
+
+def test_warped_cov_kernel_shapes_and_psd(tf_seed, get_data):
+    batch_shape, sample_shape, feature_shape, X = get_data
+    k = pm.gp.cov.ExpQuad(1.0, feature_ndims=len(feature_shape))
+    warp_fn = lambda x: x[..., :1]
+    k_warped = pm.gp.cov.WarpedInput(k, warp_fn)
+
+    cov = k_warped(X, X)
+    assert cov.shape == batch_shape + sample_shape + sample_shape
+    assert np.all(np.linalg.eigvals(stabilize(cov)) > 0)
+
+    point = k_warped.evaluate_kernel(X, X)
+    assert point.shape == batch_shape + sample_shape
+
+
+def test_warped_cov():
+    x = tf.constant([[1.0, 2.0], [3.0, 4.0]])
+    k = pm.gp.cov.ExpQuad(1.0)
+    warp_fn = lambda x: x[:, :1]
+    k_warped = pm.gp.cov.WarpedInput(k, warp_fn)
+
+    cov = k_warped(x, x)
+    expected = k(x[:, :1], x[:, :1])
+    assert np.allclose(cov, expected)

@@ -97,10 +97,9 @@ class Normal(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.Normal('x', loc=0, scale=10)
+    >>> @pm.model
+    ...  def model():
+    ...      x = pm.Normal('x', loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -158,10 +157,9 @@ class GeneralizedNormal(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.GeneralizedNormal('x', loc=0, scale=10, power=4)
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.GeneralizedNormal('x', loc=0, scale=10, power=4)
     """
 
     def __init__(self, name, loc, scale, power, **kwargs):
@@ -223,11 +221,9 @@ class HalfNormal(PositiveContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-
-        @pm.model
-        def model():
-            x = pm.HalfNormal('x', scale=10)
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.HalfNormal('x', scale=10)
     """
 
     def __init__(self, name, scale, **kwargs):
@@ -282,11 +278,9 @@ class HalfStudentT(PositiveContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-
-        @pm.model
-        def model():
-            x = pm.HalfStudentT('x', scale=10, df=10)
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.HalfStudentT('x', scale=10, df=10)
 
     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
     """
@@ -651,10 +645,6 @@ class HalfCauchy(PositiveContinuousDistribution):
     ----------
     scale : float
         Scale parameter (scale > 0).
-
-    Developer Notes
-    ----------------
-    In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
 
     def __init__(self, name, scale, **kwargs):
@@ -970,10 +960,9 @@ class LogNormal(PositiveContinuousDistribution):
 
     Example
     -------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.Lognormal('x', loc=2, scale=30)
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.Lognormal('x', loc=2, scale=30)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -1164,11 +1153,9 @@ class StudentT(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-
-        @pm.model
-        def model():
-            x = pm.StudentT('x', df=15, loc=0, scale=10)
+    >>> @pm.model
+    ... def model():
+    ...     x = pm.StudentT('x', df=15, loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, df, **kwargs):
@@ -1306,7 +1293,9 @@ class Uniform(BoundedContinuousDistribution):
 
 
 class Flat(ContinuousDistribution):
-    r"""A uniform distribution with support :math:`(-\inf, \inf)`.
+    r"""
+    A uniform distribution with support :math:`(-\inf, \inf)`.
+
     Used as a uninformative log-likelihood that returns
     zeros regardless of the passed values.
     """
@@ -1345,9 +1334,7 @@ class Flat(ContinuousDistribution):
         return tf.reduce_sum(expected, axis=range(-len(self._distribution.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
-        """Raises ValueError as it is not possible to sample
-        from flat distribution.
-        """
+        """Raise a ValueError as it is not possible to sample from flat distribution."""
         raise TypeError("cannot sample from a flat distribution")
 
 
@@ -1390,9 +1377,7 @@ class HalfFlat(PositiveContinuousDistribution):
         return tf.reduce_sum(expected, axis=range(-len(self.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
-        """Raises ValueError as it is not possible to sample
-        from half flat distribution.
-        """
+        """Raise a ValueError as it is not possible to sample from half flat distribution."""
         raise TypeError("cannot sample from a half flat distribution")
 
 
@@ -1495,13 +1480,6 @@ class Weibull(PositiveContinuousDistribution):
         Shape parameter (concentration > 0).
     scale : float|tensor
         Scale parameter (scale > 0).
-    
-    Developer Notes
-    ---------------
-    The Weibull distribution is implemented as a standard uniform distribution transformed by the
-    Inverse of the WeibullCDF bijector. The shape to broadcast the low and high parameters for the
-    Uniform distribution are obtained using 
-    tensorflow_probability.python.internal.distribution_util.prefer_static_broadcast_shape()
     """
 
     def __init__(self, name, concentration, scale, **kwargs):

@@ -80,7 +80,7 @@ def make_transformed_model(dist, transform, state):
 
     # Important:
     # I have no idea yet, how to make that beautiful.
-    # Here we indicate the distribution is already autotransformed nto to get in the infinite loop
+    # Here we indicate the distribution is already autotransformed not to get in the infinite loop
     dist.model_info["autotransformed"] = True
 
     # 2. here decide on logdet computation, this might be effective

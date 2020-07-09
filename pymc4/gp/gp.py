@@ -114,12 +114,6 @@ class LatentGP(BaseGP):
     def _build_conditional(
         self, Xnew: ArrayLike, X: ArrayLike, f: FreeRV, cov_total: Covariance, mean_total: Mean
     ) -> tuple:
-        # raise an error if the prior ``f`` is not a tensor or numpy array
-        if not tf.is_tensor(f):
-            try:
-                f = tf.convert_to_tensor(f)
-            except ValueError:
-                raise ValueError("Prior `f` must be a numpy array or tensor.")
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
         if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):
@@ -193,7 +187,8 @@ class LatentGP(BaseGP):
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])) ** kwargs,
             )
         if reparameterize:
-            return MvNormalCholesky(name, loc=mu, scale_tril=cov, **kwargs)
+            chol_factor = tf.linalg.cholesky(cov)
+            return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
         return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
     def conditional(
@@ -260,7 +255,8 @@ class LatentGP(BaseGP):
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])) ** kwargs,
             )
         if reparameterize:
-            return MvNormalCholesky(name, loc=mu, scale_tril=cov, **kwargs)
+            chol_factor = tf.linalg.cholesky(cov)
+            return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
         return MvNormal(
-            name=name, loc=mu, covariance_matrix=cov, dtype=self.cov_fn._kernel.dtype, **kwargs
+            name=name, loc=mu, covariance_matrix=cov, **kwargs
         )

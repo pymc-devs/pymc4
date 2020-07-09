@@ -173,19 +173,19 @@ class MvNormal(ContinuousDistribution):
 
     Parameters
     ----------
-    loc : array
+    loc : array_like
         Vector of means.
-    covariance_matrix : array
+    covariance_matrix : array_like
         Covariance matrix.
 
     Examples
     --------
     Define a multivariate normal variable for a given covariance
-    matrix::
+    matrix.
 
-        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
-        mu = np.zeros(2)
-        vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
+    >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
+    >>> mu = np.zeros(2)
+    >>> vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
     """
 
     def __init__(self, name, loc, covariance_matrix, **kwargs):
@@ -194,11 +194,9 @@ class MvNormal(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         loc, covariance_matrix = conditions["loc"], conditions["covariance_matrix"]
-        try:
-            chol_cov_matrix = tf.linalg.cholesky(covariance_matrix)
-        except tf.errors.InvalidArgumentError:
-            raise ValueError("Cholesky decomposition failed! Check your `covariance_matrix`.")
-        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=chol_cov_matrix, **kwargs)
+        return tfd.MultivariateNormalFullCovariance(
+            loc=loc, covariance_matrix=covariance_matrix, **kwargs
+        )
 
 
 class VonMisesFisher(ContinuousDistribution):
@@ -348,21 +346,21 @@ class MvNormalCholesky(ContinuousDistribution):
 
     Parameters
     ----------
-    loc : array
+    loc : array_like
         Vector of means.
-    scale_tril : array
+    scale_tril : array_like
         Lower triangular matrix, such that scale @ scale.T is positive
         semi-definite
 
     Examples
     --------
     Define a multivariate normal variable for a given covariance
-    matrix::
+    matrix.
 
-        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
-        chol_factor = np.linalg.cholesky(covariance_matrix)
-        mu = np.zeros(2)
-        vals = pm.MvNormalCholesky('vals', loc=loc, scale=chol_factor)
+    >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
+    >>> chol_factor = np.linalg.cholesky(covariance_matrix)
+    >>> mu = np.zeros(2)
+    >>> vals = pm.MvNormalCholesky('vals', loc=loc, scale=chol_factor)
     """
 
     def __init__(self, name, loc, scale_tril, **kwargs):

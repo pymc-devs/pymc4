@@ -22,18 +22,22 @@ class BaseGP:
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn
 
-    def prior(self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs) -> ContinuousDistribution:
+    def prior(
+        self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs
+    ) -> ContinuousDistribution:
         raise NotImplementedError
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, *, reparameterize=True, given, **kwargs
+        self, name: NameType, Xnew: ArrayLike, given, *, reparameterize=True, **kwargs
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
     def predict(self, Xnew: ArrayLike, **kwargs) -> TfTensor:
         raise NotImplementedError
 
-    def marginal_likelihood(self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs) -> ContinuousDistribution:
+    def marginal_likelihood(
+        self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs
+    ) -> ContinuousDistribution:
         raise NotImplementedError
 
 
@@ -184,7 +188,8 @@ class LatentGP(BaseGP):
             return Normal(
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
-                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])) ** kwargs,
+                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                **kwargs,
             )
         if reparameterize:
             chol_factor = tf.linalg.cholesky(cov)
@@ -192,7 +197,7 @@ class LatentGP(BaseGP):
         return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, *, reparameterize=True, given: dict, **kwargs
+        self, name: NameType, Xnew: ArrayLike, given: dict, *, reparameterize=True, **kwargs
     ) -> ContinuousDistribution:
         r"""
         Evaluate the conditional distribution evaluated over new input locations `Xnew`.
@@ -252,11 +257,10 @@ class LatentGP(BaseGP):
             return Normal(
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
-                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])) ** kwargs,
+                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                **kwargs,
             )
         if reparameterize:
             chol_factor = tf.linalg.cholesky(cov)
             return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
-        return MvNormal(
-            name=name, loc=mu, covariance_matrix=cov, **kwargs
-        )
+        return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)

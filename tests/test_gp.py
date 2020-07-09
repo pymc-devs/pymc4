@@ -93,18 +93,3 @@ def test_gp_models_conditional(tf_seed, get_data, get_gp_model):
         assert cond_samples.shape == (3,) + batch_shape
     else:
         assert cond_samples.shape == (3,) + batch_shape + sample_shape
-
-
-def test_gp_invalid_prior(tf_seed):
-    """Test if an error is thrown for invalid model prior"""
-
-    @pm.model
-    def invalid_model(gp, X, X_new):
-        f = gp.prior("f", X)
-        cond = yield gp.conditional("fcond", X_new, given={"X": X, "f": f})
-
-    with pytest.raises(ValueError, match=r"must be a numpy array or tensor"):
-        gp = pm.gp.LatentGP(cov_fn=pm.gp.cov.ExpQuad(1.0, 1.0))
-        X = tf.random.normal((2, 5, 1))
-        X_new = tf.random.normal((2, 2, 1))
-        trace = pm.sample(invalid_model(gp, X, X_new), num_samples=1, burn_in=1, num_chains=1)

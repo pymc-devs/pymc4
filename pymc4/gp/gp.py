@@ -23,12 +23,12 @@ class BaseGP:
         self.cov_fn = cov_fn
 
     def prior(
-        self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs
+        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, given, *, reparameterize=True, **kwargs
+        self, name: NameType, Xnew: ArrayLike, given, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
@@ -36,7 +36,7 @@ class BaseGP:
         raise NotImplementedError
 
     def marginal_likelihood(
-        self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs
+        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
@@ -139,7 +139,7 @@ class LatentGP(BaseGP):
         return tf.squeeze(mu, axis=[-1]), stabilize(cov)
 
     def prior(
-        self, name: NameType, X: ArrayLike, *, reparameterize=True, **kwargs
+        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         r"""
         Evaluate the GP prior distribution evaluated over the input locations `X`.
@@ -156,7 +156,7 @@ class LatentGP(BaseGP):
             Name of the random variable.
         X : array_like
             Function input values.
-        reparameterize : bool, optional
+        reparametrize : bool, optional
             If ``True``, ``MvNormalCholesky`` distribution is returned instead
             of ``MvNormal``. (default=``True``)
 
@@ -191,13 +191,13 @@ class LatentGP(BaseGP):
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
                 **kwargs,
             )
-        if reparameterize:
+        if reparametrize:
             chol_factor = tf.linalg.cholesky(cov)
             return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
         return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, given: dict, *, reparameterize=True, **kwargs
+        self, name: NameType, Xnew: ArrayLike, given: dict, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         r"""
         Evaluate the conditional distribution evaluated over new input locations `Xnew`.
@@ -218,7 +218,7 @@ class LatentGP(BaseGP):
             Name of the random variable
         Xnew : array_like
             Function input values.
-        reparameterize : bool, optional
+        reparametrize : bool, optional
             If ``True``, ``MvNormalCholesky`` distribution is returned instead
             of ``MvNormal``. (default=``True``)
         given : dict
@@ -260,7 +260,7 @@ class LatentGP(BaseGP):
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
                 **kwargs,
             )
-        if reparameterize:
+        if reparametrize:
             chol_factor = tf.linalg.cholesky(cov)
             return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
         return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)

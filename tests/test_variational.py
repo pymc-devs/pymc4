@@ -36,6 +36,10 @@ _test_kwargs = {
     "FullRank ADVI": {
         "method": pm.FullRank,
         "fit_kwargs": {}
+    },
+    "FullRank ADVI: sample_size=2": {
+        "method": pm.FullRank,
+        "fit_kwargs": {"sample_size": 2}
     }
 }
 

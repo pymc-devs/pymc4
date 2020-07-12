@@ -103,7 +103,9 @@ class Distribution(Model):
 
     @property
     def test_value(self):
-        return tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape)
+        return tf.cast(
+            tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape), self.dtype
+        )
 
     def sample(self, sample_shape=(), seed=None):
         """

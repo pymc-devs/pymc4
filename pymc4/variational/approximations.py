@@ -65,15 +65,10 @@ class Approximation(tf.Module):
     def _build_posterior(self):
         raise NotImplementedError
 
-    def sample(self, n: int) -> az.InferenceData:
+    def sample(self, n: int = 500) -> az.InferenceData:
         """Generate samples from posterior distribution."""
         samples = self.approx.sample(n)
-        q_samples = dict()
-        for param in self.unobserved_keys:
-            _, slc, shp, dtype = self.order.by_name[param]
-            q_samples[param] = tf.cast(
-                tf.reshape(samples[..., slc], tf.TensorShape([n] + shp.as_list())), dtype
-            )
+        q_samples = self.order.split_samples(samples, n)
 
         # TODO - Account for deterministics as well.
         # For all transformed_variables, apply inverse of bijector to sampled values to match support in constraint space.
@@ -137,7 +132,7 @@ class FullRank(Approximation):
     def _build_posterior(self):
         flattened_shape = self.order.size
         dtype = dtype_util.common_dtype(
-            self.state.all_unobserved_values.values(), dtype_hint=tf.float32
+            self.state.all_unobserved_values.values(), dtype_hint=tf.float64
         )
         loc = tf.Variable(tf.random.normal([flattened_shape], dtype=dtype), name="mu")
         scale_tril = tfb.FillScaleTriL(

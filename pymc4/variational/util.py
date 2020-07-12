@@ -35,8 +35,18 @@ class ArrayOrdering:
 
     def split(self, flatten_tensor: tf.Tensor) -> Dict[str, tf.Tensor]:
         """Split view of parameters used to calculate log probability."""
-        flat_state = dict()
+        split_view = dict()
         for param in self.free_rvs:
             _, slc, shape, dtype = self.by_name[param]
-            flat_state[param] = tf.cast(tf.reshape(flatten_tensor[slc], shape), dtype)
-        return flat_state
+            split_view[param] = tf.cast(tf.reshape(flatten_tensor[slc], shape), dtype)
+        return split_view
+
+    def split_samples(self, samples, n):
+        """Split view of samples after drawing samples from posterior."""
+        q_samples = dict()
+        for param in self.free_rvs.keys():
+            _, slc, shp, dtype = self.by_name[param]
+            q_samples[param] = tf.cast(
+                tf.reshape(samples[..., slc], tf.TensorShape([n] + shp.as_list())), dtype
+            )
+        return q_samples

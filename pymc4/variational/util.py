@@ -41,7 +41,7 @@ class ArrayOrdering:
             split_view[param] = tf.cast(tf.reshape(flatten_tensor[slc], shape), dtype)
         return split_view
 
-    def split_samples(self, samples, n):
+    def split_samples(self, samples: tf.Tensor, n: int):
         """Split view of samples after drawing samples from posterior."""
         q_samples = dict()
         for param in self.free_rvs.keys():

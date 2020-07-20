@@ -96,12 +96,16 @@ class Mixture(Distribution):
                 raise TypeError(
                     "every element in 'distribution' needs to be a pymc4.Distribution object"
                 )
-            distr, mixture = [el._distribution for el in d], tfd.Mixture
+            distr = [el._distribution for el in d]
+            return tfd.Mixture(
+                tfd.Categorical(probs=p, **kwargs), distr, **kwargs, use_static_graph=True
+            )
         # else if 'd' is a pymc distribution with batch_size > 1
         elif isinstance(d, Distribution):
-            distr, mixture = d._distribution, tfd.MixtureSameFamily
+            return tfd.MixtureSameFamily(
+                tfd.Categorical(probs=p, **kwargs), d._distribution, **kwargs
+            )
         else:
             raise TypeError(
                 "'distribution' needs to be a pymc4.Distribution object or a sequence of distributions"
             )
-        return mixture(tfd.Categorical(probs=p, **kwargs), distr, **kwargs)

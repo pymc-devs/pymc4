@@ -4,6 +4,7 @@ Tests for PyMC4 mixture distribution
 
 import numpy as np
 import pytest
+import tensorflow as tf
 import tensorflow_probability as tfp
 
 import pymc4 as pm
@@ -94,11 +95,15 @@ def test_wrong_distribution_argument_in_list_fails():
 
 def test_sampling(mixture, xla_fixture):
     model, n, k = mixture
-    trace = pm.sample(model, num_samples=100, num_chains=2, xla=xla_fixture)
-    if n == 1:
-        assert trace.posterior["mixture/means"].shape == (2, 100, k)
+    if xla_fixture:
+        with pytest.raises(tf.python.framework.errors_impl.InvalidArgumentError):
+            pm.sample(model, num_samples=100, num_chains=2, xla=xla_fixture)
     else:
-        assert trace.posterior["mixture/means"].shape == (2, 100, n, k)
+        trace = pm.sample(model, num_samples=100, num_chains=2, xla=xla_fixture)
+        if n == 1:
+            assert trace.posterior["mixture/means"].shape == (2, 100, k)
+        else:
+            assert trace.posterior["mixture/means"].shape == (2, 100, n, k)
 
 
 def test_prior_predictive(mixture):

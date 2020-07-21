@@ -96,7 +96,7 @@ def test_wrong_distribution_argument_in_list_fails():
 def test_sampling(mixture, xla_fixture):
     model, n, k = mixture
     if xla_fixture:
-        with pytest.raises(tf.python.framework.errors_impl.InvalidArgumentError):
+        with pytest.raises(tf.errors.InvalidArgumentError):
             pm.sample(model, num_samples=100, num_chains=2, xla=xla_fixture)
     else:
         trace = pm.sample(model, num_samples=100, num_chains=2, xla=xla_fixture)

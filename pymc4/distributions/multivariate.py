@@ -327,7 +327,7 @@ class LKJCholesky(ContinuousDistribution):
 
 class MvNormalCholesky(ContinuousDistribution):
     r"""
-    Multivariate normal random variable.
+    Multivariate normal random variable with cholesky reparametrization.
     
     A Multivariate normal random variable parameterized by a
     lower triangular matrix, i.e., the Cholesky factor L of a covariance matrix
@@ -350,17 +350,17 @@ class MvNormalCholesky(ContinuousDistribution):
         Vector of means.
     scale_tril : array_like
         Lower triangular matrix, such that scale @ scale.T is positive
-        semi-definite
+        semi-definite.
 
     Examples
     --------
-    Define a multivariate normal variable for a given covariance
-    matrix.
+    Define a multivariate normal variable for a given cholesky
+    factor of the full covariance matrix (scale_tril).
 
     >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
     >>> chol_factor = np.linalg.cholesky(covariance_matrix)
     >>> mu = np.zeros(2)
-    >>> vals = pm.MvNormalCholesky('vals', loc=loc, scale=chol_factor)
+    >>> vals = pm.MvNormalCholesky('vals', loc=loc, scale_tril=chol_factor)
     """
 
     def __init__(self, name, loc, scale_tril, **kwargs):

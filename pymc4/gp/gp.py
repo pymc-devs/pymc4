@@ -90,7 +90,7 @@ class LatentGP(BaseGP):
         r"""Check if there is only one sample point."""
         return X.shape[-(self.feature_ndims + 1)] == 1
 
-    def _build_prior(self, name, X: ArrayLike, **kwargs) -> tuple:
+    def _build_prior(self, name, X: ArrayLike) -> tuple:
         mu = self.mean_fn(X)
         cov = stabilize(self.cov_fn(X, X))
         return mu, cov
@@ -142,7 +142,7 @@ class LatentGP(BaseGP):
         self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         r"""
-        Evaluate the GP prior distribution evaluated over the input locations `X`.
+        Evaluate the GP prior distribution over the input locations `X`.
 
         This is the prior probability over the space
         of functions described by its mean and covariance function.
@@ -183,7 +183,7 @@ class LatentGP(BaseGP):
         >>> model = gp_model()
         >>> trace = pm.sample(model, num_samples=100)
         """
-        mu, cov = self._build_prior(name, X, **kwargs)
+        mu, cov = self._build_prior(name, X)
         if self._is_univariate(X):
             return Normal(
                 name=name,

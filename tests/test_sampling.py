@@ -123,3 +123,25 @@ def test_beta_sample():
 
     assert trace.posterior["model/beta"] is not None
     assert trace.posterior["model/__sigmoid_beta"] is not None
+
+
+def test_manual_batching():
+    means = np.random.random((3, 1)) * 5 + 5
+    noise = np.random.random((3, 10))
+
+    data = means + noise
+    data = data.astype("float32")
+
+    @pm.model
+    def model():
+        means = yield pm.HalfNormal(
+            name="means", loc=0, scale=10, conditionally_independent=True, event_stack=(3, 1)
+        )
+        likelihood = yield pm.Normal(
+            name="likeli", loc=means, scale=5, observed=data, event_stack=data.shape
+        )
+
+    trace = pm.sample(model(), num_samples=50, burn_in=200, num_chains=2, use_auto_batching=False)
+
+    print(means)
+    print(np.median(trace.posterior["model/means"], axis=(0, 1)))

@@ -69,6 +69,8 @@ class LatentGP(BaseGP):
     and 5 new samples. Notice that unlike PyMC3, ``given`` in ``conditional`` method is
     NOT optional.
 
+    >>> import numpy as np
+    >>> import pymc4 as pm
     >>> X = np.random.randn(2, 10, 2, 2)
     >>> Xnew = np.random.randn(2, 5, 2, 2)
     >>> # Let's define out GP model and its parameters
@@ -76,7 +78,7 @@ class LatentGP(BaseGP):
     >>> cov_fn = pm.gp.cov.ExpQuad(1., 1., feature_ndims=2)
     >>> gp = pm.gp.LatentGP(mean_fn, cov_fn)
     >>> @pm.model
-    >>> def gpmodel():
+    ... def gpmodel():
     ...     f = yield gp.prior('f', X)
     ...     fcond = yield gp.conditional('fcond', Xnew, given={'X': X, 'f': f})
     ...     return fcond

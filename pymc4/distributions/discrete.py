@@ -127,7 +127,7 @@ class Binomial(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return self._distribution.total_count
+        return self.conditions["total_count"]
 
 
 class BetaBinomial(BoundedDiscreteDistribution):
@@ -203,7 +203,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return self._distribution.total_count
+        return self.conditions["total_count"]
 
 
 class DiscreteUniform(BoundedDiscreteDistribution):
@@ -257,10 +257,10 @@ class DiscreteUniform(BoundedDiscreteDistribution):
         )
 
     def lower_limit(self):
-        return self._distribution.outcomes[0].numpy()
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self._distribution.outcomes[-1].numpy()
+        return self.conditions["high"]
 
 
 class Categorical(BoundedDiscreteDistribution):
@@ -309,7 +309,7 @@ class Categorical(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return len(self._distribution.probs)
+        return self.conditions["probs"].shape[-1]
 
 
 class Geometric(BoundedDiscreteDistribution):
@@ -763,4 +763,4 @@ class OrderedLogistic(BoundedDiscreteDistribution):
         return 0
 
     def upper_limit(self):
-        return len(self._distribution.cutpoints)
+        return self.conditions["cutpoints"].shape[-1]

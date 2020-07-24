@@ -27,9 +27,10 @@ class AR(ContinuousDistribution):
 
     Examples
     --------
+    >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.AR('x', num_timesteps=50, coefficients=[0.2, -0.8], level_scale=-0.2)
+    ...     x = yield pm.AR('x', num_timesteps=50, coefficients=[0.2, -0.8], level_scale=-0.2)
     """
 
     def __init__(

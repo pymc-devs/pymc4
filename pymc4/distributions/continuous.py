@@ -97,9 +97,10 @@ class Normal(ContinuousDistribution):
 
     Examples
     --------
+    >>> import pymc4 as pm
     >>> @pm.model
-    ...  def model():
-    ...      x = pm.Normal('x', loc=0, scale=10)
+    ... def model():
+    ...     x = yield pm.Normal('x', loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -157,9 +158,10 @@ class GeneralizedNormal(ContinuousDistribution):
 
     Examples
     --------
+    >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.GeneralizedNormal('x', loc=0, scale=10, power=4)
+    ...     x = yield pm.GeneralizedNormal('x', loc=0, scale=10, power=4)
     """
 
     def __init__(self, name, loc, scale, power, **kwargs):
@@ -221,9 +223,10 @@ class HalfNormal(PositiveContinuousDistribution):
 
     Examples
     --------
+    >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.HalfNormal('x', scale=10)
+    ...     x = yield pm.HalfNormal('x', scale=10)
     """
 
     def __init__(self, name, scale, **kwargs):
@@ -278,9 +281,10 @@ class HalfStudentT(PositiveContinuousDistribution):
 
     Examples
     --------
+    >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.HalfStudentT('x', scale=10, df=10)
+    ...     x = yield pm.HalfStudentT('x', scale=10, df=10)
 
     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
     """
@@ -960,9 +964,10 @@ class LogNormal(PositiveContinuousDistribution):
 
     Example
     -------
+    >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.Lognormal('x', loc=2, scale=30)
+    ...     x = yield pm.Lognormal('x', loc=2, scale=30)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -1020,7 +1025,7 @@ class Moyal(ContinuousDistribution):
     >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.Moyal('x', loc=0, scale=10)
+    ...     x = yield pm.Moyal('x', loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -1092,13 +1097,13 @@ class Pareto(BoundedContinuousDistribution):
         return float("inf")
 
     def lower_limit(self):
-        return self._distribution.scale
+        return self.conditions["scale"]
 
     @property
     def test_value(self):
         return (
             tf.zeros(self.batch_shape + self.event_shape, dtype=self.dtype)
-            + self._distribution.scale
+            + self.conditions["scale"]
             + 1
         )
 
@@ -1153,9 +1158,10 @@ class StudentT(ContinuousDistribution):
 
     Examples
     --------
+    >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.StudentT('x', df=15, loc=0, scale=10)
+    ...     x = yield pm.StudentT('x', df=15, loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, df, **kwargs):
@@ -1229,10 +1235,10 @@ class Triangular(BoundedContinuousDistribution):
         return tfd.Triangular(low=low, high=high, peak=peak, **kwargs)
 
     def lower_limit(self):
-        return self._distribution.low
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self._distribution.high
+        return self.conditions["high"]
 
 
 class Uniform(BoundedContinuousDistribution):
@@ -1286,10 +1292,10 @@ class Uniform(BoundedContinuousDistribution):
 
     # FIXME should we rename this functions as well?
     def lower_limit(self):
-        return self._distribution.low
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self._distribution.high
+        return self.conditions["high"]
 
 
 class Flat(ContinuousDistribution):

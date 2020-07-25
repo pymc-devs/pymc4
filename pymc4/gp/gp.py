@@ -69,6 +69,8 @@ class LatentGP(BaseGP):
     and 5 new samples. Notice that unlike PyMC3, ``given`` in ``conditional`` method is
     NOT optional.
 
+    >>> import numpy as np
+    >>> import pymc4 as pm
     >>> X = np.random.randn(2, 10, 2, 2)
     >>> Xnew = np.random.randn(2, 5, 2, 2)
     >>> # Let's define out GP model and its parameters
@@ -76,7 +78,7 @@ class LatentGP(BaseGP):
     >>> cov_fn = pm.gp.cov.ExpQuad(1., 1., feature_ndims=2)
     >>> gp = pm.gp.LatentGP(mean_fn, cov_fn)
     >>> @pm.model
-    >>> def gpmodel():
+    ... def gpmodel():
     ...     f = yield gp.prior('f', X)
     ...     fcond = yield gp.conditional('fcond', Xnew, given={'X': X, 'f': f})
     ...     return fcond
@@ -171,14 +173,15 @@ class LatentGP(BaseGP):
         --------
         >>> import pymc4 as pm
         >>> import numpy as np
-        >>> X = np.linspace(0, 1, 10)
+        >>> X = np.linspace(0, 1, 10)[..., np.newaxis]
+        >>> X = X.astype('float32')
         >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
         ... def gp_model():
         ...     f = yield gp.prior('f', X)
         >>> model = gp_model()
-        >>> trace = pm.sample(model, num_samples=100)
+        >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
         mu, cov = self._build_prior(name, X, **kwargs)
         if self._is_univariate(X):
@@ -234,8 +237,9 @@ class LatentGP(BaseGP):
         --------
         >>> import pymc4 as pm
         >>> import numpy as np
-        >>> X = np.linspace(0, 1, 10)
-        >>> Xnew = np.linspace(0, 1, 50)
+        >>> X = np.linspace(0, 1, 10)[..., np.newaxis]
+        >>> Xnew = np.linspace(0, 1, 50)[..., np.newaxis]
+        >>> X, Xnew = X.astype('float32'), Xnew.astype('float32')
         >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
@@ -243,7 +247,7 @@ class LatentGP(BaseGP):
         ...     f = yield gp.prior('f', X)
         ...     fcond = yield gp.conditional('fcond', Xnew, given={'f': f, 'X': X})
         >>> model = gp_model()
-        >>> trace = pm.sample(model, num_samples=100)
+        >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)

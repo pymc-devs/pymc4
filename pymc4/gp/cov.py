@@ -496,8 +496,6 @@ class Constant(Stationary):
     >>> from pymc4.gp.cov import Constant
     >>> import numpy as np
     >>> k = Constant(coef=5., feature_ndims=1)
-    >>> k
-    <pymc4.gp.cov.Constant object at 0x000001C96936DE10>
     >>> X1 = np.array([[1.], [2.], [3.]])
     >>> X2 = np.array([[4.], [5.], [6.]])
     >>> k(X1, X2)
@@ -564,8 +562,6 @@ class WhiteNoise(Stationary):
     >>> from pymc4.gp.cov import WhiteNoise
     >>> import numpy as np
     >>> k = WhiteNoise(noise=1e-4, feature_ndims=1)
-    >>> k
-    <pymc4.gp.cov.WhiteNoise object at 0x00000162FC073390>
     >>> X1 = np.array([[1.], [2.]])
     >>> X2 = np.array([[3.], [4.]])
     >>> k(X1, X2)
@@ -779,8 +775,8 @@ class Matern32(Stationary):
     >>> k = Matern32(1.)
     >>> k(x, x)
     <tf.Tensor: shape=(2, 2), dtype=float32, numpy=
-    array([[1.        , 0.0439721],
-           [0.0439721, 1.        ]], dtype=float32)>
+    array([[1.       , 0.0439721],
+           [0.0439721, 1.       ]], dtype=float32)>
 
     Notes
     -----

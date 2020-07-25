@@ -496,8 +496,6 @@ class Constant(Stationary):
     >>> from pymc4.gp.cov import Constant
     >>> import numpy as np
     >>> k = Constant(coef=5., feature_ndims=1)
-    >>> type(k)
-    <class 'pymc4.gp.cov.Constant'>
     >>> X1 = np.array([[1.], [2.], [3.]])
     >>> X2 = np.array([[4.], [5.], [6.]])
     >>> k(X1, X2)
@@ -564,8 +562,6 @@ class WhiteNoise(Stationary):
     >>> from pymc4.gp.cov import WhiteNoise
     >>> import numpy as np
     >>> k = WhiteNoise(noise=1e-4, feature_ndims=1)
-    >>> type(k)
-    <class 'pymc4.gp.cov.WhiteNoise'>
     >>> X1 = np.array([[1.], [2.]])
     >>> X2 = np.array([[3.], [4.]])
     >>> k(X1, X2)

@@ -173,14 +173,15 @@ class LatentGP(BaseGP):
         --------
         >>> import pymc4 as pm
         >>> import numpy as np
-        >>> X = np.linspace(0, 1, 10)
+        >>> X = np.linspace(0, 1, 10)[..., np.newaxis]
+        >>> X = X.astype('float32')
         >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
         ... def gp_model():
         ...     f = yield gp.prior('f', X)
         >>> model = gp_model()
-        >>> trace = pm.sample(model, num_samples=100)
+        >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
         mu, cov = self._build_prior(name, X, **kwargs)
         if self._is_univariate(X):
@@ -236,8 +237,9 @@ class LatentGP(BaseGP):
         --------
         >>> import pymc4 as pm
         >>> import numpy as np
-        >>> X = np.linspace(0, 1, 10)
-        >>> Xnew = np.linspace(0, 1, 50)
+        >>> X = np.linspace(0, 1, 10)[..., np.newaxis]
+        >>> Xnew = np.linspace(0, 1, 50)[..., np.newaxis]
+        >>> X, Xnew = X.astype('float32'), Xnew.astype('float32')
         >>> cov_fn = pm.gp.cov.ExpQuad(amplitude=1., length_scale=1.)
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
@@ -245,7 +247,7 @@ class LatentGP(BaseGP):
         ...     f = yield gp.prior('f', X)
         ...     fcond = yield gp.conditional('fcond', Xnew, given={'f': f, 'X': X})
         >>> model = gp_model()
-        >>> trace = pm.sample(model, num_samples=100)
+        >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, *givens)

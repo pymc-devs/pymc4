@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from .mean import Mean, Zero
 from .cov import Covariance
-from ..distributions import MvNormal, Normal, ContinuousDistribution
+from ..distributions import MvNormalCholesky, MvNormal, Normal, ContinuousDistribution
 from .util import stabilize, ArrayLike, TfTensor, FreeRV
 
 
@@ -22,18 +22,22 @@ class BaseGP:
         self.mean_fn = mean_fn
         self.cov_fn = cov_fn
 
-    def prior(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
+    def prior(
+        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
+    ) -> ContinuousDistribution:
         raise NotImplementedError
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, given, **kwargs
+        self, name: NameType, Xnew: ArrayLike, given, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
     def predict(self, Xnew: ArrayLike, **kwargs) -> TfTensor:
         raise NotImplementedError
 
-    def marginal_likelihood(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
+    def marginal_likelihood(
+        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
+    ) -> ContinuousDistribution:
         raise NotImplementedError
 
 
@@ -88,9 +92,9 @@ class LatentGP(BaseGP):
         r"""Check if there is only one sample point."""
         return X.shape[-(self.feature_ndims + 1)] == 1
 
-    def _build_prior(self, name, X: ArrayLike, **kwargs) -> tuple:
+    def _build_prior(self, name, X: ArrayLike) -> tuple:
         mu = self.mean_fn(X)
-        cov = stabilize(self.cov_fn(X, X), shift=1e-4)
+        cov = stabilize(self.cov_fn(X, X))
         return mu, cov
 
     def _get_given_vals(self, given: dict) -> tuple:
@@ -116,19 +120,13 @@ class LatentGP(BaseGP):
     def _build_conditional(
         self, Xnew: ArrayLike, X: ArrayLike, f: FreeRV, cov_total: Covariance, mean_total: Mean
     ) -> tuple:
-        # raise an error if the prior ``f`` is not a tensor or numpy array
-        if not tf.is_tensor(f):
-            try:
-                f = tf.convert_to_tensor(f)
-            except ValueError:
-                raise ValueError("Prior `f` must be a numpy array or tensor.")
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
         if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):
             f = tf.expand_dims(f, -1)
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
-        L = tf.linalg.cholesky(stabilize(Kxx, shift=1e-4))
+        L = tf.linalg.cholesky(stabilize(Kxx))
         A = tf.linalg.triangular_solve(L, Kxs, lower=True)
         # We add a `newaxis` to make the shape of mean_total(X)
         # [batch_shape, num_samples, 1] which is consistent with
@@ -140,11 +138,13 @@ class LatentGP(BaseGP):
         cov = Kss - tf.linalg.matmul(A, A, transpose_a=True)
         # Return the stabilized covariance matrix and squeeze the
         # last dimension that we added earlier.
-        return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=1e-4)
+        return tf.squeeze(mu, axis=[-1]), stabilize(cov)
 
-    def prior(self, name: NameType, X: ArrayLike, **kwargs) -> ContinuousDistribution:
+    def prior(
+        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
+    ) -> ContinuousDistribution:
         r"""
-        Evaluate the GP prior distribution evaluated over the input locations `X`.
+        Evaluate the GP prior distribution over the input locations `X`.
 
         This is the prior probability over the space
         of functions described by its mean and covariance function.
@@ -158,6 +158,9 @@ class LatentGP(BaseGP):
             Name of the random variable.
         X : array_like
             Function input values.
+        reparametrize : bool, optional
+            If ``True``, ``MvNormalCholesky`` distribution is returned instead
+            of ``MvNormal``. (default=``True``)
 
         Other Parameters
         ----------------
@@ -183,21 +186,21 @@ class LatentGP(BaseGP):
         >>> model = gp_model()
         >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
-        mu, cov = self._build_prior(name, X, **kwargs)
+        mu, cov = self._build_prior(name, X)
         if self._is_univariate(X):
             return Normal(
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
-                dtype=self.cov_fn._kernel.dtype,
                 **kwargs,
             )
-        return MvNormal(
-            name, loc=mu, covariance_matrix=cov, dtype=self.cov_fn._kernel.dtype, **kwargs
-        )
+        if reparametrize:
+            chol_factor = tf.linalg.cholesky(cov)
+            return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
+        return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, given: dict, **kwargs
+        self, name: NameType, Xnew: ArrayLike, given: dict, *, reparametrize=True, **kwargs
     ) -> ContinuousDistribution:
         r"""
         Evaluate the conditional distribution evaluated over new input locations `Xnew`.
@@ -218,6 +221,9 @@ class LatentGP(BaseGP):
             Name of the random variable
         Xnew : array_like
             Function input values.
+        reparametrize : bool, optional
+            If ``True``, ``MvNormalCholesky`` distribution is returned instead
+            of ``MvNormal``. (default=``True``)
         given : dict
             Dictionary containing the observed data tensor `X` under the key "X" and
             prior random variable `f` under the key "f".
@@ -256,9 +262,9 @@ class LatentGP(BaseGP):
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
                 scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
-                dtype=self.cov_fn._kernel.dtype,
                 **kwargs,
             )
-        return MvNormal(
-            name=name, loc=mu, covariance_matrix=cov, dtype=self.cov_fn._kernel.dtype, **kwargs
-        )
+        if reparametrize:
+            chol_factor = tf.linalg.cholesky(cov)
+            return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
+        return MvNormal(name=name, loc=mu, covariance_matrix=cov, **kwargs)

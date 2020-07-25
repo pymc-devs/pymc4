@@ -13,7 +13,7 @@ FreeRV = ArrayLike
 
 
 def stabilize(K, shift=None):
-    r"""Add a diagonal shift to a covarience matrix."""
+    r"""Add a diagonal shift to a covariance matrix."""
     diag = tf.linalg.diag_part(K)
     if shift is None:
         shifted = tf.math.nextafter(diag, np.inf)

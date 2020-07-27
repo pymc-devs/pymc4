@@ -1,6 +1,6 @@
 """An Interface for creating Gaussian Process Models in PyMC4."""
 
-from typing import Union
+from typing import Union, Optional
 
 import tensorflow as tf
 
@@ -23,12 +23,25 @@ class BaseGP:
         self.cov_fn = cov_fn
 
     def prior(
-        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
+        self,
+        name: NameType,
+        X: ArrayLike,
+        *,
+        reparametrize=True,
+        jitter: Optional[float] = None,
+        **kwargs,
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, given, *, reparametrize=True, **kwargs
+        self,
+        name: NameType,
+        Xnew: ArrayLike,
+        given: dict,
+        *,
+        reparametrize: bool = True,
+        jitter: Optional[float] = None,
+        **kwargs,
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
@@ -36,7 +49,13 @@ class BaseGP:
         raise NotImplementedError
 
     def marginal_likelihood(
-        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
+        self,
+        name: NameType,
+        X: ArrayLike,
+        *,
+        reparametrize=True,
+        jitter: Optional[float] = None,
+        **kwargs,
     ) -> ContinuousDistribution:
         raise NotImplementedError
 
@@ -92,9 +111,9 @@ class LatentGP(BaseGP):
         r"""Check if there is only one sample point."""
         return X.shape[-(self.feature_ndims + 1)] == 1
 
-    def _build_prior(self, name, X: ArrayLike) -> tuple:
+    def _build_prior(self, name, X: ArrayLike, jitter: Optional[float] = None) -> tuple:
         mu = self.mean_fn(X)
-        cov = stabilize(self.cov_fn(X, X))
+        cov = stabilize(self.cov_fn(X, X), shift=jitter)
         return mu, cov
 
     def _get_given_vals(self, given: dict) -> tuple:
@@ -118,7 +137,13 @@ class LatentGP(BaseGP):
         return X, f, cov_total, mean_total
 
     def _build_conditional(
-        self, Xnew: ArrayLike, X: ArrayLike, f: FreeRV, cov_total: Covariance, mean_total: Mean
+        self,
+        Xnew: ArrayLike,
+        X: ArrayLike,
+        f: FreeRV,
+        cov_total: Covariance,
+        mean_total: Mean,
+        jitter: Optional[float] = None,
     ) -> tuple:
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
@@ -126,7 +151,7 @@ class LatentGP(BaseGP):
             f = tf.expand_dims(f, -1)
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
-        L = tf.linalg.cholesky(stabilize(Kxx))
+        L = tf.linalg.cholesky(stabilize(Kxx, shift=jitter))
         A = tf.linalg.triangular_solve(L, Kxs, lower=True)
         # We add a `newaxis` to make the shape of mean_total(X)
         # [batch_shape, num_samples, 1] which is consistent with
@@ -138,10 +163,16 @@ class LatentGP(BaseGP):
         cov = Kss - tf.linalg.matmul(A, A, transpose_a=True)
         # Return the stabilized covariance matrix and squeeze the
         # last dimension that we added earlier.
-        return tf.squeeze(mu, axis=[-1]), stabilize(cov)
+        return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=jitter)
 
     def prior(
-        self, name: NameType, X: ArrayLike, *, reparametrize=True, **kwargs
+        self,
+        name: NameType,
+        X: ArrayLike,
+        *,
+        reparametrize: bool = True,
+        jitter: Optional[float] = None,
+        **kwargs,
     ) -> ContinuousDistribution:
         r"""
         Evaluate the GP prior distribution over the input locations `X`.
@@ -161,6 +192,10 @@ class LatentGP(BaseGP):
         reparametrize : bool, optional
             If ``True``, ``MvNormalCholesky`` distribution is returned instead
             of ``MvNormal``. (default=``True``)
+        jitter : float, optional
+            The amount of diagonal shift to add to the covariance matrix to
+            avoid cholesky decomposition failures. Defaults to 1e-4 for float32
+            tensors and 1e-6 for float64 tensors.
 
         Other Parameters
         ----------------
@@ -186,7 +221,7 @@ class LatentGP(BaseGP):
         >>> model = gp_model()
         >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
-        mu, cov = self._build_prior(name, X)
+        mu, cov = self._build_prior(name, X, jitter=jitter)
         if self._is_univariate(X):
             return Normal(
                 name=name,
@@ -200,7 +235,14 @@ class LatentGP(BaseGP):
         return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
     def conditional(
-        self, name: NameType, Xnew: ArrayLike, given: dict, *, reparametrize=True, **kwargs
+        self,
+        name: NameType,
+        Xnew: ArrayLike,
+        given: dict,
+        *,
+        reparametrize: bool = True,
+        jitter: Optional[float] = None,
+        **kwargs,
     ) -> ContinuousDistribution:
         r"""
         Evaluate the conditional distribution evaluated over new input locations `Xnew`.
@@ -221,12 +263,16 @@ class LatentGP(BaseGP):
             Name of the random variable
         Xnew : array_like
             Function input values.
-        reparametrize : bool, optional
-            If ``True``, ``MvNormalCholesky`` distribution is returned instead
-            of ``MvNormal``. (default=``True``)
         given : dict
             Dictionary containing the observed data tensor `X` under the key "X" and
             prior random variable `f` under the key "f".
+        reparametrize : bool, optional
+            If ``True``, ``MvNormalCholesky`` distribution is returned instead
+            of ``MvNormal``. (default=``True``)
+        jitter : float, optional
+            The amount of diagonal shift to add to the covariance matrix to
+            avoid cholesky decomposition failures. Defaults to 1e-4 for float32
+            tensors and 1e-6 for float64 tensors.
 
         Other Parameters
         ----------------
@@ -250,13 +296,13 @@ class LatentGP(BaseGP):
         >>> gp = pm.gp.LatentGP(cov_fn=cov_fn)
         >>> @pm.model
         ... def gp_model():
-        ...     f = yield gp.prior('f', X)
-        ...     fcond = yield gp.conditional('fcond', Xnew, given={'f': f, 'X': X})
+        ...     f = yield gp.prior('f', X, jitter=1e-3)
+        ...     fcond = yield gp.conditional('fcond', Xnew, given={'f': f, 'X': X}, jitter=1e-3)
         >>> model = gp_model()
         >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
-        givens = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, *givens)
+        X, f, cov_total, mean_total = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, X, f, cov_total, mean_total, jitter=jitter)
         if self._is_univariate(Xnew):
             return Normal(
                 name=name,

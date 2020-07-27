@@ -1287,7 +1287,7 @@ class Cosine(Covariance):
     r"""
     Cosine kernel.
 
-    This kernel is a part of the Periodic Kernels.
+    This kernel is part of the Periodic Kernels.
     It represents purely sinusoidal functions.
 
     .. math::

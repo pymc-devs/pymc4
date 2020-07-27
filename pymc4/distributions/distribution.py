@@ -103,7 +103,9 @@ class Distribution(Model):
 
     @property
     def test_value(self):
-        return tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape)
+        return tf.cast(
+            tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape), self.dtype
+        )
 
     def sample(self, sample_shape=(), seed=None):
         """
@@ -277,6 +279,12 @@ class DiscreteDistribution(Distribution):
 
 
 class BoundedDistribution(Distribution):
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.Interval(self.lower_limit(), self.upper_limit())
+        else:
+            return transform
+
     @abc.abstractmethod
     def lower_limit(self):
         raise NotImplementedError
@@ -330,6 +338,12 @@ class PositiveContinuousDistribution(BoundedContinuousDistribution):
 
 class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
     _test_value = 1
+
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.Log()
+        else:
+            return transform
 
     def lower_limit(self):
         return 0

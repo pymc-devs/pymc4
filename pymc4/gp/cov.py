@@ -56,9 +56,9 @@ __all__ = [
 
 _common_doc = """feature_ndims : int, optional
         The number of dimensions to consider as features which will be absorbed
-        during the computation. Defaults to 1. Incresing this causes significant
-        overhead in computation. Consider using ``active_dims`` parameter alongwith
-        this parameter for beter performance.
+        during the computation. Defaults to 1. Increasing this causes significant
+        overhead in computation. Consider using ``active_dims`` parameter along with
+        this parameter for better performance.
     active_dims : {int, Iterable}, optional
         A list of (list of) numbers of dimensions in each ``feature_ndims``
         columns to operate on. If ``None``, defaults to using all the dimensions
@@ -67,11 +67,17 @@ _common_doc = """feature_ndims : int, optional
         are considered for evaluation.
     scale_diag : {Number, array_like}, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevence Detection (ARD). Ignored if keyword argument ``ARD=False``."""
+        performing Automatic Relevance Detection (ARD). Ignored if keyword argument ``ARD=False``."""
 
-_note_doc = """ARD (automatic relevence detection) is done if the parameter ``length_scale``
+_note_doc = """ARD (automatic relevance detection) is performed if the parameter ``length_scale``
     is a vector or a tensor. To disable this behaviour, a keyword argument
-    ``ARD=False`` needs to be passed."""
+    ``ARD=False`` needs to be passed. Other keyword arguments that can be passed are:
+    validate_args : bool
+        A boolean indicating whether or not to validate arguments. Incurs a little
+        overhead when set to ``True``. Its default value is ``False``.
+    name:
+        You can optionally give a name to the kernels. All the operations will be
+        preformed under the name "<name>/<operation_name>:0"."""
 
 
 @_build_docs
@@ -231,7 +237,7 @@ class Covariance:
         X2 : array_like of shape ``(..., feature_ndims)``
             A tensor of other points.
         diag : bool, optional
-            If true, only evaulates the diagonal of the full covariance matrix.
+            If true, only evaluates the diagonal of the full covariance matrix.
             (default=False)
         to_dense : bool, optional
             If True, returns full covariance matrix with non-diagonal entries zero
@@ -394,7 +400,10 @@ class ExpQuad(Stationary):
     r"""
     Exponentiated Quadratic Stationary Covariance Function.
 
-    A kernel from the Radial Basis family of kernels.
+    This is the most used kernel in GP Modelling because of its mathematical properties.
+    It is infinitely differentiable and forces the covariance function to be smooth.
+    It comes from Squared Exponential (SE) family of kernels which is also commonly called
+    as the Radial Basis Kernel (RBF) Family.
 
     .. math::
 
@@ -606,7 +615,7 @@ class RatQuad(Stationary):
 
     This kernel belongs to the RBF Family of kernels and is a generalization
     over the ``ExpQuad`` kernel. ``scale_mixtue_rate`` parameter controls the
-    mixture of length-scales to use. This kernel becomes equavalent to the
+    mixture of length-scales to use. This kernel becomes equivalent to the
     ``ExpQuad`` kernel when ``scale_mixtue_rate`` approaches infinity.
 
     .. math::
@@ -692,7 +701,9 @@ class Matern12(Stationary):
 
     %(_matern_doc)
 
-    This kernel has the value of :math:`nu` = 0.5. It can be analytically shown as:
+    This kernel has the value of :math:`nu = 0.5`.
+
+    It can be given as:
 
     .. math::
 
@@ -755,7 +766,9 @@ class Matern32(Stationary):
 
     %(_matern_doc)
 
-    This kernel has the value of :math:`nu` = 1.5. It can be analytically shown as:
+    This kernel has the value of :math:`nu = 1.5`.
+
+    It can be given as:
 
     .. math::
 
@@ -819,7 +832,9 @@ class Matern52(Stationary):
 
     %(_matern_doc)
 
-    This kernel has the value of :math:`nu` = 2.5. It can be analytically shown as:
+    This kernel has the value of :math:`nu = 2.5`.
+
+    It can be given as:
 
     .. math::
 
@@ -878,8 +893,8 @@ class Matern52(Stationary):
 
 
 _linear_doc = """bias_variance : array_like
-        The bias to add in the linear equation. This parameters controls
-        how far your covarinace is from the mean value.
+        The bias to add in the linear equation. This parameter controls
+        how far your covariance is from the mean value.
     slope_variance : array_like
         The slope of the linear equation. This parameter controls how fast
         the covariance increases from the origin point.
@@ -893,8 +908,8 @@ class Linear(Covariance):
     r"""
     Linear Kernel.
 
-    This kernel evaluates a linear function of the inputs `x` and `x'`. This means
-    it is performing Bayesian Linear Regression in :math:`\mathcal{O}(n)` time.
+    This kernel evaluates a linear function of the inputs :math:`x` and :math:`x'`.
+    It performs bayesian linear regression on the inputs to produce random linear functions.
 
     .. math::
 
@@ -1060,10 +1075,9 @@ class Polynomial(Covariance):
 
 
 _period_doc = """period : array_like, optional
-        This paramerer defines the period of a periodic kernel. It controls how often your
-        data repeats where data contains an axis of time. It is used for time serias and
-        temporal prediction tasks. If a float, an isotropic kernel is used. If an array and
-        ``ARD=True``, an anisotropic kernel is used where each dimension defines the period
+        This parameter defines the period of a periodic kernel. If a float,
+        an isotropic kernel is used. If an array and ``ARD=True``, an
+        anisotropic kernel is used where each dimension defines the period
         of the respective feature dimension. (default=1)"""
 
 
@@ -1072,10 +1086,11 @@ class Periodic(Covariance):
     r"""
     Periodic aka Exponential Sine Squared Kernel.
 
-    Periodic kernel comes from Periodic Family of kernels. This kernels occilates
-    in space with a period of ``T`` as a function of ``sin`` wave. This kernel is used
-    mostly for time-series and other temporal prediction tasks. This kernel can be
-    expressed as:
+    Periodic kernel aka Exponential Sine Squared Kernel comes from the Periodic Family
+    of kernels. This kernels occilates in space with a period `T`. This kernel is used
+    mostly for time-series and other temporal prediction tasks.
+
+    This kernel can be expressed as:
 
     .. math::
 
@@ -1145,6 +1160,7 @@ class Exponential(Stationary):
     r"""Exponential Kernel.
 
     This kernel is used as an alternative to the ``ExpQuad`` kernel.
+    It is also known as Laplacian Kernel.
 
     Parameters
     ----------
@@ -1201,10 +1217,10 @@ class Gibbs(Covariance):
     r"""
     Gibbs Non-Stationary kernel.
 
-    This kernel uses length-scales that are function of the input.
+    This kernel uses length-scales that are a function of the input.
     Hence, this comes from the family of non-stationary kernels. It
     is computationally expensive but provides a very flexible function
-    using which very complex data can be modelled.
+    using which very complex data can be modelled easily.
 
     .. math::
 
@@ -1271,8 +1287,8 @@ class Cosine(Covariance):
     r"""
     Cosine kernel.
 
-    This kernel is a part of the Periodic Kenrels. It evaluates a cosine
-    function to compute the covariance function.
+    This kernel is a part of the Periodic Kernels.
+    It represents purely sinusoidal functions.
 
     .. math::
 
@@ -1335,7 +1351,7 @@ class ScaledCov(Covariance):
     r"""
     Scaled Covariance Kernel.
 
-    This kernel scales the covarince matrix given a scaling function and the kernel to scale.
+    This kernel scales the covariance matrix given a scaling function and the kernel to scale.
     It can be used to create non-stationary kernels from stationary and periodic kernels.
 
     Parameters

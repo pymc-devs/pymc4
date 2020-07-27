@@ -1220,7 +1220,7 @@ class Gibbs(Covariance):
     This kernel uses length-scales that are a function of the input.
     Hence, this comes from the family of non-stationary kernels. It
     is computationally expensive but provides a very flexible function
-    using which very complex data can be modelled easily.
+    , with which very complex data can be modeled easily.
 
     .. math::
 

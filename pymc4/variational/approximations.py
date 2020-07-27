@@ -106,7 +106,7 @@ class MeanField(Approximation):
     def _build_posterior(self):
         flattened_shape = self.order.size
         dtype = dtype_util.common_dtype(
-            self.state.all_unobserved_values.values(), dtype_hint=tf.float32
+            self.state.all_unobserved_values.values(), dtype_hint=tf.float64
         )
         loc = tf.Variable(tf.random.normal([flattened_shape], dtype=dtype), name="mu")
         cov_param = tfp.util.TransformedVariable(

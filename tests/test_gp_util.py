@@ -47,18 +47,9 @@ def test_inherit_docs_exception():
 
 
 def test_build_docs():
-    @pm.gp.util._build_docs
+    @pm.gp.util._build_docs(doc_string=doc_string)
     def func():
-        """%(doc_string)"""
+        """%(doc_string)s"""
         pass
 
     assert func.__doc__ == doc_string
-
-
-def test_build_doc_warning():
-    with pytest.warns(SyntaxWarning, match=r"arrtibute nodoc not found"):
-
-        @pm.gp.util._build_docs
-        def func():
-            """%(nodoc)"""
-            pass

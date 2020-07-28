@@ -74,14 +74,14 @@ _note_doc = """ARD (automatic relevence detection) is done if the parameter ``le
     ``ARD=False`` needs to be passed."""
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class Covariance:
     r"""
     Base class of all Covariance functions for Gaussian Process.
 
     Parameters
     ----------
-    %(_common_doc)
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -90,7 +90,7 @@ class Covariance:
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -389,7 +389,7 @@ _ls_amp_doc = """length_scale : array_like
         (default=1)"""
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class ExpQuad(Stationary):
     r"""
     Exponentiated Quadratic Stationary Covariance Function.
@@ -405,8 +405,8 @@ class ExpQuad(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -430,7 +430,7 @@ class ExpQuad(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -462,7 +462,7 @@ class ExpQuad(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class Constant(Stationary):
     r"""
     A Constant Stationary Covariance Function.
@@ -484,7 +484,7 @@ class Constant(Stationary):
         The constant coefficient indicating the covariance
         between any two points. It is the constant ``c`` in
         the equation above.
-    %(_common_doc)
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -506,7 +506,7 @@ class Constant(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -530,7 +530,7 @@ class Constant(Stationary):
         return self._coef
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class WhiteNoise(Stationary):
     r"""
     White-noise kernel function.
@@ -550,7 +550,7 @@ class WhiteNoise(Stationary):
     ----------
     noise : array_like
         The ``noise_level`` of the kernel.
-    %(_common_doc)
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -575,7 +575,7 @@ class WhiteNoise(Stationary):
     Hence, the ``pymc4.gp.cov.WhiteNoise.evaluate_kernel`` method
     raises a ``NotImplementedError`` when called.
 
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -599,7 +599,7 @@ class WhiteNoise(Stationary):
         return self._noise
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class RatQuad(Stationary):
     r"""
     Rational Quadratic Kernel.
@@ -618,12 +618,12 @@ class RatQuad(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
+    %(_ls_amp_doc)s
     scale_mixture_rate: array_like, optional
         The mixture of length-scales to use. Equivalent to adding ``ExpQuad``
         kernels with different ``length_scale``s. When this parameter approaches
         infinity, it becomes equivalent to the ``ExpQuad`` kernel. (default=1)
-    %(_common_doc)
+    %(_common_doc)s
 
     Examples
     --------
@@ -638,7 +638,7 @@ class RatQuad(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -685,12 +685,14 @@ _matern_doc = r"""Matern family of kernels is a generalization over the RBF fami
     there."""
 
 
-@_build_docs
+@_build_docs(
+    _matern_doc=_matern_doc, _ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Matern12(Stationary):
     r"""
     Matern 1/2 kernel.
 
-    %(_matern_doc)
+    %(_matern_doc)s
 
     This kernel has the value of :math:`nu` = 0.5. It can be analytically shown as:
 
@@ -700,8 +702,8 @@ class Matern12(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -716,7 +718,7 @@ class Matern12(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -748,12 +750,14 @@ class Matern12(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(
+    _matern_doc=_matern_doc, _ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Matern32(Stationary):
     r"""
     Matern 3/2 kernel.
 
-    %(_matern_doc)
+    %(_matern_doc)s
 
     This kernel has the value of :math:`nu` = 1.5. It can be analytically shown as:
 
@@ -764,8 +768,8 @@ class Matern32(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -780,7 +784,7 @@ class Matern32(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -812,12 +816,14 @@ class Matern32(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(
+    _matern_doc=_matern_doc, _ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Matern52(Stationary):
     r"""
     Matern 5/2 kernel.
 
-    %(_matern_doc)
+    %(_matern_doc)s
 
     This kernel has the value of :math:`nu` = 2.5. It can be analytically shown as:
 
@@ -829,8 +835,8 @@ class Matern52(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -845,7 +851,7 @@ class Matern52(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -888,7 +894,7 @@ _linear_doc = """bias_variance : array_like
         This parameter brings all the input values closer to origin by ``shift`` units."""
 
 
-@_build_docs
+@_build_docs(_linear_doc=_linear_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Linear(Covariance):
     r"""
     Linear Kernel.
@@ -905,8 +911,8 @@ class Linear(Covariance):
 
     Parameters
     ----------
-    %(_linear_doc)
-    %(_common_doc)
+    %(_linear_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -921,7 +927,7 @@ class Linear(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -966,7 +972,7 @@ class Linear(Covariance):
         return self._shift
 
 
-@_build_docs
+@_build_docs(_linear_doc=_linear_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Polynomial(Covariance):
     r"""
     Polynomial Kernel.
@@ -988,10 +994,10 @@ class Polynomial(Covariance):
 
     Parameters
     ----------
-    %(_linear_doc)
+    %(_linear_doc)s
     exponent : array_like
         Exponent (degree) of the underlying polynomial function.
-    %(_common_doc)
+    %(_common_doc)s
 
     Examples
     --------
@@ -1006,7 +1012,7 @@ class Polynomial(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1067,7 +1073,9 @@ _period_doc = """period : array_like, optional
         of the respective feature dimension. (default=1)"""
 
 
-@_build_docs
+@_build_docs(
+    _period_doc=_period_doc, _ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Periodic(Covariance):
     r"""
     Periodic aka Exponential Sine Squared Kernel.
@@ -1084,9 +1092,9 @@ class Periodic(Covariance):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_period_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_period_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -1101,7 +1109,7 @@ class Periodic(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1140,7 +1148,7 @@ class Periodic(Covariance):
         return self._period
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Exponential(Stationary):
     r"""Exponential Kernel.
 
@@ -1148,8 +1156,8 @@ class Exponential(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -1164,7 +1172,7 @@ class Exponential(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1196,7 +1204,7 @@ class Exponential(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class Gibbs(Covariance):
     r"""
     Gibbs Non-Stationary kernel.
@@ -1222,7 +1230,7 @@ class Gibbs(Covariance):
     fn_args : tuple, optional
         A tuple of other arguments to be passed to the function. If None,
         defaults to passing no extra arguments.
-    %(_common_doc)
+    %(_common_doc)s
 
     Examples
     --------
@@ -1237,7 +1245,7 @@ class Gibbs(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1266,7 +1274,7 @@ class Gibbs(Covariance):
         )
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Cosine(Covariance):
     r"""
     Cosine kernel.
@@ -1282,8 +1290,8 @@ class Cosine(Covariance):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -1298,7 +1306,7 @@ class Cosine(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1330,7 +1338,7 @@ class Cosine(Covariance):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(_note_doc=_note_doc)
 class ScaledCov(Covariance):
     r"""
     Scaled Covariance Kernel.
@@ -1362,7 +1370,7 @@ class ScaledCov(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1400,6 +1408,7 @@ class ScaledCov(Covariance):
         return self._fn_args
 
 
+@_build_docs(_note_doc=_note_doc)
 class WarpedInput(Covariance):
     r"""
     Warped Input Kernel.
@@ -1425,7 +1434,7 @@ class WarpedInput(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(

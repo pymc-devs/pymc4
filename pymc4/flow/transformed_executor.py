@@ -94,7 +94,7 @@ def make_transformed_model(dist, transform, state):
         coef = -1.0
     else:
         potential_fn = functools.partial(
-            transform.inverse_log_det_jacobian, state.transformed_values[transformed_scoped_name]
+            transform.inverse_log_det_jacobian, state.transformed_values[transformed_scoped_name],
         )
         coef = 1.0
     yield distributions.Potential(potential_fn, coef=coef)

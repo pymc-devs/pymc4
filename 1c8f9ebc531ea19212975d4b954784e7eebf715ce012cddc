@@ -384,9 +384,7 @@ class CompoundStep(_BaseSampler):
 
         self.kernel_kwargs["make_kernel_fn"] = make_kernel_fn
         self.kernel_kwargs["kernel_kwargs"] = part_kernel_kwargs
-        kkw = [rwm_len, nuts_len]
-        kkw = [i for i in kkw if i != 0]
-        self.kernel_kwargs["li"] = kkw
+        self.kernel_kwargs["li"] = [rwm_len, nuts_len]
 
     def __call__(self, *args, **kwargs):
         return self.sample(*args, is_compound=True, **kwargs)

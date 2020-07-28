@@ -10,21 +10,22 @@ from typing import Union, Tuple, List
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import Distribution
+from tensorflow_probability import distributions as tfd
+from collections.abc import Iterable
+
+
+__all__ = ["Mixture", "NormalMixture"]
 
 
 class Mixture(Distribution):
     r"""
     Mixture random variable.
-
     Often used to model subpopulation heterogeneity
-
     .. math:: f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)
-
     ========  ============================================
     Support   :math:`\cap_{i = 1}^n \textrm{support}(f_i)`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
     ========  ============================================
-
     Parameters
     ----------
     p : tf.Tensor

@@ -1,13 +1,13 @@
 import abc
 import copy
 import warnings
-from typing import Optional, Union, Any, Tuple
+from typing import Optional, Union, Any, Callable, Tuple
 
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
 from pymc4.distributions.batchstack import BatchStacker
-from . import transforms
+from pymc4.distributions import transforms
 
 NameType = Union[str, int]
 
@@ -29,6 +29,7 @@ __all__ = (
 class Distribution(Model):
     """Statistical distribution."""
 
+    _grad_support: bool = True
     _test_value = 0.0
     _base_parameters = ["dtype", "validate_args", "allow_nan_stats"]
 
@@ -48,9 +49,10 @@ class Distribution(Model):
         **kwargs,
     ):
         self.conditions, self.base_parameters = self.unpack_conditions(
-            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs
+            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs,
         )
         self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
+        self._default_new_state_part: Union[Callable[[Any, Any], Any], None] = None
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )
@@ -139,14 +141,14 @@ class Distribution(Model):
     def get_test_sample(self, sample_shape=(), seed=None):
         """
         Get the test value using a function signature similar to meth:`~.sample`.
-        
+
         Parameters
         ----------
         sample_shape : tuple
             sample shape
         seed : int | None
             ignored. Is only present to match the signature of meth:`~.sample`
-        
+
         Returns
         -------
         The distribution's ``test_value`` broadcasted to

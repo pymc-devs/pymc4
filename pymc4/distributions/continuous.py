@@ -120,7 +120,7 @@ class GeneralizedNormal(ContinuousDistribution):
 
     .. math::
 
-       f(x \mid \mu, \alpha, \beta) = 
+       f(x \mid \mu, \alpha, \beta) =
            \frac{\beta}{2 \Gamma(1/\beta)}
            \exp(-(|x - \mu| /\alpha)^\beta)
 
@@ -354,7 +354,10 @@ class Beta(UnitContinuousDistribution):
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
-        concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
+        concentration0, concentration1 = (
+            conditions["concentration0"],
+            conditions["concentration1"],
+        )
         return tfd.Beta(concentration0=concentration0, concentration1=concentration1, **kwargs)
 
 
@@ -779,7 +782,10 @@ class Kumaraswamy(UnitContinuousDistribution):
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
-        concentration0, concentration1 = conditions["concentration0"], conditions["concentration1"]
+        concentration0, concentration1 = (
+            conditions["concentration0"],
+            conditions["concentration1"],
+        )
         return tfd.Kumaraswamy(
             concentration0=concentration0, concentration1=concentration1, **kwargs
         )
@@ -987,7 +993,7 @@ class Moyal(ContinuousDistribution):
 
     .. math::
 
-        f(x \mid \mu, \sigma) = 
+        f(x \mid \mu, \sigma) =
            \frac{1}{\sqrt{2\pi}\sigma}
            \exp\left(-\frac{1}{2}\left[\frac{x-\mu}{\sigma}+\exp\left(-\frac{x-\mu}{\sigma}\right)\right]\right)
 
@@ -1493,6 +1499,13 @@ class Weibull(PositiveContinuousDistribution):
         Shape parameter (concentration > 0).
     scale : float|tensor
         Scale parameter (scale > 0).
+
+    Developer Notes
+    ---------------
+    The Weibull distribution is implemented as a standard uniform distribution transformed by the
+    Inverse of the WeibullCDF bijector. The shape to broadcast the low and high parameters for the
+    Uniform distribution are obtained using
+    tensorflow_probability.python.internal.distribution_util.prefer_static_broadcast_shape()
     """
 
     def __init__(self, name, concentration, scale, **kwargs):

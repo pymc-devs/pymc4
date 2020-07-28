@@ -7,6 +7,11 @@ from pymc4.distributions.distribution import (
 )
 from pymc4.distributions import transforms
 
+from pymc4.distributions.state_functions import (
+    categorical_uniform_fn,
+    bernoulli_uniform_fn,
+)
+
 __all__ = [
     "Bernoulli",
     "Binomial",
@@ -58,9 +63,11 @@ class Bernoulli(BoundedDiscreteDistribution):
     probs : float
         Probability of success (0 < probs < 1).
     """
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        self._default_new_state_part = bernoulli_uniform_fn
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
@@ -245,6 +252,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     high : int
         Upper limit (high > low).
     """
+    _grad_support = False
 
     def __init__(self, name, low, high, **kwargs):
         super().__init__(name, low=low, high=high, **kwargs)
@@ -296,9 +304,11 @@ class Categorical(BoundedDiscreteDistribution):
     probs : array of floats
         probs > 0 and the elements of probs must sum to 1.
     """
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        self._default_new_state_part = categorical_uniform_fn
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):

@@ -57,7 +57,7 @@ __all__ = [
 _common_doc = """feature_ndims : int, optional
         The number of dimensions to consider as features which will be absorbed
         during the computation. Defaults to 1. Increasing this causes significant
-        overhead in computation. Consider using ``active_dims`` parameter along with
+        overhead in computation. Consider using ``active_dims`` parameter alongwith
         this parameter for better performance.
     active_dims : {int, Iterable}, optional
         A list of (list of) numbers of dimensions in each ``feature_ndims``
@@ -69,13 +69,14 @@ _common_doc = """feature_ndims : int, optional
         Scaling parameter of the lenght_scale parameter of stationary kernels for
         performing Automatic Relevance Detection (ARD). Ignored if keyword argument ``ARD=False``."""
 
-_note_doc = """ARD (automatic relevance detection) is performed if the parameter ``length_scale``
+_note_doc = """ARD (automatic relevance detection) is done if the parameter ``length_scale``
     is a vector or a tensor. To disable this behaviour, a keyword argument
     ``ARD=False`` needs to be passed. Other keyword arguments that can be passed are:
+
     validate_args : bool
         A boolean indicating whether or not to validate arguments. Incurs a little
         overhead when set to ``True``. Its default value is ``False``.
-    name:
+    name : str
         You can optionally give a name to the kernels. All the operations will be
         preformed under the name "<name>/<operation_name>:0"."""
 

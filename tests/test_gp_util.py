@@ -10,8 +10,11 @@ doc_string = "Func doc"
 def test_stabilize_default_shift():
     data = tf.constant([[1.0, 2.0], [3.0, 4.0]])
     shifted = pm.gp.util.stabilize(data)
-    expected = tf.constant([[1.0000001, 2.0], [3.0, 4.0000005]])
+    expected = tf.constant([[1.0001, 2.0], [3.0, 4.0001]])
     assert np.allclose(shifted, expected, rtol=1e-18)
+    data = tf.constant([[1.0, 2.0], [3.0, 4.0]], dtype=tf.float64)
+    shifted = pm.gp.util.stabilize(data)
+    expected = tf.constant([[1.000001, 2.0], [3.0, 4.000001]])
 
 
 def test_stabilize():

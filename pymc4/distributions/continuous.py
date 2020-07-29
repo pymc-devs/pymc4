@@ -12,6 +12,7 @@ from pymc4.distributions.distribution import (
     UnitContinuousDistribution,
     BoundedContinuousDistribution,
 )
+from pymc4.distributions import transforms
 from .half_student_t import HalfStudentT as TFPHalfStudentT
 
 
@@ -1084,6 +1085,12 @@ class Pareto(BoundedContinuousDistribution):
     scale : float|tensor
         Scale parameter (scale > 0).
     """
+
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.LowerBound(self.lower_limit())
+        else:
+            return transform
 
     def __init__(self, name, concentration, scale, **kwargs):
         super().__init__(name, concentration=concentration, scale=scale, **kwargs)

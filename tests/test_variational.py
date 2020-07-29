@@ -4,7 +4,7 @@ import numpy as np
 
 
 @pytest.fixture(scope="function")
-def simple_model():
+def conjugate_normal_model():
     unknown_mean = -5
     known_sigma = 3
     data_points = 1000
@@ -22,6 +22,7 @@ def simple_model():
     def model():
         mu = yield pm.Normal("mu", prior_mean, prior_sigma)
         ll = yield pm.Normal("ll", mu, known_sigma, observed=data)
+        return ll
 
     return dict(data_points=data_points, data=data, estimated_mean=estimated_mean, model=model)
 
@@ -31,6 +32,14 @@ _test_kwargs = {
     "ADVI": {
         "method": pm.MeanField, 
         "fit_kwargs": {}
+    },
+    "FullRank ADVI": {
+        "method": pm.FullRank,
+        "fit_kwargs": {}
+    },
+    "FullRank ADVI: sample_size=2": {
+        "method": pm.FullRank,
+        "fit_kwargs": {"sample_size": 2}
     }
 }
 
@@ -40,15 +49,15 @@ def approximation(request):
     return request.param
 
 
-def test_fit(approximation, simple_model):
-    model = simple_model["model"]()
+def test_fit(approximation, conjugate_normal_model):
+    model = conjugate_normal_model["model"]()
     approx = _test_kwargs[approximation]
     advi = pm.fit(method=approx["method"](model), **approx["fit_kwargs"])
     assert advi is not None
     assert advi.losses.numpy().shape == (approx["fit_kwargs"].get("num_steps") or 10000,)
 
     q_samples = advi.approximation.sample(10000)
-    estimated_mean = simple_model["estimated_mean"]
+    estimated_mean = conjugate_normal_model["estimated_mean"]
     np.testing.assert_allclose(
         np.mean(np.squeeze(q_samples.posterior["model/mu"].values, axis=0)),
         estimated_mean,
@@ -71,7 +80,29 @@ def bivariate_gaussian():
 
 def test_bivariate_shapes(bivariate_gaussian):
     advi = pm.fit(bivariate_gaussian(), num_steps=5000)
-    assert advi.losses.numpy().shape == (5000, 2)
+    assert advi.losses.numpy().shape == (5000, )
 
     samples = advi.approximation.sample(5000)
     assert samples.posterior["bivariate_gaussian/density"].values.shape == (1, 5000, 2)
+
+
+def test_advi_with_deterministics(simple_model_with_deterministic):
+    advi = pm.fit(simple_model_with_deterministic(), num_steps=1000)
+    samples = advi.approximation.sample(100)
+    norm = "simple_model_with_deterministic/simple_model/norm"
+    determ = "simple_model_with_deterministic/determ"
+    np.testing.assert_allclose(samples.posterior[determ], samples.posterior[norm] * 2)
+
+
+def test_advi_with_deterministics_in_nested_models(deterministics_in_nested_models):
+    (
+        model,
+        *_,
+        deterministic_mapping,
+    ) = deterministics_in_nested_models
+    advi = pm.fit(model(), num_steps=1000)
+    samples = advi.approximation.sample(100)
+    for deterministic, (inputs, op) in deterministic_mapping.items():
+        np.testing.assert_allclose(
+            samples.posterior[deterministic], op(*[samples.posterior[i] for i in inputs]), rtol=1e-6
+        )

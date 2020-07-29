@@ -3,7 +3,7 @@ from typing import Optional
 
 from tensorflow_probability import bijectors as tfb
 
-__all__ = ["Log", "Sigmoid"]
+__all__ = ["Log", "Sigmoid", "LowerBound", "UpperBound", "Interval"]
 
 
 class JacobianPreference(enum.Enum):
@@ -113,42 +113,69 @@ class Invert(Transform):
         return self._transform.forward_log_det_jacobian(z)
 
 
-class Log(Transform):
-    name = "log"
+class BackwardTransform(Transform):
+    """Base class for Transforms with Jacobian Preference as Backward"""
+
     JacobianPreference = JacobianPreference.Backward
+
+    def __init__(self, transform):
+        self._transform = transform
+
+    def forward(self, x):
+        return self._transform.inverse(x)
+
+    def inverse(self, z):
+        return self._transform.forward(z)
+
+    def forward_log_det_jacobian(self, x):
+        return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
+
+    def inverse_log_det_jacobian(self, z):
+        return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)
+
+
+class Log(BackwardTransform):
+    name = "log"
 
     def __init__(self):
         # NOTE: We actually need the inverse to match PyMC3, do we?
-        self._transform = tfb.Exp()
-
-    def forward(self, x):
-        return self._transform.inverse(x)
-
-    def inverse(self, z):
-        return self._transform.forward(z)
-
-    def forward_log_det_jacobian(self, x):
-        return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
-
-    def inverse_log_det_jacobian(self, z):
-        return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)
+        transform = tfb.Exp()
+        super().__init__(transform)
 
 
-class Sigmoid(Transform):
+class Sigmoid(BackwardTransform):
     name = "sigmoid"
-    JacobianPreference = JacobianPreference.Backward
 
     def __init__(self):
-        self._transform = tfb.Sigmoid()
+        transform = tfb.Sigmoid()
+        super().__init__(transform)
 
-    def forward(self, x):
-        return self._transform.inverse(x)
 
-    def inverse(self, z):
-        return self._transform.forward(z)
+class LowerBound(BackwardTransform):
+    """"Transformation to interval [lower_limit, inf]"""
 
-    def forward_log_det_jacobian(self, x):
-        return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
+    name = "lowerbound"
 
-    def inverse_log_det_jacobian(self, z):
-        return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)
+    def __init__(self, lower_limit):
+        transform = tfb.Chain([tfb.Shift(lower_limit), tfb.Exp()])
+        super().__init__(transform)
+
+
+class UpperBound(BackwardTransform):
+    """"Transformation to interval [-inf, upper_limit]"""
+
+    name = "upperbound"
+
+    def __init__(self, upper_limit):
+        transform = tfb.Chain([tfb.Shift(upper_limit), tfb.Scale(-1), tfb.Exp()])
+        super().__init__(transform)
+
+
+class Interval(BackwardTransform):
+    """"Transformation to interval [lower_limit, upper_limit]"""
+
+    name = "interval"
+
+    def __init__(self, lower_limit, upper_limit):
+        transform = tfb.Sigmoid(low=lower_limit, high=upper_limit)
+        super().__init__(transform)

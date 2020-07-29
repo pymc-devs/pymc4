@@ -5,6 +5,7 @@ from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
 )
+from pymc4.distributions import transforms
 
 __all__ = [
     "Bernoulli",
@@ -67,10 +68,10 @@ class Bernoulli(BoundedDiscreteDistribution):
         return tfd.Bernoulli(probs=probs, **kwargs)
 
     def lower_limit(self):
-        return 0
+        return 0.0
 
     def upper_limit(self):
-        return 1
+        return 1.0
 
 
 class Binomial(BoundedDiscreteDistribution):
@@ -124,7 +125,7 @@ class Binomial(BoundedDiscreteDistribution):
         return tfd.Binomial(total_count=total_count, probs=probs, **kwargs)
 
     def lower_limit(self):
-        return 0
+        return 0.0
 
     def upper_limit(self):
         return self.conditions["total_count"]
@@ -200,7 +201,7 @@ class BetaBinomial(BoundedDiscreteDistribution):
         )
 
     def lower_limit(self):
-        return 0
+        return 0.0
 
     def upper_limit(self):
         return self.conditions["total_count"]
@@ -306,7 +307,7 @@ class Categorical(BoundedDiscreteDistribution):
         return tfd.FiniteDiscrete(outcomes, probs=probs, **kwargs)
 
     def lower_limit(self):
-        return 0
+        return 0.0
 
     def upper_limit(self):
         return self.conditions["probs"].shape[-1]
@@ -353,6 +354,12 @@ class Geometric(BoundedDiscreteDistribution):
     # Another example for a wrong type used on the tensorflow side
     _test_value = 2.0  # type: ignore
 
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.LowerBound(self.lower_limit())
+        else:
+            return transform
+
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
 
@@ -362,7 +369,7 @@ class Geometric(BoundedDiscreteDistribution):
         return tfd.Geometric(probs=probs, **kwargs)
 
     def lower_limit(self):
-        return 1
+        return 1.0
 
     def upper_limit(self):
         return float("inf")
@@ -760,7 +767,7 @@ class OrderedLogistic(BoundedDiscreteDistribution):
         return tfd.OrderedLogistic(cutpoints=cutpoints, loc=loc, **kwargs)
 
     def lower_limit(self):
-        return 0
+        return 0.0
 
     def upper_limit(self):
         return self.conditions["cutpoints"].shape[-1]

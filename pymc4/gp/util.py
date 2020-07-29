@@ -22,7 +22,23 @@ def stabilize(K, shift=None):
 
 
 def _inherit_docs(frommeth):
-    r"""Decorate a method or class to inherit docs from `frommeth`."""
+    r"""
+    Decorate a method or class to inherit docs from `frommeth`.
+
+    Example
+    -------
+    >>> import pymc4 as pm
+    >>> def func():
+    ...     '''Func docs.'''
+    ...     pass
+    ...
+    >>> @pm.gp.util._inherit_docs(func)
+    ... def other_func():
+    ...     pass
+    ...
+    >>> print(other_func.__doc__)
+    Func docs.
+    """
 
     def inherit(tometh):
         methdocs = frommeth.__doc__
@@ -35,7 +51,21 @@ def _inherit_docs(frommeth):
 
 
 def _build_docs(**kwargs):
-    r"""Decorate a method or class to build its doc strings."""
+    r"""
+    Decorate a method or class to build its doc strings.
+
+    Example
+    -------
+    >>> import pymc4 as pm
+    >>> doc_string = "Func docs."
+    >>> @pm.gp.util._build_docs(doc_string=doc_string)
+    ... def func():
+    ...     '''%(doc_string)s'''
+    ...     pass
+    ...
+    >>> print(func.__doc__)
+    Func docs.
+    """
 
     def _doccer(meth_or_cls):
         if meth_or_cls.__doc__ is not None:

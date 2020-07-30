@@ -319,41 +319,56 @@ class CompoundStep(_BaseSampler):
     def _assign_default_methods(
         self,
         *,
-        sampler_methods=None,
+        sampler_methods:dict={},
         state: Optional[flow.SamplingState] = None,
         observed: Optional[dict] = None,
     ):
-        if sampler_methods is not None:
-            sampler_methods = CompoundStep._convert_sampler_methods(sampler_methods)
+        sampler_methods = CompoundStep._convert_sampler_methods(sampler_methods)
 
         (state, _, _, _) = initialize_state(self.model, observed=observed, state=state)
         init = state.all_unobserved_values
         init_state = list(init.values())
         init_keys = list(init.keys())
+
+        # assigned variabled to each sampler
+        assigned_variables: list = []
+        # assignd samplers for free variables
         make_kernel_fn: list = []
+        # user passed kwargs for each sampler in `make_kernel_fn`
         part_kernel_kwargs: list = []
 
-        rwm_len = nuts_len = 0
+        # check for used sampler
+        used_samplers: dict = {}
 
         for i, state_part in enumerate(init_state):
+            # TODO: fix naming here
             unscoped_var = init_keys[i].rsplit("/", 1)[-1]
+            # get the distribution for the random variable name
             distr = state.continuous_distributions.get(init_keys[i], None)
             if distr is None:
                 distr = state.discrete_distributions[init_keys[i]]
+
+            # get custom `new_state_fn` for the distribution
+            func = distr._default_new_state_part
 
             # simplest way of assigning sampling methods
             # if the sampler_methods was passed and if a var is provided
             # then the var will be assigned to the given sampler
             # but will also be checked if the sampler supports the distr
 
-            if sampler_methods and unscoped_var in sampler_methods:
+            # 1. If sampler is provided by the user, we create new sampler
+            #    and add to `make_kernel_fn`
+            # 2. If the distribution has `new_state_fn` then the new sampler
+            #    should be create also. Because sampler is initialized with
+            #    the `new_state_fn` argument.
+            if unscoped_var in sampler_methods or callable(func):
                 part_kernel_kwargs.append({})
-                # add the default `new_state_fn` for each distribution
-                func = distr._default_new_state_part
+                # add the default `new_state_fn`
                 if callable(func):
-                    part_kernel_kwargs[i]["new_state_fn"] = functools.partial(func)()
+                    part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
 
                 sampler = sampler_methods[unscoped_var]
+                # check for the sampler able to sampler from the distribution
                 if not distr._grad_support and sampler._grad:
                     raise ValueError(
                         "The `{}` doesn't support gradient, please provide an appropriate sampler method".format(
@@ -361,32 +376,23 @@ class CompoundStep(_BaseSampler):
                         )
                     )
 
+                # add sampler to the dict
                 make_kernel_fn.append(sampler._default_kernel_maker())
-                # TODO: fix hard coding
-                if sampler.__name__ == "NUTS":
-                    nuts_len += 1
-                if sampler.__name__ == "RandomWalkM":
-                    rwm_len += 1
-                else:
-                    raise NotImplementedError
-
-            # TODO: fix logic
-            elif distr._grad_support:
-                if nuts_len == 0:
-                    make_kernel_fn.append(NUTS._default_kernel_maker())
-                    part_kernel_kwargs.append({})
-                nuts_len += 1
             else:
-                if rwm_len == 0:
-                    make_kernel_fn.append(RandomWalkM._default_kernel_maker())
+                # by default if user didn't not provide any sampler
+                # we choose NUTS for the variable with gradient and
+                # RWM for the variable without the gradient
+                kernel_ = NUTS_ if distr._grad_support else RandomWalkM
+                prev_index = used_samplers.get(kernel_, -1)
+                if prev_index >= 0:
+                    assigned_variables[prev_index].append(unscoped_var)
+                else:
+                    used_samplers[kernel_] = len(make_kernel_fn)
+                    make_kernel_fn.append(kernel_._default_kernel_maker()
                     part_kernel_kwargs.append({})
-                rwm_len += 1
 
         self.kernel_kwargs["make_kernel_fn"] = make_kernel_fn
         self.kernel_kwargs["kernel_kwargs"] = part_kernel_kwargs
-        kkw = [rwm_len, nuts_len]
-        kkw = [i for i in kkw if i != 0]
-        self.kernel_kwargs["li"] = kkw
 
     def __call__(self, *args, **kwargs):
         return self.sample(*args, is_compound=True, **kwargs)

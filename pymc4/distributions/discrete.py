@@ -11,7 +11,7 @@ from pymc4.distributions import transforms
 
 from pymc4.distributions.state_functions import (
     categorical_uniform_fn,
-    bernoulli_uniform_fn,
+    bernoulli_fn,
 )
 
 __all__ = [
@@ -69,7 +69,7 @@ class Bernoulli(BoundedDiscreteDistribution):
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
-        self._default_new_state_part = bernoulli_uniform_fn
+        self._default_new_state_part = bernoulli_fn
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):

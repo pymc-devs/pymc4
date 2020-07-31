@@ -209,7 +209,7 @@ class NameParts:
     @property
     def original_name(self) -> str:
         """Return the name of the distribution without its preceeding path.
-        
+
         Returns
         -------
         str
@@ -224,7 +224,7 @@ class NameParts:
     @property
     def full_original_name(self) -> str:
         """Return the full name of the distribution with all three parts.
-        
+
         Returns
         -------
         str
@@ -236,7 +236,7 @@ class NameParts:
     @property
     def full_untransformed_name(self) -> str:
         """Return the name of the distribution without its transform part.
-        
+
         Returns
         -------
         str

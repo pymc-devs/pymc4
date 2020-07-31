@@ -10,7 +10,7 @@ from pymc4.mcmc.utils import (
     initialize_sampling_state,
     trace_to_arviz,
     initialize_state,
-    scope_remove_transformed_part,
+    scope_remove_transformed_part_if_required,
     KERNEL_KWARGS_SET,
 )
 
@@ -398,15 +398,15 @@ class CompoundStep(_BaseSampler):
         init_state = list(init.values())
         init_keys = list(init.keys())
 
-        # assigned variabled to each sampler
-        assigned_variables: list = []
         # assignd samplers for free variables
         make_kernel_fn: list = []
         # user passed kwargs for each sampler in `make_kernel_fn`
         part_kernel_kwargs: list = []
 
         for i, state_part in enumerate(init_state):
-            untrs_var, unscoped_tr_var = scope_remove_transformed_part(init_keys[i])
+            untrs_var, unscoped_tr_var = scope_remove_transformed_part_if_required(
+                init_keys[i], state.transformed_values
+            )
             # get the distribution for the random variable name
 
             distr = continuous_distrs.get(untrs_var, None)
@@ -442,6 +442,8 @@ class CompoundStep(_BaseSampler):
                 part_kernel_kwargs.append({})
                 # update with user provided kwargs
                 part_kernel_kwargs[-1].update(kwargs)
+                # if proposal function is provided then replace
+                func = part_kernel_kwargs[-1].get("new_state_fn", func)
                 # add the default `new_state_fn` for the distr
                 # `new_state_fn` is supported for only RandomWalkMetropolis transition
                 # kernel.
@@ -460,7 +462,7 @@ class CompoundStep(_BaseSampler):
                 sampler = NUTS if distr._grad_support else RandomWalkM
                 make_kernel_fn.append(sampler)
                 part_kernel_kwargs.append({})
-                _log.info("Auto-assigning NUTS sampler...")
+                # _log.info("Auto-assigning NUTS sampler...")
 
         # `make_kernel_fn` contains (len(state)) sampler methods, this could lead
         # to more overhed when we are iterating at each call of `one_step` in the

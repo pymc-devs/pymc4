@@ -1,4 +1,5 @@
 import abc
+import itertools
 import inspect
 import functools
 from typing import Optional, List
@@ -68,7 +69,6 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         """
         if state is not None and observed is not None:
             raise ValueError("Can't use both `state` and `observed` arguments")
-
         (
             logpfn,
             init,
@@ -81,10 +81,16 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             state=state,
             observed=observed,
             collect_reduced_log_prob=use_auto_batching,
+            parent_inds=self.parent_inds if is_compound else None,
         )
 
         init_state = list(init.values())
         init_keys = list(init.keys())
+
+        if is_compound:
+            init_state = [init_state[i] for i in self.parent_inds]
+            init_keys = [init_keys[i] for i in self.parent_inds]
+
         if use_auto_batching:
             self.parallel_logpfn = vectorize_logp_function(logpfn)
             self.deterministics_callback = vectorize_logp_function(_deterministics_callback)
@@ -104,8 +110,6 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         else:
             results, sample_stats = self._run_chains(init_state, burn_in,)
 
-
-
         posterior = dict(zip(init_keys, results))
         # Keep in sync with pymc3 naming convention
         if len(sample_stats) > len(self._stat_names):
@@ -122,9 +126,6 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
     @tf.function(autograph=False)
     def _run_chains(self, init, burn_in):
-        """
-            Docs
-        """
         kernel = self._kernel(target_log_prob_fn=self.parallel_logpfn, **self.kernel_kwargs)
         if self._adaptation:
             adapt_kernel = self._adaptation(inner_kernel=kernel, **self.adaptation_kwargs,)
@@ -303,23 +304,73 @@ class CompoundStep(_BaseSampler):
         self._stat_names = ["compound_results"]
 
     def _trace_fn(self, current_state, pkr):
-        return (pkr, ) + tuple(self.deterministics_callback(*current_state))
+        return (pkr,) + tuple(self.deterministics_callback(*current_state))
 
     @staticmethod
     def _convert_sampler_methods(sampler_methods):
         sampler_methods_dict = {}
-        for (var, sampler) in sampler_methods:
+        for sampler_item in sampler_methods:
+            if len(sampler_item) < 3:
+                var, sampler = sampler_item
+                kwargs = {}
+            else:
+                var, sampler, kwargs = sampler_item
             if isinstance(var, (list, tuple)):
                 for var_ in var:
-                    sampler_methods_dict[var_] = sampler
+                    sampler_methods_dict[var_] = (sampler, kwargs)
             else:
-                sampler_methods_dict[var] = sampler
+                sampler_methods_dict[var] = (sampler, kwargs)
         return sampler_methods_dict
+
+    def _merge_samplers(self, make_kernel_fn, part_kernel_kwargs):
+        num_vars = len(make_kernel_fn)
+        samplers = []
+        parents = list(range(num_vars))
+        kernels = []
+
+        # DSU ops
+        def get_set(p):
+            if parents[p] == p:
+                return p
+            else:
+                return get_set(parents[p])
+
+        def union_set(p1, p2):
+            p1 = get_set(p1)
+            p2 = get_set(p2)
+            if p1 != p2:
+                parents[max(p1, p2)] = min(p1, p2)
+
+        # merge sets, DSU
+        for (i, j) in itertools.combinations(range(num_vars), 2):
+            if (
+                make_kernel_fn[i] == make_kernel_fn[j]
+                and part_kernel_kwargs[i] == part_kernel_kwargs[j]
+            ):
+                union_set(i, j)
+        # assign kernels based on unique sets
+        used_p = {}
+        for i, p in enumerate(parents):
+            if p not in used_p:
+                kernels.append((make_kernel_fn[i], part_kernel_kwargs[i]))
+                used_p[p] = True
+
+        # calculate independent set lengths
+        parent_used = {}
+        set_lengths = []
+        for p in parents:
+            if p in parent_used:
+                set_lengths[parent_used[p]] += 1
+            else:
+                parent_used[p] = len(set_lengths)
+                set_lengths.append(1)
+        self.parent_inds = sorted(range(len(parents)), key=lambda k: parents[k])
+        return kernels, set_lengths
 
     def _assign_default_methods(
         self,
         *,
-        sampler_methods:dict={},
+        sampler_methods: List = [],
         state: Optional[flow.SamplingState] = None,
         observed: Optional[dict] = None,
     ):
@@ -336,9 +387,6 @@ class CompoundStep(_BaseSampler):
         make_kernel_fn: list = []
         # user passed kwargs for each sampler in `make_kernel_fn`
         part_kernel_kwargs: list = []
-
-        # check for used sampler
-        used_samplers: dict = {}
 
         for i, state_part in enumerate(init_state):
             # TODO: fix naming here
@@ -362,12 +410,8 @@ class CompoundStep(_BaseSampler):
             #    should be create also. Because sampler is initialized with
             #    the `new_state_fn` argument.
             if unscoped_var in sampler_methods or callable(func):
-                part_kernel_kwargs.append({})
-                # add the default `new_state_fn`
-                if callable(func):
-                    part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
+                sampler, kwargs = sampler_methods[unscoped_var]
 
-                sampler = sampler_methods[unscoped_var]
                 # check for the sampler able to sampler from the distribution
                 if not distr._grad_support and sampler._grad:
                     raise ValueError(
@@ -377,25 +421,28 @@ class CompoundStep(_BaseSampler):
                     )
 
                 # add sampler to the dict
-                make_kernel_fn.append(sampler._default_kernel_maker())
+                make_kernel_fn.append(sampler)
+                part_kernel_kwargs.append({})
+                # update with user provided kwargs
+                part_kernel_kwargs[-1].update(kwargs)
+                # add the default `new_state_fn` for the distr
+                if callable(func):
+                    part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
             else:
                 # by default if user didn't not provide any sampler
                 # we choose NUTS for the variable with gradient and
                 # RWM for the variable without the gradient
-                kernel_ = NUTS_ if distr._grad_support else RandomWalkM
-                prev_index = used_samplers.get(kernel_, -1)
-                if prev_index >= 0:
-                    assigned_variables[prev_index].append(unscoped_var)
-                else:
-                    used_samplers[kernel_] = len(make_kernel_fn)
-                    make_kernel_fn.append(kernel_._default_kernel_maker()
-                    part_kernel_kwargs.append({})
+                sampler = NUTS if distr._grad_support else RandomWalkM
+                make_kernel_fn.append(sampler)
+                part_kernel_kwargs.append({})
 
-        self.kernel_kwargs["make_kernel_fn"] = make_kernel_fn
-        self.kernel_kwargs["kernel_kwargs"] = part_kernel_kwargs
+        kernels, set_lengths = self._merge_samplers(make_kernel_fn, part_kernel_kwargs)
+        self.kernel_kwargs["compound_samplers"] = kernels
+        self.kernel_kwargs["compound_set_lengths"] = set_lengths
 
     def __call__(self, *args, **kwargs):
         return self.sample(*args, is_compound=True, **kwargs)
+
 
 def build_logp_and_deterministic_functions(
     model,
@@ -403,6 +450,7 @@ def build_logp_and_deterministic_functions(
     observed: Optional[dict] = None,
     state: Optional[flow.SamplingState] = None,
     collect_reduced_log_prob: bool = True,
+    parent_inds: Optional[List] = None,
 ):
     if not isinstance(model, Model):
         raise TypeError(
@@ -422,6 +470,10 @@ def build_logp_and_deterministic_functions(
 
     observed_var = state.observed_values
     unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
+
+    if parent_inds:
+        unobserved_keys = [unobserved_keys[i] for i in parent_inds]
+        unobserved_values = [unobserved_values[i] for i in parent_inds]
 
     if collect_reduced_log_prob:
 

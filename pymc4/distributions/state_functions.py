@@ -79,7 +79,6 @@ def bernoulli_uniform_fn(scale=1.0, name=None):
                 generate_new_values(state_part)
                 for scale_part, state_part in zip(scales, state_parts)
             ]
-            print(deltas)
             return deltas
 
     return _fn

@@ -18,7 +18,7 @@ def _target_log_prob_fn_part(*state_part, idx, len_, state, target_log_prob_fn):
     return log_prob
 
 
-def kernel_create_object(sampleri, curr_indx, setli, current_state, target_log_prob_fn, seed=None):
+def kernel_create_object(sampleri, curr_indx, setli, current_state, target_log_prob_fn):
     mkf = sampleri[0]
     kernel = mkf.kernel(
         target_log_prob_fn=functools.partial(
@@ -29,7 +29,6 @@ def kernel_create_object(sampleri, curr_indx, setli, current_state, target_log_p
             target_log_prob_fn=target_log_prob_fn,
         ),
         **{**sampleri[1], **mkf.kernel_kwargs},
-        seed=seed,
     )
     if mkf.adaptive_kernel:
         kernel = mkf.adaptive_kernel(inner_kernel=kernel, **mkf.adaptive_kwargs)
@@ -104,7 +103,7 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
                 self._cumulative_lengths,
             ):
                 kernel = kernel_create_object(
-                    sampleri, curri, setli, current_state, self._target_log_prob_fn, seed
+                    sampleri, curri, setli, current_state, self._target_log_prob_fn
                 )
                 next_state_, next_result_ = kernel.one_step(
                     current_state[slice(curri, curri + setli)], resulti, seed=seed

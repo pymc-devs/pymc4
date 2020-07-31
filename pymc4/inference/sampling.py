@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.mcmc.samplers import reg_samplers
@@ -20,7 +20,8 @@ def sample(
     state: Optional[flow.SamplingState] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
-    sampler_methods=None,
+    sampler_methods: Optional[List] = None,
+    seed: int = None,
     **kwargs,
 ):
     """
@@ -112,6 +113,7 @@ def sample(
         state=state,
         use_auto_batching=use_auto_batching,
         xla=xla,
+        seed=seed,
     )
 
 

@@ -2,6 +2,7 @@ import abc
 import itertools
 import inspect
 import functools
+import logging
 from typing import Optional, List
 import tensorflow as tf
 from tensorflow_probability import mcmc
@@ -21,6 +22,9 @@ from pymc4.mcmc.tf_support import _CompoundStepTF
 __all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep"]
 
 reg_samplers = {}
+# TODO: come up with clever design for logging
+_log = logging.getLogger('pymc4')
+_log.setLevel(logging.INFO)
 
 
 def register_sampler(cls):
@@ -438,7 +442,7 @@ class CompoundStep(_BaseSampler):
                 # add the default `new_state_fn` for the distr
                 # `new_state_fn` is supported for only RandomWalkMetropolis transition
                 # kernel.
-                if callable(func) and isinstance(sampler, RandomWalkM):
+                if callable(func) and sampler._name == "randomwalkm":
                     part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
             elif callable(func):
                 # If distribution has defined `new_state_fn` attribute then we need
@@ -453,6 +457,7 @@ class CompoundStep(_BaseSampler):
                 sampler = NUTS if distr._grad_support else RandomWalkM
                 make_kernel_fn.append(sampler)
                 part_kernel_kwargs.append({})
+                _log.info('Auto-assigning NUTS sampler...')
 
         # `make_kernel_fn` contains (len(state)) sampler methods, this could lead
         # to more overhed when we are iterating at each call of `one_step` in the

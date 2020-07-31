@@ -10,6 +10,7 @@ from pymc4.mcmc.utils import (
     initialize_sampling_state,
     trace_to_arviz,
     initialize_state,
+    scope_remove_transformed_part,
     KERNEL_KWARGS_SET,
 )
 
@@ -23,7 +24,7 @@ __all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep"]
 
 reg_samplers = {}
 # TODO: come up with clever design for logging
-_log = logging.getLogger('pymc4')
+_log = logging.getLogger("pymc4")
 _log.setLevel(logging.INFO)
 
 
@@ -45,7 +46,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
                 )
             )
 
-        non_sampling_state, disc_names, cont_names, _ = initialize_state(model)
+        _, _, disc_names, cont_names, _, _ = initialize_state(model)
         if self._grad is True and disc_names:
             raise ValueError("Discrete distributions can't be used with gradient-based sampler")
 
@@ -390,7 +391,9 @@ class CompoundStep(_BaseSampler):
     ):
         sampler_methods = CompoundStep._convert_sampler_methods(sampler_methods)
 
-        (state, _, _, _) = initialize_state(self.model, observed=observed, state=state)
+        (_, state, _, _, continuous_distrs, discrete_distrs) = initialize_state(
+            self.model, observed=observed, state=state
+        )
         init = state.all_unobserved_values
         init_state = list(init.values())
         init_keys = list(init.keys())
@@ -403,12 +406,12 @@ class CompoundStep(_BaseSampler):
         part_kernel_kwargs: list = []
 
         for i, state_part in enumerate(init_state):
-            # TODO: fix naming here
-            unscoped_var = init_keys[i].rsplit("/", 1)[-1]
+            untrs_var, unscoped_tr_var = scope_remove_transformed_part(init_keys[i])
             # get the distribution for the random variable name
-            distr = state.continuous_distributions.get(init_keys[i], None)
+
+            distr = continuous_distrs.get(untrs_var, None)
             if distr is None:
-                distr = state.discrete_distributions[init_keys[i]]
+                distr = discrete_distrs[untrs_var]
 
             # get custom `new_state_fn` for the distribution
             func = distr._default_new_state_part
@@ -423,14 +426,14 @@ class CompoundStep(_BaseSampler):
             # 2. If the distribution has `new_state_fn` then the new sampler
             #    should be create also. Because sampler is initialized with
             #    the `new_state_fn` argument.
-            if unscoped_var in sampler_methods:
-                sampler, kwargs = sampler_methods[unscoped_var]
+            if unscoped_tr_var in sampler_methods:
+                sampler, kwargs = sampler_methods[unscoped_tr_var]
 
                 # check for the sampler able to sampler from the distribution
                 if not distr._grad_support and sampler._grad:
                     raise ValueError(
                         "The `{}` doesn't support gradient, please provide an appropriate sampler method".format(
-                            unscoped_var
+                            unscoped_tr_var
                         )
                     )
 
@@ -457,7 +460,7 @@ class CompoundStep(_BaseSampler):
                 sampler = NUTS if distr._grad_support else RandomWalkM
                 make_kernel_fn.append(sampler)
                 part_kernel_kwargs.append({})
-                _log.info('Auto-assigning NUTS sampler...')
+                _log.info("Auto-assigning NUTS sampler...")
 
         # `make_kernel_fn` contains (len(state)) sampler methods, this could lead
         # to more overhed when we are iterating at each call of `one_step` in the

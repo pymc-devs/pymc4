@@ -208,7 +208,7 @@ def test_cov_funcs_matrix_no_ard(get_cov_func):
     test_points, expected_matrix, _, feature_ndims, KernelClass = build_class_and_get_test_points(
         attr_name, kwargs
     )
-    kernel = KernelClass(**kwargs, feature_ndims=feature_ndims, ARD=False)
+    kernel = KernelClass(**kwargs, feature_ndims=feature_ndims)
     cov = kernel(*test_points).numpy()
     assert cov.dtype == expected_matrix.dtype
     assert cov.shape == expected_matrix.shape
@@ -222,7 +222,7 @@ def test_cov_funcs_point_eval_no_ard(get_cov_func):
     test_points, _, expected_point, feature_ndims, KernelClass = build_class_and_get_test_points(
         attr_name, kwargs
     )
-    kernel = KernelClass(**kwargs, feature_ndims=feature_ndims, ARD=False)
+    kernel = KernelClass(**kwargs, feature_ndims=feature_ndims)
     try:
         point = kernel.evaluate_kernel(*test_points).numpy()
     except NotImplementedError:

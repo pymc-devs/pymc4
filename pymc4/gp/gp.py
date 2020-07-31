@@ -518,14 +518,16 @@ class MarginalGP(BaseGP):
         mean_total: Mean,
         jitter: Optional[float] = None,
     ):
+        if self._is_univariate(X) and len(y.shape) < len(X.shape[: -(self.feature_ndims)]):
+            y = tf.expand_dims(y, -1)
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
         Knx = noise(X, X)
-        rxx = y - mean_total(X)
+        rxx = tf.expand_dims(y - mean_total(X), -1)
         L = tf.linalg.cholesky(stabilize(Kxx, shift=jitter) + Knx)
-        A = tf.linalg.solve_triangular(L, Kxs)
-        v = tf.linalg.solve_triangular(L, rxx)
-        mu = self.mean_fn(Xnew) + tf.linalg.matmul(A, v, transpose_a=True)
+        A = tf.linalg.triangular_solve(L, Kxs, lower=True)
+        v = tf.linalg.triangular_solve(L, rxx, lower=True)
+        mu = tf.expand_dims(self.mean_fn(Xnew), -1) + tf.linalg.matmul(A, v, transpose_a=True)
         if diag:
             Kss = self.cov_fn(Xnew, Xnew, diag=True)
             var = Kss - tf.reduce_sum(tf.square(A), axis=0)
@@ -533,7 +535,7 @@ class MarginalGP(BaseGP):
                 var += noise(Xnew, diag=True)
             return tf.squeeze(mu, axis=[-1]), var
         else:
-            Kss = self.cov_fn(Xnew)
+            Kss = self.cov_fn(Xnew, Xnew)
             cov = Kss - tf.linalg.matmul(A, A, transpose_a=True)
             if pred_noise:
                 cov += noise(Xnew, Xnew)

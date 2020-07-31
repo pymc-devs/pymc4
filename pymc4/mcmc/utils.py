@@ -132,7 +132,8 @@ def trace_to_arviz(
     )
 
 
-def scope_remove_transformed_part(name: str):
+def scope_remove_transformed_part_if_required(name: str, transformed_values: List[str]):
     name_split = name.split("/")
-    name_split[-1] = name_split[-1][2:][name_split[-1][2:].find("_") + 1 :]
+    if name in transformed_values:
+        name_split[-1] = name_split[-1][2:][name_split[-1][2:].find("_") + 1:]
     return "/".join(name_split), name_split[-1]

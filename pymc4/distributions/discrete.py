@@ -1,5 +1,7 @@
 """PyMC4 discrete random variables."""
 import tensorflow as tf
+import numpy as np
+from functools import partial
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
@@ -310,7 +312,8 @@ class Categorical(BoundedDiscreteDistribution):
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
-        self._default_new_state_part = categorical_uniform_fn
+        event_shape = np.array(probs).shape[-1]
+        self._default_new_state_part = partial(categorical_uniform_fn, event_shape)
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):

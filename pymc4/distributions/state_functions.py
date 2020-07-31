@@ -7,7 +7,7 @@ tfd = tfp.distributions
 __all__ = ["categorical_uniform_fn"]
 
 
-def categorical_uniform_fn(scale=1.0, name=None):
+def categorical_uniform_fn(event_shape, scale=1.0, name=None):
     """Returns a callable that samples new proposal from Categorical distribution with uniform probabilites
     Args:
        scale: a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
@@ -30,12 +30,10 @@ def categorical_uniform_fn(scale=1.0, name=None):
                 scales *= len(state_parts)
             if len(state_parts) != len(scales):
                 raise ValueError("`scale` must broadcast with `state_parts`")
-            probs = tf.ones_like(state_parts)
-
             deltas = [
-                tfd.Categorical(
-                    probs=probs / tf.math.reduce_sum(probs, -1), dtype=tf.float32
-                ).sample(seed=seed, sample_shape=5)
+                tfd.Categorical(probs=[0.5] * event_shape).sample(
+                    seed=seed, sample_shape=tf.shape(state_part)
+                )
                 for scale_part, state_part in zip(scales, state_parts)
             ]
             return deltas

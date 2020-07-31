@@ -310,6 +310,8 @@ class CompoundStep(_BaseSampler):
 
     @staticmethod
     def _convert_sampler_methods(sampler_methods):
+        if not sampler_methods:
+            return {}
         sampler_methods_dict = {}
         for sampler_item in sampler_methods:
             # user can pass tuple of lenght=2 or lenght=3
@@ -417,7 +419,7 @@ class CompoundStep(_BaseSampler):
             # 2. If the distribution has `new_state_fn` then the new sampler
             #    should be create also. Because sampler is initialized with
             #    the `new_state_fn` argument.
-            if unscoped_var in sampler_methods or callable(func):
+            if unscoped_var in sampler_methods:
                 sampler, kwargs = sampler_methods[unscoped_var]
 
                 # check for the sampler able to sampler from the distribution
@@ -434,8 +436,16 @@ class CompoundStep(_BaseSampler):
                 # update with user provided kwargs
                 part_kernel_kwargs[-1].update(kwargs)
                 # add the default `new_state_fn` for the distr
-                if callable(func):
+                # `new_state_fn` is supported for only RandomWalkMetropolis transition
+                # kernel.
+                if callable(func) and isinstance(sampler, RandomWalkM):
                     part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
+            elif callable(func):
+                # If distribution has defined `new_state_fn` attribute then we need
+                # to assign `RandomWalkMetropolis` transition kernel
+                make_kernel_fn.append(RandomWalkM)
+                part_kernel_kwargs.append({})
+                part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
             else:
                 # by default if user didn't not provide any sampler
                 # we choose NUTS for the variable with gradient and

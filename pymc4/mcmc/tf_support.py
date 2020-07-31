@@ -18,7 +18,7 @@ def _target_log_prob_fn_part(*state_part, idx, len_, state, target_log_prob_fn):
     return log_prob
 
 
-def kernel_create_object(sampleri, curr_indx, setli, current_state, target_log_prob_fn, seed):
+def kernel_create_object(sampleri, curr_indx, setli, current_state, target_log_prob_fn, seed=None):
     mkf = sampleri[0]
     kernel = mkf.kernel(
         target_log_prob_fn=functools.partial(
@@ -38,11 +38,7 @@ def kernel_create_object(sampleri, curr_indx, setli, current_state, target_log_p
 
 class _CompoundStepTF(kernel_base.TransitionKernel):
     def __init__(
-        self,
-        target_log_prob_fn,
-        compound_samplers,
-        compound_set_lengths,
-        name=None,
+        self, target_log_prob_fn, compound_samplers, compound_set_lengths, name=None,
     ):
         """
            Initializes the compound step transition kernel
@@ -108,7 +104,7 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
                 self._cumulative_lengths,
             ):
                 kernel = kernel_create_object(
-                    sampleri, curri, setli, current_state, self._target_log_prob_fn, self.seed
+                    sampleri, curri, setli, current_state, self._target_log_prob_fn, seed
                 )
                 next_state_, next_result_ = kernel.one_step(
                     current_state[slice(curri, curri + setli)], resulti, seed=seed

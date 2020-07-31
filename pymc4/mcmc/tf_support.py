@@ -48,6 +48,7 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
             (sampler[0]._default_kernel_maker(), sampler[1]) for sampler in compound_samplers
         ]
         self._compound_set_lengths = compound_set_lengths
+        self._cumulative_lengths = np.cumsum(compound_set_lengths) - compound_set_lengths
         self._name = name
         self._parameters = dict(target_log_prob_fn=target_log_prob_fn, name=name,)
 
@@ -71,7 +72,6 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
         """Takes one step of the TransitionKernel
         TODO: More specific fore compound step
         """
-        tf.print("one_step")
         with tf.name_scope(mcmc_util.make_name(self.name, "compound", "one_step")):
             unwrap_state_list = not tf.nest.is_nested(current_state)
             if unwrap_state_list:
@@ -80,21 +80,22 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
             next_results = []
             previous_kernel_results = previous_kernel_results.compound_results
 
-            curr_indx = 0
-            for sampleri, setli, resulti in zip(
-                self._compound_samplers, self._compound_set_lengths, previous_kernel_results
+            for sampleri, setli, resulti, curri in zip(
+                self._compound_samplers,
+                self._compound_set_lengths,
+                previous_kernel_results,
+                self._cumulative_lengths,
             ):
                 kernel = kernel_create_object(
-                    sampleri, curr_indx, setli, current_state, self._target_log_prob_fn
+                    sampleri, curri, setli, current_state, self._target_log_prob_fn
                 )
                 next_state_, next_result_ = kernel.one_step(
-                    current_state[slice(curr_indx, curr_indx + setli)], resulti
+                    current_state[slice(curri, curri + setli)], resulti
                 )
                 # concat state results for flattened list
                 next_state += next_state_
                 # save current results
                 next_results.append(next_result_)
-                curr_indx += setli
         return [next_state, CompoundStepResults(compound_results=next_results)]
 
     def bootstrap_results(self, init_state):
@@ -107,15 +108,15 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
             init_state = [tf.convert_to_tensor(x) for x in init_state]
 
             init_results = []
-            curr_indx = 0
-            for sampleri, setli in zip(self._compound_samplers, self._compound_set_lengths):
+            for sampleri, setli, curri in zip(
+                self._compound_samplers, self._compound_set_lengths, self._cumulative_lengths
+            ):
                 kernel = kernel_create_object(
-                    sampleri, curr_indx, setli, init_state, self._target_log_prob_fn
+                    sampleri, curri, setli, init_state, self._target_log_prob_fn
                 )
-                # bootstrap results in list
+                # bootstrap results in listj
                 init_results.append(
-                    kernel.bootstrap_results(init_state[slice(curr_indx, curr_indx + setli)])
+                    kernel.bootstrap_results(init_state[slice(curri, curri + setli)])
                 )
-                curr_indx += setli
 
         return CompoundStepResults(compound_results=init_results)

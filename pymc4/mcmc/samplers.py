@@ -242,7 +242,7 @@ class NUTS(_BaseSampler):
     _grad = True
 
     _default_adapter_kwargs: dict = {
-        "num_adaptation_steps": 100,  # TODO: why thoud?
+        "num_adaptation_steps": 100,
         "step_size_getter_fn": lambda pkr: pkr.step_size,
         "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
         "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
@@ -310,6 +310,14 @@ class CompoundStep(_BaseSampler):
     def _convert_sampler_methods(sampler_methods):
         sampler_methods_dict = {}
         for sampler_item in sampler_methods:
+            # user can pass tuple of lenght=2 or lenght=3
+            # we ned to check that.
+            if len(sampler_item) not in [2, 3]:
+                raise ValueError(
+                    "You need to provide `sampler_methods` as the tuple of \
+                    the length in [2, 3]. If additional kwargs for kernel \
+                    are provided then the lenght of tuple is equal to 3."
+                )
             if len(sampler_item) < 3:
                 var, sampler = sampler_item
                 kwargs = {}
@@ -324,25 +332,23 @@ class CompoundStep(_BaseSampler):
 
     def _merge_samplers(self, make_kernel_fn, part_kernel_kwargs):
         num_vars = len(make_kernel_fn)
-        samplers = []
         parents = list(range(num_vars))
         kernels = []
 
         # DSU ops
         def get_set(p):
-            if parents[p] == p:
-                return p
-            else:
-                return get_set(parents[p])
+            return p if parents[p] == p else get_set(parents[p])
 
         def union_set(p1, p2):
-            p1 = get_set(p1)
-            p2 = get_set(p2)
+            p1, p2 = get_set(p1), get_set(p2)
             if p1 != p2:
                 parents[max(p1, p2)] = min(p1, p2)
 
         # merge sets, DSU
         for (i, j) in itertools.combinations(range(num_vars), 2):
+            # For the sampler to be the same we are comparing
+            # both classes of the chosen sampler and the key
+            # arguments.
             if (
                 make_kernel_fn[i] == make_kernel_fn[j]
                 and part_kernel_kwargs[i] == part_kernel_kwargs[j]
@@ -436,7 +442,11 @@ class CompoundStep(_BaseSampler):
                 make_kernel_fn.append(sampler)
                 part_kernel_kwargs.append({})
 
+        # `make_kernel_fn` contains (len(state)) sampler methods, this could lead
+        # to more overhed when we are iterating at each call of `one_step` in the
+        # compound step kernel. For that we need to merge some of the samplers.
         kernels, set_lengths = self._merge_samplers(make_kernel_fn, part_kernel_kwargs)
+        # save to use late for compound kernel init
         self.kernel_kwargs["compound_samplers"] = kernels
         self.kernel_kwargs["compound_set_lengths"] = set_lengths
 

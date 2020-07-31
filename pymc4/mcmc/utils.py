@@ -8,6 +8,7 @@ KERNEL_KWARGS_SET = collections.namedtuple(
 )
 
 from pymc4 import Model, flow
+from pymc4.distributions import distribution
 
 
 def initialize_sampling_state(
@@ -34,26 +35,35 @@ def initialize_sampling_state(
 
 
 def initialize_state(
-    model: Model,
-    observed: Optional[dict] = None,
-    state: Optional[flow.SamplingState] = None,
-    return_non_sampling_state=False,
-) -> Tuple[flow.SamplingState, List[str], List[str], Optional[flow.SamplingState]]:
+    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
+) -> Tuple[
+    flow.SamplingState,
+    List[str],
+    List[str],
+    List[distribution.Distribution],
+    List[distribution.Distribution],
+]:
     """
     Get list of discrete/continuous distributions
     Parameters
     ----------
     model : pymc4.Model
+    observed : Optional[dict]
+    state : Optional[flow.SamplingState]
     Returns
     -------
     state: Model
         Unsampled version of sample object
+    sampling_state:
+        The model's sampling state
     free_discrete_names: List[str]
         The list of free discrete variables
     free_continuous_names: List[str]
         The list of free continuous variables
-    sampling_state:
-        The model's sampling state
+    cont_distr: List[distribution.Distribution]
+        The list of all continous distributions
+    disc_distr: List[distribution.Distribution]
+        The list of all discrete distributions
     """
     _, state = flow.evaluate_model_transformed(model)
     free_discrete_names, free_continuous_names = (
@@ -64,9 +74,17 @@ def initialize_state(
     free_discrete_names = list(filter(lambda x: x not in observed_rvs, free_discrete_names))
     free_continuous_names = list(filter(lambda x: x not in observed_rvs, free_continuous_names))
     sampling_state = None
-    if return_non_sampling_state is True:
-        sampling_state, _ = state.as_sampling_state()
-    return state, free_discrete_names, free_continuous_names, sampling_state
+    cont_distrs = state.continuous_distributions
+    disc_distrs = state.discrete_distributions
+    sampling_state, _ = state.as_sampling_state()
+    return (
+        state,
+        sampling_state,
+        free_discrete_names,
+        free_continuous_names,
+        cont_distrs,
+        disc_distrs,
+    )
 
 
 def trace_to_arviz(
@@ -112,3 +130,9 @@ def trace_to_arviz(
         posterior_predictive=posterior_predictive,
         observed_data=observed_data,
     )
+
+
+def scope_remove_transformed_part(name: str):
+    name_split = name.split("/")
+    name_split[-1] = name_split[-1][2:][name_split[-1][2:].find("_") + 1 :]
+    return "/".join(name_split), name_split[-1]

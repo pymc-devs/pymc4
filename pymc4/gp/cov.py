@@ -26,7 +26,6 @@ from tensorflow_probability.python.math.psd_kernels import (
     Polynomial as TFPPolynomial,
     Linear as TFPLinear,
 )
-from tensorflow_probability.python.math.psd_kernels.internal import util
 
 # from tensorflow_probability.python.math.psd_kernels.internal import util
 

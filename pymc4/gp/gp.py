@@ -1,6 +1,6 @@
 """An Interface for creating Gaussian Process Models in PyMC4."""
 
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 import tensorflow as tf
 
@@ -359,9 +359,9 @@ class MarginalGP(BaseGP):
         cov = Kxx + Knx
         return mu, stabilize(cov, shift=jitter)
 
-    def marginal_likelihood(
+    def marginal_likelihood(  # type: ignore
         self,
-        name,
+        name: NameType,
         X: ArrayLike,
         y: ArrayLike,
         noise: Union[ArrayLike, Covariance],
@@ -435,7 +435,7 @@ class MarginalGP(BaseGP):
         >>> noise = WhiteNoise(1e-2)
         >>> f = gp.marginal_likelihood("f", X, y, noise=noise)
 
-        To sample from the ``marginal_likehood``, use:
+        To run ADVI on the ``MarginalGP`` model, use:
 
         >>> from pymc4.gp.cov import ExpQuad
         >>> @pm.model
@@ -447,7 +447,11 @@ class MarginalGP(BaseGP):
         ...     f = yield gp.marginal_likelihood("f", X, y, noise=noise)
         ...     return f
         ...
-        >>> trace = pm.sample(model(), num_samples=10)
+        >>> advifit = pm.fit(model())
+
+        Once you have fit your model, you can sample using:
+
+        >>> samples = advifit[0].sample(100)
 
         If ``y`` is not the observed data, pass ``is_observed=False`` in the
         marginal likelihood method:
@@ -488,7 +492,7 @@ class MarginalGP(BaseGP):
             return MvNormal(name, loc=mu, covariance_matrix=cov, observed=y, **kwargs)
         return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
-    def _get_given_vals(self, given: dict):
+    def _get_given_vals(self, given: Optional[dict]) -> tuple:
         if given is None:
             given = {}
 
@@ -506,10 +510,10 @@ class MarginalGP(BaseGP):
             X, y, noise = self.X, self.y, self.noise
         return X, y, noise, cov_total, mean_total
 
-    def _build_conditional(
+    def _build_conditional(  # type: ignore
         self,
         Xnew: ArrayLike,
-        pred_noise: Covariance,
+        pred_noise: bool,
         diag: bool,
         X: ArrayLike,
         y: ArrayLike,
@@ -532,7 +536,7 @@ class MarginalGP(BaseGP):
             Kss = self.cov_fn(Xnew, Xnew, diag=True)
             var = Kss - tf.reduce_sum(tf.square(A), axis=0)
             if pred_noise:
-                var += noise(Xnew, diag=True)
+                var += noise(Xnew, Xnew, diag=True)
             return tf.squeeze(mu, axis=[-1]), var
         else:
             Kss = self.cov_fn(Xnew, Xnew)
@@ -541,7 +545,7 @@ class MarginalGP(BaseGP):
                 cov += noise(Xnew, Xnew)
             return tf.squeeze(mu, axis=[-1]), stabilize(cov, shift=jitter)
 
-    def conditional(
+    def conditional(  # type: ignore
         self,
         name: NameType,
         Xnew: ArrayLike,
@@ -569,7 +573,7 @@ class MarginalGP(BaseGP):
         ----------
         name : NameType
             Name of the random variable
-        Xnew : array-_like
+        Xnew : array_like
             Function input values.  If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         pred_noise : bool, optional
@@ -591,6 +595,61 @@ class MarginalGP(BaseGP):
         **kwargs :
             Extra keyword arguments that are passed to `MvNormal` distribution
             constructor.
+
+        Examples
+        --------
+        You can use conditional method to get the conditional distribution
+        over the new data points. This distribution can be used to predict
+        over the new data points:
+
+        >>> import numpy as np
+        >>> import pymc4 as pm
+        >>> from pymc4.gp.cov import WhiteNoise, Constant
+        >>> from pymc4.gp import MarginalGP
+        >>> k = Constant(1.)
+        >>> noise = 1e-2
+        >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
+        >>> y = np.random.rand(X.shape[0]).astype(np.float32)
+        >>> Xnew = np.linspace(0, 1, 100)[:, np.newaxis].astype(np.float32)
+        >>> gp = MarginalGP(cov_fn=k)
+        >>> y_pred = gp.conditional("y_pred", Xnew, given={"X": X, "y": y, "noise": noise})
+
+        If you have a ``marginal_likelihood`` distribution fit on some data, you need
+        not provide the ``given`` dictionary to the ``conditional`` method:
+
+        >>> y_ = gp.marginal_likelihood("y_", X, y, noise=noise)
+        >>> y_pred = gp.conditional("y_pred", Xnew) # no need to pass given
+
+        To run ADVI approximation, create a GP model using ``pm.model``. As quality of
+        ADVI fit differs with respect to the datatype used, it is better to use ``float64``
+        as shown below for stable performance:
+
+        >>> from pymc4.gp.cov import ExpQuad
+        >>> @pm.model
+        ... def model():
+        ...     ls = yield pm.HalfCauchy("ls", scale=5.)
+        ...     noise = yield pm.Beta("noise", 1., 1.)
+        ...     k = ExpQuad(length_scale=ls) + WhiteNoise(1e-2)
+        ...     gp = MarginalGP(cov_fn=k)
+        ...     y_ = yield gp.marginal_likelihood("y_", X, y, noise=noise)
+        ...     y_pred = yield gp.conditional("y_pred", Xnew, jitter=1e-3)
+        ...     return y_pred
+        ...
+        >>> advifit = pm.fit(model())
+        >>> samples = advifit[0].sample(100)
+
+        Stack multiple GPs using either a batch of inputs or using a batch of
+        distribution (priors). For example, to stack 2 GPs with different kernels, use:
+
+        >>> k = Constant([1., 2.])
+        >>> noise = 1e-2
+        >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
+        >>> y = np.random.rand(X.shape[0]).astype(np.float32)
+        >>> Xnew = np.linspace(0, 1, 100)[:, np.newaxis].astype(np.float32)
+        >>> gp = MarginalGP(cov_fn=k)
+        >>> y_pred = gp.conditional("y_pred", Xnew, given={"X": X, "y": y, "noise": noise})
+        >>> y_pred.batch_shape
+        TensorShape([2])
         """
 
         X, y, noise, cov_total, mean_total = self._get_given_vals(given)
@@ -609,51 +668,152 @@ class MarginalGP(BaseGP):
             return MvNormalCholesky(name, loc=mu, scale_tril=chol_factor, **kwargs)
         return MvNormal(name, loc=mu, covariance_matrix=cov, **kwargs)
 
-    # def predict(self, Xnew, point=None, diag=False, pred_noise=False, given=None):
-    #     R"""
-    #     Return the mean vector and covariance matrix of the conditional
-    #     distribution as numpy arrays, given a `point`, such as the MAP
-    #     estimate or a sample from a `trace`.
+    def predict(
+        self,
+        Xnew: ArrayLike,
+        diag: bool = False,
+        pred_noise: bool = False,
+        given: Optional[dict] = None,
+        sample_shape: Any = (),
+        to_numpy: bool = False,
+        *,
+        reparametrize: bool = True,
+        **kwargs,
+    ):
+        r"""
+        Get the prediction vector at new data points.
 
-    #     Parameters
-    #     ----------
-    #     Xnew : array-like
-    #         Function input values.  If one-dimensional, must be a column
-    #         vector with shape `(n, 1)`.
-    #     point : pymc3.model.Point
-    #         A specific point to condition on.
-    #     diag : bool
-    #         If `True`, return the diagonal instead of the full covariance
-    #         matrix.  Default is `False`.
-    #     pred_noise : bool
-    #         Whether or not observation noise is included in the conditional.
-    #         Default is `False`.
-    #     given : dict
-    #         Same as `conditional` method.
-    #     """
-    #     if given is None:
-    #         given = {}
-    #     mu, cov = self.predictt(Xnew, diag, pred_noise, given)
-    #     return draw_values([mu, cov], point=point)
+        Return the samples from the conditional distribution as tensorflow tensors or numpy arrays.
 
-    # def predictt(self, Xnew, diag=False, pred_noise=False, given=None):
-    #     R"""
-    #     Return the mean vector and covariance matrix of the conditional
-    #     distribution as symbolic variables.
-    #     Parameters
-    #     ----------
-    #     Xnew: array-like
-    #         Function input values.  If one-dimensional, must be a column
-    #         vector with shape `(n, 1)`.
-    #     diag: bool
-    #         If `True`, return the diagonal instead of the full covariance
-    #         matrix.  Default is `False`.
-    #     pred_noise: bool
-    #         Whether or not observation noise is included in the conditional.
-    #         Default is `False`.
-    #     given: dict
-    #         Same as `conditional` method.
-    #     """
-    #     givens = self._get_given_vals(given)
-    #     mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
-    #     return mu, cov
+        Parameters
+        ----------
+        Xnew : array-like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        diag : bool, optional
+            If `True`, return the diagonal instead of the full covariance
+            matrix.  Default is `False`.
+        pred_noise : bool, optional
+            Whether or not observation noise is included in the conditional.
+            Default is `False`.
+        given : dict, optional
+            Same as `conditional` method.
+        sample_shape : {tuple, TensorShape, ArrayLike}
+            The number of prediction vectors to be drawn from the
+            conditional distribution.
+        to_numpy : bool, optional
+            Returns `mu` and `cov` as numpy array instead of tensorflow tensors.
+        reparametrize : bool, optional
+            If ``True``, sample from a ``MvNormalCholesky`` distribution else
+            samples from a ``MvNormal`` distribution. (default=``True``)
+
+        Other Parameters
+        ----------------
+        **kwargs :
+            Extra keyword arguments that are passed to `MvNormal` distribution
+            constructor.
+
+        Examples
+        --------
+        To sample from the conditional distribution, use:
+
+        >>> import numpy as np
+        >>> import pymc4 as pm
+        >>> from pymc4.gp.cov import WhiteNoise, Constant
+        >>> from pymc4.gp import MarginalGP
+        >>> k = Constant(1.)
+        >>> noise = 1e-4
+        >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
+        >>> y = np.random.randn(X.shape[0]).astype(np.float32)
+        >>> Xnew = np.linspace(0, 1, 100)[:, np.newaxis].astype(np.float32)
+        >>> gp = MarginalGP(cov_fn=k)
+        >>> y_pred = gp.predict(Xnew, given={"X": X, "y": y, "noise": noise})
+        >>> y_pred.shape
+        TensorShape([100])
+
+        To get multiple prediction vectors (samples from the conditional distribution)
+        at once, pass the `sample_shape`` parameter:
+
+        >>> y_pred = gp.predict(Xnew, given={"X": X, "y": y, "noise": noise}, sample_shape=20)
+        >>> y_pred.shape
+        TensorShape([20, 100])
+
+        To get a numpy array instead of tensorflow tensor, use:
+
+        >>> y_pred = gp.predict(Xnew, given={"X": X, "y": y, "noise": noise}, to_numpy=True)
+        """
+        if given is None:
+            given = {}
+        mu, cov = self.predictt(Xnew, diag, pred_noise, given)
+        if reparametrize:
+            chol_factor = tf.linalg.cholesky(cov)
+            samples = MvNormalCholesky(None, loc=mu, scale_tril=chol_factor, **kwargs).sample(
+                sample_shape=sample_shape
+            )
+            if to_numpy:
+                return samples.numpy()
+            return samples
+        samples = MvNormal(None, loc=mu, covariance_matrix=cov, **kwargs).sample(
+            sample_shape=sample_shape
+        )
+        if to_numpy:
+            return samples.numpy()
+        return samples
+
+    def predictt(
+        self,
+        Xnew: ArrayLike,
+        diag: bool = False,
+        pred_noise: bool = False,
+        given: Optional[dict] = None,
+        to_numpy: bool = False,
+    ):
+        r"""
+        Get point predictions and covariance matrix.
+
+        Returns the mean vector and covariance matrix of the conditional
+        distribution as tensorflow tensors or numpy arrays. The mean vector
+        are point predictions where the conditional probability is maximum.
+        The covariance matrix can be used to quantify the uncertainties in the
+        predictions.
+
+        Parameters
+        ----------
+        Xnew: array_like
+            Function input values.  If one-dimensional, must be a column
+            vector with shape `(n, 1)`.
+        diag: bool, optional
+            If `True`, return the diagonal instead of the full covariance
+            matrix.  Default is `False`.
+        pred_noise: bool, optional
+            Whether or not observation noise is included in the conditional.
+            Default is `False`.
+        given: dict, optional
+            Same as `conditional` method.
+        to_numpy : bool, optional
+            Returns `mu` and `cov` as numpy array instead of tensorflow tensors.
+
+        Examples
+        --------
+        To get the point predictions from conditional distribution, use:
+
+        >>> import numpy as np
+        >>> import pymc4 as pm
+        >>> from pymc4.gp.cov import WhiteNoise, Constant
+        >>> from pymc4.gp import MarginalGP
+        >>> np.random.seed(42)
+        >>> k = Constant(1.)
+        >>> noise = 1e-4
+        >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
+        >>> y = np.random.randn(X.shape[0]).astype(np.float32)
+        >>> Xnew = np.linspace(0, 1, 100)[:, np.newaxis].astype(np.float32)
+        >>> gp = MarginalGP(cov_fn=k)
+        >>> mu, cov = gp.predictt(X, given={"X": X, "y": y, "noise": noise})
+        >>> print(tf.reduce_mean((y - mu)**2))
+        tf.Tensor(0.47046694, shape=(), dtype=float32)
+        """
+        givens = self._get_given_vals(given)
+        mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
+        if to_numpy:
+            return mu.numpy(), cov.numpy()
+        return mu, cov

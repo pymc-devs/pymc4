@@ -19,9 +19,21 @@ def _target_log_prob_fn_part(*state_part, idx, len_, state, target_log_prob_fn):
     return log_prob
 
 
-def kernel_create_object():
-    # TODO: we can replace kernel creation logic
-    ...
+def kernel_create_object(sampleri, curr_indx, setli, current_state, target_log_prob_fn):
+    mkf = sampleri[0]
+    kernel = mkf.kernel(
+        target_log_prob_fn=functools.partial(
+            _target_log_prob_fn_part,
+            idx=curr_indx,
+            len_=setli,
+            state=current_state,
+            target_log_prob_fn=target_log_prob_fn,
+        ),
+        **{**sampleri[1], **mkf.kernel_kwargs},
+    )
+    if mkf.adaptive_kernel:
+        kernel = mkf.adaptive_kernel(inner_kernel=kernel, **mkf.adaptive_kwargs)
+    return kernel
 
 
 class _CompoundStepTF(kernel_base.TransitionKernel):
@@ -30,19 +42,14 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
         TODO:
     """
 
-    def __init__(self, target_log_prob_fn, make_kernel_fn: NamedTuple, kernel_kwargs, li, name=None):
+    def __init__(self, target_log_prob_fn, compound_samplers, compound_set_lengths, name=None):
         self._target_log_prob_fn = target_log_prob_fn
-        self._make_kernel_fn = make_kernel_fn
-        self._kernel_kwargs = kernel_kwargs
-        # TODO: order could be wrong, sort in samplers.py
-        self.li = li
+        self._compound_samplers = [
+            (sampler[0]._default_kernel_maker(), sampler[1]) for sampler in compound_samplers
+        ]
+        self._compound_set_lengths = compound_set_lengths
         self._name = name
-        self._parameters = dict(
-            target_log_prob_fn=target_log_prob_fn,
-            make_kernel_fn=make_kernel_fn,
-            kernel_kwargs=kernel_kwargs,
-            name=name,
-        )
+        self._parameters = dict(target_log_prob_fn=target_log_prob_fn, name=name,)
 
     @property
     def target_log_prob_fn(self):
@@ -64,6 +71,7 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
         """Takes one step of the TransitionKernel
         TODO: More specific fore compound step
         """
+        tf.print("one_step")
         with tf.name_scope(mcmc_util.make_name(self.name, "compound", "one_step")):
             unwrap_state_list = not tf.nest.is_nested(current_state)
             if unwrap_state_list:
@@ -71,29 +79,22 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
             next_state = []
             next_results = []
             previous_kernel_results = previous_kernel_results.compound_results
-            for i, (make_kernel_fni, resulti, kwargsi, li) in enumerate(
-                zip(self._make_kernel_fn, previous_kernel_results, self._kernel_kwargs, self.li)
+
+            curr_indx = 0
+            for sampleri, setli, resulti in zip(
+                self._compound_samplers, self._compound_set_lengths, previous_kernel_results
             ):
-                mkf = make_kernel_fni
-                kernel = mkf.kernel(
-                    target_log_prob_fn=functools.partial(
-                        _target_log_prob_fn_part,
-                        idx=i,
-                        len_=li,
-                        state=current_state,
-                        target_log_prob_fn=self._target_log_prob_fn,
-                    ),
-                    **{**kwargsi, **mkf.kernel_kwargs},
+                kernel = kernel_create_object(
+                    sampleri, curr_indx, setli, current_state, self._target_log_prob_fn
                 )
-                if mkf.adaptive_kernel:
-                    kernel = mkf.adaptive_kernel(inner_kernel=kernel, **mkf.adaptive_kwargs)
                 next_state_, next_result_ = kernel.one_step(
-                    current_state[slice(i, i + li)], resulti
+                    current_state[slice(curr_indx, curr_indx + setli)], resulti
                 )
                 # concat state results for flattened list
                 next_state += next_state_
                 # save current results
                 next_results.append(next_result_)
+                curr_indx += setli
         return [next_state, CompoundStepResults(compound_results=next_results)]
 
     def bootstrap_results(self, init_state):
@@ -106,22 +107,15 @@ class _CompoundStepTF(kernel_base.TransitionKernel):
             init_state = [tf.convert_to_tensor(x) for x in init_state]
 
             init_results = []
-            for i, (make_kernel_fn, kwargsi, li) in enumerate(
-                zip(self._make_kernel_fn, self._kernel_kwargs, self.li)
-            ):
-                mkf = make_kernel_fn
-                kernel = mkf.kernel(
-                    target_log_prob_fn=functools.partial(
-                        _target_log_prob_fn_part,
-                        idx=i,
-                        len_=li,
-                        state=init_state,
-                        target_log_prob_fn=self._target_log_prob_fn,
-                    ),
-                    **{**kwargsi, **mkf.kernel_kwargs},
+            curr_indx = 0
+            for sampleri, setli in zip(self._compound_samplers, self._compound_set_lengths):
+                kernel = kernel_create_object(
+                    sampleri, curr_indx, setli, init_state, self._target_log_prob_fn
                 )
-                if mkf.adaptive_kernel:
-                    kernel = mkf.adaptive_kernel(inner_kernel=kernel, **mkf.adaptive_kwargs)
                 # bootstrap results in list
-                init_results.append(kernel.bootstrap_results(init_state[slice(i, i + li)]))
+                init_results.append(
+                    kernel.bootstrap_results(init_state[slice(curr_indx, curr_indx + setli)])
+                )
+                curr_indx += setli
+
         return CompoundStepResults(compound_results=init_results)

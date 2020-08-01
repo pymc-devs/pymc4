@@ -121,6 +121,7 @@ def gaussian_round_fn(scale=1.0, name=None):
 
     return _fn
 
+
 def poisson_fn(scale=1.0, name=None):
     """Returns a callable that samples new proposal from Poisson
     Args:

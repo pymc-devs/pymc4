@@ -130,7 +130,6 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             for key in keys_to_cast:
                 posterior[key] = tf.cast(posterior[key], dtype=tf.int32)
 
-
         # Keep in sync with pymc3 naming convention
         if len(sample_stats) > len(self._stat_names):
             deterministic_values = sample_stats[len(self._stat_names) :]

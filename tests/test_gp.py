@@ -32,7 +32,11 @@ class TestLatentGP:
             k = ExpQuad(length_scale=ls)
             gp = LatentGP(cov_fn=k)
             f = yield gp.prior("f", self.X.astype(np.float32))
-            fcond = yield gp.conditional("fcond", self.Xnew.astype(np.float32), given={"X": self.X.astype(np.float32), "f": f})
+            fcond = yield gp.conditional(
+                "fcond",
+                self.Xnew.astype(np.float32),
+                given={"X": self.X.astype(np.float32), "f": f},
+            )
 
         self.model = model
 
@@ -137,7 +141,9 @@ class TestMarginalGP:
             k = ExpQuad(length_scale=ls)
             gp = MarginalGP(cov_fn=k)
             sigma = yield pm.Beta("sigma", 1.0, 1.0)
-            y_ = yield gp.marginal_likelihood("y_", self.X.astype(np.float32), self.y.astype(np.float32), noise=sigma, jitter=0)
+            y_ = yield gp.marginal_likelihood(
+                "y_", self.X.astype(np.float32), self.y.astype(np.float32), noise=sigma, jitter=0
+            )
             y_pred = yield gp.conditional("y_pred", self.Xnew.astype(np.float32))
 
         self.model = model
@@ -173,7 +179,9 @@ class TestMarginalGP:
         assert not np.isnan(samples).any()
 
     def test_conditional(self, tf_seed):
-        y_pred = self.gp.conditional("y_pred", self.Xnew, given={"X": self.X, "y": self.y, "noise": self.noise})
+        y_pred = self.gp.conditional(
+            "y_pred", self.Xnew, given={"X": self.X, "y": self.y, "noise": self.noise}
+        )
         samples = y_pred.sample(5)
         assert isinstance(y_pred, pm.MvNormalCholesky)
         assert y_pred.batch_shape == ()
@@ -182,7 +190,9 @@ class TestMarginalGP:
         assert not np.isnan(samples).any()
 
     def test_conditional_univariate(self, tf_seed):
-        y_pred = self.gp.conditional("y_pred", self.Xnewuni, given={"X": self.X, "y": self.y, "noise": self.noise})
+        y_pred = self.gp.conditional(
+            "y_pred", self.Xnewuni, given={"X": self.X, "y": self.y, "noise": self.noise}
+        )
         samples = y_pred.sample(5)
         assert isinstance(y_pred, pm.Normal)
         assert y_pred.batch_shape == ()
@@ -191,7 +201,9 @@ class TestMarginalGP:
         assert not np.isnan(samples).any()
 
     def test_conditional_batched(self, tf_seed):
-        y_pred = self.gp.conditional("y_pred", self.Xnewmv, given={"X": self.X, "y": self.y, "noise": self.noise})
+        y_pred = self.gp.conditional(
+            "y_pred", self.Xnewmv, given={"X": self.X, "y": self.y, "noise": self.noise}
+        )
         samples = y_pred.sample(5)
         assert isinstance(y_pred, pm.MvNormalCholesky)
         assert y_pred.batch_shape == (3,)

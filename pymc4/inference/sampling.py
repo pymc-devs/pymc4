@@ -21,9 +21,11 @@ def sample(
     xla: bool = False,
     use_auto_batching: bool = True,
     sampler_methods: Optional[List] = None,
+    trace_discrete: List[str] = None,
     seed: int = None,
     **kwargs,
 ):
+    # TODO: complete docs
     """
     Perform MCMC sampling using NUTS (for now).
     Parameters
@@ -114,6 +116,7 @@ def sample(
         use_auto_batching=use_auto_batching,
         xla=xla,
         seed=seed,
+        trace_discrete=trace_discrete,
     )
 
 

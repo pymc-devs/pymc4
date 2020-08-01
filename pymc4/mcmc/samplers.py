@@ -67,8 +67,9 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         state: Optional[flow.SamplingState] = None,
         use_auto_batching: bool = True,
         xla: bool = False,
-        seed: int = None,
-        is_compound=False,
+        seed: Optional[int] = None,
+        is_compound: bool = False,
+        trace_discrete: Optional[List[str]] = None,
     ):
         """
             Docs
@@ -117,6 +118,19 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             results, sample_stats = self._run_chains(init_state, burn_in, seed)
 
         posterior = dict(zip(init_keys, results))
+
+        if trace_discrete:
+            # TODO: maybe better logic can be written here
+            # The workaround to cast variables post-sample.
+            # `trace_discrete` is the list of vairables that need to be casted
+            # to tf.int32 after the sampling is completed.
+            init_keys_ = [scope_remove_transformed_part_if_required(_)[1] for _ in init_keys]
+            discrete_indices = [init_keys_.index(_) for _ in trace_discrete]
+            keys_to_cast = [init_keys[_] for _ in discrete_indices]
+            for key in keys_to_cast:
+                posterior[key] = tf.cast(posterior[key], dtype=tf.int32)
+
+
         # Keep in sync with pymc3 naming convention
         if len(sample_stats) > len(self._stat_names):
             deterministic_values = sample_stats[len(self._stat_names) :]

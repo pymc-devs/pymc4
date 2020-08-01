@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.testing as npt
 import tensorflow as tf
 import pymc4 as pm
 from pymc4.gp.util import stabilize
@@ -173,6 +174,7 @@ def build_class_and_get_test_points(name, kwargs):
     return test_points, expected_matrix, expected_point, feature_ndims, KernelClass
 
 
+@pytest.mark.xfail
 def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_unique_cov_func):
     attr_name = get_unique_cov_func
     batch_shape, sample_shape, feature_shape, X = get_data
@@ -181,10 +183,8 @@ def test_cov_funcs_matrix_shape_psd(tf_seed, get_data, get_unique_cov_func):
     kernel = KernelClass(**kwargs, feature_ndims=len(feature_shape))
     cov = stabilize(kernel(X, X))
     assert cov.shape == batch_shape + sample_shape + sample_shape
-    if not np.all(np.linalg.eigvals(cov.numpy()) > 0):
-        pytest.xfail("Covariance matrix is not Positive Semi-Definite.")
-    if not tf.reduce_all(np.allclose(cov, tf.linalg.matrix_transpose(cov))):
-        pytest.xfail("The covariance matrix is not symetric.")
+    npt.assert_(np.all(np.linalg.eigvals(cov.numpy()) > 0))
+    npt.assert_allclose(cov, tf.linalg.matrix_transpose(cov), rtol=1e-05)
 
 
 def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_unique_cov_func):
@@ -198,7 +198,7 @@ def test_cov_funcs_point_eval_shape(tf_seed, get_data, get_unique_cov_func):
     except NotImplementedError:
         pytest.skip("`evaluate_kernel` method not implemeted. skipping...")
     assert point.shape == batch_shape + sample_shape
-    assert tf.reduce_all(point >= 0.0)
+    npt.assert_(np.all(point >= 0.0))
 
 
 def test_cov_funcs_matrix_no_ard(get_cov_func):
@@ -212,7 +212,7 @@ def test_cov_funcs_matrix_no_ard(get_cov_func):
     cov = kernel(*test_points).numpy()
     assert cov.dtype == expected_matrix.dtype
     assert cov.shape == expected_matrix.shape
-    assert np.allclose(cov, expected_matrix)
+    npt.assert_allclose(cov, expected_matrix, rtol=1e-05)
 
 
 def test_cov_funcs_point_eval_no_ard(get_cov_func):
@@ -229,8 +229,8 @@ def test_cov_funcs_point_eval_no_ard(get_cov_func):
         pytest.skip("`evaluate_kernel` method not implemeted. skipping...")
     assert point.shape == expected_point.shape
     assert point.dtype == expected_point.dtype
-    assert np.allclose(point, expected_point)
-    assert np.all(point >= 0.0)
+    npt.assert_allclose(point, expected_point, rtol=1e-05)
+    npt.assert_(np.all(point >= 0.0))
 
 
 def test_cov_combination(get_cov_func):
@@ -249,10 +249,10 @@ def test_cov_combination(get_cov_func):
     kernel_mul = kernel * kernel
     cov_add = kernel_add(*test_points).numpy()
     cov_mul = kernel_mul(*test_points).numpy()
-    assert np.all(np.linalg.eigvals(stabilize(cov_add).numpy()) > 0)
-    assert np.all(np.linalg.eigvals(stabilize(cov_mul).numpy()) > 0)
-    assert np.allclose(cov_add, expected_matrix * 2)
-    assert np.allclose(cov_mul, expected_matrix ** 2)
+    npt.assert_(np.all(np.linalg.eigvals(stabilize(cov_add).numpy()) > 0))
+    npt.assert_(np.all(np.linalg.eigvals(stabilize(cov_mul).numpy()) > 0))
+    npt.assert_allclose(cov_add, expected_matrix * 2, rtol=1e-05)
+    npt.assert_allclose(cov_mul, expected_matrix ** 2, rtol=1e-05)
 
 
 def test_cov_non_cov_combination(get_cov_func):
@@ -273,8 +273,8 @@ def test_cov_non_cov_combination(get_cov_func):
         kernel_rmul = other + kernel
         cov_radd = kernel_rmul(*test_points).numpy()
         cov_rmul = kernel_radd(*test_points).numpy()
-        assert np.allclose(cov_radd, other + expected_matrix)
-        assert np.allclose(cov_rmul, other * expected_matrix)
+        npt.assert_allclose(cov_radd, other + expected_matrix, rtol=1e-05)
+        npt.assert_allclose(cov_rmul, other * expected_matrix, rtol=1e-05)
 
 
 def test_cov_funcs_diag(get_cov_func):
@@ -291,8 +291,8 @@ def test_cov_funcs_diag(get_cov_func):
     diag_cov = kernel(*test_points, diag=True).numpy()
     assert diag_cov.shape == expected_matrix.shape
     assert diag_cov.dtype == expected_matrix.dtype
-    assert np.allclose(np.diag(diag_cov), np.diag(expected_matrix))
-    assert np.all(np.linalg.eigvals(stabilize(diag_cov).numpy()) > 0)
+    npt.assert_allclose(np.diag(diag_cov), np.diag(expected_matrix), rtol=1e-05)
+    npt.assert_(np.all(np.linalg.eigvals(stabilize(diag_cov).numpy()) > 0))
 
 
 def test_cov_funcs_active_dims(tf_seed):
@@ -306,13 +306,13 @@ def test_cov_funcs_active_dims(tf_seed):
 
     cov_matrix = kernel(X1, X2)
     expected_matrix = refkernel(X1[:, :, :4, :3, :], X2[:, :, :4, :3, :])
-    assert np.allclose(cov_matrix, expected_matrix)
+    npt.assert_allclose(cov_matrix, expected_matrix, rtol=1e-05)
 
     active_dims = [4, 3, 1]
     kernel = pm.gp.cov.ExpQuad(1.0, 1.0, feature_ndims, active_dims)
     cov_matrix = kernel(X1, X2)
     expected_matrix = refkernel(X1[:, :, :4, :3, :1], X2[:, :, :4, :3, :1])
-    assert np.allclose(cov_matrix, expected_matrix)
+    npt.assert_allclose(cov_matrix, expected_matrix, rtol=1e-05)
 
     active_dims = [[1, 3], 2, 2]
     kernel = pm.gp.cov.ExpQuad(1.0, 1.0, feature_ndims, active_dims)
@@ -320,7 +320,7 @@ def test_cov_funcs_active_dims(tf_seed):
     X1new = tf.stack([X1[:, :, 1, :2, :2], X1[:, :, 3, :2, :2]], axis=2)
     X2new = tf.stack([X2[:, :, 1, :2, :2], X2[:, :, 3, :2, :2]], axis=2)
     expected_matrix = refkernel(X1new, X2new)
-    assert np.allclose(cov_matrix, expected_matrix)
+    npt.assert_allclose(cov_matrix, expected_matrix, rtol=1e-05)
 
 
 def test_cov_funcs_invalid_feature_ndims():
@@ -346,7 +346,7 @@ def test_scaled_cov_kernel_shapes_and_psd(tf_seed, get_data):
 
     cov = k_scal(X, X)
     assert cov.shape == batch_shape + sample_shape + sample_shape
-    assert np.all(np.linalg.eigvals(stabilize(cov)) > 0)
+    npt.assert_(np.all(np.linalg.eigvals(stabilize(cov)) > 0))
 
     point = k_scal.evaluate_kernel(X, X)
     assert point.shape == batch_shape + sample_shape
@@ -360,7 +360,7 @@ def test_scaled_cov():
 
     cov = k_scal(x, x)
     expected = tf.constant([[2.0, 0.03663128], [0.03663128, 2.0]], dtype=np.float32)
-    assert np.allclose(cov, expected)
+    npt.assert_allclose(cov, expected, rtol=1e-05)
 
 
 def test_warped_cov_kernel_shapes_and_psd(tf_seed, get_data):
@@ -371,7 +371,7 @@ def test_warped_cov_kernel_shapes_and_psd(tf_seed, get_data):
 
     cov = k_warped(X, X)
     assert cov.shape == batch_shape + sample_shape + sample_shape
-    assert np.all(np.linalg.eigvals(stabilize(cov)) > 0)
+    npt.assert_(np.all(np.linalg.eigvals(stabilize(cov)) > 0))
 
     point = k_warped.evaluate_kernel(X, X)
     assert point.shape == batch_shape + sample_shape
@@ -385,4 +385,4 @@ def test_warped_cov():
 
     cov = k_warped(x, x)
     expected = k(x[:, :1], x[:, :1])
-    assert np.allclose(cov, expected)
+    npt.assert_allclose(cov, expected, rtol=1e-05)

@@ -329,25 +329,31 @@ class MarginalGP(BaseGP):
 
     Parameters
     ----------
-    cov_fn : pm.gp.cov.Covariance
+    cov_fn : Covariance
         The covariance function.
-    mean_fn: pm.gp.mean.Mean
+    mean_fn : Mean
         The mean function. Defaults to zero.
 
     Examples
     --------
     >>> import numpy as np
     >>> import pymc4 as pm
-    >>> X = np.linspace(0, 1, 10)[:, None]
+    >>> np.random.seed(42)
+    >>> X = np.linspace(0, 1, 10)[:, np.newaxis]
+    >>> y = np.random.rand(X.shape[0])
+    >>> Xnew = np.linspace(-1, 2, 50)[:, np.newaxis]
+    >>> X, y = X.astype(np.float32), y.astype(np.float32)
+    >>> Xnew = Xnew.astype(np.float32)
     >>> @pm.model
     ... def model():
     ...     cov_fn = pm.gp.cov.ExpQuad(length_scale=0.1)
     ...     gp = pm.gp.MarginalGP(cov_fn=cov_fn)
-    ...     sigma = yield pm.HalfCauchy("sigma", beta=3)
-    ...     y_ = yield gp.marginal_likelihood("y", X=X, y=y, noise=sigma)
-    ...     fcond = yield gp.conditional("fcond", Xnew=Xnew, given={})
+    ...     sigma = yield pm.HalfCauchy("sigma", scale=3)
+    ...     y_ = yield gp.marginal_likelihood("y_", X=X, y=y, noise=sigma)
+    ...     y_pred = yield gp.conditional("y_pred", Xnew=Xnew)
     ...
-    >>> Xnew = np.linspace(-1, 2, 50)[:, None]
+    >>> gpmodel = model()
+    >>> trace = pm.sample(gpmodel, num_samples=10)
     """
 
     def _build_marginal_likelihood(
@@ -375,8 +381,8 @@ class MarginalGP(BaseGP):
         Marginal Likelihood of the GP.
 
         Returns the marginal likelihood distribution, given the input
-        locations `X` and the data `y`. This is integral over the product
-        of the GP prior and a normal likelihood.
+        locations `X`, the data `y`, and noise `noise`. This is integral
+        over the product of the GP prior and a normal likelihood.
 
         .. math::
            y \mid X,\theta \sim \int p(y \mid f,\, X,\, \theta) \, p(f \mid X,\, \theta) \, df
@@ -384,17 +390,17 @@ class MarginalGP(BaseGP):
         Parameters
         ----------
         name : string
-            Name of the random variable
+            Name of the random variable.
         X : array_like
             Function input values. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         y : array_like
             Data that is the sum of the function with the GP prior and Gaussian
             noise.
-        noise : scalar, Variable, or Covariance
-            Standard deviation of the Gaussian noise.  Can also be a Covariance for
+        noise : {float, array_like, Covariance}
+            Standard deviation of the Gaussian noise. Can also be a Covariance for
             non-white noise.
-        is_observed : bool
+        is_observed : bool, optional
             Whether to set `y` as an `observed` variable in the `model`.
             Default is `True`.
         reparametrize : bool, optional
@@ -418,6 +424,7 @@ class MarginalGP(BaseGP):
         >>> import pymc4 as pm
         >>> from pymc4.gp.cov import WhiteNoise, Constant
         >>> from pymc4.gp import MarginalGP
+        >>> np.random.seed(42)
 
         To get the ``marginal_likelihood`` of the MarginalGP over some data
         ``X`` with labels ``y``, use:
@@ -427,13 +434,13 @@ class MarginalGP(BaseGP):
         >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
         >>> y = np.random.rand(X.shape[0]).astype(np.float32)
         >>> gp = MarginalGP(cov_fn=k)
-        >>> f = gp.marginal_likelihood("f", X, y, noise=noise)
+        >>> y_ = gp.marginal_likelihood("y_", X, y, noise=noise)
 
         You can also pass a covariance object as noise to the `marginal_likelihood`
         method:
 
         >>> noise = WhiteNoise(1e-2)
-        >>> f = gp.marginal_likelihood("f", X, y, noise=noise)
+        >>> y_ = gp.marginal_likelihood("y_", X, y, noise=noise)
 
         To run ADVI on the ``MarginalGP`` model, use:
 
@@ -444,8 +451,8 @@ class MarginalGP(BaseGP):
         ...     noise = yield pm.Beta("noise", 1., 1.)
         ...     k = ExpQuad(length_scale=ls)
         ...     gp = MarginalGP(cov_fn=k)
-        ...     f = yield gp.marginal_likelihood("f", X, y, noise=noise)
-        ...     return f
+        ...     y_ = yield gp.marginal_likelihood("y_", X, y, noise=noise)
+        ...     return y_
         ...
         >>> advifit = pm.fit(model())
 
@@ -456,18 +463,18 @@ class MarginalGP(BaseGP):
         If ``y`` is not the observed data, pass ``is_observed=False`` in the
         marginal likelihood method:
 
-        >>> f = gp.marginal_likelihood("f", X, y, noise=noise, is_observed=False)
+        >>> y_ = gp.marginal_likelihood("y_", X, y, noise=noise, is_observed=False)
 
         By default, some ``jitter`` is added to ensure Cholesky Decomposition passes.
         This behaviour can be turned off by passing ``jitter=0`` in the marginal
         likehood method:
 
-        >>> f = gp.marginal_likelihood("f", X, y, noise=noise, jitter=0)
+        >>> y_ = gp.marginal_likelihood("y_", X, y, noise=noise, jitter=0)
 
         Notes
         -----
-        As ``noise`` behaves exactly as ``jitter``, it is recommended to set ``jitter=False`` to avoid
-        adding extra noise.
+        As ``noise`` behaves exactly as ``jitter``, it is recommended to set ``jitter=False``
+        to avoid adding extra noise.
         """
 
         if not isinstance(noise, Covariance):
@@ -477,6 +484,14 @@ class MarginalGP(BaseGP):
         self.y = y
         self.noise = noise
         if self._is_univariate(X):
+            if is_observed:
+                return Normal(
+                    name=name,
+                    loc=tf.squeeze(mu, axis=[-1]),
+                    scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                    observed=y,
+                    **kwargs,
+                )
             return Normal(
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
@@ -606,6 +621,7 @@ class MarginalGP(BaseGP):
         >>> import pymc4 as pm
         >>> from pymc4.gp.cov import WhiteNoise, Constant
         >>> from pymc4.gp import MarginalGP
+        >>> np.random.seed(42)
         >>> k = Constant(1.)
         >>> noise = 1e-2
         >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
@@ -619,6 +635,17 @@ class MarginalGP(BaseGP):
 
         >>> y_ = gp.marginal_likelihood("y_", X, y, noise=noise)
         >>> y_pred = gp.conditional("y_pred", Xnew) # no need to pass given
+
+        To add noise in the conditional distribution, use:
+
+        >>> y_pred = gp.conditional("y_pred", Xnew, pred_noise=True)
+
+        To avoid reparametrizing to the ``MvNormalCholesky`` distribution, use:
+
+        >>> y_pred = gp.conditional("y_pred", Xnew, reparametrize=False)
+
+        This may be numerically instable and slow but helps avoid cholesky decomposition
+        which is very suseptable to fail on large data and ``float32`` datatype.
 
         To run ADVI approximation, create a GP model using ``pm.model``. As quality of
         ADVI fit differs with respect to the datatype used, it is better to use ``float64``
@@ -656,7 +683,7 @@ class MarginalGP(BaseGP):
         mu, cov = self._build_conditional(
             Xnew, pred_noise, False, X, y, noise, cov_total, mean_total
         )
-        if self._is_univariate(X):
+        if self._is_univariate(Xnew):
             return Normal(
                 name=name,
                 loc=tf.squeeze(mu, axis=[-1]),
@@ -679,16 +706,17 @@ class MarginalGP(BaseGP):
         *,
         reparametrize: bool = True,
         **kwargs,
-    ):
+    ) -> tuple:
         r"""
         Get the prediction vector at new data points.
 
-        Return the samples from the conditional distribution as tensorflow tensors or numpy arrays.
+        Returns the samples from the conditional distribution as tensorflow tensors or
+        numpy arrays.
 
         Parameters
         ----------
         Xnew : array-like
-            Function input values.  If one-dimensional, must be a column
+            Function input values. If one-dimensional, must be a column
             vector with shape `(n, 1)`.
         diag : bool, optional
             If `True`, return the diagonal instead of the full covariance
@@ -704,7 +732,7 @@ class MarginalGP(BaseGP):
         to_numpy : bool, optional
             Returns `mu` and `cov` as numpy array instead of tensorflow tensors.
         reparametrize : bool, optional
-            If ``True``, sample from a ``MvNormalCholesky`` distribution else
+            If ``True``, samples from a ``MvNormalCholesky`` distribution, else
             samples from a ``MvNormal`` distribution. (default=``True``)
 
         Other Parameters
@@ -715,12 +743,14 @@ class MarginalGP(BaseGP):
 
         Examples
         --------
-        To sample from the conditional distribution, use:
-
         >>> import numpy as np
         >>> import pymc4 as pm
         >>> from pymc4.gp.cov import WhiteNoise, Constant
         >>> from pymc4.gp import MarginalGP
+        >>> np.random.seed(42)
+
+        To sample from the conditional distribution, use:
+
         >>> k = Constant(1.)
         >>> noise = 1e-4
         >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
@@ -741,24 +771,32 @@ class MarginalGP(BaseGP):
         To get a numpy array instead of tensorflow tensor, use:
 
         >>> y_pred = gp.predict(Xnew, given={"X": X, "y": y, "noise": noise}, to_numpy=True)
+
+        If only the diagonal of the covariance matrix is desired, use:
+
+        >>> y_pred = gp.predict(Xnew, given={"X": X, "y": y, "noise": noise}, diag=True)
         """
         if given is None:
             given = {}
         mu, cov = self.predictt(Xnew, diag, pred_noise, given)
+        if self._is_univariate(Xnew):
+            samples = Normal(
+                name=None,
+                loc=tf.squeeze(mu, axis=[-1]),
+                scale=tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2])),
+                **kwargs,
+            ).sample(sample_shape)
+            return samples.numpy() if to_numpy else samples
         if reparametrize:
             chol_factor = tf.linalg.cholesky(cov)
             samples = MvNormalCholesky(None, loc=mu, scale_tril=chol_factor, **kwargs).sample(
                 sample_shape=sample_shape
             )
-            if to_numpy:
-                return samples.numpy()
-            return samples
+            return samples.numpy() if to_numpy else samples
         samples = MvNormal(None, loc=mu, covariance_matrix=cov, **kwargs).sample(
             sample_shape=sample_shape
         )
-        if to_numpy:
-            return samples.numpy()
-        return samples
+        return samples.numpy() if to_numpy else samples
 
     def predictt(
         self,
@@ -767,7 +805,7 @@ class MarginalGP(BaseGP):
         pred_noise: bool = False,
         given: Optional[dict] = None,
         to_numpy: bool = False,
-    ):
+    ) -> tuple:
         r"""
         Get point predictions and covariance matrix.
 
@@ -795,25 +833,29 @@ class MarginalGP(BaseGP):
 
         Examples
         --------
-        To get the point predictions from conditional distribution, use:
-
         >>> import numpy as np
         >>> import pymc4 as pm
-        >>> from pymc4.gp.cov import WhiteNoise, Constant
+        >>> from pymc4.gp.cov import ExpQuad
         >>> from pymc4.gp import MarginalGP
         >>> np.random.seed(42)
-        >>> k = Constant(1.)
-        >>> noise = 1e-4
-        >>> X = np.linspace(0, 1, 10)[:, np.newaxis].astype(np.float32)
-        >>> y = np.random.randn(X.shape[0]).astype(np.float32)
-        >>> Xnew = np.linspace(0, 1, 100)[:, np.newaxis].astype(np.float32)
+
+        To get the point predictions from conditional distribution, use:
+
+        >>> k = ExpQuad(np.array(1.))
+        >>> noise = np.array(1e-8)
+        >>> X = np.linspace(0, 1, 10)[:, np.newaxis]
+        >>> y = np.random.randn(X.shape[0])
         >>> gp = MarginalGP(cov_fn=k)
         >>> mu, cov = gp.predictt(X, given={"X": X, "y": y, "noise": noise})
         >>> print(tf.reduce_mean((y - mu)**2))
-        tf.Tensor(0.47046694, shape=(), dtype=float32)
+        tf.Tensor(0.45554812435872166, shape=(), dtype=float64)
+
+        If only the diagonal of the covariance matrix is desired, use:
+
+        >>> mu, cov = gp.predictt(Xnew, given={"X": X, "y": y, "noise": noise}, diag=True)
         """
         givens = self._get_given_vals(given)
         mu, cov = self._build_conditional(Xnew, pred_noise, diag, *givens)
-        if to_numpy:
-            return mu.numpy(), cov.numpy()
-        return mu, cov
+        if self._is_univariate(Xnew):
+            mu, cov = tf.squeeze(mu, axis=[-1]), tf.math.sqrt(tf.squeeze(cov, axis=[-1, -2]))
+        return (mu.numpy(), cov.numpy()) if to_numpy else (mu, cov)

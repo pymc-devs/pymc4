@@ -1,4 +1,5 @@
 """Implements ADVI approximations."""
+import logging
 from typing import Optional, Union
 from collections import namedtuple
 
@@ -168,6 +169,8 @@ def fit(
     sample_size: int = 1,
     random_seed: Optional[int] = None,
     optimizer=None,
+    progressbar: bool = True,
+    trace_params: Optional[None] = None,
     **kwargs,
 ):
     """
@@ -192,6 +195,10 @@ def fit(
         Seed for tensorflow random number generator
     optimizer : TF1-style | TF2-style | from pymc4/variational/updates
         Tensorflow optimizer to use
+    progressbar: bool, default = True
+        Whether to show progress bar or not
+    trace_params: dict, default = None
+        Parameters to track
     kwargs : Optional[Dict[str, Any]]
         Pass extra non-default arguments to
         ``tensorflow_probability.vi.fit_surrogate_posterior``
@@ -200,6 +207,11 @@ def fit(
     -------
     ADVIFit : collections.namedtuple
         Named tuple, including approximation, ELBO losses depending on the `trace_fn`
+
+    Notes
+    -----
+    Use `trace_params` argument for tracking of parameters. `trace_fn` parameter passed to 
+    `tfp.vi.fit_surrogate_posterior` automatically includes those parameters.
     """
     _select = dict(advi=MeanField, fullrank_advi=FullRank)
 
@@ -229,6 +241,48 @@ def fit(
     else:
         opt = updates.adam()
 
+    if progressbar:
+        num_cols = 20
+        it_break = num_steps // num_cols
+
+        @tf.function(autograph=False)
+        def trace_fn(traceable_quantities):
+            tf.cond(
+                tf.math.mod(traceable_quantities.step + 1, it_break) == 0,
+                lambda: tf.print(
+                    tf.strings.reduce_join(
+                        [
+                            "|",
+                            tf.strings.reduce_join(
+                                tf.repeat(">", (traceable_quantities.step + 1) // it_break, axis=0)
+                            ),
+                            tf.strings.reduce_join(
+                                tf.repeat(
+                                    ".",
+                                    num_cols - (traceable_quantities.step + 1) // it_break,
+                                    axis=0,
+                                )
+                            ),
+                            "|",
+                        ]
+                    ),
+                    end="\r",
+                    output_stream=logging.INFO,
+                ),
+                lambda: tf.print("", end="", output_stream=logging.INFO),
+            )
+            if trace_params:
+                return dict(loss=traceable_quantities.loss, **trace_params)
+            return traceable_quantities.loss
+
+    else:
+
+        @tf.function(autograph=False)
+        def trace_fn(traceable_quantities):
+            if trace_params:
+                return dict(loss=traceable_quantities.loss, **trace_params)
+            return traceable_quantities.loss
+
     @tf.function(autograph=False)
     def run_approximation():
         losses = tfp.vi.fit_surrogate_posterior(
@@ -238,6 +292,7 @@ def fit(
             sample_size=sample_size,
             seed=random_seed,
             optimizer=opt,
+            trace_fn=trace_fn,
             **kwargs,
         )
         return losses

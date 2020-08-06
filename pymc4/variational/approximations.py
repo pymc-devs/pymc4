@@ -210,8 +210,10 @@ def fit(
 
     Notes
     -----
-    Use `trace_params` argument for tracking of parameters. `trace_fn` parameter passed to 
-    `tfp.vi.fit_surrogate_posterior` automatically includes those parameters.
+    1. Use `trace_params` argument for tracking of parameters. `trace_fn` parameter passed to
+       `tfp.vi.fit_surrogate_posterior` automatically includes those parameters.
+    2. For larger datasets, use `tf.float64` for all parameters to avoid `Cholesky Decomposition Errors`.
+    3. Keeping `progressbar=True` adds a very small overhead while optimizing ELBO.
     """
     _select = dict(advi=MeanField, fullrank_advi=FullRank)
 
@@ -269,7 +271,7 @@ def fit(
                     end="\r",
                     output_stream=logging.INFO,
                 ),
-                lambda: tf.print("", end="", output_stream=logging.INFO),
+                lambda: tf.no_op(),
             )
             if trace_params:
                 return dict(loss=traceable_quantities.loss, **trace_params)

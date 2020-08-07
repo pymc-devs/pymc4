@@ -100,6 +100,7 @@ class TestLatentGP:
         assert samples.shape == (5, 3, 20)
         assert not np.isnan(samples).any()
 
+    @pytest.mark.xfail
     def test_sampling(self, tf_seed):
         m = self.model()
         trace = pm.sample(m, num_samples=10, num_chains=1, burn_in=10)
@@ -211,6 +212,7 @@ class TestMarginalGP:
         assert samples.shape == (5, 3, 20)
         assert not np.isnan(samples).any()
 
+    @pytest.mark.xfail
     def test_sampling(self, tf_seed):
         m = self.model()
         trace = pm.sample(m, num_samples=10, num_chains=1, burn_in=10)

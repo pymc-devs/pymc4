@@ -6,6 +6,7 @@ import tensorflow as tf
 import pymc4 as pm
 from pymc4.gp.cov import ExpQuad
 from pymc4.gp import LatentGP, MarginalGP
+import pytest
 
 
 class TestLatentGP:

@@ -183,10 +183,10 @@ class Covariance:
         """Evaluate only the diagonal part of the full covariance matrix."""
         try:
             cov = self.evaluate_kernel(X1, X2)
-            return tf.linalg.diag(cov)
+            return cov
         except NotImplementedError:
             cov = self(X1, X2)
-            return tf.linalg.diag(tf.linalg.diag_part(cov))
+            return tf.linalg.diag_part(cov)
 
     def evaluate_kernel(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         r"""
@@ -278,7 +278,7 @@ class Covariance:
 
         for i in range(result.size):
             left_array[i] = result[i].factors[1]
-        left_array = left_array.reshape(original_shape)
+        left_array = tf.cast(left_array.reshape(original_shape), result[0].factors[0]._kernel.dtype)
 
         if isinstance(result[0], _Add):
             return result[0].factors[0] + left_array
@@ -315,9 +315,8 @@ class Combination(Covariance):
         if isinstance(factor, Covariance):
             return factor(X1, X2, diag=diag)
         if diag:
-            return tf.linalg.diag(tf.linalg.diag_part(factor))
-        else:
-            return factor
+            return tf.linalg.diag_part(factor)
+        return factor
 
     def merge_factors(self, X1: ArrayLike, X2: ArrayLike, diag=False) -> List[TfTensor]:
         fn = partial(self._eval_factor, X1=X1, X2=X2, diag=diag)

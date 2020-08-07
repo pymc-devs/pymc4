@@ -287,12 +287,13 @@ def test_cov_funcs_diag(get_cov_func):
         feature_ndims,
         KernelClass,
     ) = build_class_and_get_test_points(attr_name, kwargs)
+    expected_matrix = np.diag(expected_matrix)
     kernel = KernelClass(feature_ndims=feature_ndims, **kwargs)
     diag_cov = kernel(*test_points, diag=True).numpy()
     assert diag_cov.shape == expected_matrix.shape
     assert diag_cov.dtype == expected_matrix.dtype
-    npt.assert_allclose(np.diag(diag_cov), np.diag(expected_matrix), rtol=1e-05)
-    npt.assert_(np.all(np.linalg.eigvals(stabilize(diag_cov).numpy()) > 0))
+    npt.assert_allclose(diag_cov, expected_matrix, rtol=1e-05)
+    npt.assert_(np.all(diag_cov) > 0)
 
 
 def test_cov_funcs_active_dims(tf_seed):

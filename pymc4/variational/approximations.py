@@ -254,7 +254,7 @@ def fit(
                 lambda: tf.print(
                     tf.strings.reduce_join(
                         [
-                            "|",
+                            "\r|",
                             tf.strings.reduce_join(
                                 tf.repeat(">", (traceable_quantities.step + 1) // it_break, axis=0)
                             ),
@@ -268,7 +268,7 @@ def fit(
                             "|",
                         ]
                     ),
-                    end="\r",
+                    end="",
                     output_stream=logging.INFO,
                 ),
                 lambda: tf.no_op(),

@@ -320,7 +320,7 @@ class Combination(Covariance):
 
     def merge_factors(self, X1: ArrayLike, X2: ArrayLike, diag=False) -> List[TfTensor]:
         fn = partial(self._eval_factor, X1=X1, X2=X2, diag=diag)
-        return map(fn, self.factors)
+        return list(map(fn, self.factors))
 
 
 class _Add(Combination):

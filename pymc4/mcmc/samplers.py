@@ -41,19 +41,28 @@ class _BaseSampler(metaclass=abc.ABCMeta):
     ):
         if not isinstance(model, Model):
             raise TypeError(
-                "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
+                "`sample` function only supports `pymc4.Model` objects, but \
+                    you've passed `{}`".format(
                     type(model)
                 )
             )
 
         _, _, disc_names, cont_names, _, _ = initialize_state(model)
+        # if sampler has the gradient calculation during `one_step`
+        # and the model contains discrete distributions then we throw the
+        # error.
         if self._grad is True and disc_names:
-            raise ValueError("Discrete distributions can't be used with gradient-based sampler")
+            raise ValueError(
+                "Discrete distributions can't be used with \
+                    gradient-based sampler"
+            )
 
         self.model = model
         self._stat_names: List = []
-        # assign arguments from **kwargs to distinct kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`
+        # assign arguments from **kwargs to distinct kwargs for
+        # `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
+        # check arguments for correctness
         self._check_arguments()
         self._bound_kwargs()
 
@@ -163,62 +172,70 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         return results, sample_stats
 
     @abc.abstractmethod
-    def _trace_fn(self, current_state, pkr):
+    def _trace_fn(self, current_state: flow.SamplingState, pkr):
+        """
+        Support a tracing for each sampler
+
+        Parameters
+        ----------
+        current_state : flow.SamplingState
+            state for tracing
+        pkr :
+            kernel results
+        """
         pass
 
     def _assign_arguments(self, kwargs):
         kwargs_keys = set(kwargs.keys())
-        adaptation_keys = set(
-            list(inspect.signature(self._adaptation.__init__).parameters.keys())[1:]
+        # fetch adaptation kernel, kernel, and `sample_chain` kwargs keys
+        adaptation_keys = (
+            set(list(inspect.signature(self._adaptation.__init__).parameters.keys())[1:])
+            if self._adaptation
+            else set()
         )
         kernel_keys = set(list(inspect.signature(self._kernel.__init__).parameters.keys())[1:])
         chain_keys = set(list(inspect.signature(mcmc.sample_chain).parameters.keys()))
 
+        # intersection of key sets of each object from
+        # (`self._adaptation`, `self._kernel`, `sample_chain`)
+        # is the kwargs we are trying to find
         self.adaptation_kwargs = {k: kwargs[k] for k in (adaptation_keys & kwargs_keys)}
         self.kernel_kwargs = {k: kwargs[k] for k in (kernel_keys & kwargs_keys)}
         self.chain_kwargs = {k: kwargs[k] for k in (chain_keys & kwargs_keys)}
 
     def _check_arguments(self):
+        # check if there is an ambiguity of the kwargs keys for
+        # kernel, adaptation_kernel adn sample_chain method
         if (
             (self.adaptation_kwargs.keys() & self.kernel_kwargs.keys())
             or (self.adaptation_kwargs.keys() & self.chain_kwargs.keys())
             or (self.kernel_kwargs.keys() & self.chain_kwargs.keys())
         ):
             raise ValueError(
-                "Ambiguity in setting kwargs for `kernel`, `adaptation_kernel`, `chain_sampler`"
+                "Ambiguity in setting kwargs for `kernel`, \
+                        `adaptation_kernel`, `chain_sampler`"
             )
 
-        method_kwargs_pairs = [
-            (self._adaptation, self.adaptation_kwargs),
-            (self._kernel, self.kernel_kwargs),
-            (mcmc.sample_chain, self.chain_kwargs),
-        ]
-        self._check_kwargs(method_kwargs_pairs)
-
-    def _check_kwargs(self, method_kwargs_pairs):
-        for (class_method, object_kwargs) in method_kwargs_pairs:
-            if not class_method:
-                continue
-            if not callable(class_method):
-                class_method = class_method.__init__
-                class_keys = set(list(inspect.signature(class_method).parameters.keys()[1:]))
-            else:
-                class_keys = set(list(inspect.signature(class_method).parameters.keys()))
-            if len(class_keys & object_kwargs.keys()) > len(class_keys):
-                raise "{} does not support passed arguments".format(class_method.__name__)
-
-    def __call__(self, *args, **kwargs):
-        return self.sample(*args, **kwargs)
-
     def _bound_kwargs(self, *args):
+        # set all the default kwargs which are distinct
+        # for each type of sampler. If a use has passed
+        # the key argument then we don't change the kwargs set
         for k, v in self._default_kernel_kwargs.items():
             self.kernel_kwargs.setdefault(k, v)
         for k, v in self._default_adapter_kwargs.items():
             self.adaptation_kwargs.setdefault(k, v)
 
+    def __call__(self, *args, **kwargs):
+        # pm.sample() entrance
+        return self.sample(*args, **kwargs)
+
     @classmethod
     def _default_kernel_maker(cls):
-        # TODO: maybe can be done with partial, but not sure how to do it recursively
+        # The function is used for compound step support.
+        # by supporting collection we could easily instantiate
+        # kernel inside the `one_step`
+        # TODO: maybe can be done with partial, but not
+        # sure how to do it recursively
         kernel_collection = KERNEL_KWARGS_SET(
             kernel=cls._kernel,
             adaptive_kernel=cls._adaptation,

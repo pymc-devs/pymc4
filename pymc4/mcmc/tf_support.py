@@ -10,9 +10,6 @@ CompoundGibbsStepResults = collections.namedtuple("CompoundGibbsStepResults", ["
 
 
 def _target_log_prob_fn_part_compound(*state_part, idx, len_, state, target_log_prob_fn):
-    """
-        TODO:...
-    """
     sl = slice(idx, idx + len_)
     temp_value = state[sl]
     state[sl] = state_part
@@ -22,9 +19,6 @@ def _target_log_prob_fn_part_compound(*state_part, idx, len_, state, target_log_
 
 
 def _target_log_prob_fn_part_gibbs(*state_part, idx, len_, state, target_log_prob_fn):
-    """
-        TODO:...
-    """
     sl = slice(idx, idx + len_)
     state[sl] = state_part
     log_prob = target_log_prob_fn(*state)
@@ -168,5 +162,5 @@ class _GibbsStepTF(_CompoundGibbsStepTF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.kernel_create_object = functools.partial(
-            kernel_create_object, target_log_prob_fn_part=_target_log_prob_fn_part_gibbs
+            kernel_create_object, target_log_prob_fn_part=_target_log_prob_fn_part_compound
         )

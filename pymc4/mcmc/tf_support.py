@@ -158,7 +158,4 @@ class _CompoundStepTF(_CompoundGibbsStepTF):
 
 class _GibbsStepTF(_CompoundGibbsStepTF):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.kernel_create_object = functools.partial(
-            kernel_create_object, target_log_prob_fn_part=_target_log_prob_fn_part_compound
-        )
+        raise NotImplementedError

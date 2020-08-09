@@ -46,6 +46,11 @@ def discrete_support_sampler_type(request):
     return request.param
 
 
+@pytest.fixture(scope="module", params=["nuts_simple", "hmc_simple"])
+def expanded_sampler_type(request):
+    return request.param
+
+
 def test_samplers_on_compound_model(compound_model, seed, xla_fixture, sampler_type):
     def _execute():
         model = compound_model()
@@ -63,6 +68,7 @@ def test_samplers_on_compound_model(compound_model, seed, xla_fixture, sampler_t
         # else check for the exception thrown
         with pytest.raises(ValueError):
             _execute()
+
 
 def test_compound_model_sampler_method(
     compound_model, seed, xla_fixture, discrete_support_sampler_type
@@ -85,5 +91,12 @@ def test_compound_model_sampler_method(
 def test_samplers_on_simple_model(simple_model, seed, xla_fixture, sampler_type):
     model = simple_model()
     trace = pm.sample(model, sampler_type=sampler_type, xla_fixture=xla_fixture, seed=seed)
+    var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
+    np.testing.assert_allclose(var1, 0.0, atol=0.1)
+
+
+def test_extended_samplers_on_simple_model(simple_model, seed, xla_fixture, expanded_sampler_type):
+    model = simple_model()
+    trace = pm.sample(model, sampler_type=expanded_sampler_type, xla_fixture=xla_fixture, seed=seed)
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)

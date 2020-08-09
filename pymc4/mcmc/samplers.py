@@ -19,6 +19,7 @@ from pymc4 import flow
 from pymc4.mcmc.tf_support import _CompoundStepTF
 
 import logging
+
 logging._warn_preinit_stderr = 0
 
 
@@ -26,7 +27,11 @@ __all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep"]
 
 reg_samplers = {}
 # set up logging
-_log = logging.getLogger("pymc4.samplers")
+console = logging.StreamHandler()
+_log = logging.getLogger("pymc4.sampling")
+_log.root.handlers = []  # remove tf absl logging handling
+_log.setLevel(logging.INFO)
+_log.addHandler(console)
 
 
 def register_sampler(cls):
@@ -538,8 +543,8 @@ class CompoundStep(_BaseSampler):
     @staticmethod
     def _log_variables(var_keys, kernels, kernel_kwargs):
         log_output = ""
-        for (var, kernel, kwargs) in zip(var_keys, kernels, kernel_kwargs):
-            log_output += "\n\t -- {}[{}, proposal_function={}]".format(
+        for i, (var, kernel, kwargs) in enumerate(zip(var_keys, kernels, kernel_kwargs)):
+            log_output += ("\n" if i > 0 else "") + "\t -- {}[{}, proposal_function={}]".format(
                 kernel._name, var.split("/")[-1], (kwargs.get("new_state_fn", "default"))
             )
         _log.info(log_output)

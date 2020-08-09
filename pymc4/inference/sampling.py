@@ -1,13 +1,15 @@
 from typing import Optional, Dict, Any, List
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.mcmc.samplers import reg_samplers
+from pymc4.mcmc.samplers import reg_samplers, _log
 from pymc4.mcmc.utils import initialize_state
 import logging
+
 logging._warn_preinit_stderr = 0
 
 # set up logging
-_log = logging.getLogger("pymc4.sampling")
+# _log = logging.getLogger("pymc4.sampling")
+# _log.setLevel(logging.INFO)
 
 
 def sample(
@@ -158,8 +160,8 @@ def _auto_assign_sampler(
         model, observed=observed, state=state
     )
     if not free_disc_names:
-        _log.info("\nAuto-assigning NUTS sampler")
+        _log.info("Auto-assigning NUTS sampler")
         return "nuts"
     else:
-        _log.info("\nThe model contains discrete distributions. " "\nCompound step is chosen.")
+        _log.info("The model contains discrete distributions. " "\nCompound step is chosen.")
         return "compound"

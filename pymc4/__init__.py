@@ -1,4 +1,8 @@
 """PyMC4."""
+import logging
+
+_log = logging.getLogger("pymc4")
+_log.setLevel(logging.INFO)
 
 from . import utils
 from .coroutine_model import Model, model
@@ -19,5 +23,6 @@ from .forward_sampling import sample_prior_predictive, sample_posterior_predicti
 from .inference.sampling import sample
 from . import gp
 from . import mcmc
+
 
 __version__ = "4.0a2"

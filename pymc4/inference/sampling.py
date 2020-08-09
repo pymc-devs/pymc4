@@ -3,11 +3,11 @@ from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.mcmc.samplers import reg_samplers
 from pymc4.mcmc.utils import initialize_state
-
 import logging
+logging._warn_preinit_stderr = 0
 
-
-_log = logging.getLogger("pymc4")
+# set up logging
+_log = logging.getLogger("pymc4.sampling")
 
 
 def sample(
@@ -158,8 +158,8 @@ def _auto_assign_sampler(
         model, observed=observed, state=state
     )
     if not free_disc_names:
-        _log.info("Auto-assigning NUTS sampler")
+        _log.info("\nAuto-assigning NUTS sampler")
         return "nuts"
     else:
-        # TODO: more complex logic here
-        return "randomwalkm"
+        _log.info("\nThe model contains discrete distributions. " "\nCompound step is chosen.")
+        return "compound"

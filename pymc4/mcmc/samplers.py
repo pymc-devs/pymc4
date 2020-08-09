@@ -2,7 +2,6 @@ import abc
 import itertools
 import inspect
 import functools
-import logging
 from typing import Optional, List
 import tensorflow as tf
 from tensorflow_probability import mcmc
@@ -19,13 +18,15 @@ from pymc4.utils import NameParts
 from pymc4 import flow
 from pymc4.mcmc.tf_support import _CompoundStepTF
 
+import logging
+logging._warn_preinit_stderr = 0
+
 
 __all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep"]
 
 reg_samplers = {}
-# TODO: come up with clever design for logging
-_log = logging.getLogger("pymc4")
-_log.setLevel(logging.INFO)
+# set up logging
+_log = logging.getLogger("pymc4.samplers")
 
 
 def register_sampler(cls):
@@ -525,12 +526,23 @@ class CompoundStep(_BaseSampler):
         # to more overhed when we are iterating at each call of `one_step` in the
         # compound step kernel. For that we need to merge some of the samplers.
         kernels, set_lengths = self._merge_samplers(make_kernel_fn, part_kernel_kwargs)
+        # log variable sampler mapping
+        CompoundStep._log_variables(init_keys, make_kernel_fn, part_kernel_kwargs)
         # save to use late for compound kernel init
         self.kernel_kwargs["compound_samplers"] = kernels
         self.kernel_kwargs["compound_set_lengths"] = set_lengths
 
     def __call__(self, *args, **kwargs):
         return self.sample(*args, is_compound=True, **kwargs)
+
+    @staticmethod
+    def _log_variables(var_keys, kernels, kernel_kwargs):
+        log_output = ""
+        for (var, kernel, kwargs) in zip(var_keys, kernels, kernel_kwargs):
+            log_output += "\n\t -- {}[{}, proposal_function={}]".format(
+                kernel._name, var.split("/")[-1], (kwargs.get("new_state_fn", "default"))
+            )
+        _log.info(log_output)
 
 
 def build_logp_and_deterministic_functions(

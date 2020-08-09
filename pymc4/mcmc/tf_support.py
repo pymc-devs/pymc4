@@ -61,8 +61,6 @@ class _CompoundGibbsStepTF(kernel_base.TransitionKernel):
              compound_samplers: List of the pymc4.mcmc.samplers._BaseSampler sub-classes
                that are used for each subset of the free variables
              compound_set_lengths: List of the sizes of each subset of variables
-     >>      seed: Python integer to seed the random number generator. Deprecated, pass
-               seed to `tfp.mcmc.sample_chain`.
              name: Python `str` name prefixed to Ops created by this function.
         """
 

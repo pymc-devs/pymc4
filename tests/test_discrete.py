@@ -3,23 +3,23 @@ import pymc4 as pm
 
 
 @pytest.fixture(scope="function")
-def simple_model():
+def model_with_discrete_categorical():
     @pm.model()
-    def simple_model():
-        disc = yield pm.Normal("disc", 0, 1)
-        return disc
-
-    return simple_model
-
-
-@pytest.fixture(scope="function")
-def model_with_discrete():
-    @pm.model()
-    def model_with_discrete():
+    def model_with_discrete_categorical():
         disc = yield pm.Categorical("disc", probs=[0.1, 0.9])
         return disc
 
-    return model_with_discrete
+    return model_with_discrete_categorical
+
+
+@pytest.fixture(scope="function")
+def model_with_discrete_bernoulli():
+    @pm.model()
+    def model_with_discrete_bernoulli():
+        disc = yield pm.Bernoulli("disc", 0.9)
+        return disc
+
+    return model_with_discrete_bernoulli
 
 
 @pytest.fixture(scope="function")
@@ -38,15 +38,19 @@ def xla_fixture(request):
     return request.param == "XLA"
 
 
-@pytest.fixture(scope="module", params=["auto_batch", "trust_manual_batching"], ids=str)
-def use_auto_batching_fixture(request):
-    return request.param == "auto_batch"
-
-
-def test_discrete_sampling(model_with_discrete, xla_fixture):
-    model = model_with_discrete()
+def test_discrete_sampling_categorical(model_with_discrete_categorical, xla_fixture):
+    model = model_with_discrete_categorical()
     trace = pm.sample(model=model, sampler_type="compound", xla_fixture=xla_fixture)
-    round_value = round(trace.posterior["model_with_discrete/disc"].mean().item(), 1)
+    round_value = round(trace.posterior["model_with_discrete_categorical/disc"].mean().item(), 1)
+    # check to match the categorical prob parameter
+    assert round_value == 0.9
+
+
+def test_discrete_sampling_bernoulli(model_with_discrete_bernoulli, xla_fixture):
+    model = model_with_discrete_bernoulli()
+    trace = pm.sample(model=model, sampler_type="compound", xla_fixture=xla_fixture)
+    round_value = round(trace.posterior["model_with_discrete_bernoulli/disc"].mean().item(), 1)
+    # check to match the bernoulli prob parameter
     assert round_value == 0.9
 
 

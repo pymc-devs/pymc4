@@ -97,11 +97,21 @@ def sample(
         print("The given sampler doesn't exist")
 
     # _log.info("{} doesn't support discrete variables".format(sampler.__name__))
-    # TODO: keep num_adaptation_steps for nuts/hmc with adaptive step but later should be removed because of ambiguity
+    # TODO: keep num_adaptation_steps for nuts/hmc with
+    # adaptive step but later should be removed because of ambiguity
     if "nuts" in sampler_type or "hmc" in sampler_type:
         kwargs["num_adaptation_steps"] = burn_in
 
     sampler = sampler(model, **kwargs)
+
+    # If some distributions in the model have non default proposal
+    # generation functions then we lanuch compound step instead of rwm
+    if sampler_type == "randomwalkm":
+        compound_required = sampler._check_proposal_functions(state=state, observed=observed)
+        if compound_required:
+            sampler_type = "compound"
+            sampler = reg_samplers[sampler_type](model, **kwargs)
+
     if sampler_type == "compound":
         sampler._assign_default_methods(
             sampler_methods=sampler_methods, state=state, observed=observed

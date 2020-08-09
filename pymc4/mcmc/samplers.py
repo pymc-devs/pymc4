@@ -278,6 +278,8 @@ class NUTS(_BaseSampler):
     _kernel = mcmc.NoUTurnSampler
     _grad = True
 
+    # we set default kwargs to support previous sampling logic
+    # optimal values can be modified in future
     _default_adapter_kwargs: dict = {
         "num_adaptation_steps": 100,
         "step_size_getter_fn": lambda pkr: pkr.step_size,
@@ -323,6 +325,30 @@ class RandomWalkM(_BaseSampler):
     def _trace_fn(self, current_state, pkr):
         return (pkr.log_accept_ratio,) + tuple(self.deterministics_callback(*current_state))
 
+    def _check_proposal_functions(
+        self, *, state: Optional[flow.SamplingState] = None, observed: Optional[dict] = None,
+    ):
+        # check for the non-default proposal generation functions
+        (_, state, _, _, continuous_distrs, discrete_distrs) = initialize_state(
+            self.model, observed=observed, state=state
+        )
+        init = state.all_unobserved_values
+        init_state = list(init.values())
+        init_keys = list(init.keys())
+
+        for i, state_part in enumerate(init_state):
+            untrs_var, unscoped_tr_var = scope_remove_transformed_part_if_required(
+                init_keys[i], state.transformed_values
+            )
+            # get the distribution for the random variable name
+            distr = continuous_distrs.get(untrs_var, None)
+            if distr is None:
+                distr = discrete_distrs[untrs_var]
+            func = distr._default_new_state_part
+            if callable(func):
+                return True
+        return False
+
 
 @register_sampler
 class CompoundStep(_BaseSampler):
@@ -338,6 +364,7 @@ class CompoundStep(_BaseSampler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # CompoundGibbsStepResults.compound_results
         self._stat_names = ["compound_results"]
 
     def _trace_fn(self, current_state, pkr):
@@ -415,7 +442,7 @@ class CompoundStep(_BaseSampler):
     def _assign_default_methods(
         self,
         *,
-        sampler_methods: List = [],
+        sampler_methods: Optional[List] = None,
         state: Optional[flow.SamplingState] = None,
         observed: Optional[dict] = None,
     ):

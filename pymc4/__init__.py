@@ -1,9 +1,4 @@
 """PyMC4."""
-import logging
-
-_log = logging.getLogger("pymc4")
-_log.setLevel(logging.INFO)
-
 from . import utils
 from .coroutine_model import Model, model
 from .scopes import name_scope, variable_name

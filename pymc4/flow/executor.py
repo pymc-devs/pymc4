@@ -147,10 +147,10 @@ class SamplingState:
             posterior_predictives = set()
         else:
             posterior_predictives = posterior_predictives.copy()
-        if deterministics_distributions is None:
+        if deterministic_distributions is None:
             deterministic_distributions = dict()
         else:
-            deterministic_distributions = deterministics_distributions.copy()
+            deterministic_distributions = deterministic_distributions.copy()
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
@@ -642,7 +642,7 @@ class SamplingExecutor:
                 )
             )
         state.deterministics[scoped_name] = return_value = deterministic.get_value()
-        state.deterministics_distributions[scoped_name] = deterministic
+        state.deterministic_distributions[scoped_name] = deterministic
         return return_value, state
 
     def prepare_model_control_flow(

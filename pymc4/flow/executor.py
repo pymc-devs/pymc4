@@ -116,7 +116,7 @@ class SamplingState:
         potentials: List[distribution.Potential] = None,
         deterministics: Dict[str, Any] = None,
         posterior_predictives: Optional[Set[str]] = None,
-        deterministic_distributions: Dic[str, distribution.Deterministic] = None,
+        deterministic_distributions: Dict[str, distribution.Deterministic] = None,
     ) -> None:
         # verbose __init__
         if transformed_values is None:
@@ -246,8 +246,8 @@ class SamplingState:
             distributions=self.distributions,
             potentials=self.potentials,
             deterministics=self.deterministics,
-            deterministic_distributions=self.deterministic_distributions,
             posterior_predictives=self.posterior_predictives,
+            deterministic_distributions=self.deterministic_distributions,
         )
 
     def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":

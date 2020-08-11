@@ -630,6 +630,7 @@ class SamplingExecutor:
                 )
             )
         state.deterministics[scoped_name] = return_value = deterministic.get_value()
+        state.distributions[scoped_name] = deterministic
         return return_value, state
 
     def prepare_model_control_flow(

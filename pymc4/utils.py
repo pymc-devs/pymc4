@@ -273,7 +273,7 @@ def get_data(filename):
     return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join("data", filename)))
 
 
-def wrapped_partial(func, *args, **kwargs):
+def wrapped_partial(func: Callable, *args, **kwargs):
     partial_func = functools.partial(func, *args, **kwargs)
     functools.update_wrapper(partial_func, func)
     return partial_func

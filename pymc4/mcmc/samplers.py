@@ -553,9 +553,7 @@ class CompoundStep(_BaseSampler):
             kernel, kwargs = kernel_kwargsi
             vars_ = var_keys[curr_indx : curr_indx + set_leni]
             log_output += ("\n" if i > 0 else "") + " -- {}[vars={}, proposal_function={}]".format(
-                kernel._name,
-                [item.split("/")[1] for item in vars_],
-                (func_names[curr_indx]),
+                kernel._name, [item.split("/")[1] for item in vars_], (func_names[curr_indx]),
             )
             curr_indx += set_leni
         _log.info(log_output)

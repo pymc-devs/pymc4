@@ -312,7 +312,7 @@ class Categorical(BoundedDiscreteDistribution):
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
-        event_shape = np.array(probs).shape[-1]
+        event_shape = probs.shape[-1] if tf.is_tensor(probs) else np.array(probs).shape[-1]
         self._default_new_state_part = partial(categorical_uniform_fn, event_shape)
 
     @staticmethod

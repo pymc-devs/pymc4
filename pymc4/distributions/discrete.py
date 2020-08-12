@@ -1,7 +1,6 @@
 """PyMC4 discrete random variables."""
 import tensorflow as tf
 import numpy as np
-from functools import partial
 from tensorflow_probability import distributions as tfd
 from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
@@ -12,6 +11,8 @@ from pymc4.distributions.state_functions import (
     categorical_uniform_fn,
     bernoulli_fn,
 )
+
+from pymc4 import utils
 
 __all__ = [
     "Bernoulli",
@@ -313,7 +314,7 @@ class Categorical(BoundedDiscreteDistribution):
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
         event_shape = probs.shape[-1] if tf.is_tensor(probs) else np.array(probs).shape[-1]
-        self._default_new_state_part = partial(categorical_uniform_fn, event_shape)
+        self._default_new_state_part = utils.wrapped_partial(categorical_uniform_fn, event_shape)
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):

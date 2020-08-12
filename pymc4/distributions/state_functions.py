@@ -66,14 +66,12 @@ def bernoulli_fn(scale=1.0, name=None):
                 ndim = scale_part.get_shape().ndims
                 reduced_elem = tf.squeeze(
                     tf.slice(
-                        scale_part,
-                        tf.zeros(ndim, dtype=tf.int32),
-                        tf.ones(ndim, dtype=tf.int32),
+                        scale_part, tf.zeros(ndim, dtype=tf.int32), tf.ones(ndim, dtype=tf.int32),
                     )
                 )
-                delta = tfd.Bernoulli(
-                    probs=0.5 * reduced_elem, dtype=state_part.dtype
-                ).sample(seed=seed, sample_shape=(tf.shape(state_part)))
+                delta = tfd.Bernoulli(probs=0.5 * reduced_elem, dtype=state_part.dtype).sample(
+                    seed=seed, sample_shape=(tf.shape(state_part))
+                )
                 state_part += delta
                 state_part = state_part % 2.0
                 return state_part
@@ -125,9 +123,7 @@ def gaussian_round_fn(scale=1.0, name=None):
                 ndim = scale_part.get_shape().ndims
                 reduced_elem = tf.squeeze(
                     tf.slice(
-                        scale_part,
-                        tf.zeros(ndim, dtype=tf.int32),
-                        tf.ones(ndim, dtype=tf.int32),
+                        scale_part, tf.zeros(ndim, dtype=tf.int32), tf.ones(ndim, dtype=tf.int32),
                     )
                 )
                 delta = tfd.Normal(0.0, reduced_elem * 1.0).sample(

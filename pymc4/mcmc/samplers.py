@@ -464,6 +464,8 @@ class CompoundStep(_BaseSampler):
         make_kernel_fn: list = []
         # user passed kwargs for each sampler in `make_kernel_fn`
         part_kernel_kwargs: list = []
+        # keep the list for proposal func names
+        func_names: list = []
 
         for i, state_part in enumerate(init_state):
             untrs_var, unscoped_tr_var = scope_remove_transformed_part_if_required(
@@ -525,13 +527,15 @@ class CompoundStep(_BaseSampler):
                 make_kernel_fn.append(sampler)
                 part_kernel_kwargs.append({})
                 # _log.info("Auto-assigning NUTS sampler...")
+            # save proposal func names
+            func_names.append(func.__name__ if func else "default")
 
         # `make_kernel_fn` contains (len(state)) sampler methods, this could lead
         # to more overhed when we are iterating at each call of `one_step` in the
         # compound step kernel. For that we need to merge some of the samplers.
         kernels, set_lengths = self._merge_samplers(make_kernel_fn, part_kernel_kwargs)
         # log variable sampler mapping
-        CompoundStep._log_variables(init_keys, make_kernel_fn, part_kernel_kwargs)
+        CompoundStep._log_variables(init_keys, kernels, set_lengths, self.parent_inds, func_names)
         # save to use late for compound kernel init
         self.kernel_kwargs["compound_samplers"] = kernels
         self.kernel_kwargs["compound_set_lengths"] = set_lengths
@@ -540,12 +544,20 @@ class CompoundStep(_BaseSampler):
         return self.sample(*args, is_compound=True, **kwargs)
 
     @staticmethod
-    def _log_variables(var_keys, kernels, kernel_kwargs):
+    def _log_variables(var_keys, kernel_kwargs, set_lengths, parent_inds, func_names):
+        var_keys = [var_keys[i] for i in parent_inds]
+        func_names = [func_names[i] for i in parent_inds]
         log_output = ""
-        for i, (var, kernel, kwargs) in enumerate(zip(var_keys, kernels, kernel_kwargs)):
-            log_output += ("\n" if i > 0 else "") + "\t -- {}[{}, proposal_function={}]".format(
-                kernel._name, var.split("/")[-1], (kwargs.get("new_state_fn", "default"))
+        curr_indx = 0
+        for i, (kernel_kwargsi, set_leni) in enumerate(zip(kernel_kwargs, set_lengths)):
+            kernel, kwargs = kernel_kwargsi
+            vars_ = var_keys[curr_indx : curr_indx + set_leni]
+            log_output += ("\n" if i > 0 else "") + " -- {}[vars={}, proposal_function={}]".format(
+                kernel._name,
+                [item.split("/")[1] for item in vars_],
+                (func_names[curr_indx]),
             )
+            curr_indx += set_leni
         _log.info(log_output)
 
 

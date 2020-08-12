@@ -92,6 +92,8 @@ def sample(
     """
     if sampler_type is None:
         sampler_type = _auto_assign_sampler(model)
+    elif sampler_type == "compound":
+        _log.info("Working with Compound step")
 
     try:
         sampler = reg_samplers[sampler_type]

@@ -104,3 +104,7 @@ def test_extended_samplers_on_simple_model(simple_model, seed, xla_fixture, expa
 
 def test_compound_seed(compound_model, seed, xla_fixture):
     raise NotImplementedError
+
+
+def test_logging(compound_model):
+    raise NotImplementedError

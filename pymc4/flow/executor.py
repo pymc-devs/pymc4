@@ -104,7 +104,7 @@ class SamplingState:
         "distributions",
         "potentials",
         "deterministics",
-        "deterministic_distributions",
+        "deterministic_variables",
     )
 
     def __init__(
@@ -116,7 +116,7 @@ class SamplingState:
         potentials: List[distribution.Potential] = None,
         deterministics: Dict[str, Any] = None,
         posterior_predictives: Optional[Set[str]] = None,
-        deterministic_distributions: Dict[str, distribution.Deterministic] = None,
+        deterministic_variables: Dict[str, distribution.Deterministic] = None,
     ) -> None:
         # verbose __init__
         if transformed_values is None:
@@ -147,10 +147,10 @@ class SamplingState:
             posterior_predictives = set()
         else:
             posterior_predictives = posterior_predictives.copy()
-        if deterministic_distributions is None:
-            deterministic_distributions = dict()
+        if deterministic_variables is None:
+            deterministic_variables = dict()
         else:
-            deterministic_distributions = deterministic_distributions.copy()
+            deterministic_variables = deterministic_variables.copy()
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
@@ -162,7 +162,7 @@ class SamplingState:
         self.potentials = potentials
         self.deterministics = deterministics
         self.posterior_predictives = posterior_predictives
-        self.deterministic_distributions = deterministic_distributions
+        self.deterministic_variables = deterministic_variables
 
     def collect_log_prob_elemwise(self):
         return itertools.chain(
@@ -183,7 +183,7 @@ class SamplingState:
         observed_values = list(self.observed_values)
         deterministics = list(self.deterministics)
         posterior_predictives = list(self.posterior_predictives)
-        deterministic_distributions = list(self.deterministic_distributions)
+        deterministic_variables = list(self.deterministic_variables)
         # format like dist:name
         distributions = [
             "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
@@ -206,7 +206,7 @@ class SamplingState:
             + indent
             + "deterministics: {}\n"
             + indent
-            + "deterministic_distributions: {}\n"
+            + "deterministic_variables: {}\n"
             + indent
             + "posterior_predictives: {})"
         ).format(
@@ -217,7 +217,7 @@ class SamplingState:
             distributions,
             num_potentials,
             deterministics,
-            deterministic_distributions,
+            deterministic_variables,
             posterior_predictives,
         )
 
@@ -247,7 +247,7 @@ class SamplingState:
             potentials=self.potentials,
             deterministics=self.deterministics,
             posterior_predictives=self.posterior_predictives,
-            deterministic_distributions=self.deterministic_distributions,
+            deterministic_variables=self.deterministic_variables,
         )
 
     def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":
@@ -642,7 +642,7 @@ class SamplingExecutor:
                 )
             )
         state.deterministics[scoped_name] = return_value = deterministic.get_value()
-        state.deterministic_distributions[scoped_name] = deterministic
+        state.deterministic_variables[scoped_name] = deterministic
         return return_value, state
 
     def prepare_model_control_flow(

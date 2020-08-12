@@ -4,7 +4,7 @@ from tensorflow_probability.python.mcmc.internal import util as mcmc_util
 
 tfd = tfp.distributions
 
-__all__ = ["categorical_uniform_fn", "bernoulli_fn", "gaussian_round_fn", "poisson_fn"]
+__all__ = ["categorical_uniform_fn", "bernoulli_fn", "gaussian_round_fn"]
 
 
 def categorical_uniform_fn(event_shape, name=None):
@@ -137,8 +137,6 @@ def gaussian_round_fn(scale=1.0, name=None):
                 return tf.round(state_part)
 
             state_parts = tf.stack(state_parts)
-            # TODO: we create scale_part with shape=state_part.shape
-            # each function call. But scalar value would be enough
             scales = tf.broadcast_to(scales, state_parts.shape)
             deltas = tf.unstack(
                 tf.map_fn(

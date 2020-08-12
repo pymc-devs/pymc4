@@ -127,10 +127,10 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
         if xla:
             results, sample_stats = tf.xla.experimental.compile(
-                self._run_chains, inputs=[init_state, burn_in, seed],
+                self._run_chains, inputs=[init_state, burn_in],
             )
         else:
-            results, sample_stats = self._run_chains(init_state, burn_in, seed)
+            results, sample_stats = self._run_chains(init_state, burn_in)
 
         posterior = dict(zip(init_keys, results))
 
@@ -159,7 +159,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
 
     @tf.function(autograph=False)
-    def _run_chains(self, init, burn_in, seed):
+    def _run_chains(self, init, burn_in):
         kernel = self._kernel(target_log_prob_fn=self.parallel_logpfn, **self.kernel_kwargs)
         if self._adaptation:
             adapt_kernel = self._adaptation(inner_kernel=kernel, **self.adaptation_kwargs,)
@@ -172,7 +172,6 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             kernel=adapt_kernel,
             num_burnin_steps=burn_in,
             trace_fn=self._trace_fn,
-            seed=seed,
             **self.chain_kwargs,
         )
         return results, sample_stats

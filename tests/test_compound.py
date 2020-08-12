@@ -100,3 +100,7 @@ def test_extended_samplers_on_simple_model(simple_model, seed, xla_fixture, expa
     trace = pm.sample(model, sampler_type=expanded_sampler_type, xla_fixture=xla_fixture, seed=seed)
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
+
+
+def test_compound_seed(compound_model, seed, xla_fixture):
+    raise NotImplementedError

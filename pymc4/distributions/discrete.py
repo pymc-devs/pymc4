@@ -72,7 +72,7 @@ class Bernoulli(BoundedDiscreteDistribution):
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
-        self._default_new_state_part = bernoulli_fn
+        self._default_new_state_part = bernoulli_fn()
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
@@ -314,7 +314,7 @@ class Categorical(BoundedDiscreteDistribution):
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
         event_shape = probs.shape[-1] if tf.is_tensor(probs) else np.array(probs).shape[-1]
-        self._default_new_state_part = utils.wrapped_partial(categorical_uniform_fn, event_shape)
+        self._default_new_state_part = categorical_uniform_fn(event_shape=event_shape)
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):

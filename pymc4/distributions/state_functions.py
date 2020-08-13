@@ -51,7 +51,7 @@ class Proposal(metaclass=abc.ABCMeta):
 class CategoricalUniformFn(Proposal):
     """Returns a callable that samples new proposal from Categorical distribution with uniform probabilites
     Args:
-       event_shape: tuple, tf.TensorShape
+       classes: tuple, tf.TensorShape
            Shape of logits/probs parameter of the distribution
        name: Python `str` name prefixed to Ops created by this function.
            Default value: 'categorical_uniform_fn'.
@@ -65,15 +65,15 @@ class CategoricalUniformFn(Proposal):
 
     _name = "categorical_uniform_fn"
 
-    def __init__(self, event_shape, name=None):
+    def __init__(self, classes, name=None):
         super().__init__(name)
-        self.event_shape = event_shape
+        self.classes = classes
 
     def _fn(self, state_parts, seed):
         with tf.name_scope(self._name or "categorical_uniform_fn"):
             deltas = tf.unstack(
                 tf.map_fn(
-                    lambda x: tfd.Categorical(logits=tf.ones(self.event_shape)).sample(
+                    lambda x: tfd.Categorical(logits=tf.ones(self.classes)).sample(
                         seed=seed, sample_shape=tf.shape(x)
                     ),
                     tf.stack(state_parts),
@@ -82,7 +82,7 @@ class CategoricalUniformFn(Proposal):
             return deltas
 
     def __eq__(self, other):
-        return self._name == other._name and self.event_shape == other.event_shape
+        return self._name == other._name and self.classes == other.classes
 
 
 class BernoulliFn(Proposal):

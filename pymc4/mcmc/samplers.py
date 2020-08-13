@@ -163,7 +163,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
     def _run_chains(self, init, burn_in):
         kernel = self._kernel(target_log_prob_fn=self.parallel_logpfn, **self.kernel_kwargs)
         if self._adaptation:
-            adapt_kernel = self._adaptation(inner_kernel=kernel, **self.adaptation_kwargs,)
+            adapt_kernel = self._adaptation(inner_kernel=kernel, **self.adaptation_kwargs)
         else:
             adapt_kernel = kernel
 
@@ -413,6 +413,7 @@ class CompoundStep(_BaseSampler):
             # the rest of the kwargs of the sampler kernel
             key = "new_state_fn"
             if (key in item1 and key in item2) or (key not in item1 and key not in item2):
+                # compare class instances instea of _fn for `new_state_fn`
                 if key in item1 and item1[key].__self__ != item2[key].__self__:
                     return False
                 value1, value2 = item1.pop(key), item2.pop(key)

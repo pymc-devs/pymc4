@@ -571,7 +571,7 @@ class SamplingExecutor:
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if scoped_name in state.distributions or scoped_name in state.deterministics_values:
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -631,7 +631,7 @@ class SamplingExecutor:
         scoped_name = scopes.variable_name(deterministic.name)
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if scoped_name in state.distributions or scoped_name in state.deterministics_values:
             raise EvaluationError(
                 "Attempting to create a duplicate deterministic {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "

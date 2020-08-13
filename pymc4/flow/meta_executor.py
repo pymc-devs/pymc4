@@ -38,7 +38,7 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if scoped_name in state.distributions or scoped_name in state.deterministics_values:
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "

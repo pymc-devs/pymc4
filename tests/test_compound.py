@@ -187,3 +187,7 @@ def test_sampler_merging(categorical_same_shape, categorical_different_shape):
     sampler_ = sampler(model_diff)
     sampler_._assign_default_methods(sampler_methods=sampler_methods5)
     assert len(sampler_.kernel_kwargs["compound_samplers"]) == 3
+
+
+def test_other_samplers():
+    raise NotImplementedError

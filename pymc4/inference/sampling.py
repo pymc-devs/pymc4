@@ -7,14 +7,10 @@ import logging
 
 logging._warn_preinit_stderr = 0
 
-# set up logging
-# _log = logging.getLogger("pymc4.sampling")
-# _log.setLevel(logging.INFO)
-
 
 def sample(
     model: Model,
-    sampler_type: str = None,  # TODO: to keep current progress, later, assigner should be added
+    sampler_type: Optional[str] = None,
     num_samples: int = 1000,
     num_chains: int = 10,
     burn_in: int = 100,
@@ -23,13 +19,13 @@ def sample(
     xla: bool = False,
     use_auto_batching: bool = True,
     sampler_methods: Optional[List] = None,
-    trace_discrete: List[str] = None,
-    seed: int = None,
+    trace_discrete: Optional[List[str]] = None,
+    seed: Optional[int] = None,
     **kwargs,
 ):
-    # TODO: complete docs
     """
     Perform MCMC sampling using NUTS (for now).
+
     Parameters
     ----------
     model : pymc4.Model
@@ -60,6 +56,9 @@ def sample(
         ``batch_shape``. Achieving this is a hard task, but it enables the model to be safely
         evaluated in parallel across all chains in MCMC, so sampling will be faster than in the
         automatically batched scenario.
+    trace_discrete : Optional[List[str]]
+        INFO: This is an advanced user feature.
+    seed : Optional[int]
     Returns
     -------
     Trace : InferenceDataType
@@ -100,7 +99,6 @@ def sample(
     except KeyError:
         print("The given sampler doesn't exist")
 
-    # _log.info("{} doesn't support discrete variables".format(sampler.__name__))
     # TODO: keep num_adaptation_steps for nuts/hmc with
     # adaptive step but later should be removed because of ambiguity
     if "nuts" in sampler_type or "hmc" in sampler_type:
@@ -111,7 +109,7 @@ def sample(
     # If some distributions in the model have non default proposal
     # generation functions then we lanuch compound step instead of rwm
     if sampler_type == "randomwalkm":
-        compound_required = sampler._check_proposal_functions(state=state, observed=observed)
+        compound_required = sampler.check_proposal_functions(state=state, observed=observed)
         if compound_required:
             sampler_type = "compound"
             sampler = reg_samplers[sampler_type](model, **kwargs)
@@ -138,7 +136,7 @@ def auto_assign_sampler(
     model: Model,
     observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
-):
+) -> str:
     """
     The toy implementation of sampler assigner
     Parameters
@@ -149,6 +147,11 @@ def auto_assign_sampler(
         New observed values (optional)
     state : Optional[pymc4.flow.SamplingState]
         Alternative way to pass specify initial values and observed values
+
+    Returns
+    -------
+    sampler_type : str
+        Sampler type name
     """
     return _auto_assign_sampler(model, observed, state)
 
@@ -158,6 +161,7 @@ def _auto_assign_sampler(
     observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
 ):
+    # TODO: This could be improved in the future?
     _, _, free_disc_names, free_cont_names, _, _ = initialize_state(
         model, observed=observed, state=state
     )

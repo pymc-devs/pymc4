@@ -406,6 +406,20 @@ class CompoundStep(_BaseSampler):
         parents = list(range(num_vars))
         kernels = []
 
+        def cmp_(item1, item2):
+            # hack to separetely compare proposal function and
+            # the rest of the kwargs of the sampler kernel
+            key = "new_state_fn"
+            if (key in item1 and key in item2) or (key not in item1 and key not in item2):
+                if key in item1 and item1[key].__self__ != item2[key].__self__:
+                    return False
+                value1, value2 = item1.pop(key), item2.pop(key)
+                flag = item1 == item2
+                item1[key], item2[key] = value1, value2
+                return flag
+            else:
+                return False
+
         # DSU ops
         def get_set(p):
             return p if parents[p] == p else get_set(parents[p])
@@ -420,14 +434,11 @@ class CompoundStep(_BaseSampler):
             # For the sampler to be the same we are comparing
             # both classes of the chosen sampler and the key
             # arguments.
-            if (
-                make_kernel_fn[i] == make_kernel_fn[j]
-                and part_kernel_kwargs[i] == part_kernel_kwargs[j]
+            if make_kernel_fn[i] == make_kernel_fn[j] and cmp_(
+                part_kernel_kwargs[i], part_kernel_kwargs[j]
             ):
                 union_set(i, j)
         # assign kernels based on unique sets
-
-        # FIXME: some issues with merging proposal funcs
 
         used_p = {}
         for i, p in enumerate(parents):

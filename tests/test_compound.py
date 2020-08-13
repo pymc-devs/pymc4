@@ -3,6 +3,7 @@ import pymc4 as pm
 import numpy as np
 import tensorflow as tf
 from pymc4.mcmc.samplers import RandomWalkM
+from pymc4.mcmc.samplers import reg_samplers
 
 
 @pytest.fixture(scope="function")
@@ -24,6 +25,26 @@ def compound_model():
         return var2
 
     return compound_model
+
+
+@pytest.fixture(scope="function")
+def categorical_same_shape():
+    @pm.model
+    def categorical_same_shape():
+        var1 = yield pm.Categorical("var1", probs=[0.2, 0.4, 0.4])
+        var1 = yield pm.Categorical("var2", probs=[0.1, 0.3, 0.6])
+        var1 = yield pm.Categorical("var3", probs=[0.1, 0.1, 0.8])
+    return categorical_same_shape
+
+
+@pytest.fixture(scope="function")
+def categorical_different_shape():
+    @pm.model
+    def categorical_different_shape():
+        var1 = yield pm.Categorical("var1", probs=[0.2, 0.4, 0.4])
+        var1 = yield pm.Categorical("var2", probs=[0.1, 0.3, 0.1, 0.5])
+        var1 = yield pm.Categorical("var3", probs=[0.1, 0.1, 0.1, 0.2, 0.5])
+    return categorical_different_shape
 
 
 @pytest.fixture(scope="module", params=["XLA", "noXLA"], ids=str)
@@ -110,5 +131,14 @@ def test_logging(compound_model):
     raise NotImplementedError
 
 
-def test_merged_kernels(compound_model):
-    raise NotImplementedError
+def test_sampler_merging(categorical_same_shape, categorical_different_shape):
+    model_same = categorical_same_shape()
+    model_diff = categorical_different_shape()
+    sampler = reg_samplers["compound"]
+    sampler1 = sampler(model_same)
+    sampler1._assign_default_methods()
+    sampler2 = sampler(model_diff)
+    sampler2._assign_default_methods()
+    assert len(sampler1.kernel_kwargs["compound_samplers"]) == 1
+    assert len(sampler2.kernel_kwargs["compound_samplers"]) == 3
+    # TODO: more examples

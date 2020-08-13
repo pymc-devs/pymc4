@@ -247,7 +247,7 @@ class SamplingState:
             potentials=self.potentials,
             deterministics=self.deterministics,
             posterior_predictives=self.posterior_predictives,
-            deterministic_variables=self.deterministic_variables,
+            deterministics_values=self.deterministics_values,
         )
 
     def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":

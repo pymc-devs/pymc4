@@ -34,6 +34,7 @@ def categorical_same_shape():
         var1 = yield pm.Categorical("var1", probs=[0.2, 0.4, 0.4])
         var1 = yield pm.Categorical("var2", probs=[0.1, 0.3, 0.6])
         var1 = yield pm.Categorical("var3", probs=[0.1, 0.1, 0.8])
+
     return categorical_same_shape
 
 
@@ -44,6 +45,7 @@ def categorical_different_shape():
         var1 = yield pm.Categorical("var1", probs=[0.2, 0.4, 0.4])
         var1 = yield pm.Categorical("var2", probs=[0.1, 0.3, 0.1, 0.5])
         var1 = yield pm.Categorical("var3", probs=[0.1, 0.1, 0.1, 0.2, 0.5])
+
     return categorical_different_shape
 
 
@@ -123,8 +125,13 @@ def test_extended_samplers_on_simple_model(simple_model, seed, xla_fixture, expa
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 
 
-def test_compound_seed(compound_model, seed, xla_fixture):
-    raise NotImplementedError
+def test_compound_seed(simple_model, seed, xla_fixture):
+    model = simple_model()
+    trace1 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
+    trace2 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
+    np.testing.assert_allclose(
+        tf.norm(trace1.posterior["simple_model"] - trace2.posterior["simple_model"]), 0.0, atol=1e-6
+    )
 
 
 def test_logging(compound_model):

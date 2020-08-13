@@ -124,6 +124,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
         # TODO: problem with tf.function when passing as argument to self._run_chains
         self._num_samples = num_samples
+        self.seed = seed
 
         if xla:
             results, sample_stats = tf.xla.experimental.compile(
@@ -172,6 +173,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             kernel=adapt_kernel,
             num_burnin_steps=burn_in,
             trace_fn=self._trace_fn,
+            seed=self.seed,
             **self.chain_kwargs,
         )
         return results, sample_stats

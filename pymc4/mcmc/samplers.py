@@ -26,7 +26,7 @@ logging._warn_preinit_stderr = 0
 __all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep"]
 
 reg_samplers = {}
-# set up logging
+# TODO: better design for logging
 console = logging.StreamHandler()
 _log = logging.getLogger("pymc4.sampling")
 _log.root.handlers = []  # remove tf absl logging handling
@@ -64,7 +64,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             )
 
         self.model = model
-        self._stat_names: List = []
+        self.stat_names: List = []
         # assign arguments from **kwargs to distinct kwargs for
         # `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
@@ -72,12 +72,12 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         self._check_arguments()
         self._bound_kwargs()
 
-    def sample(
+    def _sample(
         self,
         *,
-        num_samples=1000,
-        num_chains=10,
-        burn_in=100,
+        num_samples: int = 1000,
+        num_chains: int = 10,
+        burn_in: int = 100,
         observed: Optional[dict] = None,
         state: Optional[flow.SamplingState] = None,
         use_auto_batching: bool = True,
@@ -86,9 +86,6 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         is_compound: bool = False,
         trace_discrete: Optional[List[str]] = None,
     ):
-        """
-            Docs
-        """
         if state is not None and observed is not None:
             raise ValueError("Can't use both `state` and `observed` arguments")
         (
@@ -147,10 +144,10 @@ class _BaseSampler(metaclass=abc.ABCMeta):
                 posterior[key] = tf.cast(posterior[key], dtype=tf.int32)
 
         # Keep in sync with pymc3 naming convention
-        if len(sample_stats) > len(self._stat_names):
-            deterministic_values = sample_stats[len(self._stat_names) :]
-            sample_stats = sample_stats[: len(self._stat_names)]
-        sampler_stats = dict(zip(self._stat_names, sample_stats))
+        if len(sample_stats) > len(self.stat_names):
+            deterministic_values = sample_stats[len(self.stat_names) :]
+            sample_stats = sample_stats[: len(self.stat_names)]
+        sampler_stats = dict(zip(self.stat_names, sample_stats))
         if len(deterministic_names) > 0:
             posterior.update(dict(zip(deterministic_names, deterministic_values)))
 
@@ -172,25 +169,11 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             current_state=init,
             kernel=adapt_kernel,
             num_burnin_steps=burn_in,
-            trace_fn=self._trace_fn,
+            trace_fn=self.trace_fn,
             seed=self.seed,
             **self.chain_kwargs,
         )
         return results, sample_stats
-
-    @abc.abstractmethod
-    def _trace_fn(self, current_state: flow.SamplingState, pkr):
-        """
-        Support a tracing for each sampler
-
-        Parameters
-        ----------
-        current_state : flow.SamplingState
-            state for tracing
-        pkr :
-            kernel results
-        """
-        pass
 
     def _assign_arguments(self, kwargs):
         kwargs_keys = set(kwargs.keys())
@@ -227,14 +210,14 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         # set all the default kwargs which are distinct
         # for each type of sampler. If a use has passed
         # the key argument then we don't change the kwargs set
-        for k, v in self._default_kernel_kwargs.items():
+        for k, v in self.default_kernel_kwargs.items():
             self.kernel_kwargs.setdefault(k, v)
-        for k, v in self._default_adapter_kwargs.items():
+        for k, v in self.default_adapter_kwargs.items():
             self.adaptation_kwargs.setdefault(k, v)
 
     def __call__(self, *args, **kwargs):
         # pm.sample() entrance
-        return self.sample(*args, **kwargs)
+        return self._sample(*args, **kwargs)
 
     @classmethod
     def _default_kernel_maker(cls):
@@ -246,27 +229,74 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         kernel_collection = KERNEL_KWARGS_SET(
             kernel=cls._kernel,
             adaptive_kernel=cls._adaptation,
-            kernel_kwargs=cls._default_kernel_kwargs,
-            adaptive_kwargs=cls._default_adapter_kwargs,
+            kernel_kwargs=cls.default_kernel_kwargs,
+            adaptive_kwargs=cls.default_adapter_kwargs,
         )
         return kernel_collection
+
+    @abc.abstractmethod
+    def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
+        """
+        Support a tracing for each sampler
+
+        Parameters
+        ----------
+        current_state : flow.SamplingState
+            state for tracing
+        pkr : Union[tf.Tensor, Any]
+            A `Tensor` or nested collection of `Tensor`s
+        """
+        pass
 
 
 @register_sampler
 class HMC(_BaseSampler):
+    """
+    Sampler to run one_step of Hamiltonian Monte Carlo (HMC).
+    HMC is a Markov chain Monte Carlo (MCMC) algorithm that takes a
+    series of gradient-informed steps to produce a Metropolis proposal.
+    Mathematical details and derivations can be found in [Neal (2011)].
+
+    The adaptation scheme for this class is `tfp.mcmc.DualAveragingStepSizeAdaptation`
+    which is the dual averaging policy that uses a noisy step size for exploration,
+    while averaging over tuning steps to provide a smoothed estimate of an optimal value.
+    It is based on [section 3.2 of Hoffman and Gelman (2013)], which modifies the
+    [stochastic convex optimization scheme of Nesterov (2009)].
+
+    More about the implementation of the HMC:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/HamiltonianMonteCarlo]
+
+    More about the implementation of the adaptation:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/DualAveragingStepSizeAdaptation]
+
+    Default values for HMC kernel are:
+        {
+            step_size:0.1,
+            num_leapfrog_steps:3
+        }
+
+    Default stat_names:
+        ["mean_tree_accept"]
+
+    Default trace_fn:
+        Leave only `log_accept_ratio` and calculate deterministic values
+    """
+
+    # TODO: provide ref links for papers
+
     _name = "hmc"
+    _grad = True
     _adaptation = mcmc.DualAveragingStepSizeAdaptation
     _kernel = mcmc.HamiltonianMonteCarlo
-    _grad = True
 
-    _default_kernel_kwargs: dict = {"step_size": 0.1, "num_leapfrog_steps": 3}
-    _default_adapter_kwargs: dict = {}
+    default_kernel_kwargs: dict = {"step_size": 0.1, "num_leapfrog_steps": 3}
+    default_adapter_kwargs: dict = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._stat_names = {"mean_tree_accept"}
+        self.stat_names = {"mean_tree_accept"}
 
-    def _trace_fn(self, current_state, pkr):
+    def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
         return (pkr.inner_results.log_accept_ratio,) + tuple(
             self.deterministics_callback(*current_state)
         )
@@ -274,32 +304,99 @@ class HMC(_BaseSampler):
 
 @register_sampler
 class HMCSimple(HMC):
+    """
+    Sampler to run one_step of Hamiltonian Monte Carlo (HMC).
+    HMC is a Markov chain Monte Carlo (MCMC) algorithm that takes a
+    series of gradient-informed steps to produce a Metropolis proposal.
+    Mathematical details and derivations can be found in [Neal (2011)].
+
+    The adaptation scheme for this class is `tfp.mcmc.SimpleStepSizeAdaptation`
+    which multiplicatively increases or decreases the step_size of the inner kernel
+    based on the value of log_accept_prob. It is based on [equation 19 of Andrieu and Thoms (2008)].
+
+
+    More about the implementation of the HMC:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/HamiltonianMonteCarlo]
+
+    More about the implementation of the adaptation:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/SimpleStepSizeAdaptation]
+    """
+
     _name = "hmc_simple"
     _adaptation = mcmc.SimpleStepSizeAdaptation
 
 
 @register_sampler
 class NUTS(_BaseSampler):
+    """
+    Sampler to run one_step of No U-Turn Sampler (NUTS).
+    NUTS is an adaptive variant of the Hamiltonian Monte
+    Carlo (HMC) method for MCMC. NUTS adapts the distance traveled in response to
+    the curvature of the target density. Conceptually, one proposal consists of
+    reversibly evolving a trajectory through the sample space, continuing until
+    that trajectory turns back on itself (hence the name, 'No U-Turn'). This class
+    implements one random NUTS step from a given `current_state`.
+    Mathematical details and derivations can be found in
+    [Hoffman, Gelman (2011)] and [Betancourt (2018)].
+
+    The adaptation scheme for this class is `tfp.mcmc.DualAveragingStepSizeAdaptation`
+    which is the dual averaging policy that uses a noisy step size for exploration,
+    while averaging over tuning steps to provide a smoothed estimate of an optimal value.
+    It is based on [section 3.2 of Hoffman and Gelman (2013)], which modifies the
+    [stochastic convex optimization scheme of Nesterov (2009)].
+
+    More about the implementation of the NUTS:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/NoUTurnSampler]
+
+    More about the implementation of the adaptation:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/DualAveragingStepSizeAdaptation]
+
+    Default arguments for NUTS kernel are:
+        {step_size=0.1}
+
+    Default arguments for adaptation scheme:
+        {
+            num_adaptation_steps: 100,
+            step_size_getter_fn: lambda pkr: pkr.step_size,
+            log_accept_prob_getter_fn: lambda pkr: pkr.log_accept_ratio,
+            step_size_setter_fn: lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
+        }
+
+    Default `stat_names` values:
+        ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
+
+    Default `trace_fn` returns:
+        (
+            inner_results.target_log_prob,
+            inner_results.leapfrogs_taken,
+            inner_results.has_divergence,
+            inner_results.energy,
+            inner_results.log_accept_ratio,
+            *deterministic_values,
+        )
+
+    """
+
     _name = "nuts"
+    _grad = True
     _adaptation = mcmc.DualAveragingStepSizeAdaptation
     _kernel = mcmc.NoUTurnSampler
-    _grad = True
 
     # we set default kwargs to support previous sampling logic
     # optimal values can be modified in future
-    _default_adapter_kwargs: dict = {
+    default_adapter_kwargs: dict = {
         "num_adaptation_steps": 100,
         "step_size_getter_fn": lambda pkr: pkr.step_size,
         "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
         "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
     }
-    _default_kernel_kwargs: dict = {"step_size": 0.1}
+    default_kernel_kwargs: dict = {"step_size": 0.1}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
+        self.stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
 
-    def _trace_fn(self, current_state, pkr):
+    def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
         return (
             pkr.inner_results.target_log_prob,
             pkr.inner_results.leapfrogs_taken,
@@ -311,31 +408,84 @@ class NUTS(_BaseSampler):
 
 @register_sampler
 class NUTSSimple(NUTS):
+    """
+    Sampler to run one_step of No U-Turn Sampler (NUTS).
+    NUTS is an adaptive variant of the Hamiltonian Monte
+    Carlo (HMC) method for MCMC. NUTS adapts the distance traveled in response to
+    the curvature of the target density. Conceptually, one proposal consists of
+    reversibly evolving a trajectory through the sample space, continuing until
+    that trajectory turns back on itself (hence the name, 'No U-Turn'). This class
+    implements one random NUTS step from a given `current_state`.
+    Mathematical details and derivations can be found in
+    [Hoffman, Gelman (2011)] and [Betancourt (2018)].
+
+    The adaptation scheme for this class is `tfp.mcmc.SimpleStepSizeAdaptation`
+    which multiplicatively increases or decreases the step_size of the inner kernel
+    based on the value of log_accept_prob. It is based on [equation 19 of Andrieu and Thoms (2008)].
+
+    More about the implementation of the HMC:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/NoUTurnSampler]
+
+    More about the implementation of the adaptation:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/SimpleStepSizeAdaptation]
+    """
+
     _name = "nuts_simple"
     _adaptation = mcmc.SimpleStepSizeAdaptation
 
 
 @register_sampler
 class RandomWalkM(_BaseSampler):
+    """
+    Sampler to run one_step of Random Walk Metropolis (RWM).
+    RWM is a gradient-free Markov chain Monte Carlo (MCMC)
+    algorithm. The algorithm involves a proposal generating
+    step proposal_state = current_state + perturb by a random perturbation,
+    followed by Metropolis-Hastings accept/reject step. For more details see
+    Section 2.1 of Roberts and Rosenthal (2004)
+
+    More about the implementation of the RWM:
+        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/RandomWalkMetropolis]
+
+    Default `stat_names` values:
+        ["mean_accept"]
+
+    Default `trace_fn` returns:
+        (
+            log_accept_ratio,
+            *deterministic_values,
+        )
+
+    """
+
     _name = "randomwalkm"
     _adaptation = None
     _kernel = mcmc.RandomWalkMetropolis
     _grad = False
 
-    _default_kernel_kwargs: dict = {}
-    _default_adapter_kwargs: dict = {}
+    default_kernel_kwargs: dict = {}
+    default_adapter_kwargs: dict = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._stat_names = ["mean_accept"]
+        self.stat_names = ["mean_accept"]
 
-    def _trace_fn(self, current_state, pkr):
+    def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
         return (pkr.log_accept_ratio,) + tuple(self.deterministics_callback(*current_state))
 
-    def _check_proposal_functions(
+    def check_proposal_functions(
         self, *, state: Optional[flow.SamplingState] = None, observed: Optional[dict] = None,
-    ):
-        # check for the non-default proposal generation functions
+    ) -> bool:
+        """
+        Check for the non-default proposal generation functions
+
+        Parameters
+        ----------
+        state : Optional[flow.SamplingState]
+            Current state
+        observed : Optional[Dict[str, Any]]
+            Observed values (optional)
+        """
         (_, state, _, _, continuous_distrs, discrete_distrs) = initialize_state(
             self.model, observed=observed, state=state
         )
@@ -359,22 +509,32 @@ class RandomWalkM(_BaseSampler):
 
 @register_sampler
 class CompoundStep(_BaseSampler):
-    """The basic implementation of the compound step"""
+    """
+    The basic implementation of the compound step
+
+    Default `stat_names` values:
+        ["compound_results"]
+
+    Default `trace_fn` returns:
+        (
+            *,
+            *deterministic_values,
+        )
+    """
 
     _name = "compound"
     _adaptation = None
     _kernel = _CompoundStepTF
     _grad = False
 
-    _default_adapter_kwargs: dict = {}
-    _default_kernel_kwargs: dict = {}
+    default_adapter_kwargs: dict = {}
+    default_kernel_kwargs: dict = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # CompoundGibbsStepResults.compound_results
-        self._stat_names = ["compound_results"]
+        self.stat_names = ["compound_results"]
 
-    def _trace_fn(self, current_state, pkr):
+    def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
         return (pkr,) + tuple(self.deterministics_callback(*current_state))
 
     @staticmethod

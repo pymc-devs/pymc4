@@ -204,7 +204,7 @@ class GaussianRoundFn(Proposal):
 
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         scale = self.scale
-        with tf.name_scope(self._name or "bernoulli_uniform_fn"):
+        with tf.name_scope(self._name or "gaussian_round_fn"):
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
             if len(scales) == 1:
                 scales *= len(state_parts)

@@ -426,6 +426,9 @@ class CompoundStep(_BaseSampler):
             ):
                 union_set(i, j)
         # assign kernels based on unique sets
+
+        # FIXME: some issues with merging proposal funcs
+
         used_p = {}
         for i, p in enumerate(parents):
             if p not in used_p:
@@ -433,8 +436,7 @@ class CompoundStep(_BaseSampler):
                 used_p[p] = True
 
         # calculate independent set lengths
-        parent_used = {}
-        set_lengths = []
+        parent_used, set_lengths = {}, []
         for p in parents:
             if p in parent_used:
                 set_lengths[parent_used[p]] += 1
@@ -511,14 +513,14 @@ class CompoundStep(_BaseSampler):
                 # add the default `new_state_fn` for the distr
                 # `new_state_fn` is supported for only RandomWalkMetropolis transition
                 # kernel.
-                if callable(func) and sampler._name == "randomwalkm":
-                    part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
+                if func and sampler._name == "randomwalkm":
+                    part_kernel_kwargs[-1]["new_state_fn"] = func()
             elif callable(func):
                 # If distribution has defined `new_state_fn` attribute then we need
                 # to assign `RandomWalkMetropolis` transition kernel
                 make_kernel_fn.append(RandomWalkM)
                 part_kernel_kwargs.append({})
-                part_kernel_kwargs[-1]["new_state_fn"] = functools.partial(func)()
+                part_kernel_kwargs[-1]["new_state_fn"] = func()
             else:
                 # by default if user didn't not provide any sampler
                 # we choose NUTS for the variable with gradient and
@@ -528,7 +530,7 @@ class CompoundStep(_BaseSampler):
                 part_kernel_kwargs.append({})
                 # _log.info("Auto-assigning NUTS sampler...")
             # save proposal func names
-            func_names.append(func.__name__ if func else "default")
+            func_names.append(func._name if func else "default")
 
         # `make_kernel_fn` contains (len(state)) sampler methods, this could lead
         # to more overhed when we are iterating at each call of `one_step` in the

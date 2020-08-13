@@ -1,3 +1,4 @@
+import abc
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow_probability.python.mcmc.internal import util as mcmc_util
@@ -6,8 +7,48 @@ tfd = tfp.distributions
 
 __all__ = ["categorical_uniform_fn", "bernoulli_fn", "gaussian_round_fn"]
 
+# TODO: We can furthere optimize proposal function
+# For now if a user provides two sampler functions with
+# the same proposal function but different scale parameter
+# the sampler code will treat them as separete sampling kernels
+# which will increase the graph size.
 
-def categorical_uniform_fn(event_shape, name=None):
+
+def wrap_inner_fn_name():
+    """
+        Change the name of nested function.
+        We need this to compare the proposal functions.
+    """
+
+    def decorate(func):
+        def call(*args, **kwargs):
+            q = func(*args, **kwargs)
+            q.__name__ = "/".join([func.__name__, q.__name__])
+            return q
+
+        return call
+
+    return decorate
+
+
+class Proposal(metaclass=abc.ABCMeta):
+    def __init__(self, name=None):
+        if name:
+            self._name = name
+
+    @abc.abstractmethod
+    def _fn(self, state_parts, seed):
+        pass
+
+    @abc.abstractmethod
+    def __eq__(self, other):
+        pass
+
+    def __call__(self):
+        return self._fn
+
+
+class CategoricalUniformFn(Proposal):
     """Returns a callable that samples new proposal from Categorical distribution with uniform probabilites
     Args:
        event_shape: tuple, tf.TensorShape
@@ -22,11 +63,17 @@ def categorical_uniform_fn(event_shape, name=None):
          proposal for the RWM algorithm.
     """
 
-    def _fn(state_parts, seed):
-        with tf.name_scope(name or "categorical_uniform_fn"):
+    _name = "categorical_uniform_fn"
+
+    def __init__(self, event_shape, name=None):
+        super().__init__(name)
+        self.event_shape = event_shape
+
+    def _fn(self, state_parts, seed):
+        with tf.name_scope(self._name or "categorical_uniform_fn"):
             deltas = tf.unstack(
                 tf.map_fn(
-                    lambda x: tfd.Categorical(logits=tf.ones(event_shape)).sample(
+                    lambda x: tfd.Categorical(logits=tf.ones(self.event_shape)).sample(
                         seed=seed, sample_shape=tf.shape(x)
                     ),
                     tf.stack(state_parts),
@@ -34,10 +81,11 @@ def categorical_uniform_fn(event_shape, name=None):
             )
             return deltas
 
-    return _fn
+    def __eq__(self, other):
+        return self._name == other._name and self.event_shape == other.event_shape
 
 
-def bernoulli_fn(scale=1.0, name=None):
+class BernoulliFn(Proposal):
     """Returns a callable that samples new proposal from Bernoulli distribution
     Args:
        scale: a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
@@ -53,8 +101,15 @@ def bernoulli_fn(scale=1.0, name=None):
          proposal for the RWM algorithm.
     """
 
-    def _fn(state_parts, seed):
-        with tf.name_scope(name or "bernoulli_fn"):
+    _name = "bernoulli_fn"
+
+    def __init__(self, scale=1.0, name=None):
+        super().__init__(name)
+        self.scale = scale
+
+    def _fn(self, state_parts, seed):
+        scale = self.scale
+        with tf.name_scope(self._name or "bernoulli_fn"):
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
             if len(scales) == 1:
                 scales *= len(state_parts)
@@ -80,7 +135,13 @@ def bernoulli_fn(scale=1.0, name=None):
             orig_dtype = state_parts.dtype
             # TODO: we create scale_part with shape=state_part.shape
             # each function call. But scalar value would be enough
-            scales = tf.broadcast_to(scales, state_parts.shape)
+
+            shape_ = state_parts.shape
+            inds_tile = tf.concat(
+                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0
+            )
+            shape_ = (1,) + shape_[1:] + (shape_[0],)
+            scales = tf.tile(tf.broadcast_to(scales, shape_), inds_tile)[..., 0]
             state_parts = tf.cast(state_parts, dtype=scales.dtype)
             deltas = tf.unstack(
                 tf.map_fn(
@@ -92,10 +153,11 @@ def bernoulli_fn(scale=1.0, name=None):
             )
             return tf.unstack(tf.cast(deltas, dtype=orig_dtype))
 
-    return _fn
+    def __eq__(self, other):
+        return self._name == other._name and self.scale == other.scale
 
 
-def gaussian_round_fn(scale=1.0, name=None):
+class GaussianRoundFn(Proposal):
     """Returns a callable that samples new proposal from Normal distribution with round
     Args:
        scale: a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
@@ -111,8 +173,15 @@ def gaussian_round_fn(scale=1.0, name=None):
          proposal for the RWM algorithm.
     """
 
-    def _fn(state_parts, seed):
-        with tf.name_scope(name or "bernoulli_uniform_fn"):
+    _name = "gaussian_round_fn"
+
+    def __init__(self, scale=1.0, name=None):
+        super().__init__(name)
+        self.scale = scale
+
+    def _fn(self, state_parts, seed):
+        scale = self.scale
+        with tf.name_scope(self._name or "bernoulli_uniform_fn"):
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
             if len(scales) == 1:
                 scales *= len(state_parts)
@@ -133,7 +202,14 @@ def gaussian_round_fn(scale=1.0, name=None):
                 return tf.round(state_part)
 
             state_parts = tf.stack(state_parts)
-            scales = tf.broadcast_to(scales, state_parts.shape)
+
+            shape_ = state_parts.shape
+            inds_tile = tf.concat(
+                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0
+            )
+            shape_ = (1,) + shape_[1:] + (shape_[0],)
+            scales = tf.tile(tf.broadcast_to(scales, shape_), inds_tile)[..., 0]
+
             deltas = tf.unstack(
                 tf.map_fn(
                     lambda x: generate_new_values(x[0], x[1]),
@@ -142,4 +218,10 @@ def gaussian_round_fn(scale=1.0, name=None):
             )
             return tf.unstack(deltas)
 
-    return _fn
+    def __eq__(self, other):
+        return self._name == other._name and self.scale == other.scale
+
+
+categorical_uniform_fn = CategoricalUniformFn
+bernoulli_fn = BernoulliFn
+gaussian_round_fn = GaussianRoundFn

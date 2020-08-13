@@ -108,3 +108,7 @@ def test_compound_seed(compound_model, seed, xla_fixture):
 
 def test_logging(compound_model):
     raise NotImplementedError
+
+
+def test_merged_kernels(compound_model):
+    raise NotImplementedError

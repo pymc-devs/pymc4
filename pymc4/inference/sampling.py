@@ -2,10 +2,46 @@ from typing import Optional, Dict, Any, List
 from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.mcmc.samplers import reg_samplers, _log
-from pymc4.mcmc.utils import initialize_state
+from pymc4.mcmc.utils import initialize_state, scope_remove_transformed_part_if_required
 import logging
 
 logging._warn_preinit_stderr = 0
+
+
+def check_proposal_functions(
+    model: Model, state: Optional[flow.SamplingState] = None, observed: Optional[dict] = None,
+) -> bool:
+    """
+    Check for the non-default proposal generation functions
+
+    Parameters
+    ----------
+    model : pymc4.Model
+        Model to sample posterior for
+    state : Optional[flow.SamplingState]
+        Current state
+    observed : Optional[Dict[str, Any]]
+        Observed values (optional)
+    """
+    (_, state, _, _, continuous_distrs, discrete_distrs) = initialize_state(
+        model, observed=observed, state=state
+    )
+    init = state.all_unobserved_values
+    init_state = list(init.values())
+    init_keys = list(init.keys())
+
+    for i, state_part in enumerate(init_state):
+        untrs_var, unscoped_tr_var = scope_remove_transformed_part_if_required(
+            init_keys[i], state.transformed_values
+        )
+        # get the distribution for the random variable name
+        distr = continuous_distrs.get(untrs_var, None)
+        if distr is None:
+            distr = discrete_distrs[untrs_var]
+        func = distr._default_new_state_part
+        if callable(func):
+            return True
+    return False
 
 
 def sample(
@@ -58,7 +94,9 @@ def sample(
         automatically batched scenario.
     trace_discrete : Optional[List[str]]
         INFO: This is an advanced user feature.
+        The pyhton list of variables that should be casted to tf.int32 after sampling is completed
     seed : Optional[int]
+        A seed for reproducible sampling
     Returns
     -------
     Trace : InferenceDataType
@@ -109,7 +147,7 @@ def sample(
     # If some distributions in the model have non default proposal
     # generation functions then we lanuch compound step instead of rwm
     if sampler_type == "randomwalkm":
-        compound_required = sampler.check_proposal_functions(state=state, observed=observed)
+        compound_required = check_proposal_functions(model, state=state, observed=observed)
         if compound_required:
             sampler_type = "compound"
             sampler = reg_samplers[sampler_type](model, **kwargs)

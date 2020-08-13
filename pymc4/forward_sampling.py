@@ -203,7 +203,7 @@ def sample_prior_predictive(
     # If we don't have to auto-batch, then we can simply evaluate the model
     if not use_auto_batching:
         _, state = evaluate_model(model, observed=observed, sample_shape=sample_shape)
-        all_values = collections.ChainMap(state.all_values, state.deterministics)
+        all_values = collections.ChainMap(state.all_values, state.deterministics_values)
         return trace_to_arviz(prior_predictive={k: all_values[k].numpy() for k in var_names})
 
     # Setup the function that makes a single draw

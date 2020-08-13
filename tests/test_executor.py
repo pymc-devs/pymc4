@@ -613,7 +613,7 @@ def test_deterministics(model_with_deterministics):
     _, state = pm.evaluate_model(model())
 
     assert len(state.deterministics_values) == len(expected_deterministics)
-    assert set(expected_deterministics) <= set(state.deterministics)
+    assert set(expected_deterministics) <= set(state.deterministics_values)
     for expected_deterministic, op, op_inputs in zip(
         expected_deterministics, expected_ops, expected_ops_inputs
     ):

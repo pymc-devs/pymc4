@@ -1,7 +1,7 @@
 import abc
 import itertools
 import inspect
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.mcmc.utils import (
@@ -22,7 +22,7 @@ import logging
 logging._warn_preinit_stderr = 0
 
 
-__all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep", "NUTSSimple", "HMCSimple", "RandomWalkMDA"]
+__all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep", "NUTSSimple", "HMCSimple"]
 
 reg_samplers = {}
 # TODO: better design for logging
@@ -457,7 +457,7 @@ class RandomWalkM(_BaseSampler):
 
     """
 
-    _name = "randomwalkm"
+    _name = "rwm"
     _adaptation = None
     _kernel = mcmc.RandomWalkMetropolis
     _grad = False
@@ -471,57 +471,6 @@ class RandomWalkM(_BaseSampler):
 
     def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
         return (pkr.log_accept_ratio,) + tuple(self.deterministics_callback(*current_state))
-
-
-@register_sampler
-class RandomWalkMDA(_BaseSampler):
-    """
-    Sampler to run one_step of Random Walk Metropolis (RWM).
-    RWM is a gradient-free Markov chain Monte Carlo (MCMC)
-    algorithm. The algorithm involves a proposal generating
-    step proposal_state = current_state + perturb by a random perturbation,
-    followed by Metropolis-Hastings accept/reject step. For more details see
-    Section 2.1 of Roberts and Rosenthal (2004)
-
-    The adaptation scheme for this class is `tfp.mcmc.DualAveragingStepSizeAdaptation`
-    which is the dual averaging policy that uses a noisy step size for exploration,
-    while averaging over tuning steps to provide a smoothed estimate of an optimal value.
-    It is based on [section 3.2 of Hoffman and Gelman (2013)], which modifies the
-    [stochastic convex optimization scheme of Nesterov (2009)].
-
-    More about the implementation of the RWM:
-        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/RandomWalkMetropolis]
-
-    More about the implementation of the adaptation:
-        [https://www.tensorflow.org/probability/api_docs/python/tfp/mcmc/DualAveragingStepSizeAdaptation]
-
-    Default `stat_names` values:
-        ["mean_accept"]
-
-    Default `trace_fn` returns:
-        (
-            inner_results.log_accept_ratio,
-            *deterministic_values,
-        )
-
-    """
-
-    _name = "randomwalkm_da"
-    _adaptation = mcmc.DualAveragingStepSizeAdaptation
-    _kernel = mcmc.RandomWalkMetropolis
-    _grad = False
-
-    default_kernel_kwargs: dict = {}
-    default_adapter_kwargs: dict = {}
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.stat_names = ["mean_accept"]
-
-    def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
-        return (pkr.inner_results.log_accept_ratio,) + tuple(
-            self.deterministics_callback(*current_state)
-        )
 
 
 @register_sampler
@@ -704,7 +653,7 @@ class CompoundStep(_BaseSampler):
                 # add the default `new_state_fn` for the distr
                 # `new_state_fn` is supported for only RandomWalkMetropolis transition
                 # kernel.
-                if func and sampler._name == "randomwalkm":
+                if func and sampler._name == "rwm":
                     part_kernel_kwargs[-1]["new_state_fn"] = func()
             elif callable(func):
                 # If distribution has defined `new_state_fn` attribute then we need
@@ -734,7 +683,7 @@ class CompoundStep(_BaseSampler):
         self.kernel_kwargs["compound_set_lengths"] = set_lengths
 
     def __call__(self, *args, **kwargs):
-        return self.sample(*args, is_compound=True, **kwargs)
+        return self._sample(*args, is_compound=True, **kwargs)
 
     @staticmethod
     def _log_variables(var_keys, kernel_kwargs, set_lengths, parent_inds, func_names):

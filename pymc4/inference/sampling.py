@@ -146,7 +146,7 @@ def sample(
 
     # If some distributions in the model have non default proposal
     # generation functions then we lanuch compound step instead of rwm
-    if sampler_type == "randomwalkm":
+    if sampler_type == "rwm":
         compound_required = check_proposal_functions(model, state=state, observed=observed)
         if compound_required:
             sampler_type = "compound"

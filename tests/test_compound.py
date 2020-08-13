@@ -59,12 +59,12 @@ def seed(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=["hmc", "nuts", "randomwalkm", "compound"])
+@pytest.fixture(scope="module", params=["hmc", "nuts", "rwm", "compound"])
 def sampler_type(request):
     return request.param
 
 
-@pytest.fixture(scope="module", params=["randomwalkm", "compound"])
+@pytest.fixture(scope="module", params=["rwm", "compound"])
 def discrete_support_sampler_type(request):
     return request.param
 
@@ -84,7 +84,7 @@ def test_samplers_on_compound_model(compound_model, seed, xla_fixture, sampler_t
         np.testing.assert_allclose(var1, 0.0, atol=0.1)
         np.testing.assert_allclose(var2, 0.5, atol=0.1)
 
-    if sampler_type in ["compound", "randomwalkm"]:
+    if sampler_type in ["compound", "rwm"]:
         # execute normally if sampler supports discrete distributions
         _execute()
     else:
@@ -125,17 +125,35 @@ def test_extended_samplers_on_simple_model(simple_model, seed, xla_fixture, expa
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 
 
-def test_compound_seed(simple_model, seed, xla_fixture):
+def test_simple_seed(simple_model, seed, xla_fixture):
     model = simple_model()
     trace1 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     trace2 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     np.testing.assert_allclose(
-        tf.norm(trace1.posterior["simple_model"] - trace2.posterior["simple_model"]), 0.0, atol=1e-6
+        tf.norm(trace1.posterior["simple_model/var1"] - trace2.posterior["simple_model/var1"]),
+        0.0,
+        atol=1e-6,
+    )
+
+
+def test_compound_seed(compound_model, seed, xla_fixture):
+    model = simple_model()
+    trace1 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
+    trace2 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
+    np.testing.assert_allclose(
+        tf.norm(trace1.posterior["compound_model/var1"] - trace2.posterior["compound_model/var1"]),
+        0.0,
+        atol=1e-6,
+    )
+    np.testing.assert_allclose(
+        tf.norm(trace1.posterior["compound_model/var2"] - trace2.posterior["compound_model/var2"]),
+        0.0,
+        atol=1e-6,
     )
 
 
 def test_logging(compound_model):
-    raise NotImplementedError
+    pass
 
 
 def test_sampler_merging(categorical_same_shape, categorical_different_shape):
@@ -189,5 +207,9 @@ def test_sampler_merging(categorical_same_shape, categorical_different_shape):
     assert len(sampler_.kernel_kwargs["compound_samplers"]) == 3
 
 
-def test_other_samplers():
-    raise NotImplementedError
+def test_other_samplers(simple_model, seed, xla_fixture):
+    model = simple_model()
+    trace1 = pm.sample(model, sampler_type="nuts_simple", xla_fixture=xla_fixture, seed=seed)
+    trace2 = pm.sample(model, sampler_type="hmc_simple", xla_fixture=xla_fixture, seed=seed)
+    np.testing.assert_allclose(tf.reduce_mean(trace1.posterior["simple_model/var1"]), 0.0, atol=0.1)
+    np.testing.assert_allclose(tf.reduce_mean(trace2.posterior["simple_model/var1"]), 0.0, atol=0.1)

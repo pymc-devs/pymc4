@@ -1,4 +1,5 @@
 import abc
+from typing import Optional, List, Union, Any
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow_probability.python.mcmc.internal import util as mcmc_util
@@ -14,34 +15,56 @@ __all__ = ["categorical_uniform_fn", "bernoulli_fn", "gaussian_round_fn"]
 # which will increase the graph size.
 
 
-def wrap_inner_fn_name():
-    """
-        Change the name of nested function.
-        We need this to compare the proposal functions.
-    """
-
-    def decorate(func):
-        def call(*args, **kwargs):
-            q = func(*args, **kwargs)
-            q.__name__ = "/".join([func.__name__, q.__name__])
-            return q
-
-        return call
-
-    return decorate
-
-
 class Proposal(metaclass=abc.ABCMeta):
-    def __init__(self, name=None):
+    def __init__(self, name: Optional[str] = None):
         if name:
             self._name = name
 
     @abc.abstractmethod
-    def _fn(self, state_parts, seed):
+    def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
+        """
+        Proposal function that is passed as the argument
+        to RWM kernel
+
+        Parameters
+        ----------
+        state_parts : List[tf.Tensor]
+            A list of `Tensor`s of any shape and real dtype representing
+            the state of the `current_state` of the Markov chain
+        seed: Optional[int]
+            The random seed for this `Op`. If `None`, no seed is
+        applied
+            Default value: `None`
+
+        Returns
+        -------
+        List[tf.Tensor]
+            A Python `list` of The `Tensor`s. Has the same
+            shape and type as the `state_parts`.
+
+        Raises
+        ------
+        ValueError: if `scale` does not broadcast with `state_parts`.
+        """
         pass
 
     @abc.abstractmethod
-    def __eq__(self, other):
+    def __eq__(self, other: "Proposal") -> bool:
+        """
+        Comparison operator overload of each proposal sub-class.
+        The operator is required to disnguish same proposal functions to separate
+        samplers in `Compound step`
+
+        Parameters
+        ----------
+        other: pm.distributions.Proposal
+        Another instance of `Proposal` sub-class.
+
+        Returns
+        -------
+        bool
+            True/False for equality of instances
+        """
         pass
 
     def __call__(self):
@@ -49,27 +72,26 @@ class Proposal(metaclass=abc.ABCMeta):
 
 
 class CategoricalUniformFn(Proposal):
-    """Returns a callable that samples new proposal from Categorical distribution with uniform probabilites
-    Args:
-       classes: tuple, tf.TensorShape
-           Shape of logits/probs parameter of the distribution
-       name: Python `str` name prefixed to Ops created by this function.
-           Default value: 'categorical_uniform_fn'.
-    Returns:
-        categorical_uniform_fn: A callable accepting a Python `list` of `Tensor`s
-         representing the state parts of the `current_state` and an `int`
-         representing the random seed used to generate the proposal. The callable
-         returns the same-type `list` of `Tensor`s as the input and represents the
-         proposal for the RWM algorithm.
+    """
+    Categorical proposal sub-class with the `_fn` that is sampling new proposal
+    from catecorical distribution with uniform probabilities.
+
+    Parameters
+    ----------
+    classes: int
+        Number of classes for catecorical distribution
+    name: Optional[str]
+        Python `str` name prefixed to Ops created by this function.
+        Default value: 'categorical_uniform_fn'.
     """
 
     _name = "categorical_uniform_fn"
 
-    def __init__(self, classes, name=None):
+    def __init__(self, classes: int, name: Optional[str] = None):
         super().__init__(name)
         self.classes = classes
 
-    def _fn(self, state_parts, seed):
+    def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         with tf.name_scope(self._name or "categorical_uniform_fn"):
             deltas = tf.unstack(
                 tf.map_fn(
@@ -81,33 +103,32 @@ class CategoricalUniformFn(Proposal):
             )
             return deltas
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Proposal") -> bool:
         return self._name == other._name and self.classes == other.classes
 
 
 class BernoulliFn(Proposal):
-    """Returns a callable that samples new proposal from Bernoulli distribution
-    Args:
-       scale: a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
-         controlling the upper and lower bound of the uniform proposal
-         distribution.
-       name: Python `str` name prefixed to Ops created by this function.
-           Default value: 'bernoulli_fn'.
-    Returns:
-        bernoulli_fn: A callable accepting a Python `list` of `Tensor`s
-         representing the state parts of the `current_state` and an `int`
-         representing the random seed used to generate the proposal. The callable
-         returns the same-type `list` of `Tensor`s as the input and represents the
-         proposal for the RWM algorithm.
+    """
+    Bernoulli proposal sub-class with the `_fn` that is sampling new proposal
+    from bernoulli distribution with p=0.5.
+
+    Parameters
+    ----------
+    scale: Union[List[Any], Any]
+        a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
+        controlling the scale of the proposal distribution.
+    name: Optional[str]
+        Python `str` name prefixed to Ops created by this function.
+        Default value: 'categorical_uniform_fn'.
     """
 
     _name = "bernoulli_fn"
 
-    def __init__(self, scale=1.0, name=None):
+    def __init__(self, scale: Union[List[Any], Any] = 1.0, name: Optional[str] = None):
         super().__init__(name)
         self.scale = scale
 
-    def _fn(self, state_parts, seed):
+    def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         scale = self.scale
         with tf.name_scope(self._name or "bernoulli_fn"):
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
@@ -135,6 +156,9 @@ class BernoulliFn(Proposal):
             orig_dtype = state_parts.dtype
             # TODO: we create scale_part with shape=state_part.shape
             # each function call. But scalar value would be enough
+            # The issue is that we pass the single tensor to map_fn
+            # and we need the semantics of the tensors to be the same
+            # to be able to stack them together.
 
             shape_ = state_parts.shape
             inds_tile = tf.concat(
@@ -153,33 +177,32 @@ class BernoulliFn(Proposal):
             )
             return tf.unstack(tf.cast(deltas, dtype=orig_dtype))
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Proposal") -> bool:
         return self._name == other._name and self.scale == other.scale
 
 
 class GaussianRoundFn(Proposal):
-    """Returns a callable that samples new proposal from Normal distribution with round
-    Args:
-       scale: a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
-         controlling the upper and lower bound of the uniform proposal
-         distribution.
-       name: Python `str` name prefixed to Ops created by this function.
-           Default value: 'gaussian_round_fn'.
-    Returns:
-        gaussian_round_fn: A callable accepting a Python `list` of `Tensor`s
-         representing the state parts of the `current_state` and an `int`
-         representing the random seed used to generate the proposal. The callable
-         returns the same-type `list` of `Tensor`s as the input and represents the
-         proposal for the RWM algorithm.
+    """
+    Gaussian-Round proposal sub-class with the `_fn` that is sampling new proposal
+    from normal distribution N(0, 1) and rounding the values.
+
+    Parameters
+    ----------
+    scale: Union[List[Any], Any]
+        a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
+        controlling the scale of the proposal distribution.
+    name: Optional[str]
+        Python `str` name prefixed to Ops created by this function.
+        Default value: 'categorical_uniform_fn'.
     """
 
     _name = "gaussian_round_fn"
 
-    def __init__(self, scale=1.0, name=None):
+    def __init__(self, scale: Union[List[Any], Any] = 1.0, name: Optional[str] = None):
         super().__init__(name)
         self.scale = scale
 
-    def _fn(self, state_parts, seed):
+    def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         scale = self.scale
         with tf.name_scope(self._name or "bernoulli_uniform_fn"):
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
@@ -218,7 +241,7 @@ class GaussianRoundFn(Proposal):
             )
             return tf.unstack(deltas)
 
-    def __eq__(self, other):
+    def __eq__(self, other: "Proposal") -> bool:
         return self._name == other._name and self.scale == other.scale
 
 

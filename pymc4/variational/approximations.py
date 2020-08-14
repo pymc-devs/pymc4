@@ -10,7 +10,7 @@ from tensorflow_probability.python.internal import dtype_util
 
 from pymc4 import flow
 from pymc4.coroutine_model import Model
-from pymc4.inference.utils import initialize_sampling_state
+from pymc4.mcmc.utils import initialize_sampling_state
 from pymc4.utils import NameParts
 from pymc4.variational import updates
 from pymc4.variational.util import ArrayOrdering
@@ -93,7 +93,7 @@ class MeanField(Approximation):
     """
     Mean Field ADVI.
 
-    This class implements Mean Field Automatic Differentiation Variational Inference. It posits spherical 
+    This class implements Mean Field Automatic Differentiation Variational Inference. It posits spherical
     Gaussian family to fit posterior. And assumes the parameters to be uncorrelated.
 
     References
@@ -120,7 +120,7 @@ class FullRank(Approximation):
     """
     Full Rank ADVI.
 
-    This class implements Full Rank Automatic Differentiation Variational Inference. It posits Multivariate 
+    This class implements Full Rank Automatic Differentiation Variational Inference. It posits Multivariate
     Gaussian family to fit posterior. And estimates a full covariance matrix. As a result, it comes with
     higher computation costs.
 

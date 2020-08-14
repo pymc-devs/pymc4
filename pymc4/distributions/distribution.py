@@ -1,7 +1,7 @@
 import abc
 import copy
 import warnings
-from typing import Optional, Union, Any, Callable, Tuple
+from typing import Optional, Union, Any, Tuple
 
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
@@ -52,7 +52,7 @@ class Distribution(Model):
             dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs,
         )
         self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
-        self._default_new_state_part: Union[Callable[[Any, Any], Any], None] = None
+        self._default_new_state_part = None
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )

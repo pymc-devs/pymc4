@@ -49,7 +49,7 @@ class Proposal(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def __eq__(self, other: "Proposal") -> bool:
+    def __eq__(self, other) -> bool:
         """
         Comparison operator overload of each proposal sub-class.
         The operator is required to disnguish same proposal functions to separate
@@ -103,7 +103,7 @@ class CategoricalUniformFn(Proposal):
             )
             return deltas
 
-    def __eq__(self, other: "Proposal") -> bool:
+    def __eq__(self, other) -> bool:
         return self._name == other._name and self.classes == other.classes
 
 
@@ -152,32 +152,32 @@ class BernoulliFn(Proposal):
                 state_part = state_part % 2.0
                 return state_part
 
-            state_parts = tf.stack(state_parts)
-            orig_dtype = state_parts.dtype
+            state_parts_st = tf.stack(state_parts)
+            orig_dtype = state_parts_st.dtype
             # TODO: we create scale_part with shape=state_part.shape
             # each function call. But scalar value would be enough
             # The issue is that we pass the single tensor to map_fn
             # and we need the semantics of the tensors to be the same
             # to be able to stack them together.
 
-            shape_ = state_parts.shape
+            shape_ = state_parts_st.shape
             inds_tile = tf.concat(
                 [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0
             )
             shape_ = (1,) + shape_[1:] + (shape_[0],)
             scales = tf.tile(tf.broadcast_to(scales, shape_), inds_tile)[..., 0]
-            state_parts = tf.cast(state_parts, dtype=scales.dtype)
+            state_parts_st = tf.cast(state_parts_st, dtype=scales.dtype)
             deltas = tf.unstack(
                 tf.map_fn(
                     lambda x: generate_new_values(
                         x[0], x[1]
                     ),  # TODO: some issues with unpack and tf graph
-                    tf.stack([state_parts, scales], axis=1),
+                    tf.stack([state_parts_st, scales], axis=1),
                 )
             )
             return tf.unstack(tf.cast(deltas, dtype=orig_dtype))
 
-    def __eq__(self, other: "Proposal") -> bool:
+    def __eq__(self, other) -> bool:
         return self._name == other._name and self.scale == other.scale
 
 
@@ -224,9 +224,9 @@ class GaussianRoundFn(Proposal):
                 state_part += delta
                 return tf.round(state_part)
 
-            state_parts = tf.stack(state_parts)
+            state_parts_st = tf.stack(state_parts)
 
-            shape_ = state_parts.shape
+            shape_ = state_parts_st.shape
             inds_tile = tf.concat(
                 [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0
             )
@@ -236,12 +236,12 @@ class GaussianRoundFn(Proposal):
             deltas = tf.unstack(
                 tf.map_fn(
                     lambda x: generate_new_values(x[0], x[1]),
-                    tf.stack([state_parts, scales], axis=1),
+                    tf.stack([state_parts_st, scales], axis=1),
                 )
             )
             return tf.unstack(deltas)
 
-    def __eq__(self, other: "Proposal") -> bool:
+    def __eq__(self, other) -> bool:
         return self._name == other._name and self.scale == other.scale
 
 

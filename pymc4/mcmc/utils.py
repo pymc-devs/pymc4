@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 import arviz as az
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict, Any
 
 KERNEL_KWARGS_SET = collections.namedtuple(
     "KERNEL_ARGS_SET", ["kernel", "adaptive_kernel", "kernel_kwargs", "adaptive_kwargs"]
@@ -38,10 +38,11 @@ def initialize_state(
     model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
 ) -> Tuple[
     flow.SamplingState,
+    flow.SamplingState,
     List[str],
     List[str],
-    List[distribution.Distribution],
-    List[distribution.Distribution],
+    Dict[str, distribution.Distribution],
+    Dict[str, distribution.Distribution],
 ]:
     """
     Get list of discrete/continuous distributions
@@ -132,9 +133,7 @@ def trace_to_arviz(
     )
 
 
-def scope_remove_transformed_part_if_required(
-    name: str, transformed_values: Optional[List[str]] = None
-):
+def scope_remove_transformed_part_if_required(name: str, transformed_values: Dict[str, Any]):
     name_split = name.split("/")
     if transformed_values and name in transformed_values:
         name_split[-1] = name_split[-1][2:][name_split[-1][2:].find("_") + 1 :]

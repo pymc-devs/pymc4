@@ -11,24 +11,26 @@ from pymc4.mcmc.utils import (
     scope_remove_transformed_part_if_required,
     KERNEL_KWARGS_SET,
 )
+from functools import partial
 
 from pymc4.coroutine_model import Model
 from pymc4.utils import NameParts
 from pymc4 import flow
 from pymc4.mcmc.tf_support import _CompoundStepTF
-
 import logging
 
-logging._warn_preinit_stderr = 0
-
+MYPY = False
 
 __all__ = ["HMC", "NUTS", "RandomWalkM", "CompoundStep", "NUTSSimple", "HMCSimple"]
-
 reg_samplers = {}
+
 # TODO: better design for logging
 console = logging.StreamHandler()
 _log = logging.getLogger("pymc4.sampling")
-_log.root.handlers = []  # remove tf absl logging handling
+if not MYPY:
+    logging._warn_preinit_stderr = 0
+    # TODO: I'm not sure about the issue
+    _log.root.handlers = []  # remove tf absl logging handlers
 _log.setLevel(logging.INFO)
 _log.addHandler(console)
 
@@ -63,7 +65,8 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             )
 
         self.model = model
-        self.stat_names: List = []
+        self.stat_names: List[str] = []
+        self.parent_inds: List[int] = []
         # assign arguments from **kwargs to distinct kwargs for
         # `kernel`, `adaptation_kernel`, `chain_sampler`
         self._assign_arguments(kwargs)
@@ -136,7 +139,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             # The workaround to cast variables post-sample.
             # `trace_discrete` is the list of vairables that need to be casted
             # to tf.int32 after the sampling is completed.
-            init_keys_ = [scope_remove_transformed_part_if_required(_)[1] for _ in init_keys]
+            init_keys_ = [scope_remove_transformed_part_if_required(_, {})[1] for _ in init_keys]
             discrete_indices = [init_keys_.index(_) for _ in trace_discrete]
             keys_to_cast = [init_keys[_] for _ in discrete_indices]
             for key in keys_to_cast:
@@ -150,10 +153,11 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         if len(deterministic_names) > 0:
             posterior.update(dict(zip(deterministic_names, deterministic_values)))
 
-        if is_compound is True:
-            sampler_stats = None
-
-        return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
+        return trace_to_arviz(
+            posterior,
+            sampler_stats if is_compound is False else None,
+            observed_data=state_.observed_values,
+        )
 
     @tf.function(autograph=False)
     def _run_chains(self, init, burn_in):
@@ -501,6 +505,8 @@ class CompoundStep(_BaseSampler):
         self.stat_names = ["compound_results"]
 
     def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
+        # TODO: I'm not sure if adding python loop here is the best idea
+        # so I'm leaving all the results in trace and discarding it later
         return (pkr,) + tuple(self.deterministics_callback(*current_state))
 
     @staticmethod
@@ -540,11 +546,14 @@ class CompoundStep(_BaseSampler):
             key = "new_state_fn"
             if (key in item1 and key in item2) or (key not in item1 and key not in item2):
                 # compare class instances instea of _fn for `new_state_fn`
-                if key in item1 and item1[key].__self__ != item2[key].__self__:
-                    return False
-                value1, value2 = item1.pop(key), item2.pop(key)
-                flag = item1 == item2
-                item1[key], item2[key] = value1, value2
+                if key in item1:
+                    if item1[key].__self__ != item2[key].__self__:
+                        return False
+                    value1, value2 = item1.pop(key), item2.pop(key)
+                    flag = item1 == item2
+                    item1[key], item2[key] = value1, value2
+                else:
+                    flag = item1 == item2
                 return flag
             else:
                 return False
@@ -593,7 +602,7 @@ class CompoundStep(_BaseSampler):
         state: Optional[flow.SamplingState] = None,
         observed: Optional[dict] = None,
     ):
-        sampler_methods = CompoundStep._convert_sampler_methods(sampler_methods)
+        converted_sampler_methods: List = CompoundStep._convert_sampler_methods(sampler_methods)
 
         (_, state, _, _, continuous_distrs, discrete_distrs) = initialize_state(
             self.model, observed=observed, state=state
@@ -632,8 +641,8 @@ class CompoundStep(_BaseSampler):
             # 2. If the distribution has `new_state_fn` then the new sampler
             #    should be create also. Because sampler is initialized with
             #    the `new_state_fn` argument.
-            if unscoped_tr_var in sampler_methods:
-                sampler, kwargs = sampler_methods[unscoped_tr_var]
+            if unscoped_tr_var in converted_sampler_methods:
+                sampler, kwargs = converted_sampler_methods[unscoped_tr_var]
 
                 # check for the sampler able to sampler from the distribution
                 if not distr._grad_support and sampler._grad:
@@ -654,13 +663,13 @@ class CompoundStep(_BaseSampler):
                 # `new_state_fn` is supported for only RandomWalkMetropolis transition
                 # kernel.
                 if func and sampler._name == "rwm":
-                    part_kernel_kwargs[-1]["new_state_fn"] = func()
+                    part_kernel_kwargs[-1]["new_state_fn"] = partial(func)()
             elif callable(func):
                 # If distribution has defined `new_state_fn` attribute then we need
                 # to assign `RandomWalkMetropolis` transition kernel
                 make_kernel_fn.append(RandomWalkM)
                 part_kernel_kwargs.append({})
-                part_kernel_kwargs[-1]["new_state_fn"] = func()
+                part_kernel_kwargs[-1]["new_state_fn"] = partial(func)()
             else:
                 # by default if user didn't not provide any sampler
                 # we choose NUTS for the variable with gradient and

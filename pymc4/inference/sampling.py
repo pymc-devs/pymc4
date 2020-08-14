@@ -5,7 +5,10 @@ from pymc4.mcmc.samplers import reg_samplers, _log
 from pymc4.mcmc.utils import initialize_state, scope_remove_transformed_part_if_required
 import logging
 
-logging._warn_preinit_stderr = 0
+MYPY = False
+
+if not MYPY:
+    logging._warn_preinit_stderr = 0
 
 
 def check_proposal_functions(

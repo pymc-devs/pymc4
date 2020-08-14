@@ -12,8 +12,6 @@ from pymc4.distributions.state_functions import (
     bernoulli_fn,
 )
 
-from pymc4 import utils
-
 __all__ = [
     "Bernoulli",
     "Binomial",

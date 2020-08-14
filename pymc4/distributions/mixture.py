@@ -13,8 +13,12 @@ from pymc4.distributions.distribution import Distribution
 from tensorflow_probability import distributions as tfd
 from collections.abc import Iterable
 
+import collections
+from typing import Union, Tuple, List
 
-__all__ = ["Mixture", "NormalMixture"]
+import tensorflow as tf
+from tensorflow_probability import distributions as tfd
+from pymc4.distributions.distribution import Distribution
 
 
 class Mixture(Distribution):

@@ -192,14 +192,11 @@ def sample_prior_predictive(
         traced_observeds = set(
             [var_name for var_name in var_names if var_name in state.observed_values]
         )
-    if not set(var_names) <= (
-        set(distributions_names + deterministic_names) | traced_observeds
-    ):
+    if not set(var_names) <= (set(distributions_names + deterministic_names) | traced_observeds):
         raise ValueError(
             "Some of the supplied var_names are not defined in the supplied "
             "model {}.\nList of unknown var_names: {}".format(
-                model,
-                list(set(var_names) - set(distributions_names + deterministic_names)),
+                model, list(set(var_names) - set(distributions_names + deterministic_names)),
             )
         )
 
@@ -207,9 +204,7 @@ def sample_prior_predictive(
     if not use_auto_batching:
         _, state = evaluate_model(model, observed=observed, sample_shape=sample_shape)
         all_values = collections.ChainMap(state.all_values, state.deterministics)
-        return trace_to_arviz(
-            prior_predictive={k: all_values[k].numpy() for k in var_names}
-        )
+        return trace_to_arviz(prior_predictive={k: all_values[k].numpy() for k in var_names})
 
     # Setup the function that makes a single draw
     @tf.function(autograph=False)
@@ -218,11 +213,7 @@ def sample_prior_predictive(
         return tuple(
             state.untransformed_values[k]
             if k in state.untransformed_values
-            else (
-                state.observed_values[k]
-                if k in traced_observeds
-                else state.deterministics[k]
-            )
+            else (state.observed_values[k] if k in traced_observeds else state.deterministics[k])
             for k in var_names
         )
 
@@ -315,8 +306,7 @@ def sample_posterior_predictive(
     # passing the trace as values
     if not use_auto_batching:
         values = {
-            var_name: tf.convert_to_tensor(value)
-            for var_name, value in trace.posterior.items()
+            var_name: tf.convert_to_tensor(value) for var_name, value in trace.posterior.items()
         }
         # We need to pass the number of chains and draws as sample_shape for
         # observed conditionally independent variables
@@ -399,26 +389,20 @@ def sample_posterior_predictive(
     for k, v in posterior.items():
         core_shape = tf.TensorShape(state.all_values[k].shape)
         batched_val = tf.broadcast_to(v.values, batch_shape + core_shape)
-        flattened_posterior.append(
-            tf.reshape(batched_val, shape=[-1] + core_shape.as_list())
-        )
+        flattened_posterior.append(tf.reshape(batched_val, shape=[-1] + core_shape.as_list()))
     posterior_vars = list(posterior)
     # Setup the function that makes a single draw
     @tf.function(autograph=False)
     def single_draw(elems):
         values = dict(zip(posterior_vars, elems))
-        _, st = evaluate_model_posterior_predictive(
-            model, values=values, observed=observed
-        )
+        _, st = evaluate_model_posterior_predictive(model, values=values, observed=observed)
         return tuple(
             [
                 (
                     st.untransformed_values[k]
                     if k in st.untransformed_values
                     else (
-                        st.deterministics[k]
-                        if k in st.deterministics
-                        else st.transformed_values[k]
+                        st.deterministics[k] if k in st.deterministics else st.transformed_values[k]
                     )
                 )
                 for k in var_names

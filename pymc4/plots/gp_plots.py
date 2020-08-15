@@ -55,19 +55,10 @@ def plot_gp_dist(
         upper = np.percentile(samples, p, axis=1)
         lower = np.percentile(samples, 100 - p, axis=1)
         color_val = colors[i]
-        ax.fill_between(
-            x, upper, lower, color=cmap(color_val), alpha=fill_alpha, **fill_kwargs
-        )
+        ax.fill_between(x, upper, lower, color=cmap(color_val), alpha=fill_alpha, **fill_kwargs)
     if plot_samples:
         # plot a few samples
         idx = np.random.randint(0, samples.shape[1], 30)
-        ax.plot(
-            x,
-            samples[:, idx],
-            color=cmap(0.9),
-            lw=1,
-            alpha=samples_alpha,
-            **samples_kwargs
-        )
+        ax.plot(x, samples[:, idx], color=cmap(0.9), lw=1, alpha=samples_alpha, **samples_kwargs)
 
     return ax

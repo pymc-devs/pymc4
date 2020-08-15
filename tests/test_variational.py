@@ -24,9 +24,7 @@ def conjugate_normal_model():
         ll = yield pm.Normal("ll", mu, known_sigma, observed=data)
         return ll
 
-    return dict(
-        data_points=data_points, data=data, estimated_mean=estimated_mean, model=model
-    )
+    return dict(data_points=data_points, data=data, estimated_mean=estimated_mean, model=model)
 
 
 # fmt: off

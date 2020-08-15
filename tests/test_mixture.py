@@ -37,12 +37,8 @@ distribution_conditions = {
     "three_components_three_distributions": {
         "n": 3,
         "k": 3,
-        "p": np.array(
-            [[0.5, 0.25, 0.25], [0.8, 0.1, 0.1], [0.2, 0.5, 0.3]], dtype="float32"
-        ),
-        "loc": np.array(
-            [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype="float32"
-        ),
+        "p": np.array([[0.5, 0.25, 0.25], [0.8, 0.1, 0.1], [0.2, 0.5, 0.3]], dtype="float32"),
+        "loc": np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype="float32"),
         "scale": 1.0,
     },
 }
@@ -56,9 +52,7 @@ def mixture_components(request):
 
 def _mixture(k, p, loc, scale, dat):
     m = yield pm.Normal("means", loc=loc, scale=scale)
-    distributions = [
-        pm.Normal("d" + str(i), loc=m[..., i], scale=scale) for i in range(k)
-    ]
+    distributions = [pm.Normal("d" + str(i), loc=m[..., i], scale=scale) for i in range(k)]
     obs = yield pm.Mixture(
         "mixture", p=p, distributions=distributions, validate_args=True, observed=dat
     )
@@ -80,9 +74,7 @@ def mixture(mixture_components, request):
     dat = tfd.Normal(loc=np.zeros(n), scale=1).sample(100).numpy()
     if n == 1:
         dat = dat.reshape(-1)
-    model = ModelTemplate(
-        request.param, name="mixture", keep_auxiliary=True, keep_return=True
-    )
+    model = ModelTemplate(request.param, name="mixture", keep_auxiliary=True, keep_return=True)
     model = model(k, p, loc, scale, dat)
     return model, n, k
 
@@ -97,10 +89,7 @@ def test_wrong_distribution_argument_in_list_fails():
         pm.Mixture(
             "mix",
             p=[0.5, 0.5],
-            distributions=[
-                pm.Normal("comp1", loc=0.0, scale=1.0),
-                "not a distribution",
-            ],
+            distributions=[pm.Normal("comp1", loc=0.0, scale=1.0), "not a distribution",],
         )
 
 

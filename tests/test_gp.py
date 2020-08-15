@@ -13,10 +13,7 @@ import pytest
 GP_MODELS = [
     (
         "LatentGP",
-        {
-            "mean_fn": ("Zero", {}),
-            "cov_fn": ("ExpQuad", {"amplitude": 1.0, "length_scale": 1.0}),
-        },
+        {"mean_fn": ("Zero", {}), "cov_fn": ("ExpQuad", {"amplitude": 1.0, "length_scale": 1.0}),},
     ),
 ]
 

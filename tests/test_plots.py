@@ -7,7 +7,5 @@ def test_gp_plot(tf_seed):
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots()
-    ax = plot_gp_dist(
-        ax, np.random.randn(2, 2), x=np.random.randn(2, 1), plot_samples=True
-    )
+    ax = plot_gp_dist(ax, np.random.randn(2, 2), x=np.random.randn(2, 1), plot_samples=True)
     assert ax is not None

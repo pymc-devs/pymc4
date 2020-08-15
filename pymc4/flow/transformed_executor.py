@@ -34,9 +34,7 @@ class TransformedSamplingExecutor(SamplingExecutor):
         if not isinstance(dist, distribution.Distribution):
             return dist
 
-        return transform_dist_if_necessary(
-            dist, state, allow_transformed_and_untransformed=True
-        )
+        return transform_dist_if_necessary(dist, state, allow_transformed_and_untransformed=True)
 
 
 def make_untransformed_model(dist, transform, state):
@@ -50,9 +48,7 @@ def make_untransformed_model(dist, transform, state):
     sampled_transformed_value = transform.forward(sampled_untransformed_value)
     # already stored untransformed value via yield
     # state.values[scoped_name] = sampled_untransformed_value
-    transformed_scoped_name = scopes.transformed_variable_name(
-        transform.name, dist.name
-    )
+    transformed_scoped_name = scopes.transformed_variable_name(transform.name, dist.name)
     state.transformed_values[transformed_scoped_name] = sampled_transformed_value
     # 2. increment the potential
     if transform.jacobian_preference == JacobianPreference.Forward:
@@ -73,9 +69,7 @@ def make_untransformed_model(dist, transform, state):
 def make_transformed_model(dist, transform, state):
     # 1. now compute all the variables: in the transformed and untransformed space
     scoped_name = scopes.variable_name(dist.name)
-    transformed_scoped_name = scopes.transformed_variable_name(
-        transform.name, dist.name
-    )
+    transformed_scoped_name = scopes.transformed_variable_name(transform.name, dist.name)
     state.untransformed_values[scoped_name] = transform.inverse(
         state.transformed_values[transformed_scoped_name]
     )
@@ -100,8 +94,7 @@ def make_transformed_model(dist, transform, state):
         coef = -1.0
     else:
         potential_fn = functools.partial(
-            transform.inverse_log_det_jacobian,
-            state.transformed_values[transformed_scoped_name],
+            transform.inverse_log_det_jacobian, state.transformed_values[transformed_scoped_name],
         )
         coef = 1.0
     yield distributions.Potential(potential_fn, coef=coef)
@@ -116,9 +109,7 @@ def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransfor
         return dist
     scoped_name = scopes.variable_name(dist.name)
     transform = dist.transform
-    transformed_scoped_name = scopes.transformed_variable_name(
-        transform.name, dist.name
-    )
+    transformed_scoped_name = scopes.transformed_variable_name(transform.name, dist.name)
     if observed_value_in_evaluation(scoped_name, dist, state) is not None:
         # do not modify a distribution if it is observed
         # same for programmatically observed
@@ -139,9 +130,7 @@ def transform_dist_if_necessary(dist, state, *, allow_transformed_and_untransfor
         return dist
 
     if transformed_scoped_name in state.transformed_values:
-        if (
-            not allow_transformed_and_untransformed
-        ) and scoped_name in state.untransformed_values:
+        if (not allow_transformed_and_untransformed) and scoped_name in state.untransformed_values:
             state.untransformed_values.pop(scoped_name)
         return make_transformed_model(dist, transform, state)
     else:

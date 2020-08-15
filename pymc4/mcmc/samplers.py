@@ -114,9 +114,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
         if use_auto_batching:
             self.parallel_logpfn = vectorize_logp_function(logpfn)
-            self.deterministics_callback = vectorize_logp_function(
-                _deterministics_callback
-            )
+            self.deterministics_callback = vectorize_logp_function(_deterministics_callback)
             init_state = tile_init(init_state, num_chains)
         else:
             self.parallel_logpfn = logpfn
@@ -141,9 +139,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             # The workaround to cast variables post-sample.
             # `trace_discrete` is the list of vairables that need to be casted
             # to tf.int32 after the sampling is completed.
-            init_keys_ = [
-                scope_remove_transformed_part_if_required(_, {})[1] for _ in init_keys
-            ]
+            init_keys_ = [scope_remove_transformed_part_if_required(_, {})[1] for _ in init_keys]
             discrete_indices = [init_keys_.index(_) for _ in trace_discrete]
             keys_to_cast = [init_keys[_] for _ in discrete_indices]
             for key in keys_to_cast:
@@ -165,13 +161,9 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
     @tf.function(autograph=False)
     def _run_chains(self, init, burn_in):
-        kernel = self._kernel(
-            target_log_prob_fn=self.parallel_logpfn, **self.kernel_kwargs
-        )
+        kernel = self._kernel(target_log_prob_fn=self.parallel_logpfn, **self.kernel_kwargs)
         if self._adaptation:
-            adapt_kernel = self._adaptation(
-                inner_kernel=kernel, **self.adaptation_kwargs
-            )
+            adapt_kernel = self._adaptation(inner_kernel=kernel, **self.adaptation_kwargs)
         else:
             adapt_kernel = kernel
 
@@ -181,7 +173,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             kernel=adapt_kernel,
             num_burnin_steps=burn_in,
             trace_fn=self.trace_fn,
-            seed=seed,
+            seed=self.seed,
             **self.chain_kwargs,
         )
         return results, sample_stats
@@ -190,15 +182,11 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         kwargs_keys = set(kwargs.keys())
         # fetch adaptation kernel, kernel, and `sample_chain` kwargs keys
         adaptation_keys = (
-            set(
-                list(inspect.signature(self._adaptation.__init__).parameters.keys())[1:]
-            )
+            set(list(inspect.signature(self._adaptation.__init__).parameters.keys())[1:])
             if self._adaptation
             else set()
         )
-        kernel_keys = set(
-            list(inspect.signature(self._kernel.__init__).parameters.keys())[1:]
-        )
+        kernel_keys = set(list(inspect.signature(self._kernel.__init__).parameters.keys())[1:])
         chain_keys = set(list(inspect.signature(mcmc.sample_chain).parameters.keys()))
 
         # intersection of key sets of each object from
@@ -403,9 +391,7 @@ class NUTS(_BaseSampler):
         "num_adaptation_steps": 100,
         "step_size_getter_fn": lambda pkr: pkr.step_size,
         "log_accept_prob_getter_fn": lambda pkr: pkr.log_accept_ratio,
-        "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(
-            step_size=new_step_size
-        ),
+        "step_size_setter_fn": lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
     }
     default_kernel_kwargs: dict = {"step_size": 0.1}
 
@@ -488,9 +474,7 @@ class RandomWalkM(_BaseSampler):
         self.stat_names = ["mean_accept"]
 
     def trace_fn(self, current_state: flow.SamplingState, pkr: Union[tf.Tensor, Any]):
-        return (pkr.log_accept_ratio,) + tuple(
-            self.deterministics_callback(*current_state)
-        )
+        return (pkr.log_accept_ratio,) + tuple(self.deterministics_callback(*current_state))
 
 
 @register_sampler
@@ -560,9 +544,7 @@ class CompoundStep(_BaseSampler):
             # hack to separetely compare proposal function and
             # the rest of the kwargs of the sampler kernel
             key = "new_state_fn"
-            if (key in item1 and key in item2) or (
-                key not in item1 and key not in item2
-            ):
+            if (key in item1 and key in item2) or (key not in item1 and key not in item2):
                 # compare class instances instea of _fn for `new_state_fn`
                 if key in item1:
                     if item1[key].__self__ != item2[key].__self__:
@@ -620,9 +602,7 @@ class CompoundStep(_BaseSampler):
         state: Optional[flow.SamplingState] = None,
         observed: Optional[dict] = None,
     ):
-        converted_sampler_methods: List = CompoundStep._convert_sampler_methods(
-            sampler_methods
-        )
+        converted_sampler_methods: List = CompoundStep._convert_sampler_methods(sampler_methods)
 
         (_, state, _, _, continuous_distrs, discrete_distrs) = initialize_state(
             self.model, observed=observed, state=state
@@ -706,9 +686,7 @@ class CompoundStep(_BaseSampler):
         # compound step kernel. For that we need to merge some of the samplers.
         kernels, set_lengths = self._merge_samplers(make_kernel_fn, part_kernel_kwargs)
         # log variable sampler mapping
-        CompoundStep._log_variables(
-            init_keys, kernels, set_lengths, self.parent_inds, func_names
-        )
+        CompoundStep._log_variables(init_keys, kernels, set_lengths, self.parent_inds, func_names)
         # save to use late for compound kernel init
         self.kernel_kwargs["compound_samplers"] = kernels
         self.kernel_kwargs["compound_set_lengths"] = set_lengths
@@ -725,12 +703,8 @@ class CompoundStep(_BaseSampler):
         for i, (kernel_kwargsi, set_leni) in enumerate(zip(kernel_kwargs, set_lengths)):
             kernel, kwargs = kernel_kwargsi
             vars_ = var_keys[curr_indx : curr_indx + set_leni]
-            log_output += (
-                "\n" if i > 0 else ""
-            ) + " -- {}[vars={}, proposal_function={}]".format(
-                kernel._name,
-                [item.split("/")[1] for item in vars_],
-                (func_names[curr_indx]),
+            log_output += ("\n" if i > 0 else "") + " -- {}[vars={}, proposal_function={}]".format(
+                kernel._name, [item.split("/")[1] for item in vars_], (func_names[curr_indx]),
             )
             curr_indx += set_leni
         _log.info(log_output)
@@ -753,9 +727,7 @@ def build_logp_and_deterministic_functions(
     if state is not None and observed is not None:
         raise ValueError("Can't use both `state` and `observed` arguments")
 
-    state, deterministic_names = initialize_sampling_state(
-        model, observed=observed, state=state
-    )
+    state, deterministic_names = initialize_sampling_state(model, observed=observed, state=state)
 
     if not state.all_unobserved_values:
         raise ValueError(
@@ -814,12 +786,8 @@ def build_logp_and_deterministic_functions(
         st = flow.SamplingState.from_values(kwargs, observed_values=observed_var)
         _, st = flow.evaluate_model_transformed(model, state=st)
         for transformed_name in st.transformed_values:
-            untransformed_name = NameParts.from_name(
-                transformed_name
-            ).full_untransformed_name
-            st.deterministics[untransformed_name] = st.untransformed_values.pop(
-                untransformed_name
-            )
+            untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
+            st.deterministics[untransformed_name] = st.untransformed_values.pop(untransformed_name)
         return st.deterministics.values()
 
     return (
@@ -840,7 +808,4 @@ def vectorize_logp_function(logpfn):
 
 
 def tile_init(init, num_repeats):
-    return [
-        tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim)
-        for tens in init
-    ]
+    return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]

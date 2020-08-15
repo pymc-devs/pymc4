@@ -100,9 +100,7 @@ class LKJ(ContinuousDistribution):
     """
 
     def __init__(self, name, dimension, concentration, **kwargs):
-        super().__init__(
-            name, dimension=dimension, concentration=concentration, **kwargs
-        )
+        super().__init__(name, dimension=dimension, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
@@ -231,9 +229,7 @@ class VonMisesFisher(ContinuousDistribution):
     """
 
     def __init__(self, name, mean_direction, concentration, **kwargs):
-        super().__init__(
-            name, mean_direction=mean_direction, concentration=concentration, **kwargs
-        )
+        super().__init__(name, mean_direction=mean_direction, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
@@ -320,16 +316,12 @@ class LKJCholesky(ContinuousDistribution):
     """
 
     def __init__(self, name, dimension, concentration, **kwargs):
-        super().__init__(
-            name, dimension=dimension, concentration=concentration, **kwargs
-        )
+        super().__init__(name, dimension=dimension, concentration=concentration, **kwargs)
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         dimension, concentration = conditions["dimension"], conditions["concentration"]
-        return tfd.CholeskyLKJ(
-            dimension=dimension, concentration=concentration, **kwargs
-        )
+        return tfd.CholeskyLKJ(dimension=dimension, concentration=concentration, **kwargs)
 
     @property
     def test_value(self):

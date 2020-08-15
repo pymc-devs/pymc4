@@ -17,15 +17,11 @@ from tensorflow_probability.python.math.psd_kernels.positive_semidefinite_kernel
 
 
 class _Constant(PositiveSemidefiniteKernel):
-    def __init__(
-        self, coef=None, feature_ndims=1, validate_args=False, name="Constant"
-    ):
+    def __init__(self, coef=None, feature_ndims=1, validate_args=False, name="Constant"):
         parameters = dict(locals())
         with tf.name_scope(name):
             dtype = util.maybe_get_common_dtype([coef])
-            self._coef = tensor_util.convert_nonref_to_tensor(
-                coef, dtype=dtype, name="coef"
-            )
+            self._coef = tensor_util.convert_nonref_to_tensor(coef, dtype=dtype, name="coef")
         super(_Constant, self).__init__(
             feature_ndims,
             dtype=dtype,
@@ -71,15 +67,11 @@ class _Constant(PositiveSemidefiniteKernel):
 
 
 class _WhiteNoise(PositiveSemidefiniteKernel):
-    def __init__(
-        self, noise=None, feature_ndims=1, validate_args=False, name="WhiteNoise"
-    ):
+    def __init__(self, noise=None, feature_ndims=1, validate_args=False, name="WhiteNoise"):
         parameters = dict(locals())
         with tf.name_scope(name):
             dtype = util.maybe_get_common_dtype([noise])
-            self._noise = tensor_util.convert_nonref_to_tensor(
-                noise, dtype=dtype, name="noise"
-            )
+            self._noise = tensor_util.convert_nonref_to_tensor(noise, dtype=dtype, name="noise")
         super(_WhiteNoise, self).__init__(
             feature_ndims,
             dtype=dtype,
@@ -93,8 +85,7 @@ class _WhiteNoise(PositiveSemidefiniteKernel):
 
     def _matrix(self, x1, x2):
         shape = tf.broadcast_dynamic_shape(
-            x1.shape[: -(1 + self.feature_ndims)],
-            x2.shape[: -(1 + self.feature_ndims)],
+            x1.shape[: -(1 + self.feature_ndims)], x2.shape[: -(1 + self.feature_ndims)],
         )
         expected = tf.linalg.eye(
             x1.shape[-(1 + self.feature_ndims)],
@@ -145,12 +136,8 @@ class _Exponential(PositiveSemidefiniteKernel):
         parameters = dict(locals())
         with tf.name_scope(name):
             dtype = util.maybe_get_common_dtype([amplitude, length_scale])
-            self._amplitude = tensor_util.convert_nonref_to_tensor(
-                amplitude, dtype=dtype
-            )
-            self._length_scale = tensor_util.convert_nonref_to_tensor(
-                length_scale, dtype=dtype
-            )
+            self._amplitude = tensor_util.convert_nonref_to_tensor(amplitude, dtype=dtype)
+            self._length_scale = tensor_util.convert_nonref_to_tensor(length_scale, dtype=dtype)
         super(_Exponential, self).__init__(
             feature_ndims=feature_ndims,
             dtype=dtype,
@@ -201,9 +188,7 @@ class _Exponential(PositiveSemidefiniteKernel):
         if not self.validate_args:
             return []
         assertions = []
-        for arg_name, arg in dict(
-            amplitude=self.amplitude, length_scale=self.length_scale
-        ).items():
+        for arg_name, arg in dict(amplitude=self.amplitude, length_scale=self.length_scale).items():
             if arg is not None and is_init != tensor_util.is_ref(arg):
                 assertions.append(
                     assert_util.assert_positive(
@@ -267,9 +252,7 @@ class _Gibbs(PositiveSemidefiniteKernel):
             scal = self._log_apply(lx1, lx2)
             sqdist = tf.math.squared_difference(x1, x2)
             sqdist /= lx1 ** 2 + lx2 ** 2
-            sqdist = util.sum_rightmost_ndims_preserving_shape(
-                sqdist, self.feature_ndims
-            )
+            sqdist = util.sum_rightmost_ndims_preserving_shape(sqdist, self.feature_ndims)
             return scal * tf.exp(-sqdist)
         sqdist = util.sum_rightmost_ndims_preserving_shape(
             tf.math.squared_difference(x1, x2), self.feature_ndims
@@ -298,12 +281,8 @@ class _Cosine(PositiveSemidefiniteKernel):
         parameters = locals()
         with tf.name_scope(name):
             dtype = util.maybe_get_common_dtype([length_scale, amplitude])
-            self._length_scale = tensor_util.convert_nonref_to_tensor(
-                length_scale, dtype=dtype
-            )
-            self._amplitude = tensor_util.convert_nonref_to_tensor(
-                amplitude, dtype=dtype
-            )
+            self._length_scale = tensor_util.convert_nonref_to_tensor(length_scale, dtype=dtype)
+            self._amplitude = tensor_util.convert_nonref_to_tensor(amplitude, dtype=dtype)
         super(_Cosine, self).__init__(
             feature_ndims=feature_ndims,
             dtype=dtype,
@@ -345,9 +324,7 @@ class _Cosine(PositiveSemidefiniteKernel):
         return tf.broadcast_static_shape(
             scalar_shape if self._amplitude is None else self._amplitude.shape,
             tf.broadcast_static_shape(
-                scalar_shape
-                if self._length_scale is None
-                else self._length_scale.shape,
+                scalar_shape if self._length_scale is None else self._length_scale.shape,
                 scalar_shape if self._period is None else self._period.shape,
             ),
         )
@@ -465,9 +442,7 @@ class _ScaledCov(PositiveSemidefiniteKernel):
         if self._scaling_fn is not None:
             scal_x1 = tf.convert_to_tensor(self._scaling_fn(x1, *self._fn_args))
             scal_x2 = tf.convert_to_tensor(self._scaling_fn(x2, *self._fn_args))
-            scal = util.sum_rightmost_ndims_preserving_shape(
-                scal_x1 * scal_x2, self._feature_ndims
-            )
+            scal = util.sum_rightmost_ndims_preserving_shape(scal_x1 * scal_x2, self._feature_ndims)
             return scal * cov
         return cov
 

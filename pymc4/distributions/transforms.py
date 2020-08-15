@@ -128,14 +128,10 @@ class BackwardTransform(Transform):
         return self._transform.forward(z)
 
     def forward_log_det_jacobian(self, x):
-        return self._transform.inverse_log_det_jacobian(
-            x, self._transform.inverse_min_event_ndims
-        )
+        return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
 
     def inverse_log_det_jacobian(self, z):
-        return self._transform.forward_log_det_jacobian(
-            z, self._transform.forward_min_event_ndims
-        )
+        return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)
 
 
 class Log(BackwardTransform):

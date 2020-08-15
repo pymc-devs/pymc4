@@ -19,6 +19,7 @@ from .inference.sampling import sample
 from .mcmc.samplers import *
 from . import gp
 from . import mcmc
+from .variational import *
 
 
 __version__ = "4.0a2"

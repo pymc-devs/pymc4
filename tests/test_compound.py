@@ -54,7 +54,7 @@ def xla_fixture(request):
     return request.param == "XLA"
 
 
-@pytest.fixture(scope="module", params=[3, 5, 7])
+@pytest.fixture(scope="module", params=[3, 5])
 def seed(request):
     return request.param
 
@@ -111,21 +111,21 @@ def test_compound_model_sampler_method(
     np.testing.assert_allclose(var2, 0.5, atol=0.1)
 
 
-def test_samplers_on_simple_model(simple_model, seed, xla_fixture, sampler_type):
+def test_samplers_on_simple_model(simple_model, xla_fixture, sampler_type):
     model = simple_model()
     trace = pm.sample(model, sampler_type=sampler_type, xla_fixture=xla_fixture, seed=seed)
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 
 
-def test_extended_samplers_on_simple_model(simple_model, seed, xla_fixture, expanded_sampler_type):
+def test_extended_samplers_on_simple_model(simple_model, la_fixture, expanded_sampler_type):
     model = simple_model()
     trace = pm.sample(model, sampler_type=expanded_sampler_type, xla_fixture=xla_fixture, seed=seed)
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 
 
-def test_simple_seed(simple_model, seed, xla_fixture):
+def test_simple_seed(simple_model, seed):
     model = simple_model()
     trace1 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     trace2 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
@@ -136,7 +136,7 @@ def test_simple_seed(simple_model, seed, xla_fixture):
     )
 
 
-def test_compound_seed(compound_model, seed, xla_fixture):
+def test_compound_seed(compound_model, seed):
     model = compound_model()
     trace1 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     trace2 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
@@ -217,7 +217,7 @@ def test_sampler_merging(categorical_same_shape, categorical_different_shape):
     assert len(sampler_.kernel_kwargs["compound_samplers"]) == 3
 
 
-def test_other_samplers(simple_model, seed, xla_fixture):
+def test_other_samplers(simple_model, seed):
     model = simple_model()
     trace1 = pm.sample(model, sampler_type="nuts_simple", xla_fixture=xla_fixture, seed=seed)
     trace2 = pm.sample(model, sampler_type="hmc_simple", xla_fixture=xla_fixture, seed=seed)

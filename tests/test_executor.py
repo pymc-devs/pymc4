@@ -521,9 +521,7 @@ def test_unable_to_create_duplicate_variable():
 def test_unnamed_return():
     @pm.model
     def a_model():
-        return (
-            yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
-        )
+        return (yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log()))
 
     _, state = pm.evaluate_model(a_model())
     assert "a_model" in state.deterministics
@@ -540,9 +538,7 @@ def test_unnamed_return():
 def test_unnamed_return_2():
     @pm.model(name=None)
     def a_model():
-        return (
-            yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
-        )
+        return (yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log()))
 
     _, state = pm.evaluate_model(a_model(name="b_model"))
     assert "b_model" in state.deterministics
@@ -597,7 +593,10 @@ def test_log_prob_elemwise(fixture_model_with_stacks):
     model, expected_rv_shapes = fixture_model_with_stacks
     _, state = pm.evaluate_model(model())
     log_prob_elemwise = dict(
-        zip({**state.continuous_distributions, **state.discrete_distributions}, state.collect_log_prob_elemwise())
+        zip(
+            {**state.continuous_distributions, **state.discrete_distributions},
+            state.collect_log_prob_elemwise(),
+        )
     )  # This will discard potentials in log_prob_elemwise
     log_prob = state.collect_log_prob()
     assert len(log_prob_elemwise) == len(expected_rv_shapes)

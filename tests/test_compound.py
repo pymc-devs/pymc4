@@ -113,14 +113,14 @@ def test_compound_model_sampler_method(
 
 def test_samplers_on_simple_model(simple_model, xla_fixture, sampler_type):
     model = simple_model()
-    trace = pm.sample(model, sampler_type=sampler_type, xla_fixture=xla_fixture, seed=seed)
+    trace = pm.sample(model, sampler_type=sampler_type, xla_fixture=xla_fixture)
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 
 
 def test_extended_samplers_on_simple_model(simple_model, la_fixture, expanded_sampler_type):
     model = simple_model()
-    trace = pm.sample(model, sampler_type=expanded_sampler_type, xla_fixture=xla_fixture, seed=seed)
+    trace = pm.sample(model, sampler_type=expanded_sampler_type, xla_fixture=xla_fixture)
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 

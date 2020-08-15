@@ -30,7 +30,8 @@ def _make_summary_statistic(attr):  # noqa
         shape = prefer_static.concat(
             [
                 prefer_static.ones(
-                    prefer_static.rank_from_shape(self.batch_stack), dtype=self.batch_stack.dtype,
+                    prefer_static.rank_from_shape(self.batch_stack),
+                    dtype=self.batch_stack.dtype,
                 ),
                 self.distribution.batch_shape_tensor(),
                 self.distribution.event_shape_tensor(),
@@ -125,7 +126,9 @@ class BatchStacker(distribution_lib.Distribution):
         self._distribution = distribution
         with tf.name_scope(name) as name:
             batch_stack = distribution_util.expand_to_vector(
-                tf.convert_to_tensor(batch_stack, dtype_hint=tf.int32, name="batch_stack")
+                tf.convert_to_tensor(
+                    batch_stack, dtype_hint=tf.int32, name="batch_stack"
+                )
             )
             self._batch_stack = batch_stack
             super(BatchStacker, self).__init__(
@@ -186,7 +189,9 @@ class BatchStacker(distribution_lib.Distribution):
         x = tf.reshape(
             x,
             shape=tf.pad(
-                tf.shape(x), paddings=[[prefer_static.maximum(0, -d), 0]], constant_values=1,
+                tf.shape(x),
+                paddings=[[prefer_static.maximum(0, -d), 0]],
+                constant_values=1,
             ),
         )
         # (2) Compute x's log_prob.
@@ -240,6 +245,8 @@ def _kl_sample(a: BatchStacker, b: BatchStacker, name: str = "kl_sample") -> tf.
         if not np.array_equal(a_ss, b_ss):
             raise ValueError(msg)
     elif a.validate_args or b.validate_args:
-        assertions.append(assert_util.assert_equal(a.batch_stack, b.batch_stack, message=msg))
+        assertions.append(
+            assert_util.assert_equal(a.batch_stack, b.batch_stack, message=msg)
+        )
     with tf.control_dependencies(assertions):
         return kullback_leibler.kl_divergence(a.distribution, b.distribution, name=name)

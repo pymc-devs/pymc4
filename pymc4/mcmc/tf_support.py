@@ -6,10 +6,14 @@ import tensorflow as tf
 from tensorflow_probability.python.mcmc import kernel as kernel_base
 from tensorflow_probability.python.mcmc.internal import util as mcmc_util
 
-CompoundGibbsStepResults = collections.namedtuple("CompoundGibbsStepResults", ["compound_results"])
+CompoundGibbsStepResults = collections.namedtuple(
+    "CompoundGibbsStepResults", ["compound_results"]
+)
 
 
-def _target_log_prob_fn_part_compound(*state_part, idx, len_, state, target_log_prob_fn):
+def _target_log_prob_fn_part_compound(
+    *state_part, idx, len_, state, target_log_prob_fn
+):
     sl = slice(idx, idx + len_)
     temp_value = state[sl]
     state[sl] = state_part
@@ -26,11 +30,13 @@ def _target_log_prob_fn_part_gibbs(*state_part, idx, len_, state, target_log_pro
 
 
 def kernel_create_object(
-    sampleri, curr_indx, setli, current_state, target_log_prob_fn, target_log_prob_fn_part
+    sampleri,
+    curr_indx,
+    setli,
+    current_state,
+    target_log_prob_fn,
+    target_log_prob_fn_part,
 ):
-    """
-        TODO:...
-    """
     mkf = sampleri[0]
     kernel = mkf.kernel(
         target_log_prob_fn=functools.partial(
@@ -67,10 +73,13 @@ class _CompoundGibbsStepTF(kernel_base.TransitionKernel):
         with tf.name_scope(name or "CompoundSampler") as name:
             self._target_log_prob_fn = target_log_prob_fn
             self._compound_samplers = [
-                (sampler[0]._default_kernel_maker(), sampler[1]) for sampler in compound_samplers
+                (sampler[0]._default_kernel_maker(), sampler[1])
+                for sampler in compound_samplers
             ]
             self._compound_set_lengths = compound_set_lengths
-            self._cumulative_lengths = np.cumsum(compound_set_lengths) - compound_set_lengths
+            self._cumulative_lengths = (
+                np.cumsum(compound_set_lengths) - compound_set_lengths
+            )
             self._name = name
             self._parameters = dict(target_log_prob_fn=target_log_prob_fn, name=name)
 
@@ -91,9 +100,6 @@ class _CompoundGibbsStepTF(kernel_base.TransitionKernel):
         return True
 
     def one_step(self, current_state, previous_kernel_results, seed=None):
-        """Takes one step of the TransitionKernel
-        TODO: More specific fore compound step
-        """
         with tf.name_scope(mcmc_util.make_name(self.name, "compound", "one_step")):
             unwrap_state_list = not tf.nest.is_nested(current_state)
             if unwrap_state_list:
@@ -125,17 +131,22 @@ class _CompoundGibbsStepTF(kernel_base.TransitionKernel):
         return [next_state, CompoundGibbsStepResults(compound_results=next_results)]
 
     def bootstrap_results(self, init_state):
-        """Returns an object with the same type as returned by `one_step(...)[1]`
+        """
+        Returns an object with the same type as returned by `one_step(...)[1]`
         Compound bootrstrap step
         """
-        with tf.name_scope(mcmc_util.make_name(self.name, "compound", "bootstrap_results")):
+        with tf.name_scope(
+            mcmc_util.make_name(self.name, "compound", "bootstrap_results")
+        ):
             if not mcmc_util.is_list_like(init_state):
                 init_state = [init_state]
             init_state = [tf.convert_to_tensor(x) for x in init_state]
 
             init_results = []
             for sampleri, setli, curri in zip(
-                self._compound_samplers, self._compound_set_lengths, self._cumulative_lengths
+                self._compound_samplers,
+                self._compound_set_lengths,
+                self._cumulative_lengths,
             ):
                 kernel = self.kernel_create_object(
                     sampleri, curri, setli, init_state, self._target_log_prob_fn
@@ -152,7 +163,8 @@ class _CompoundStepTF(_CompoundGibbsStepTF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.kernel_create_object = functools.partial(
-            kernel_create_object, target_log_prob_fn_part=_target_log_prob_fn_part_compound
+            kernel_create_object,
+            target_log_prob_fn_part=_target_log_prob_fn_part_compound,
         )
 
 

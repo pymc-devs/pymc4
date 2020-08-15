@@ -8,7 +8,12 @@ import tensorflow as tf
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
     model = simple_model_with_deterministic()
     trace = pm.sample(
-        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+        model=model,
+        num_samples=10,
+        num_chains=4,
+        burn_in=100,
+        step_size=0.1,
+        xla=xla_fixture,
     )
     norm = "simple_model_with_deterministic/simple_model/norm"
     determ = "simple_model_with_deterministic/determ"
@@ -44,13 +49,17 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
     expected_deterministic = np.max(np.reshape(inputs, batch_size + (-1,)), axis=-1)
     deterministics_callback_output = deterministics_callback(input_tensor)[0].numpy()
     assert deterministics_callback_output.shape == batch_size
-    np.testing.assert_allclose(deterministics_callback_output, expected_deterministic, rtol=1e-5)
+    np.testing.assert_allclose(
+        deterministics_callback_output, expected_deterministic, rtol=1e-5
+    )
 
     # Test log_prob part
     expected_log_prob = np.sum(
         np.reshape(stats.norm.logpdf(inputs), batch_size + (-1,)), axis=-1
     ) + np.sum(  # norm.log_prob
-        stats.norm.logpdf(observed.flatten(), loc=expected_deterministic[..., None], scale=1),
+        stats.norm.logpdf(
+            observed.flatten(), loc=expected_deterministic[..., None], scale=1
+        ),
         axis=-1,
     )  # output.log_prob
     logpfn_output = logpfn(input_tensor).numpy()
@@ -69,11 +78,18 @@ def test_sampling_with_deterministics_in_nested_models(
         deterministic_mapping,
     ) = deterministics_in_nested_models
     trace = pm.sample(
-        model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+        model=model(),
+        num_samples=10,
+        num_chains=4,
+        burn_in=100,
+        step_size=0.1,
+        xla=xla_fixture,
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
-            trace.posterior[deterministic], op(*[trace.posterior[i] for i in inputs]), rtol=1e-6
+            trace.posterior[deterministic],
+            op(*[trace.posterior[i] for i in inputs]),
+            rtol=1e-6,
         )
 
 
@@ -83,7 +99,9 @@ def test_sampling_with_no_free_rvs(simple_model_no_free_rvs):
         trace = pm.sample(model=model, num_samples=1, num_chains=1, burn_in=1)
 
 
-def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_batching_fixture):
+def test_sample_auto_batching(
+    vectorized_model_fixture, xla_fixture, use_auto_batching_fixture
+):
     model, is_vectorized_model, core_shapes = vectorized_model_fixture
     num_samples = 10
     num_chains = 4

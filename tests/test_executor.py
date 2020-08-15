@@ -29,7 +29,9 @@ def fixture_distribution_parameters(fixture_batch_shapes, fixture_sample_shapes)
     return fixture_batch_shapes, observed
 
 
-@pytest.fixture(scope="module", params=["decorate_model", "use_plain_function"], ids=str)
+@pytest.fixture(
+    scope="module", params=["decorate_model", "use_plain_function"], ids=str
+)
 def fixture_pm_model_decorate(request):
     return request.param == "decorate_model"
 
@@ -89,7 +91,9 @@ def transformed_model():
 @pytest.fixture(scope="module")
 def transformed_model_with_observed():
     def transformed_model_with_observed():
-        norm = yield dist.HalfNormal("n", 1, transform=dist.transforms.Log(), observed=1.0)
+        norm = yield dist.HalfNormal(
+            "n", 1, transform=dist.transforms.Log(), observed=1.0
+        )
         return norm
 
     return transformed_model_with_observed
@@ -107,7 +111,9 @@ def class_model():
 
 
 @pytest.fixture(scope="module")
-def fixture_model_with_stacks(fixture_distribution_parameters, fixture_pm_model_decorate):
+def fixture_model_with_stacks(
+    fixture_distribution_parameters, fixture_pm_model_decorate
+):
     batch_shape, observed = fixture_distribution_parameters
     expected_obs_shape = (
         ()
@@ -175,8 +181,14 @@ def deterministics_in_nested_models():
     deterministic_mapping = {
         "outer_model/dcond": (["outer_model/cond"], lambda x: x * 2),
         "outer_model/ddx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model/dx": (
+            ["outer_model/nested_model/x"],
+            lambda x: x + 1,
+        ),
+        "outer_model/nested_model/dx": (
+            ["outer_model/nested_model/x"],
+            lambda x: x + 1,
+        ),
         "outer_model/nested_model": (["outer_model/nested_model/x"], lambda x: x + 1),
         "outer_model": (["outer_model/nested_model/x"], lambda x: x + 1),
     }
@@ -262,7 +274,9 @@ def test_transformed_model_transformed_executor_with_passed_value(transformed_mo
     assert set(state.untransformed_values) == {"n"}
     np.testing.assert_allclose(state.all_values["__log_n"], 0.0)
 
-    _, state = pm.evaluate_model_transformed(transformed_model(), values=dict(__log_n=0.0))
+    _, state = pm.evaluate_model_transformed(
+        transformed_model(), values=dict(__log_n=0.0)
+    )
 
     assert set(state.all_values) == {"n", "__log_n"}
     assert set(state.transformed_values) == {"__log_n"}
@@ -273,12 +287,16 @@ def test_transformed_model_transformed_executor_with_passed_value(transformed_mo
 def test_transformed_executor_logp_tensorflow(transformed_model):
     norm_log = tfd.TransformedDistribution(tfd.HalfNormal(1), bij.Invert(bij.Exp()))
 
-    _, state = pm.evaluate_model_transformed(transformed_model(), values=dict(__log_n=-math.pi))
+    _, state = pm.evaluate_model_transformed(
+        transformed_model(), values=dict(__log_n=-math.pi)
+    )
     np.testing.assert_allclose(
         state.collect_log_prob(), norm_log.log_prob(-math.pi), equal_nan=False
     )
 
-    _, state = pm.evaluate_model_transformed(transformed_model(), values=dict(n=math.exp(-math.pi)))
+    _, state = pm.evaluate_model_transformed(
+        transformed_model(), values=dict(n=math.exp(-math.pi))
+    )
     np.testing.assert_allclose(
         state.collect_log_prob(), norm_log.log_prob(-math.pi), equal_nan=False
     )
@@ -289,7 +307,9 @@ def test_executor_logp_tensorflow(transformed_model):
 
     _, state = pm.evaluate_model(transformed_model(), values=dict(n=math.pi))
 
-    np.testing.assert_allclose(state.collect_log_prob(), norm.log_prob(math.pi), equal_nan=False)
+    np.testing.assert_allclose(
+        state.collect_log_prob(), norm.log_prob(math.pi), equal_nan=False
+    )
 
 
 def test_single_distribution():
@@ -317,7 +337,9 @@ def test_observed_are_passed_correctly(complex_model_with_observed):
     assert np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
 
 
-def test_observed_are_set_to_none_for_posterior_predictive_correctly(complex_model_with_observed):
+def test_observed_are_set_to_none_for_posterior_predictive_correctly(
+    complex_model_with_observed,
+):
     _, state = pm.evaluate_model(
         complex_model_with_observed(), observed={"complex_model/a/n": None}
     )
@@ -336,14 +358,18 @@ def test_observed_do_not_produce_transformed_values(transformed_model_with_obser
     assert not state.untransformed_values
 
 
-def test_observed_do_not_produce_transformed_values_case_programmatic(transformed_model):
+def test_observed_do_not_produce_transformed_values_case_programmatic(
+    transformed_model,
+):
     _, state = pm.evaluate_model_transformed(transformed_model(), observed=dict(n=1.0))
     assert set(state.observed_values) == {"n"}
     assert not state.transformed_values
     assert not state.untransformed_values
 
 
-def test_observed_do_not_produce_transformed_values_case_override(transformed_model_with_observed):
+def test_observed_do_not_produce_transformed_values_case_override(
+    transformed_model_with_observed,
+):
     _, state = pm.evaluate_model_transformed(
         transformed_model_with_observed(), observed=dict(n=None)
     )
@@ -364,7 +390,9 @@ def test_observed_do_not_produce_transformed_values_case_override_with_set_value
     np.testing.assert_allclose(state.all_values["__log_n"], 0.0)
 
     _, state = pm.evaluate_model_transformed(
-        transformed_model_with_observed(), values=dict(__log_n=0.0), observed=dict(n=None)
+        transformed_model_with_observed(),
+        values=dict(__log_n=0.0),
+        observed=dict(n=None),
     )
     assert not state.observed_values
     assert set(state.transformed_values) == {"__log_n"}
@@ -387,12 +415,16 @@ def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_untransfo
     transformed_model_with_observed,
 ):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
-        _, state = pm.evaluate_model(transformed_model_with_observed(), values=dict(n=0.0))
+        _, state = pm.evaluate_model(
+            transformed_model_with_observed(), values=dict(n=0.0)
+        )
     assert e.match("{'n': None}")
     assert e.match("'n' from untransformed values")
 
 
-def test_observed_cant_mix_with_transformed_and_raises_an_error(transformed_model_with_observed):
+def test_observed_cant_mix_with_transformed_and_raises_an_error(
+    transformed_model_with_observed,
+):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         _, state = pm.evaluate_model_transformed(
             transformed_model_with_observed(), values=dict(__log_n=0.0)
@@ -507,7 +539,9 @@ def test_initialized_distribution_cant_be_transformed_into_a_new_prior():
 
 def test_unable_to_create_duplicate_variable():
     def invdalid_model():
-        yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+        yield pm.distributions.HalfNormal(
+            "n", 1, transform=pm.distributions.transforms.Log()
+        )
         yield pm.distributions.Normal("n", 0, 1)
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
@@ -522,7 +556,9 @@ def test_unnamed_return():
     @pm.model
     def a_model():
         return (
-            yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+            yield pm.distributions.HalfNormal(
+                "n", 1, transform=pm.distributions.transforms.Log()
+            )
         )
 
     _, state = pm.evaluate_model(a_model())
@@ -541,7 +577,9 @@ def test_unnamed_return_2():
     @pm.model(name=None)
     def a_model():
         return (
-            yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+            yield pm.distributions.HalfNormal(
+                "n", 1, transform=pm.distributions.transforms.Log()
+            )
         )
 
     _, state = pm.evaluate_model(a_model(name="b_model"))
@@ -563,7 +601,9 @@ def test_uncatched_exception_works():
             yield 1
         except:
             pass
-        yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+        yield pm.distributions.HalfNormal(
+            "n", 1, transform=pm.distributions.transforms.Log()
+        )
 
     with pytest.raises(pm.flow.executor.StopExecution) as e:
         pm.evaluate_model(a_model())
@@ -602,12 +642,21 @@ def test_log_prob_elemwise(fixture_model_with_stacks):
     log_prob = state.collect_log_prob()
     assert len(log_prob_elemwise) == len(expected_rv_shapes)
     assert all(rv in log_prob_elemwise for rv in expected_rv_shapes)
-    assert all(log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items())
-    assert log_prob.numpy() == sum(map(tf.reduce_sum, log_prob_elemwise.values())).numpy()
+    assert all(
+        log_prob_elemwise[rv].shape == shape for rv, shape in expected_rv_shapes.items()
+    )
+    assert (
+        log_prob.numpy() == sum(map(tf.reduce_sum, log_prob_elemwise.values())).numpy()
+    )
 
 
 def test_deterministics(model_with_deterministics):
-    model, expected_deterministics, expected_ops, expected_ops_inputs = model_with_deterministics
+    (
+        model,
+        expected_deterministics,
+        expected_ops,
+        expected_ops_inputs,
+    ) = model_with_deterministics
     _, state = pm.evaluate_model(model())
 
     assert len(state.deterministics) == len(expected_deterministics)
@@ -690,12 +739,16 @@ def test_unreduced_log_prob(fixture_batch_shapes):
         "model/b": np.ones(fixture_batch_shapes, dtype="float32"),
     }
     observed = {
-        "model/c": np.broadcast_to(observed_value, fixture_batch_shapes + observed_value.shape)
+        "model/c": np.broadcast_to(
+            observed_value, fixture_batch_shapes + observed_value.shape
+        )
     }
     state = pm.evaluate_model(model(), values=values, observed=observed)[1]
     unreduced_log_prob = state.collect_unreduced_log_prob()
     assert unreduced_log_prob.numpy().shape == fixture_batch_shapes
-    np.testing.assert_allclose(tf.reduce_sum(unreduced_log_prob), state.collect_log_prob())
+    np.testing.assert_allclose(
+        tf.reduce_sum(unreduced_log_prob), state.collect_log_prob()
+    )
 
 
 def test_executor_on_conditionally_independent(fixture_batch_shapes):

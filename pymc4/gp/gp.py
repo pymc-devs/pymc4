@@ -132,7 +132,9 @@ class LatentGP(BaseGP):
             # XXX: Maybe we can add this feature later
             # X, f = self.X, self.f
             raise ValueError(
-                "given must contain 'X' and 'f' keys. found {} only.".format(list(given.keys()))
+                "given must contain 'X' and 'f' keys. found {} only.".format(
+                    list(given.keys())
+                )
             )
         return X, f, cov_total, mean_total
 
@@ -147,7 +149,9 @@ class LatentGP(BaseGP):
     ) -> tuple:
         # We need to add an extra dimension onto ``f`` for univariate
         # distributions to make the shape consistent with ``mean_total(X)``
-        if self._is_univariate(X) and len(f.shape) < len(X.shape[: -(self.feature_ndims)]):
+        if self._is_univariate(X) and len(f.shape) < len(
+            X.shape[: -(self.feature_ndims)]
+        ):
             f = tf.expand_dims(f, -1)
         Kxx = cov_total(X, X)
         Kxs = self.cov_fn(X, Xnew)
@@ -156,9 +160,13 @@ class LatentGP(BaseGP):
         # We add a `newaxis` to make the shape of mean_total(X)
         # [batch_shape, num_samples, 1] which is consistent with
         # the shape `tf.linalg.solve` accepts.
-        v = tf.linalg.triangular_solve(L, tf.expand_dims((f - mean_total(X)), -1), lower=True)
+        v = tf.linalg.triangular_solve(
+            L, tf.expand_dims((f - mean_total(X)), -1), lower=True
+        )
         # Add an axis to avoid right align broadcasting
-        mu = tf.expand_dims(self.mean_fn(Xnew), -1) + tf.linalg.matmul(A, v, transpose_a=True)
+        mu = tf.expand_dims(self.mean_fn(Xnew), -1) + tf.linalg.matmul(
+            A, v, transpose_a=True
+        )
         Kss = self.cov_fn(Xnew, Xnew)
         cov = Kss - tf.linalg.matmul(A, A, transpose_a=True)
         # Return the stabilized covariance matrix and squeeze the
@@ -302,7 +310,9 @@ class LatentGP(BaseGP):
         >>> trace = pm.sample(model, num_samples=10, burn_in=10)
         """
         X, f, cov_total, mean_total = self._get_given_vals(given)
-        mu, cov = self._build_conditional(Xnew, X, f, cov_total, mean_total, jitter=jitter)
+        mu, cov = self._build_conditional(
+            Xnew, X, f, cov_total, mean_total, jitter=jitter
+        )
         if self._is_univariate(Xnew):
             return Normal(
                 name=name,

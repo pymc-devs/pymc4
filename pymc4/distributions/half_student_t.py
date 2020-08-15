@@ -40,7 +40,13 @@ class HalfStudentT(distribution.Distribution):
     """
 
     def __init__(
-        self, df, loc, scale, validate_args=False, allow_nan_stats=True, name="HalfStudentT",
+        self,
+        df,
+        loc,
+        scale,
+        validate_args=False,
+        allow_nan_stats=True,
+        name="HalfStudentT",
     ):
         r"""
         Construct a half-Student's t distribution with ``df``, ``loc`` and ``scale``.
@@ -78,8 +84,12 @@ class HalfStudentT(distribution.Distribution):
         with tf.name_scope(name) as name:
             dtype = dtype_util.common_dtype([df, loc, scale], dtype_hint=tf.float32)
             self._df = tensor_util.convert_nonref_to_tensor(df, name="df", dtype=dtype)
-            self._loc = tensor_util.convert_nonref_to_tensor(loc, name="loc", dtype=dtype)
-            self._scale = tensor_util.convert_nonref_to_tensor(scale, name="scale", dtype=dtype)
+            self._loc = tensor_util.convert_nonref_to_tensor(
+                loc, name="loc", dtype=dtype
+            )
+            self._scale = tensor_util.convert_nonref_to_tensor(
+                scale, name="scale", dtype=dtype
+            )
             dtype_util.assert_same_float_dtype((self._df, self._loc, self._scale))
             super(HalfStudentT, self).__init__(
                 dtype=dtype,
@@ -93,7 +103,10 @@ class HalfStudentT(distribution.Distribution):
     @staticmethod
     def _param_shapes(sample_shape):
         return dict(
-            zip(("df", "loc", "scale"), ([tf.convert_to_tensor(sample_shape, dtype=tf.int32)] * 3),)
+            zip(
+                ("df", "loc", "scale"),
+                ([tf.convert_to_tensor(sample_shape, dtype=tf.int32)] * 3),
+            )
         )
 
     @classmethod
@@ -149,9 +162,13 @@ class HalfStudentT(distribution.Distribution):
         shape = tf.concat([[n], batch_shape], 0)
         seed = SeedStream(seed, "half_student_t")
 
-        abs_normal_sample = tf.math.abs(tf.random.normal(shape, dtype=self.dtype, seed=seed()))
+        abs_normal_sample = tf.math.abs(
+            tf.random.normal(shape, dtype=self.dtype, seed=seed())
+        )
         df = df * tf.ones(batch_shape, dtype=self.dtype)
-        gamma_sample = tf.random.gamma([n], 0.5 * df, beta=0.5, dtype=self.dtype, seed=seed())
+        gamma_sample = tf.random.gamma(
+            [n], 0.5 * df, beta=0.5, dtype=self.dtype, seed=seed()
+        )
         samples = abs_normal_sample * tf.math.rsqrt(gamma_sample / df)
         return samples * scale + loc  # Abs(scale) not wanted.
 
@@ -170,7 +187,9 @@ class HalfStudentT(distribution.Distribution):
             - np.log(2.0)
         )
         log_prob = log_unnormalized_prob - log_normalization
-        return tf.where(x < loc, dtype_util.as_numpy_dtype(self.dtype)(-np.inf), log_prob)
+        return tf.where(
+            x < loc, dtype_util.as_numpy_dtype(self.dtype)(-np.inf), log_prob
+        )
 
     def _cdf(self, x):
         df = tf.convert_to_tensor(self.df)
@@ -183,7 +202,9 @@ class HalfStudentT(distribution.Distribution):
         neg_cdf = 0.5 * tf.math.betainc(
             0.5 * tf.broadcast_to(df, prefer_static.shape(x_t)), 0.5, x_t
         )
-        return tf.where(x < loc, dtype_util.as_numpy_dtype(self.dtype)(-np.inf), 2.0 - 2 * neg_cdf)
+        return tf.where(
+            x < loc, dtype_util.as_numpy_dtype(self.dtype)(-np.inf), 2.0 - 2 * neg_cdf
+        )
 
     @distribution_util.AppendDocstring(
         r"""
@@ -210,7 +231,9 @@ class HalfStudentT(distribution.Distribution):
         )
         mean = tf.math.exp(log_mean)
         if self.allow_nan_stats:
-            return tf.where(df > 1.0, mean, dtype_util.as_numpy_dtype(self.dtype)(np.nan))
+            return tf.where(
+                df > 1.0, mean, dtype_util.as_numpy_dtype(self.dtype)(np.nan)
+            )
         else:
             return distribution_util.with_dependencies(
                 [
@@ -252,7 +275,9 @@ class HalfStudentT(distribution.Distribution):
         )
         if self.allow_nan_stats:
             return tf.where(
-                df > 1.0, result_where_defined, dtype_util.as_numpy_dtype(self.dtype)(np.nan),
+                df > 1.0,
+                result_where_defined,
+                dtype_util.as_numpy_dtype(self.dtype)(np.nan),
             )
         else:
             return distribution_util.with_dependencies(
@@ -289,7 +314,9 @@ class HalfStudentT(distribution.Distribution):
         assertions = []
         if is_init != tensor_util.is_ref(self.df):
             assertions.append(
-                assert_util.assert_positive(self.df, message="Argument `df` must be positive.")
+                assert_util.assert_positive(
+                    self.df, message="Argument `df` must be positive."
+                )
             )
         if is_init != tensor_util.is_ref(self.scale):
             assertions.append(

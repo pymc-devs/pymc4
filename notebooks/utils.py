@@ -31,7 +31,9 @@ def plot_samples(x, batched_samples, labels, names, ylim=None):
     plt.show()
 
 
-def plot_cov_matrix(k, X, labels, names, vlim=None, cmap="inferno", interpolation="none"):
+def plot_cov_matrix(
+    k, X, labels, names, vlim=None, cmap="inferno", interpolation="none"
+):
     cov = k(X, X)
     cov = np.asarray(cov)
     if vlim is not None:

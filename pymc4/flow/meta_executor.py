@@ -79,17 +79,21 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
                             scoped_name
                         )
                     )
-                assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
+                assert_values_compatible_with_distribution(
+                    scoped_name, observed_variable, dist
+                )
                 return_value = state.observed_values[scoped_name] = observed_variable
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
         else:
             if dist.is_root:
-                return_value = state.untransformed_values[scoped_name] = dist.get_test_sample(
-                    sample_shape=sample_shape
-                )
+                return_value = state.untransformed_values[
+                    scoped_name
+                ] = dist.get_test_sample(sample_shape=sample_shape)
             else:
-                return_value = state.untransformed_values[scoped_name] = dist.get_test_sample()
+                return_value = state.untransformed_values[
+                    scoped_name
+                ] = dist.get_test_sample()
         if dist._grad_support:
             state.continuous_distributions[scoped_name] = dist
         else:

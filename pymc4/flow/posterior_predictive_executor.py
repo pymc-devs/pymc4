@@ -82,9 +82,7 @@ class PosteriorPredictiveSamplingExecutor(SamplingExecutor):
         dist = super().modify_distribution(dist, model_info, state)
         # We only modify the shape of Distribution instances that have observed
         # values
-        dist = transform_dist_if_necessary(
-            dist, state, allow_transformed_and_untransformed=False
-        )
+        dist = transform_dist_if_necessary(dist, state, allow_transformed_and_untransformed=False)
         if not isinstance(dist, Distribution):
             return dist
         scoped_name = scopes.variable_name(dist.name)
@@ -114,9 +112,7 @@ class PosteriorPredictiveSamplingExecutor(SamplingExecutor):
         # Now we construct and return the same distribution but setting
         # observed to None and setting a batch_size that matches the result of
         # broadcasting the observed and distribution shape
-        batch_stack = extra_batch_stack + (
-            dist.batch_stack if dist.batch_stack is not None else ()
-        )
+        batch_stack = extra_batch_stack + (dist.batch_stack if dist.batch_stack is not None else ())
         if len(batch_stack) > 0:
             reinterpreted_batch_ndims = dist.reinterpreted_batch_ndims
             if dist.event_stack:

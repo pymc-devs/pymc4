@@ -8,9 +8,7 @@ from pymc4 import forward_sampling
 from pymc4.flow.executor import EvaluationError
 
 
-@pytest.fixture(
-    scope="module", params=[(1, 0), (1, 1), (1, 2), (1, 1, 1), (1, 3, 7)], ids=str
-)
+@pytest.fixture(scope="module", params=[(1, 0), (1, 1), (1, 2), (1, 1, 1), (1, 3, 7)], ids=str)
 def sample_shape_fixture(request):
     return request.param
 
@@ -20,9 +18,7 @@ def n_draws_fixture(request):
     return request.param
 
 
-@pytest.fixture(
-    scope="module", params=["NoResampleObserved", "ResampleObserveds"], ids=str
-)
+@pytest.fixture(scope="module", params=["NoResampleObserved", "ResampleObserveds"], ids=str)
 def sample_from_observed_fixture(request):
     return request.param == "ResampleObserveds"
 
@@ -78,9 +74,7 @@ def use_auto_batching_fixture(request):
     return request.param == "auto_batch"
 
 
-@pytest.fixture(
-    scope="module", params=["unvectorized_model", "vectorized_model"], ids=str
-)
+@pytest.fixture(scope="module", params=["unvectorized_model", "vectorized_model"], ids=str)
 def vectorized_model_fixture(request):
     is_vectorized_model = request.param == "vectorized_model"
     observed = np.zeros((5, 4), dtype="float32")
@@ -98,11 +92,7 @@ def vectorized_model_fixture(request):
         @pm.model
         def model():
             mu = yield pm.Normal(
-                "mu",
-                tf.zeros(4),
-                1,
-                conditionally_independent=True,
-                reinterpreted_batch_ndims=1,
+                "mu", tf.zeros(4), 1, conditionally_independent=True, reinterpreted_batch_ndims=1,
             )
             scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
             x = yield pm.Normal(
@@ -130,9 +120,7 @@ def posterior_predictive_fixture(model_with_observed_fixture):
     num_samples = 40
     num_chains = 3
     (model, observed, core_ppc_shapes, observed_in_RV) = model_with_observed_fixture
-    trace = pm.sample(
-        model(), num_samples=num_samples, num_chains=num_chains, observed=observed
-    )
+    trace = pm.sample(model(), num_samples=num_samples, num_chains=num_chains, observed=observed)
     return (
         model,
         observed,
@@ -144,9 +132,7 @@ def posterior_predictive_fixture(model_with_observed_fixture):
     )
 
 
-@pytest.fixture(
-    scope="module", params=["unvectorized_model", "vectorized_model"], ids=str
-)
+@pytest.fixture(scope="module", params=["unvectorized_model", "vectorized_model"], ids=str)
 def glm_model_fixture(request):
     is_vectorized_model = request.param == "vectorized_model"
     n_features = 10
@@ -174,11 +160,7 @@ def glm_model_fixture(request):
             scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
             mu = tf.linalg.matvec(regressors, beta) + bias[..., None]
             y = yield pm.Normal(
-                "y",
-                mu,
-                scale[..., None],
-                observed=observed,
-                reinterpreted_batch_ndims=1,
+                "y", mu, scale[..., None], observed=observed, reinterpreted_batch_ndims=1,
             )
 
     else:
@@ -194,9 +176,7 @@ def glm_model_fixture(request):
     return model, is_vectorized_model, core_shapes
 
 
-def test_sample_prior_predictive(
-    model_fixture, sample_shape_fixture, sample_from_observed_fixture
-):
+def test_sample_prior_predictive(model_fixture, sample_shape_fixture, sample_from_observed_fixture):
     model, observed = model_fixture
 
     prior = pm.sample_prior_predictive(
@@ -208,9 +188,7 @@ def test_sample_prior_predictive(
         )
         assert all((value.shape == sample_shape_fixture for value in prior.values()))
     else:
-        assert set(["model/sd", "model/y", "model/mu", "model/dy"]) == set(
-            prior.data_vars
-        )
+        assert set(["model/sd", "model/y", "model/mu", "model/dy"]) == set(prior.data_vars)
         assert all(
             (
                 value.shape == sample_shape_fixture
@@ -245,10 +223,7 @@ def test_sample_prior_predictive_var_names(model_fixture):
     # Assert we can get the values of observeds if we ask for them explicitly
     # even if sample_from_observed_fixture is False
     prior = pm.sample_prior_predictive(
-        model(),
-        var_names=["model/x", "model/y"],
-        sample_shape=(),
-        sample_from_observed=False,
+        model(), var_names=["model/x", "model/y"], sample_shape=(), sample_from_observed=False,
     ).prior_predictive
     assert set(prior) == set(["model/x", "model/y"])
     assert np.all(prior["model/x"] == observed)
@@ -259,21 +234,15 @@ def test_sample_prior_predictive_var_names(model_fixture):
         model_func, ["X"]
     )
     with pytest.raises(ValueError, match=re.escape(expected_message)):
-        prior = pm.sample_prior_predictive(
-            model_func, var_names=["X", "model/y"], sample_shape=()
-        )
+        prior = pm.sample_prior_predictive(model_func, var_names=["X", "model/y"], sample_shape=())
 
 
 def test_sample_prior_predictive_int_sample_shape(model_fixture, n_draws_fixture):
     model, observed = model_fixture
 
-    prior_int = forward_sampling.sample_prior_predictive(
-        model(), sample_shape=n_draws_fixture
-    )
+    prior_int = forward_sampling.sample_prior_predictive(model(), sample_shape=n_draws_fixture)
 
-    prior_tuple = forward_sampling.sample_prior_predictive(
-        model(), sample_shape=(n_draws_fixture,)
-    )
+    prior_tuple = forward_sampling.sample_prior_predictive(model(), sample_shape=(n_draws_fixture,))
 
     assert all(
         (
@@ -299,9 +268,7 @@ def test_posterior_predictive_executor(model_with_observed_fixture):
     assert len(ppc_state.observed_values) == 0
     for var, shape in core_ppc_shapes.items():
         assert (
-            collections.ChainMap(ppc_state.all_values, ppc_state.deterministics)[var]
-            .numpy()
-            .shape
+            collections.ChainMap(ppc_state.all_values, ppc_state.deterministics)[var].numpy().shape
             == shape
         )
         if var in observed:
@@ -328,16 +295,13 @@ def test_sample_posterior_predictive(posterior_predictive_fixture):
     ).posterior_predictive
     assert set(sorted(list(ppc))) == set(observed)
     assert np.all(
-        [
-            v.shape == (num_chains, num_samples) + observed[k].shape
-            for k, v in ppc.items()
-        ]
+        [v.shape == (num_chains, num_samples) + observed[k].shape for k, v in ppc.items()]
     )
 
 
 def test_sample_ppc_var_names(model_fixture):
     model, observed = model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             "model/sd": tf.ones((10, 1), dtype="float32"),
             "model/y": tf.convert_to_tensor(observed[:, None]),
@@ -358,9 +322,7 @@ def test_sample_ppc_var_names(model_fixture):
     del trace.posterior["name not in model!"]
 
     var_names = ["model/sd", "model/x", "model/dy"]
-    ppc = pm.sample_posterior_predictive(
-        model(), trace, var_names=var_names
-    ).posterior_predictive
+    ppc = pm.sample_posterior_predictive(model(), trace, var_names=var_names).posterior_predictive
     assert set(var_names) == set(ppc)
     assert ppc["model/sd"].shape == trace.posterior["model/sd"].shape
 
@@ -371,15 +333,10 @@ def test_sample_ppc_corrupt_trace():
         x = yield pm.Normal("x", tf.ones(5), 1, reinterpreted_batch_ndims=1)
         y = yield pm.Normal("y", x, 1)
 
-    trace1 = pm.inference.utils.trace_to_arviz(
-        {"model/x": tf.ones((7, 1), dtype="float32")}
-    )
+    trace1 = pm.mcmc.utils.trace_to_arviz({"model/x": tf.ones((7, 1), dtype="float32")})
 
-    trace2 = pm.inference.utils.trace_to_arviz(
-        {
-            "model/x": tf.ones((1, 5), dtype="float32"),
-            "model/y": tf.zeros((1, 1), dtype="float32"),
-        }
+    trace2 = pm.mcmc.utils.trace_to_arviz(
+        {"model/x": tf.ones((1, 5), dtype="float32"), "model/y": tf.zeros((1, 1), dtype="float32"),}
     )
     with pytest.raises(EvaluationError):
         forward_sampling.sample_posterior_predictive(model(), trace1)
@@ -392,15 +349,9 @@ def test_vectorized_sample_prior_predictive(
 ):
     model, is_vectorized_model, core_shapes = vectorized_model_fixture
     prior = forward_sampling.sample_prior_predictive(
-        model(),
-        sample_shape=sample_shape_fixture,
-        use_auto_batching=use_auto_batching_fixture,
+        model(), sample_shape=sample_shape_fixture, use_auto_batching=use_auto_batching_fixture,
     ).prior_predictive
-    if (
-        not use_auto_batching_fixture
-        and not is_vectorized_model
-        and len(sample_shape_fixture) > 0
-    ):
+    if not use_auto_batching_fixture and not is_vectorized_model and len(sample_shape_fixture) > 0:
         with pytest.raises(AssertionError):
             for k, v in core_shapes.items():
                 # The (1,) comes from trace_to_arviz imposed chain axis
@@ -415,11 +366,7 @@ def test_sample_prior_predictive_on_glm(
     glm_model_fixture, use_auto_batching_fixture, sample_shape_fixture
 ):
     model, is_vectorized_model, core_shapes = glm_model_fixture
-    if (
-        not use_auto_batching_fixture
-        and not is_vectorized_model
-        and len(sample_shape_fixture) > 0
-    ):
+    if not use_auto_batching_fixture and not is_vectorized_model and len(sample_shape_fixture) > 0:
         with pytest.raises(AssertionError):
             prior = forward_sampling.sample_prior_predictive(
                 model(),
@@ -431,9 +378,7 @@ def test_sample_prior_predictive_on_glm(
                 assert prior[k].shape == (1,) + sample_shape_fixture + v
     else:
         prior = forward_sampling.sample_prior_predictive(
-            model(),
-            sample_shape=sample_shape_fixture,
-            use_auto_batching=use_auto_batching_fixture,
+            model(), sample_shape=sample_shape_fixture, use_auto_batching=use_auto_batching_fixture,
         ).prior_predictive
         for k, v in core_shapes.items():
             # The (1,) comes from trace_to_arviz imposed chain axis
@@ -444,25 +389,19 @@ def test_vectorized_sample_posterior_predictive(
     vectorized_model_fixture, use_auto_batching_fixture, sample_shape_fixture
 ):
     model, is_vectorized_model, core_shapes = vectorized_model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
             # instead of (num_samples, num_chains, ...)
             k: tf.zeros(
-                (sample_shape_fixture[1], sample_shape_fixture[0])
-                + sample_shape_fixture[2:]
-                + v
+                (sample_shape_fixture[1], sample_shape_fixture[0]) + sample_shape_fixture[2:] + v
             )
             for k, v in core_shapes.items()
             if k not in ["model/x"]
         }
     )
-    if (
-        not use_auto_batching_fixture
-        and not is_vectorized_model
-        and len(sample_shape_fixture) > 0
-    ):
+    if not use_auto_batching_fixture and not is_vectorized_model and len(sample_shape_fixture) > 0:
         with pytest.raises((ValueError, EvaluationError)):
             # This can raise ValueError when tfp distributions complain about
             # the parameter shapes being imcompatible or it can raise an
@@ -483,15 +422,13 @@ def test_sample_posterior_predictive_on_glm(
     glm_model_fixture, use_auto_batching_fixture, sample_shape_fixture
 ):
     model, is_vectorized_model, core_shapes = glm_model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
             # instead of (num_samples, num_chains, ...)
             k: tf.zeros(
-                (sample_shape_fixture[1], sample_shape_fixture[0])
-                + sample_shape_fixture[2:]
-                + v
+                (sample_shape_fixture[1], sample_shape_fixture[0]) + sample_shape_fixture[2:] + v
             )
             for k, v in core_shapes.items()
             if k not in ["model/y"]
@@ -543,14 +480,10 @@ def test_posterior_predictive_on_root_variable(use_auto_batching_fixture):
         bias = yield pm.Normal("bias", 0, 1, conditionally_independent=True)
         mu = beta[..., None] * x + bias[..., None]
         yield pm.Normal(
-            "obs",
-            mu,
-            1,
-            observed=np.ones(n_obs, dtype="float32"),
-            reinterpreted_batch_ndims=1,
+            "obs", mu, 1, observed=np.ones(n_obs, dtype="float32"), reinterpreted_batch_ndims=1,
         )
 
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             "model/beta": tf.zeros((n_samples, n_chains), dtype="float32"),
             "model/bias": tf.zeros((n_samples, n_chains), dtype="float32"),
@@ -563,10 +496,6 @@ def test_posterior_predictive_on_root_variable(use_auto_batching_fixture):
         _, state = pm.evaluate_model_posterior_predictive(
             model(), sample_shape=(n_chains, n_samples)
         )
-        assert state.untransformed_values["model/x"].numpy().shape == (
-            n_chains,
-            n_samples,
-            n_obs,
-        )
+        assert state.untransformed_values["model/x"].numpy().shape == (n_chains, n_samples, n_obs,)
     assert ppc["model/obs"].shape == (n_chains, n_samples, n_obs)
     assert ppc["model/x"].shape == (n_chains, n_samples, n_obs)

@@ -23,9 +23,7 @@ ADVIFit = namedtuple("ADVIFit", "approximation, losses")
 class Approximation(tf.Module):
     """Base Approximation class."""
 
-    def __init__(
-        self, model: Optional[Model] = None, random_seed: Optional[int] = None
-    ):
+    def __init__(self, model: Optional[Model] = None, random_seed: Optional[int] = None):
         if not isinstance(model, Model):
             raise TypeError(
                 "`fit` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
@@ -65,9 +63,7 @@ class Approximation(tf.Module):
             )
             _, st = flow.evaluate_model_transformed(self.model, state=st)
             for transformed_name in st.transformed_values:
-                untransformed_name = NameParts.from_name(
-                    transformed_name
-                ).full_untransformed_name
+                untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
                 st.deterministics[untransformed_name] = st.untransformed_values.pop(
                     untransformed_name
                 )
@@ -216,8 +212,7 @@ def fit(
             inference = _select[method.lower()](model, random_seed)
         except KeyError:
             raise KeyError(
-                "method should be one of %s or Approximation instance"
-                % set(_select.keys())
+                "method should be one of %s or Approximation instance" % set(_select.keys())
             )
 
     elif isinstance(method, Approximation):

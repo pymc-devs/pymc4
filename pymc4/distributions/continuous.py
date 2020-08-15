@@ -358,9 +358,7 @@ class Beta(UnitContinuousDistribution):
             conditions["concentration0"],
             conditions["concentration1"],
         )
-        return tfd.Beta(
-            concentration0=concentration0, concentration1=concentration1, **kwargs
-        )
+        return tfd.Beta(concentration0=concentration0, concentration1=concentration1, **kwargs)
 
 
 class Cauchy(ContinuousDistribution):
@@ -1333,13 +1331,8 @@ class Flat(ContinuousDistribution):
         value = tf.convert_to_tensor(value)
         expected = tf.zeros(self.batch_shape + self.event_shape)
         # check if the event shape matches
-        if (
-            len(self.event_shape)
-            and value.shape[-len(self.event_shape) :] != self.event_shape
-        ):
-            raise ValueError(
-                "values not consistent with the event shape of distribution"
-            )
+        if len(self.event_shape) and value.shape[-len(self.event_shape) :] != self.event_shape:
+            raise ValueError("values not consistent with the event shape of distribution")
         # broadcast expected to shape of value
         if len(value.shape) < len(self.batch_shape + self.event_shape):
             if (
@@ -1357,9 +1350,7 @@ class Flat(ContinuousDistribution):
                     "shape of value not consistent with the distribution's batch + event shape"
                 )
 
-        return tf.reduce_sum(
-            expected, axis=range(-len(self._distribution.event_shape), 0)
-        )
+        return tf.reduce_sum(expected, axis=range(-len(self._distribution.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
         """Raise a ValueError as it is not possible to sample from flat distribution."""
@@ -1382,13 +1373,8 @@ class HalfFlat(PositiveContinuousDistribution):
         value = tf.where(value > 0, x=0.0, y=-np.inf)
         expected = tf.zeros(self.batch_shape + self.event_shape)
         # check if the event shape matches
-        if (
-            len(self.event_shape)
-            and value.shape[-len(self.event_shape) :] != self.event_shape
-        ):
-            raise ValueError(
-                "values not consistent with the event shape of distribution"
-            )
+        if len(self.event_shape) and value.shape[-len(self.event_shape) :] != self.event_shape:
+            raise ValueError("values not consistent with the event shape of distribution")
         # broadcast expected to shape of value
         if len(value.shape) < len(self.batch_shape + self.event_shape):
             expected = expected + value
@@ -1541,9 +1527,7 @@ class Weibull(PositiveContinuousDistribution):
             distribution=tfd.Uniform(
                 low=tf.zeros(broadcast_shape), high=tf.ones(broadcast_shape), **kwargs
             ),
-            bijector=bij.Invert(
-                bij.WeibullCDF(scale=scale, concentration=concentration)
-            ),
+            bijector=bij.Invert(bij.WeibullCDF(scale=scale, concentration=concentration)),
             validate_args=kwargs.get("validate_args", False),
             name="Weibull",
         )

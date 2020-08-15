@@ -142,14 +142,12 @@ class BernoulliFn(Proposal):
                 ndim = scale_part.get_shape().ndims
                 reduced_elem = tf.squeeze(
                     tf.slice(
-                        scale_part,
-                        tf.zeros(ndim, dtype=tf.int32),
-                        tf.ones(ndim, dtype=tf.int32),
+                        scale_part, tf.zeros(ndim, dtype=tf.int32), tf.ones(ndim, dtype=tf.int32),
                     )
                 )
-                delta = tfd.Bernoulli(
-                    probs=0.5 * reduced_elem, dtype=state_part.dtype
-                ).sample(seed=seed, sample_shape=(tf.shape(state_part)))
+                delta = tfd.Bernoulli(probs=0.5 * reduced_elem, dtype=state_part.dtype).sample(
+                    seed=seed, sample_shape=(tf.shape(state_part))
+                )
                 state_part += delta
                 state_part = state_part % 2.0
                 return state_part
@@ -164,8 +162,7 @@ class BernoulliFn(Proposal):
 
             shape_ = state_parts_st.shape
             inds_tile = tf.concat(
-                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)],
-                axis=0,
+                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0,
             )
             shape_ = (1,) + shape_[1:] + (shape_[0],)
             scales = tf.tile(tf.broadcast_to(scales, shape_), inds_tile)[..., 0]
@@ -218,9 +215,7 @@ class GaussianRoundFn(Proposal):
                 ndim = scale_part.get_shape().ndims
                 reduced_elem = tf.squeeze(
                     tf.slice(
-                        scale_part,
-                        tf.zeros(ndim, dtype=tf.int32),
-                        tf.ones(ndim, dtype=tf.int32),
+                        scale_part, tf.zeros(ndim, dtype=tf.int32), tf.ones(ndim, dtype=tf.int32),
                     )
                 )
                 delta = tfd.Normal(0.0, reduced_elem * 1.0).sample(
@@ -233,8 +228,7 @@ class GaussianRoundFn(Proposal):
 
             shape_ = state_parts_st.shape
             inds_tile = tf.concat(
-                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)],
-                axis=0,
+                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0,
             )
             shape_ = (1,) + shape_[1:] + (shape_[0],)
             scales = tf.tile(tf.broadcast_to(scales, shape_), inds_tile)[..., 0]

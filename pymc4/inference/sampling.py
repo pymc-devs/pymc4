@@ -12,9 +12,7 @@ if not MYPY:
 
 
 def check_proposal_functions(
-    model: Model,
-    state: Optional[flow.SamplingState] = None,
-    observed: Optional[dict] = None,
+    model: Model, state: Optional[flow.SamplingState] = None, observed: Optional[dict] = None,
 ) -> bool:
     """
     Check for the non-default proposal generation functions
@@ -152,9 +150,7 @@ def sample(
     # If some distributions in the model have non default proposal
     # generation functions then we lanuch compound step instead of rwm
     if sampler_type == "rwm":
-        compound_required = check_proposal_functions(
-            model, state=state, observed=observed
-        )
+        compound_required = check_proposal_functions(model, state=state, observed=observed)
         if compound_required:
             sampler_type = "compound"
             sampler = reg_samplers[sampler_type](model, **kwargs)
@@ -214,7 +210,5 @@ def _auto_assign_sampler(
         _log.info("Auto-assigning NUTS sampler")
         return "nuts"
     else:
-        _log.info(
-            "The model contains discrete distributions. " "\nCompound step is chosen."
-        )
+        _log.info("The model contains discrete distributions. " "\nCompound step is chosen.")
         return "compound"

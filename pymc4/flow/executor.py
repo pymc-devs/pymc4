@@ -155,9 +155,7 @@ class SamplingState:
         self.all_values = ChainMap(
             self.untransformed_values, self.transformed_values, self.observed_values
         )
-        self.all_unobserved_values = ChainMap(
-            self.transformed_values, self.untransformed_values
-        )
+        self.all_unobserved_values = ChainMap(self.transformed_values, self.untransformed_values)
         self.discrete_distributions = discrete_distributions
         self.continuous_distributions = continuous_distributions
         self.potentials = potentials
@@ -169,8 +167,7 @@ class SamplingState:
             (
                 dist.log_prob(self.all_values[name])
                 for name, dist in itertools.chain(
-                    self.discrete_distributions.items(),
-                    self.continuous_distributions.items(),
+                    self.discrete_distributions.items(), self.continuous_distributions.items(),
                 )
             ),
             (p.value for p in self.potentials),
@@ -191,8 +188,7 @@ class SamplingState:
         posterior_predictives = list(self.posterior_predictives)
         # format like dist:name
         discrete_distributions = [
-            "{}:{}".format(d.__class__.__name__, k)
-            for k, d in self.discrete_distributions.items()
+            "{}:{}".format(d.__class__.__name__, k) for k, d in self.discrete_distributions.items()
         ]
         # continuous case
         continuous_distributions = [
@@ -285,10 +281,7 @@ class SamplingState:
             namespec = utils.NameParts.from_name(name)
             if dist.transform is not None and name not in self.observed_values:
                 transformed_namespec = namespec.replace_transform(dist.transform.name)
-                if (
-                    transformed_namespec.full_original_name
-                    not in self.transformed_values
-                ):
+                if transformed_namespec.full_original_name not in self.transformed_values:
                     raise TypeError(
                         "Transformed value {!r} is not found for {} distribution with name {!r}. "
                         "You should evaluate the model using the transformed executor to get "
@@ -300,9 +293,7 @@ class SamplingState:
                     transformed_values[
                         transformed_namespec.full_original_name
                     ] = self.transformed_values[transformed_namespec.full_original_name]
-                    need_to_transform_after.append(
-                        transformed_namespec.full_untransformed_name
-                    )
+                    need_to_transform_after.append(transformed_namespec.full_untransformed_name)
             else:
                 if name in self.observed_values:
                     observed_values[name] = self.observed_values[name]
@@ -476,9 +467,7 @@ class SamplingExecutor:
                 raise StopExecution(
                     "Attempting to call `evaluate_model` on a "
                     "non model-like object {}. Supported types are "
-                    "`types.GeneratorType` and `pm.coroutine_model.Model`".format(
-                        type(model)
-                    )
+                    "`types.GeneratorType` and `pm.coroutine_model.Model`".format(type(model))
                 )
             control_flow = model
             model_info = coroutine_model.Model.default_model_info
@@ -490,14 +479,10 @@ class SamplingExecutor:
                     if not isinstance(dist, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
                         # prohibit any unknown type
                         error = EvaluationError(
-                            "Type {} can't be processed in evaluation".format(
-                                type(dist)
-                            )
+                            "Type {} can't be processed in evaluation".format(type(dist))
                         )
                         control_flow.throw(error)
-                        raise StopExecution(
-                            StopExecution.NOT_HELD_ERROR_MESSAGE
-                        ) from error
+                        raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
 
                     # dist is a clean, known type from here on
 
@@ -509,14 +494,10 @@ class SamplingExecutor:
                         return_value = dist
                     elif isinstance(dist, distribution.Deterministic):
                         try:
-                            return_value, state = self.proceed_deterministic(
-                                dist, state
-                            )
+                            return_value, state = self.proceed_deterministic(dist, state)
                         except EvaluationError as error:
                             control_flow.throw(error)
-                            raise StopExecution(
-                                StopExecution.NOT_HELD_ERROR_MESSAGE
-                            ) from error
+                            raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(
@@ -524,28 +505,19 @@ class SamplingExecutor:
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
-                            raise StopExecution(
-                                StopExecution.NOT_HELD_ERROR_MESSAGE
-                            ) from error
+                            raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
-                            dist,
-                            state=state,
-                            _validate_state=False,
-                            sample_shape=sample_shape,
+                            dist, state=state, _validate_state=False, sample_shape=sample_shape,
                         )
                     else:
                         err = EvaluationError(
                             "Type {} can't be processed in evaluation. This error may appear "
                             "due to wrong implementation, please submit a bug report to "
-                            "https://github.com/pymc-devs/pymc4/issues".format(
-                                type(dist)
-                            )
+                            "https://github.com/pymc-devs/pymc4/issues".format(type(dist))
                         )
                         control_flow.throw(err)
-                        raise StopExecution(
-                            StopExecution.NOT_HELD_ERROR_MESSAGE
-                        ) from err
+                        raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from err
             except StopExecution:
                 # for some reason outer scope (control flow) may silence an exception in `yield`
                 # try:
@@ -583,9 +555,7 @@ class SamplingExecutor:
         if state.transformed_values:
             raise ValueError(
                 "untransformed executor should not contain "
-                "transformed variables but found {}".format(
-                    set(state.transformed_values)
-                )
+                "transformed variables but found {}".format(set(state.transformed_values))
             )
 
     def modify_distribution(
@@ -628,13 +598,11 @@ class SamplingExecutor:
                 if scoped_name not in state.untransformed_values:
                     # posterior predictive
                     if dist.is_root:
-                        return_value = state.untransformed_values[
-                            scoped_name
-                        ] = dist.sample(sample_shape=sample_shape)
+                        return_value = state.untransformed_values[scoped_name] = dist.sample(
+                            sample_shape=sample_shape
+                        )
                     else:
-                        return_value = state.untransformed_values[
-                            scoped_name
-                        ] = dist.sample()
+                        return_value = state.untransformed_values[scoped_name] = dist.sample()
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -649,9 +617,7 @@ class SamplingExecutor:
                             scoped_name
                         )
                     )
-                assert_values_compatible_with_distribution(
-                    scoped_name, observed_variable, dist
-                )
+                assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
                 return_value = state.observed_values[scoped_name] = observed_variable
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
@@ -695,10 +661,7 @@ class SamplingExecutor:
         return return_value, state
 
     def prepare_model_control_flow(
-        self,
-        model: coroutine_model.Model,
-        model_info: Dict[str, Any],
-        state: SamplingState,
+        self, model: coroutine_model.Model, model_info: Dict[str, Any], state: SamplingState,
     ):
         control_flow: types.GeneratorType = model.control_flow()
         model_name = model_info["name"]
@@ -710,18 +673,12 @@ class SamplingExecutor:
             control_flow.close()
             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
         return_name = scopes.variable_name(model_name)
-        if (
-            not model_info["keep_auxiliary"]
-            and return_name in state.untransformed_values
-        ):
+        if not model_info["keep_auxiliary"] and return_name in state.untransformed_values:
             raise EarlyReturn(state.untransformed_values[model_name], state)
         return control_flow
 
     def finalize_control_flow(
-        self,
-        stop_iteration: StopIteration,
-        model_info: Dict[str, Any],
-        state: SamplingState,
+        self, stop_iteration: StopIteration, model_info: Dict[str, Any], state: SamplingState,
     ):
         if stop_iteration.args:
             return_value = stop_iteration.args[0]
@@ -777,16 +734,11 @@ def assert_values_compatible_with_distribution(
     """
     event_shape = dist.event_shape
     batch_shape = dist.batch_shape
-    assert_values_compatible_with_distribution_shape(
-        scoped_name, values, batch_shape, event_shape
-    )
+    assert_values_compatible_with_distribution_shape(scoped_name, values, batch_shape, event_shape)
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str,
-    values: Any,
-    batch_shape: tf.TensorShape,
-    event_shape: tf.TensorShape,
+    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape,
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
     A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of

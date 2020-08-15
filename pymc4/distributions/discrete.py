@@ -322,7 +322,7 @@ class Categorical(BoundedDiscreteDistribution):
         return 0.0
 
     def upper_limit(self):
-        return self.conditions["probs"].shape[-1]
+        return tf.shape(self.conditions["probs"])[-1].numpy()
 
 
 class Geometric(BoundedDiscreteDistribution):

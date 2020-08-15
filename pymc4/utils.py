@@ -113,7 +113,8 @@ class NameParts:
         "note only one underscore between the transform and actual name"
     )
     UNTRANSFORMED_NAME_ERROR_MESSAGE = (
-        "Invalid name: `{}`, the correct one should look like: " "`name` without leading underscore"
+        "Invalid name: `{}`, the correct one should look like: "
+        "`name` without leading underscore"
     )
     __slots__ = ("path", "transform_name", "untransformed_name")
 
@@ -159,7 +160,12 @@ class NameParts:
         match = cls.NAME_RE.match(name)
         return match is not None
 
-    def __init__(self, path: Sequence[str], transform_name: Optional[str], untransformed_name: str):
+    def __init__(
+        self,
+        path: Sequence[str],
+        transform_name: Optional[str],
+        untransformed_name: str,
+    ):
         """Initialize a ``NameParts`` instance from its parts.
 
         Parameters

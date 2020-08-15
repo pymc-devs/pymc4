@@ -12,7 +12,9 @@ from pymc4.distributions import distribution
 
 
 def initialize_sampling_state(
-    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
+    model: Model,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initialize the model provided state and/or observed variables.
@@ -35,7 +37,9 @@ def initialize_sampling_state(
 
 
 def initialize_state(
-    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
+    model: Model,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
 ) -> Tuple[
     flow.SamplingState,
     flow.SamplingState,
@@ -72,8 +76,12 @@ def initialize_state(
         list(state.continuous_distributions),
     )
     observed_rvs = list(state.observed_values.keys())
-    free_discrete_names = list(filter(lambda x: x not in observed_rvs, free_discrete_names))
-    free_continuous_names = list(filter(lambda x: x not in observed_rvs, free_continuous_names))
+    free_discrete_names = list(
+        filter(lambda x: x not in observed_rvs, free_discrete_names)
+    )
+    free_continuous_names = list(
+        filter(lambda x: x not in observed_rvs, free_continuous_names)
+    )
     sampling_state = None
     cont_distrs = state.continuous_distributions
     disc_distrs = state.discrete_distributions
@@ -133,7 +141,9 @@ def trace_to_arviz(
     )
 
 
-def scope_remove_transformed_part_if_required(name: str, transformed_values: Dict[str, Any]):
+def scope_remove_transformed_part_if_required(
+    name: str, transformed_values: Dict[str, Any]
+):
     name_split = name.split("/")
     if transformed_values and name in transformed_values:
         name_split[-1] = name_split[-1][2:][name_split[-1][2:].find("_") + 1 :]

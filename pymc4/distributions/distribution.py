@@ -49,9 +49,14 @@ class Distribution(Model):
         **kwargs,
     ):
         self.conditions, self.base_parameters = self.unpack_conditions(
-            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs,
+            dtype=dtype,
+            validate_args=validate_args,
+            allow_nan_stats=allow_nan_stats,
+            **kwargs,
         )
-        self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
+        self._distribution = self._init_distribution(
+            self.conditions, **self.base_parameters
+        )
         self._default_new_state_part = None
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
@@ -71,9 +76,13 @@ class Distribution(Model):
                 self._distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims
             )
         if batch_stack is not None:
-            self._distribution = BatchStacker(self._distribution, batch_stack=batch_stack)
+            self._distribution = BatchStacker(
+                self._distribution, batch_stack=batch_stack
+            )
         if event_stack is not None:
-            self._distribution = tfd.Sample(self._distribution, sample_shape=self.event_stack)
+            self._distribution = tfd.Sample(
+                self._distribution, sample_shape=self.event_stack
+            )
 
     @property
     def dtype(self):
@@ -106,7 +115,8 @@ class Distribution(Model):
     @property
     def test_value(self):
         return tf.cast(
-            tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape), self.dtype
+            tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape),
+            self.dtype,
         )
 
     def sample(self, sample_shape=(), seed=None):
@@ -155,7 +165,9 @@ class Distribution(Model):
         ``sample_shape + self.batch_shape + self.event_shape``
         """
         sample_shape = tf.TensorShape(sample_shape)
-        return tf.broadcast_to(self.test_value, sample_shape + self.batch_shape + self.event_shape)
+        return tf.broadcast_to(
+            self.test_value, sample_shape + self.batch_shape + self.event_shape
+        )
 
     def log_prob(self, value):
         """Return log probability as tensor."""
@@ -177,7 +189,9 @@ class Distribution(Model):
         making it act as a prior and allow to participate within yield
         """
         if not self.is_anonymous:
-            raise TypeError("Distribution is already not anonymous and cant define a new prior")
+            raise TypeError(
+                "Distribution is already not anonymous and cant define a new prior"
+            )
         if name is None:
             raise ValueError("Can't create a prior Distribution without a name")
         # internally is is ok to make a shallow copy of a distribution
@@ -246,7 +260,9 @@ class Deterministic(Model):
 
     def __init__(self, name: Optional[NameType], value: Any):
         self.value = value
-        super().__init__(self.get_value, name=name, keep_return=True, keep_auxiliary=False)
+        super().__init__(
+            self.get_value, name=name, keep_return=True, keep_auxiliary=False
+        )
 
     def get_value(self):
         return self.value
@@ -297,9 +313,14 @@ class BoundedDistribution(Distribution):
 
 
 class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
+    def _init_transform(self, transform):
+        return transform
+
     @property
     def _test_value(self):
-        return tf.cast(tf.round(0.5 * (self.upper_limit() + self.lower_limit())), self.dtype)
+        return tf.cast(
+            tf.round(0.5 * (self.upper_limit() + self.lower_limit())), self.dtype
+        )
 
 
 class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution):

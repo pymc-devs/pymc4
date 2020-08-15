@@ -12,7 +12,14 @@ _no_name_provided = object()
 
 
 @biwrap
-def model(genfn, *, name=_no_name_provided, keep_auxiliary=True, keep_return=True, method=False):
+def model(
+    genfn,
+    *,
+    name=_no_name_provided,
+    keep_auxiliary=True,
+    keep_return=True,
+    method=False
+):
     """Flexibly wrap a generator function into a Model template."""
     if method:
         # What is this block for?
@@ -84,7 +91,12 @@ class ModelTemplate:
         self.keep_return = keep_return
 
     def __call__(
-        self, *args, name=_no_name_provided, keep_auxiliary=None, keep_return=None, **kwargs
+        self,
+        *args,
+        name=_no_name_provided,
+        keep_auxiliary=None,
+        keep_return=None,
+        **kwargs
     ):
         """
         Evaluate the model.
@@ -169,7 +181,9 @@ class ModelTemplate:
         if keep_return is None:
             keep_return = self.keep_return
 
-        return Model(genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return)
+        return Model(
+            genfn, name=name, keep_auxiliary=keep_auxiliary, keep_return=keep_return
+        )
 
 
 def unpack(arg):
@@ -196,7 +210,9 @@ class Model:
     def validate_name(name: Optional[Union[int, str]]) -> Optional[str]:
         """Validate the type of the name argument."""
         if name is not None and not isinstance(name, (int, str)):
-            raise ValueError("name should be either `str` or `int`, got type {}".format(type(name)))
+            raise ValueError(
+                "name should be either `str` or `int`, got type {}".format(type(name))
+            )
         elif name is None:
             return None
         else:

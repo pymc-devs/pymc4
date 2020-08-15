@@ -30,7 +30,9 @@ class ArrayOrdering:
 
     def flatten(self) -> tf.Tensor:
         """Flattened view of parameters."""
-        flattened_tensor = [tf.reshape(var, shape=[-1]) for var in self.free_rvs.values()]
+        flattened_tensor = [
+            tf.reshape(var, shape=[-1]) for var in self.free_rvs.values()
+        ]
         return tf.concat(flattened_tensor, axis=0)
 
     def split(self, flatten_tensor: tf.Tensor) -> Dict[str, tf.Tensor]:
@@ -47,6 +49,7 @@ class ArrayOrdering:
         for param in self.free_rvs.keys():
             _, slc, shp, dtype = self.by_name[param]
             q_samples[param] = tf.cast(
-                tf.reshape(samples[..., slc], tf.TensorShape([n] + shp.as_list())), dtype
+                tf.reshape(samples[..., slc], tf.TensorShape([n] + shp.as_list())),
+                dtype,
             )
         return q_samples

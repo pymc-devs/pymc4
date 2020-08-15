@@ -77,7 +77,9 @@ def expanded_sampler_type(request):
 def test_samplers_on_compound_model(compound_model, seed, xla_fixture, sampler_type):
     def _execute():
         model = compound_model()
-        trace = pm.sample(model, sampler_type=sampler_type, xla_fixture=xla_fixture, seed=seed)
+        trace = pm.sample(
+            model, sampler_type=sampler_type, xla_fixture=xla_fixture, seed=seed
+        )
         var1 = round(trace.posterior["compound_model/var1"].mean().item(), 1)
         # int32 dtype variable
         var2 = tf.reduce_sum(trace.posterior["compound_model/var2"]) / (1000 * 10)
@@ -113,14 +115,20 @@ def test_compound_model_sampler_method(
 
 def test_samplers_on_simple_model(simple_model, seed, xla_fixture, sampler_type):
     model = simple_model()
-    trace = pm.sample(model, sampler_type=sampler_type, xla_fixture=xla_fixture, seed=seed)
+    trace = pm.sample(
+        model, sampler_type=sampler_type, xla_fixture=xla_fixture, seed=seed
+    )
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 
 
-def test_extended_samplers_on_simple_model(simple_model, seed, xla_fixture, expanded_sampler_type):
+def test_extended_samplers_on_simple_model(
+    simple_model, seed, xla_fixture, expanded_sampler_type
+):
     model = simple_model()
-    trace = pm.sample(model, sampler_type=expanded_sampler_type, xla_fixture=xla_fixture, seed=seed)
+    trace = pm.sample(
+        model, sampler_type=expanded_sampler_type, xla_fixture=xla_fixture, seed=seed
+    )
     var1 = round(trace.posterior["simple_model/var1"].mean().item(), 1)
     np.testing.assert_allclose(var1, 0.0, atol=0.1)
 
@@ -130,7 +138,10 @@ def test_simple_seed(simple_model, seed, xla_fixture):
     trace1 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     trace2 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     np.testing.assert_allclose(
-        tf.norm(trace1.posterior["simple_model/var1"] - trace2.posterior["simple_model/var1"]),
+        tf.norm(
+            trace1.posterior["simple_model/var1"]
+            - trace2.posterior["simple_model/var1"]
+        ),
         0.0,
         atol=1e-6,
     )
@@ -141,12 +152,18 @@ def test_compound_seed(compound_model, seed, xla_fixture):
     trace1 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     trace2 = pm.sample(model, xla_fixture=xla_fixture, seed=seed)
     np.testing.assert_allclose(
-        tf.norm(trace1.posterior["compound_model/var1"] - trace2.posterior["compound_model/var1"]),
+        tf.norm(
+            trace1.posterior["compound_model/var1"]
+            - trace2.posterior["compound_model/var1"]
+        ),
         0.0,
         atol=1e-6,
     )
     np.testing.assert_allclose(
-        tf.norm(trace1.posterior["compound_model/var2"] - trace2.posterior["compound_model/var2"]),
+        tf.norm(
+            trace1.posterior["compound_model/var2"]
+            - trace2.posterior["compound_model/var2"]
+        ),
         0.0,
         atol=1e-6,
     )
@@ -174,7 +191,11 @@ def test_sampler_merging(categorical_same_shape, categorical_different_shape):
         (
             "var1",
             RandomWalkM,
-            {"new_state_fn": pm.categorical_uniform_fn(classes=3, name="smth_different")},
+            {
+                "new_state_fn": pm.categorical_uniform_fn(
+                    classes=3, name="smth_different"
+                )
+            },
         )
     ]
 
@@ -182,16 +203,28 @@ def test_sampler_merging(categorical_same_shape, categorical_different_shape):
         (
             "var1",
             RandomWalkM,
-            {"new_state_fn": pm.categorical_uniform_fn(classes=3, name="smth_different")},
+            {
+                "new_state_fn": pm.categorical_uniform_fn(
+                    classes=3, name="smth_different"
+                )
+            },
         ),
         (
             "var3",
             RandomWalkM,
-            {"new_state_fn": pm.categorical_uniform_fn(classes=3, name="smth_different")},
+            {
+                "new_state_fn": pm.categorical_uniform_fn(
+                    classes=3, name="smth_different"
+                )
+            },
         ),
     ]
 
-    sampler_methods5 = [("var1", RandomWalkM,), ("var2", RandomWalkM,), ("var3", RandomWalkM,)]
+    sampler_methods5 = [
+        ("var1", RandomWalkM,),
+        ("var2", RandomWalkM,),
+        ("var3", RandomWalkM,),
+    ]
 
     sampler_ = sampler(model_same)
     sampler_._assign_default_methods(sampler_methods=sampler_methods1)
@@ -209,7 +242,15 @@ def test_sampler_merging(categorical_same_shape, categorical_different_shape):
 
 def test_other_samplers(simple_model, seed, xla_fixture):
     model = simple_model()
-    trace1 = pm.sample(model, sampler_type="nuts_simple", xla_fixture=xla_fixture, seed=seed)
-    trace2 = pm.sample(model, sampler_type="hmc_simple", xla_fixture=xla_fixture, seed=seed)
-    np.testing.assert_allclose(tf.reduce_mean(trace1.posterior["simple_model/var1"]), 0.0, atol=0.1)
-    np.testing.assert_allclose(tf.reduce_mean(trace2.posterior["simple_model/var1"]), 0.0, atol=0.1)
+    trace1 = pm.sample(
+        model, sampler_type="nuts_simple", xla_fixture=xla_fixture, seed=seed
+    )
+    trace2 = pm.sample(
+        model, sampler_type="hmc_simple", xla_fixture=xla_fixture, seed=seed
+    )
+    np.testing.assert_allclose(
+        tf.reduce_mean(trace1.posterior["simple_model/var1"]), 0.0, atol=0.1
+    )
+    np.testing.assert_allclose(
+        tf.reduce_mean(trace2.posterior["simple_model/var1"]), 0.0, atol=0.1
+    )

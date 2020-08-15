@@ -13,7 +13,9 @@ COV_FUNCS = [
             "amplitude": 1.0,
             "length_scale": 1.0,
             "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.01831564], [0.01831564, 1.0]], dtype=np.float32),
+            "expected_matrix": np.array(
+                [[1.0, 0.01831564], [0.01831564, 1.0]], dtype=np.float32
+            ),
             "expected_point": np.array([1.0, 1.0], dtype=np.float32),
             "feature_ndims": 1,
         },
@@ -55,7 +57,9 @@ COV_FUNCS = [
             "amplitude": 1.0,
             "length_scale": 1.0,
             "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.05910575], [0.05910575, 1.0]], dtype=np.float32),
+            "expected_matrix": np.array(
+                [[1.0, 0.05910575], [0.05910575, 1.0]], dtype=np.float32
+            ),
             "expected_point": np.array([1.0, 1.0], dtype=np.float32),
             "feature_ndims": 1,
         },
@@ -66,7 +70,9 @@ COV_FUNCS = [
             "amplitude": 1.0,
             "length_scale": 1.0,
             "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.04397209], [0.04397209, 1.0]], dtype=np.float32),
+            "expected_matrix": np.array(
+                [[1.0, 0.04397209], [0.04397209, 1.0]], dtype=np.float32
+            ),
             "expected_point": np.array([1.0, 1.0], dtype=np.float32),
             "feature_ndims": 1,
         },
@@ -77,7 +83,9 @@ COV_FUNCS = [
             "amplitude": 1.0,
             "length_scale": 1.0,
             "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.03701404], [0.03701404, 1.0]], dtype=np.float32),
+            "expected_matrix": np.array(
+                [[1.0, 0.03701404], [0.03701404, 1.0]], dtype=np.float32
+            ),
             "expected_point": np.array([1.0, 1.0], dtype=np.float32),
             "feature_ndims": 1,
         },
@@ -88,7 +96,9 @@ COV_FUNCS = [
             "amplitude": 1.0,
             "length_scale": 1.0,
             "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.24311673], [0.24311673, 1.0]], dtype=np.float32),
+            "expected_matrix": np.array(
+                [[1.0, 0.24311673], [0.24311673, 1.0]], dtype=np.float32
+            ),
             "expected_point": np.array([1.0, 1.0], dtype=np.float32),
             "feature_ndims": 1,
         },
@@ -98,7 +108,9 @@ COV_FUNCS = [
         {
             "length_scale_fn": (lambda x: tf.ones(x.shape)),
             "test_points": [np.array([[1.0], [3.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.13533528], [0.13533528, 1.0]], dtype=np.float32),
+            "expected_matrix": np.array(
+                [[1.0, 0.13533528], [0.13533528, 1.0]], dtype=np.float32
+            ),
             "expected_point": np.array([1.0, 1.0], dtype=np.float32),
             "feature_ndims": 1,
         },
@@ -134,7 +146,9 @@ COV_FUNCS = [
             "length_scale": 1.0,
             "amplitude": 1.0,
             "test_points": [np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)] * 2,
-            "expected_matrix": np.array([[1.0, 0.47307032], [0.47307032, 1.0]], dtype=np.float32),
+            "expected_matrix": np.array(
+                [[1.0, 0.47307032], [0.47307032, 1.0]], dtype=np.float32
+            ),
             "expected_point": np.array([1.0, 1.0], dtype=np.float32),
             "feature_ndims": 1,
         },
@@ -205,9 +219,13 @@ def test_cov_funcs_matrix_no_ard(get_cov_func):
     """Test the covariance functions present in COV_FUNCS list"""
     attr_name = get_cov_func[0]
     kwargs = get_cov_func[1].copy()
-    test_points, expected_matrix, _, feature_ndims, KernelClass = build_class_and_get_test_points(
-        attr_name, kwargs
-    )
+    (
+        test_points,
+        expected_matrix,
+        _,
+        feature_ndims,
+        KernelClass,
+    ) = build_class_and_get_test_points(attr_name, kwargs)
     kernel = KernelClass(**kwargs, feature_ndims=feature_ndims, ARD=False)
     cov = kernel(*test_points).numpy()
     assert cov.dtype == expected_matrix.dtype
@@ -219,9 +237,13 @@ def test_cov_funcs_point_eval_no_ard(get_cov_func):
     """Test the `evaluate_kernel` method of covariance functions"""
     attr_name = get_cov_func[0]
     kwargs = get_cov_func[1].copy()
-    test_points, _, expected_point, feature_ndims, KernelClass = build_class_and_get_test_points(
-        attr_name, kwargs
-    )
+    (
+        test_points,
+        _,
+        expected_point,
+        feature_ndims,
+        KernelClass,
+    ) = build_class_and_get_test_points(attr_name, kwargs)
     kernel = KernelClass(**kwargs, feature_ndims=feature_ndims, ARD=False)
     try:
         point = kernel.evaluate_kernel(*test_points).numpy()
@@ -332,7 +354,8 @@ def test_cov_funcs_invalid_feature_ndims():
 def test_cov_funcs_invalid_active_dims():
     feature_ndims = 3
     with pytest.raises(
-        ValueError, match=r"active_dims' contain more entries than number of feature dimensions"
+        ValueError,
+        match=r"active_dims' contain more entries than number of feature dimensions",
     ):
         active_dims = [1, 2, 3, 4, 5]
         kernel = pm.gp.cov.ExpQuad(1.0, 1.0, feature_ndims, active_dims)

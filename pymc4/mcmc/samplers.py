@@ -139,7 +139,10 @@ class _BaseSampler(metaclass=abc.ABCMeta):
             # The workaround to cast variables post-sample.
             # `trace_discrete` is the list of vairables that need to be casted
             # to tf.int32 after the sampling is completed.
-            init_keys_ = [scope_remove_transformed_part_if_required(_, {})[1] for _ in init_keys]
+            init_keys_ = [
+                scope_remove_transformed_part_if_required(_, state_.transformed_values)[1]
+                for _ in init_keys
+            ]
             discrete_indices = [init_keys_.index(_) for _ in trace_discrete]
             keys_to_cast = [init_keys[_] for _ in discrete_indices]
             for key in keys_to_cast:

@@ -93,13 +93,11 @@ class CategoricalUniformFn(Proposal):
 
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         with tf.name_scope(self._name or "categorical_uniform_fn"):
-            deltas = tf.unstack(
-                tf.map_fn(
-                    lambda x: tfd.Categorical(logits=tf.ones(self.classes)).sample(
-                        seed=seed, sample_shape=tf.shape(x)
-                    ),
-                    tf.stack(state_parts),
-                )
+            deltas = tf.nest.map_structure(
+                lambda x: tfd.Categorical(logits=tf.ones(self.classes)).sample(
+                    seed=seed, sample_shape=tf.shape(x)
+                ),
+                state_parts,
             )
             return deltas
 
@@ -114,9 +112,6 @@ class BernoulliFn(Proposal):
 
     Parameters
     ----------
-    scale: Union[List[Any], Any]
-        a `Tensor` or Python `list` of `Tensor`s of any shapes and `dtypes`
-        controlling the scale of the proposal distribution.
     name: Optional[str]
         Python `str` name prefixed to Ops created by this function.
         Default value: 'categorical_uniform_fn'.
@@ -124,61 +119,24 @@ class BernoulliFn(Proposal):
 
     _name = "bernoulli_fn"
 
-    def __init__(self, scale: Union[List[Any], Any] = 1.0, name: Optional[str] = None):
+    def __init__(self, name: Optional[str] = None):
         super().__init__(name)
-        self.scale = scale
 
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
-        scale = self.scale
         with tf.name_scope(self._name or "bernoulli_fn"):
-            scales = scale if mcmc_util.is_list_like(scale) else [scale]
-            if len(scales) == 1:
-                scales *= len(state_parts)
-            if len(state_parts) != len(scales):
-                raise ValueError("`scale` must broadcast with `state_parts`")
 
-            def generate_new_values(state_part, scale_part):
-                # TODO: is there a more elegant way
-                ndim = scale_part.get_shape().ndims
-                reduced_elem = tf.squeeze(
-                    tf.slice(
-                        scale_part, tf.zeros(ndim, dtype=tf.int32), tf.ones(ndim, dtype=tf.int32),
-                    )
-                )
-                delta = tfd.Bernoulli(probs=0.5 * reduced_elem, dtype=state_part.dtype).sample(
-                    seed=seed, sample_shape=(tf.shape(state_part))
-                )
-                state_part += delta
-                state_part = state_part % 2.0
+            def generate_bernoulli(state_part):
+                delta = tfd.Bernoulli(
+                    probs=tf.ones_like(state_part, dtype=tf.float32) * 0.5, dtype=state_part.dtype
+                ).sample(seed=seed)
+                state_part = (state_part + delta) % tf.constant(2, dtype=state_part.dtype)
                 return state_part
 
-            state_parts_st = tf.stack(state_parts)
-            orig_dtype = state_parts_st.dtype
-            # TODO: we create scale_part with shape=state_part.shape
-            # each function call. But scalar value would be enough
-            # The issue is that we pass the single tensor to map_fn
-            # and we need the semantics of the tensors to be the same
-            # to be able to stack them together.
-
-            shape_ = state_parts_st.shape
-            inds_tile = tf.concat(
-                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0,
-            )
-            shape_ = (1,) + shape_[1:] + (shape_[0],)
-            scales = tf.tile(tf.broadcast_to(scales, shape_), inds_tile)[..., 0]
-            state_parts_st = tf.cast(state_parts_st, dtype=scales.dtype)
-            deltas = tf.unstack(
-                tf.map_fn(
-                    lambda x: generate_new_values(
-                        x[0], x[1]
-                    ),  # TODO: some issues with unpack and tf graph
-                    tf.stack([state_parts_st, scales], axis=1),
-                )
-            )
-            return tf.unstack(tf.cast(deltas, dtype=orig_dtype))
+            new_state = tf.nest.map_structure(generate_bernoulli, state_parts)
+            return new_state
 
     def __eq__(self, other) -> bool:
-        return self._name == other._name and self.scale == other.scale
+        return self._name == other._name
 
 
 class GaussianRoundFn(Proposal):
@@ -211,35 +169,13 @@ class GaussianRoundFn(Proposal):
             if len(state_parts) != len(scales):
                 raise ValueError("`scale` must broadcast with `state_parts`")
 
-            def generate_new_values(state_part, scale_part):
-                ndim = scale_part.get_shape().ndims
-                reduced_elem = tf.squeeze(
-                    tf.slice(
-                        scale_part, tf.zeros(ndim, dtype=tf.int32), tf.ones(ndim, dtype=tf.int32),
-                    )
-                )
-                delta = tfd.Normal(0.0, reduced_elem * 1.0).sample(
-                    seed=seed, sample_shape=(tf.shape(state_part))
-                )
+            def generate_rounded_normal(state_part, scale_part):
+                delta = tfd.Normal(0.0, tf.ones_like(state_part)).sample(seed=seed)
                 state_part += delta
                 return tf.round(state_part)
 
-            state_parts_st = tf.stack(state_parts)
-
-            shape_ = state_parts_st.shape
-            inds_tile = tf.concat(
-                [tf.constant([shape_[0]]), tf.ones(shape_.ndims, dtype=tf.int32)], axis=0,
-            )
-            shape_ = (1,) + shape_[1:] + (shape_[0],)
-            scales = tf.tile(tf.broadcast_to(scales, shape_), inds_tile)[..., 0]
-
-            deltas = tf.unstack(
-                tf.map_fn(
-                    lambda x: generate_new_values(x[0], x[1]),
-                    tf.stack([state_parts_st, scales], axis=1),
-                )
-            )
-            return tf.unstack(deltas)
+            new_state = tf.nest.map_structure(generate_rounded_normal, state_parts, scales)
+            return new_state
 
     def __eq__(self, other) -> bool:
         return self._name == other._name and self.scale == other.scale

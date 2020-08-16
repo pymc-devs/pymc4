@@ -322,7 +322,7 @@ class Categorical(BoundedDiscreteDistribution):
         return 0.0
 
     def upper_limit(self):
-        return tf.shape(self.conditions["probs"])[-1].numpy()
+        return float(tf.shape(self.conditions["probs"])[-1])
 
 
 class Geometric(BoundedDiscreteDistribution):
@@ -498,8 +498,6 @@ class Poisson(PositiveDiscreteDistribution):
     """
 
     # For some ridiculous reason, tfp needs poisson values to be floats...
-    _test_value = 0.0  # type: ignore
-
     def __init__(self, name, rate, **kwargs):
         super().__init__(name, rate=rate, **kwargs)
 

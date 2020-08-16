@@ -344,12 +344,6 @@ class PositiveContinuousDistribution(BoundedContinuousDistribution):
 class PositiveDiscreteDistribution(BoundedDiscreteDistribution):
     _test_value = 1
 
-    def _init_transform(self, transform):
-        if transform is None:
-            return transforms.Log()
-        else:
-            return transform
-
     def lower_limit(self):
         return 0
 

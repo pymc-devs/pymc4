@@ -2,6 +2,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow_probability import distributions as tfd
+from tensorflow_probability.python.internal import prefer_static
 from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
@@ -311,7 +312,7 @@ class Categorical(BoundedDiscreteDistribution):
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
-        classes = probs.shape[-1] if tf.is_tensor(probs) else np.array(probs).shape[-1]
+        classes = prefer_static.shape(probs)[-1]
         self._default_new_state_part = categorical_uniform_fn(classes=classes)
 
     @staticmethod
@@ -801,4 +802,4 @@ class OrderedLogistic(BoundedDiscreteDistribution):
         return 0.0
 
     def upper_limit(self):
-        return self.conditions["cutpoints"].shape[-1]
+        return prefer_static.shape(self.conditions["cutpoints"])[-1]

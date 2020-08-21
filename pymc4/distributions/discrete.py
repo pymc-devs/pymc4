@@ -558,9 +558,10 @@ class ZeroInflatedBinomial(PositiveDiscreteDistribution):
             cat=tfd.Categorical(probs=[1 - conditions["psi"], conditions["psi"]]),
             components=[
                 tfd.Deterministic(loc=tf.zeros_like(conditions["n"])),
-                tfd.Binomial(total_count=conditions["n"],
-                             probs=conditions["p"])
-            ], **kwargs)
+                tfd.Binomial(total_count=conditions["n"], probs=conditions["p"]),
+            ],
+            **kwargs,
+        )
 
 
 class ZeroInflatedNegativeBinomial(PositiveDiscreteDistribution):
@@ -635,12 +636,16 @@ class ZeroInflatedNegativeBinomial(PositiveDiscreteDistribution):
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         return tfd.Mixture(
-            cat=tfd.Categorical(probs=[1. - conditions["psi"], conditions["psi"]]),
+            cat=tfd.Categorical(probs=[1.0 - conditions["psi"], conditions["psi"]]),
             components=[
                 tfd.Deterministic(loc=tf.zeros_like(conditions["mu"])),
-                tfd.NegativeBinomial(total_count=conditions["alpha"],
-                                     probs=(conditions["mu"]) / (conditions["mu"] + conditions["alpha"]))
-            ], **kwargs)
+                tfd.NegativeBinomial(
+                    total_count=conditions["alpha"],
+                    probs=(conditions["mu"]) / (conditions["mu"] + conditions["alpha"]),
+                ),
+            ],
+            **kwargs,
+        )
 
 
 class ZeroInflatedPoisson(PositiveDiscreteDistribution):
@@ -700,11 +705,13 @@ class ZeroInflatedPoisson(PositiveDiscreteDistribution):
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         return tfd.Mixture(
-            cat=tfd.Categorical(probs=[1. - conditions["psi"], conditions["psi"]]),
+            cat=tfd.Categorical(probs=[1.0 - conditions["psi"], conditions["psi"]]),
             components=[
                 tfd.Deterministic(loc=tf.zeros_like(conditions["theta"])),
-                tfd.Poisson(rate=conditions["theta"])
-            ], **kwargs)
+                tfd.Poisson(rate=conditions["theta"]),
+            ],
+            **kwargs,
+        )
 
 
 class Zipf(PositiveDiscreteDistribution):

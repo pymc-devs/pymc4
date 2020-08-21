@@ -374,25 +374,30 @@ _distribution_conditions = {
         },
     },
     "ZeroInflatedBinomial": {
-        "scalar_parameters": {"psi": 0.2, "n": 10., "p": 0.5, "sample": 0.0},
-        "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"),
-                                "n": np.array([10., 10.], dtype="float32"),
-                                "p": np.array([0.5, 0.25], dtype="float32"),
-                                "sample": np.array([0.0, 0.0], dtype="float32")},
+        "scalar_parameters": {"psi": 0.2, "n": 10.0, "p": 0.5, "sample": 0.0},
+        "multidim_parameters": {
+            "psi": np.array([0.2, 0.2], dtype="float32"),
+            "n": np.array([10.0, 10.0], dtype="float32"),
+            "p": np.array([0.5, 0.25], dtype="float32"),
+            "sample": np.array([0.0, 0.0], dtype="float32"),
+        },
     },
-
     "ZeroInflatedNegativeBinomial": {
-        "scalar_parameters": {"psi": 0.2, "mu": 10., "alpha": 3., "sample": 0.},
-        "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"),
-                                "mu": np.array([10., 10.], dtype="float32"),
-                                "alpha": np.array([3., 3.], dtype="float32"),
-                                "sample": np.array([0.0, 0.0], dtype="float32")},
+        "scalar_parameters": {"psi": 0.2, "mu": 10.0, "alpha": 3.0, "sample": 0.0},
+        "multidim_parameters": {
+            "psi": np.array([0.2, 0.2], dtype="float32"),
+            "mu": np.array([10.0, 10.0], dtype="float32"),
+            "alpha": np.array([3.0, 3.0], dtype="float32"),
+            "sample": np.array([0.0, 0.0], dtype="float32"),
+        },
     },
     "ZeroInflatedPoisson": {
-        "scalar_parameters": {"psi": 0.2, "theta": 2., "sample": 0},
-        "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"),
-                                "theta": np.array([2., 2.], dtype="float32"),
-                                "sample": np.array([0.0, 0.0], dtype="float32")},
+        "scalar_parameters": {"psi": 0.2, "theta": 2.0, "sample": 0},
+        "multidim_parameters": {
+            "psi": np.array([0.2, 0.2], dtype="float32"),
+            "theta": np.array([2.0, 2.0], dtype="float32"),
+            "sample": np.array([0.0, 0.0], dtype="float32"),
+        },
     },
     "Zipf": {
         "scalar_parameters": {"power": 2.0},
@@ -436,8 +441,8 @@ for distribution in _distribution_conditions:
         "allow_nan_stats": {"allow_nan_stats": True},
     }
     if (
-            not issubclass(getattr(pm, distribution, None), pm.ContinuousDistribution)
-            and distribution not in unsupported_dtype_distributions
+        not issubclass(getattr(pm, distribution, None), pm.ContinuousDistribution)
+        and distribution not in unsupported_dtype_distributions
     ):
         extra_parameters["dtype"] = {"dtype": "int32"}
     if distribution == "AR":

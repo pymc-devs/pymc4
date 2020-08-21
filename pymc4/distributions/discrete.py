@@ -1,6 +1,5 @@
 """PyMC4 discrete random variables."""
 import tensorflow as tf
-import numpy as np
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability.python.internal import prefer_static
 from pymc4.distributions.distribution import (

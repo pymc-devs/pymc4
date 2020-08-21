@@ -17,6 +17,9 @@ __all__ = [
     "NegativeBinomial",
     "OrderedLogistic",
     "Poisson",
+    "ZeroInflatedBinomial",
+    "ZeroInflatedNegativeBinomial",
+    "ZeroInflatedPoisson",
     "Zipf",
 ]
 
@@ -497,193 +500,218 @@ class Poisson(PositiveDiscreteDistribution):
         return tfd.Poisson(rate=rate, **kwargs)
 
 
-# TODO: Implement this
-# class ZeroInflatedBinomial(PositiveDiscreteDistribution):
-#     r"""Zero-inflated Binomial log-likelihood.
+class ZeroInflatedBinomial(PositiveDiscreteDistribution):
+    r"""Zero-inflated Binomial log-likelihood.
 
-#     The pmf of this distribution is
+    The pmf of this distribution is
 
-#     .. math::
+    .. math::
 
-#         f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
-#             (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
-#             \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
-#             \end{array} \right.
+        f(x \mid \psi, n, p) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi (1-p)^{n}, \text{if } x = 0 \\
+            \psi {n \choose x} p^x (1-p)^{n-x}, \text{if } x=1,2,3,\ldots,n
+            \end{array} \right.
 
-#     .. plot::
+    .. plot::
 
-#         import matplotlib.pyplot as plt
-#         import numpy as np
-#         import scipy.stats as st
-#         plt.style.use('arviz-darkgrid')
-#         x = np.arange(0, 25)
-#         ns = [10, 20]
-#         ps = [0.5, 0.7]
-#         psis = [0.7, 0.4]
-#         for n, p, psi in zip(ns, ps, psis):
-#             pmf = st.binom.pmf(x, n, p)
-#             pmf[0] = (1 - psi) + pmf[0]
-#             pmf[1:] =  psi * pmf[1:]
-#             pmf /= pmf.sum()
-#             plt.plot(x, pmf, '-o', label='n = {}, p = {}, $\\psi$ = {}'.format(n, p, psi))
-#         plt.xlabel('x', fontsize=12)
-#         plt.ylabel('f(x)', fontsize=12)
-#         plt.legend(loc=1)
-#         plt.show()
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('arviz-darkgrid')
+        x = np.arange(0, 25)
+        ns = [10, 20]
+        ps = [0.5, 0.7]
+        psis = [0.7, 0.4]
+        for n, p, psi in zip(ns, ps, psis):
+            pmf = st.binom.pmf(x, n, p)
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            plt.plot(x, pmf, '-o', label='n = {}, p = {}, $\\psi$ = {}'.format(n, p, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
-#     ========  ==========================
-#     Support   :math:`x \in \mathbb{N}_0`
-#     Mean      :math:`(1 - \psi) n p`
-#     Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
-#     ========  ==========================
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`(1 - \psi) n p`
+    Variance  :math:`(1-\psi) n p [1 - p(1 - \psi n)].`
+    ========  ==========================
 
-#     Parameters
-#     ----------
-#     psi : float
-#         Expected proportion of Binomial variates (0 < psi < 1)
-#     n : int
-#         Number of Bernoulli trials (n >= 0).
-#     p : float
-#         Probability of success in each trial (0 < p < 1).
-#     """
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of Binomial variates (0 < psi < 1)
+    n : int
+        Number of Bernoulli trials (n >= 0).
+    p : float
+        Probability of success in each trial (0 < p < 1).
+    """
 
-#     def __init__(self, name, psi, n, p, **kwargs):
-#         super().__init__(name, psi=psi, n=n, p=p, **kwargs)
+    def __init__(self, name, psi, n, p, **kwargs):
+        super().__init__(name, psi=psi, n=n, p=p, **kwargs)
 
-#     @staticmethod
-#     def _init_distribution(conditions):
-#         fill this in
-
-
-# TODO: Implement this
-# class ZeroInflatedNegativeBinomial(PositiveDiscreteDistribution):
-#     r"""Zero-Inflated Negative binomial random variable.
-
-#     The Zero-inflated version of the Negative Binomial (NB).
-#     The NB distribution describes a Poisson random variable
-#     whose rate parameter is gamma distributed.
-
-#     The pmf of this distribution is
-
-#     .. math::
-#        f(x \mid \psi, \mu, \alpha) = \left\{
-#          \begin{array}{l}
-#            (1-\psi) + \psi \left (
-#              \frac{\alpha}{\alpha+\mu}
-#            \right) ^\alpha, \text{if } x = 0 \\
-#            \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (
-#              \frac{\alpha}{\mu+\alpha}
-#            \right)^\alpha \left(
-#              \frac{\mu}{\mu+\alpha}
-#            \right)^x, \text{if } x=1,2,3,\ldots
-#          \end{array}
-#        \right.
-
-#     .. plot::
-
-#         import matplotlib.pyplot as plt
-#         import numpy as np
-#         import scipy.stats as st
-#         from scipy import special
-#         plt.style.use('arviz-darkgrid')
-#         def ZeroInfNegBinom(a, m, psi, x):
-#             pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
-#             pmf[0] = (1 - psi) + pmf[0]
-#             pmf[1:] =  psi * pmf[1:]
-#             pmf /= pmf.sum()
-#             return pmf
-#         x = np.arange(0, 25)
-#         alphas = [2, 4]
-#         mus = [2, 8]
-#         psis = [0.7, 0.7]
-#         for a, m, psi in zip(alphas, mus, psis):
-#             pmf = ZeroInfNegBinom(a, m, psi, x)
-#             plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}, $\psi$ = {}'.format(a, m, psi))
-#         plt.xlabel('x', fontsize=12)
-#         plt.ylabel('f(x)', fontsize=12)
-#         plt.legend(loc=1)
-#         plt.show()
-
-#     ========  ==========================
-#     Support   :math:`x \in \mathbb{N}_0`
-#     Mean      :math:`\psi\mu`
-#     Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
-#     ========  ==========================
-
-#     Parameters
-#     ----------
-#     psi : float
-#         Expected proportion of NegativeBinomial variates (0 < psi < 1)
-#     mu : float
-#         Poission distribution parameter (mu > 0). Also corresponds to the number of expected
-#         successes before the number of desired failures (alpha) is reached.
-#     alpha : float
-#         Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
-#         desired.
-#     """
-
-#     def __init__(self, name, psi, mu, alpha, **kwargs):
-#         super().__init__(name, psi=psi, mu=mu, alpha=alpha, **kwargs)
+    @staticmethod
+    def _init_distribution(conditions, **kwargs):
+        return tfd.Mixture(
+            cat=tfd.Categorical(probs=[1 - conditions["psi"], conditions["psi"]]),
+            components=[
+                tfd.Deterministic(loc=tf.zeros_like(conditions["n"])),
+                tfd.Binomial(total_count=conditions["n"], probs=conditions["p"]),
+            ],
+            **kwargs,
+        )
 
 
-# TODO: Implement this
-# class ZeroInflatedPoisson(PositiveDiscreteDistribution):
-#     r"""
-#     Zero-inflated Poisson random variable.
+class ZeroInflatedNegativeBinomial(PositiveDiscreteDistribution):
+    r"""Zero-Inflated Negative binomial random variable.
 
-#     Often used to model the number of events occurring in a fixed period
-#     of time when the times at which events occur are independent.
+    The Zero-inflated version of the Negative Binomial (NB).
+    The NB distribution describes a Poisson random variable
+    whose rate parameter is gamma distributed.
 
-#     The pmf of this distribution is
+    The pmf of this distribution is
 
-#     .. math::
+    .. math::
+       f(x \mid \psi, \mu, \alpha) = \left\{
+         \begin{array}{l}
+           (1-\psi) + \psi \left (
+             \frac{\alpha}{\alpha+\mu}
+           \right) ^\alpha, \text{if } x = 0 \\
+           \psi \frac{\Gamma(x+\alpha)}{x! \Gamma(\alpha)} \left (
+             \frac{\alpha}{\mu+\alpha}
+           \right)^\alpha \left(
+             \frac{\mu}{\mu+\alpha}
+           \right)^x, \text{if } x=1,2,3,\ldots
+         \end{array}
+       \right.
 
-#         f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
-#             (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
-#             \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
-#             \end{array} \right.
+    .. plot::
 
-#     .. plot::
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        from scipy import special
+        plt.style.use('arviz-darkgrid')
+        def ZeroInfNegBinom(a, m, psi, x):
+            pmf = special.binom(x + a - 1, x) * (a / (m + a))**a * (m / (m + a))**x
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            return pmf
+        x = np.arange(0, 25)
+        alphas = [2, 4]
+        mus = [2, 8]
+        psis = [0.7, 0.7]
+        for a, m, psi in zip(alphas, mus, psis):
+            pmf = ZeroInfNegBinom(a, m, psi, x)
+            plt.plot(x, pmf, '-o', label=r'$\alpha$ = {}, $\mu$ = {}, $\psi$ = {}'.format(a, m, psi))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
 
-#         import matplotlib.pyplot as plt
-#         import numpy as np
-#         import scipy.stats as st
-#         plt.style.use('arviz-darkgrid')
-#         x = np.arange(0, 22)
-#         psis = [0.7, 0.4]
-#         thetas = [8, 4]
-#         for psi, theta in zip(psis, thetas):
-#             pmf = st.poisson.pmf(x, theta)
-#             pmf[0] = (1 - psi) + pmf[0]
-#             pmf[1:] =  psi * pmf[1:]
-#             pmf /= pmf.sum()
-#             plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
-#         plt.xlabel('x', fontsize=12)
-#         plt.ylabel('f(x)', fontsize=12)
-#         plt.legend(loc=1)
-#         plt.show()
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\mu`
+    Var       :math:`\psi\mu +  \left (1 + \frac{\mu}{\alpha} + \frac{1-\psi}{\mu} \right)`
+    ========  ==========================
 
-#     ========  ==========================
-#     Support   :math:`x \in \mathbb{N}_0`
-#     Mean      :math:`\psi\theta`
-#     Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
-#     ========  ==========================
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of NegativeBinomial variates (0 < psi < 1)
+    mu : float
+        Poission distribution parameter (mu > 0). Also corresponds to the number of expected
+        successes before the number of desired failures (alpha) is reached.
+    alpha : float
+        Gamma distribution parameter (alpha > 0). Also corresponds to the number of failures
+        desired.
+    """
 
-#     Parameters
-#     ----------
-#     psi : float
-#         Expected proportion of Poisson variates (0 < psi < 1)
-#     theta : float
-#         Expected number of occurrences during the given interval
-#         (theta >= 0).
-#     """
+    def __init__(self, name, psi, mu, alpha, **kwargs):
+        super().__init__(name, psi=psi, mu=mu, alpha=alpha, **kwargs)
 
-#     def __init__(self, name, psi, theta, **kwargs):
-#         super().__init__(name, psi=psi, theta=theta, **kwargs)
+    @staticmethod
+    def _init_distribution(conditions, **kwargs):
+        return tfd.Mixture(
+            cat=tfd.Categorical(probs=[1.0 - conditions["psi"], conditions["psi"]]),
+            components=[
+                tfd.Deterministic(loc=tf.zeros_like(conditions["mu"])),
+                tfd.NegativeBinomial(
+                    total_count=conditions["alpha"],
+                    probs=(conditions["mu"]) / (conditions["mu"] + conditions["alpha"]),
+                ),
+            ],
+            **kwargs,
+        )
 
-#     @staticmethod
-#     def _init_distribution(conditions):
-#         fill this in
+
+class ZeroInflatedPoisson(PositiveDiscreteDistribution):
+    r"""
+    Zero-inflated Poisson random variable.
+
+    Often used to model the number of events occurring in a fixed period
+    of time when the times at which events occur are independent.
+
+    The pmf of this distribution is
+
+    .. math::
+
+        f(x \mid \psi, \theta) = \left\{ \begin{array}{l}
+            (1-\psi) + \psi e^{-\theta}, \text{if } x = 0 \\
+            \psi \frac{e^{-\theta}\theta^x}{x!}, \text{if } x=1,2,3,\ldots
+            \end{array} \right.
+
+    .. plot::
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import scipy.stats as st
+        plt.style.use('arviz-darkgrid')
+        x = np.arange(0, 22)
+        psis = [0.7, 0.4]
+        thetas = [8, 4]
+        for psi, theta in zip(psis, thetas):
+            pmf = st.poisson.pmf(x, theta)
+            pmf[0] = (1 - psi) + pmf[0]
+            pmf[1:] =  psi * pmf[1:]
+            pmf /= pmf.sum()
+            plt.plot(x, pmf, '-o', label='$\\psi$ = {}, $\\theta$ = {}'.format(psi, theta))
+        plt.xlabel('x', fontsize=12)
+        plt.ylabel('f(x)', fontsize=12)
+        plt.legend(loc=1)
+        plt.show()
+
+    ========  ==========================
+    Support   :math:`x \in \mathbb{N}_0`
+    Mean      :math:`\psi\theta`
+    Variance  :math:`\theta + \frac{1-\psi}{\psi}\theta^2`
+    ========  ==========================
+
+    Parameters
+    ----------
+    psi : float
+        Expected proportion of Poisson variates (0 < psi < 1)
+    theta : float
+        Expected number of occurrences during the given interval
+        (theta >= 0).
+    """
+
+    def __init__(self, name, psi, theta, **kwargs):
+        super().__init__(name, psi=psi, theta=theta, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions, **kwargs):
+        return tfd.Mixture(
+            cat=tfd.Categorical(probs=[1.0 - conditions["psi"], conditions["psi"]]),
+            components=[
+                tfd.Deterministic(loc=tf.zeros_like(conditions["theta"])),
+                tfd.Poisson(rate=conditions["theta"]),
+            ],
+            **kwargs,
+        )
 
 
 class Zipf(PositiveDiscreteDistribution):

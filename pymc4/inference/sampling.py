@@ -139,6 +139,7 @@ def sample(
         sampler = reg_samplers[sampler_type]
     except KeyError:
         print("The given sampler doesn't exist")
+        raise
 
     # TODO: keep num_adaptation_steps for nuts/hmc with
     # adaptive step but later should be removed because of ambiguity

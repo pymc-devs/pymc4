@@ -39,6 +39,16 @@ def categorical_same_shape():
 
 
 @pytest.fixture(scope="function")
+def model_symmetric():
+    @pm.model
+    def model_symmetric():
+        var1 = yield pm.Bernoulli("var1", 0.1)
+        var2 = yield pm.Bernoulli("var2", 1 - 0.1)
+
+    return model_symmetric
+
+
+@pytest.fixture(scope="function")
 def categorical_different_shape():
     @pm.model
     def categorical_different_shape():
@@ -223,3 +233,18 @@ def test_other_samplers(simple_model, seed):
     trace2 = pm.sample(model, sampler_type="hmc_simple", xla_fixture=xla_fixture, seed=seed)
     np.testing.assert_allclose(tf.reduce_mean(trace1.posterior["simple_model/var1"]), 0.0, atol=0.1)
     np.testing.assert_allclose(tf.reduce_mean(trace2.posterior["simple_model/var1"]), 0.0, atol=0.1)
+
+
+def test_compound_symmetric(model_symmetric, seed):
+    model = model_symmetric()
+    trace = pm.sample(model)
+    np.testing.assert_allclose(
+        tf.reduce_mean(tf.cast(trace.posterior["model_symmetric/var1"], dtype=tf.float32)),
+        0.1,
+        atol=0.1,
+    )
+    np.testing.assert_allclose(
+        tf.reduce_mean(tf.cast(trace.posterior["model_symmetric/var2"], dtype=tf.float32)),
+        1.0 - 0.1,
+        atol=0.1,
+    )

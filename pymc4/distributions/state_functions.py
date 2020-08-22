@@ -3,6 +3,7 @@ from typing import Optional, List, Union, Any
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow_probability.python.mcmc.internal import util as mcmc_util
+from tensorflow_probability.python.util.seed_stream import SeedStream
 
 tfd = tfp.distributions
 
@@ -93,9 +94,10 @@ class CategoricalUniformFn(Proposal):
 
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         with tf.name_scope(self._name or "categorical_uniform_fn"):
+            seed_stream = SeedStream(seed, salt="BernoulliFn")
             deltas = tf.nest.map_structure(
                 lambda x: tfd.Categorical(logits=tf.ones(self.classes)).sample(
-                    seed=seed, sample_shape=tf.shape(x)
+                    seed=seed_stream(), sample_shape=tf.shape(x)
                 ),
                 state_parts,
             )
@@ -124,11 +126,12 @@ class BernoulliFn(Proposal):
 
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         with tf.name_scope(self._name or "bernoulli_fn"):
+            seed_stream = SeedStream(seed, salt="BernoulliFn")
 
             def generate_bernoulli(state_part):
                 delta = tfd.Bernoulli(
                     probs=tf.ones_like(state_part, dtype=tf.float32) * 0.5, dtype=state_part.dtype
-                ).sample(seed=seed)
+                ).sample(seed=seed_stream())
                 state_part = (state_part + delta) % tf.constant(2, dtype=state_part.dtype)
                 return state_part
 
@@ -163,6 +166,7 @@ class GaussianRoundFn(Proposal):
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         scale = self.scale
         with tf.name_scope(self._name or "gaussian_round_fn"):
+            seed_stream = SeedStream(seed, salt="BernoulliFn")
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
             if len(scales) == 1:
                 scales *= len(state_parts)
@@ -170,7 +174,7 @@ class GaussianRoundFn(Proposal):
                 raise ValueError("`scale` must broadcast with `state_parts`")
 
             def generate_rounded_normal(state_part, scale_part):
-                delta = tfd.Normal(0.0, tf.ones_like(state_part)).sample(seed=seed)
+                delta = tfd.Normal(0.0, tf.ones_like(state_part)).sample(seed=seed_stream())
                 state_part += delta
                 return tf.round(state_part)
 

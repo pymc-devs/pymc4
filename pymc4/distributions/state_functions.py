@@ -94,7 +94,7 @@ class CategoricalUniformFn(Proposal):
 
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         with tf.name_scope(self._name or "categorical_uniform_fn"):
-            seed_stream = SeedStream(seed, salt="BernoulliFn")
+            seed_stream = SeedStream(seed, salt="CategoricalUniformFn")
             deltas = tf.nest.map_structure(
                 lambda x: tfd.Categorical(logits=tf.ones(self.classes)).sample(
                     seed=seed_stream(), sample_shape=tf.shape(x)
@@ -166,7 +166,7 @@ class GaussianRoundFn(Proposal):
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         scale = self.scale
         with tf.name_scope(self._name or "gaussian_round_fn"):
-            seed_stream = SeedStream(seed, salt="BernoulliFn")
+            seed_stream = SeedStream(seed, salt="GaussianRoundFn")
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
             if len(scales) == 1:
                 scales *= len(state_parts)

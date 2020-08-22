@@ -95,6 +95,7 @@ class CategoricalUniformFn(Proposal):
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         with tf.name_scope(self._name or "categorical_uniform_fn"):
             import pdb
+
             pdb.set_trace()
             part_seeds = samplers.split_seed(seed, n=len(state_parts), salt="CategoricalUniformFn")
             deltas = tf.nest.map_structure(
@@ -105,6 +106,7 @@ class CategoricalUniformFn(Proposal):
                 part_seeds,
             )
             import pdb
+
             pdb.set_trace()
             return deltas
 

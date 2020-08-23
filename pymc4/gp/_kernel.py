@@ -354,8 +354,7 @@ class _Cosine(PositiveSemidefiniteKernel):
         return assertions
 
 
-# FIXME: This kernel is not implemented currently as tensorflow doesn't allow
-#        slicing with tensors or arrays. Any help would be appriciated.
+# FIXME: Implement Coregion kernel.
 # class Coregion(PositiveSemidefiniteKernel):
 #     def __init__(
 #         self, W=None, kappa=None, B=None, feature_ndims=None, validate_args=False, name="Coregion"

@@ -94,9 +94,6 @@ class CategoricalUniformFn(Proposal):
 
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         with tf.name_scope(self._name or "categorical_uniform_fn"):
-            import pdb
-
-            pdb.set_trace()
             part_seeds = samplers.split_seed(seed, n=len(state_parts), salt="CategoricalUniformFn")
             deltas = tf.nest.map_structure(
                 lambda x, s: tfd.Categorical(logits=tf.ones(self.classes)).sample(
@@ -105,9 +102,6 @@ class CategoricalUniformFn(Proposal):
                 state_parts,
                 part_seeds,
             )
-            import pdb
-
-            pdb.set_trace()
             return deltas
 
     def __eq__(self, other) -> bool:
@@ -173,12 +167,13 @@ class GaussianRoundFn(Proposal):
     def _fn(self, state_parts: List[tf.Tensor], seed: Optional[int]) -> List[tf.Tensor]:
         scale = self.scale
         with tf.name_scope(self._name or "gaussian_round_fn"):
-            part_seeds = samplers.split_seed(seed, n=len(state_parts), salt="BernoulliFn")
             scales = scale if mcmc_util.is_list_like(scale) else [scale]
             if len(scales) == 1:
                 scales *= len(state_parts)
             if len(state_parts) != len(scales):
                 raise ValueError("`scale` must broadcast with `state_parts`")
+
+            part_seeds = samplers.split_seed(seed, n=len(state_parts), salt="BernoulliFn")
 
             def generate_rounded_normal(state_part, scale_part, part_seed):
                 delta = tfd.Normal(0.0, tf.ones_like(state_part)).sample(seed=part_seed)

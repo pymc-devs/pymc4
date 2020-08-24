@@ -788,9 +788,7 @@ class MarginalGP(BaseGP):
             ).sample(sample_shape)
             return samples.numpy() if to_numpy else samples
         if diag:
-            samples = Normal(None, loc=mu, scale=cov, **kwargs).sample(
-                sample_shape=sample_shape
-            )
+            samples = Normal(None, loc=mu, scale=cov, **kwargs).sample(sample_shape=sample_shape)
             return samples.numpy() if to_numpy else samples
         if reparametrize:
             chol_factor = tf.linalg.cholesky(cov)

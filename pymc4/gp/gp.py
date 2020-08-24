@@ -787,6 +787,11 @@ class MarginalGP(BaseGP):
                 **kwargs,
             ).sample(sample_shape)
             return samples.numpy() if to_numpy else samples
+        if diag:
+            samples = Normal(None, loc=mu, scale=cov, **kwargs).sample(
+                sample_shape=sample_shape
+            )
+            return samples.numpy() if to_numpy else samples
         if reparametrize:
             chol_factor = tf.linalg.cholesky(cov)
             samples = MvNormalCholesky(None, loc=mu, scale_tril=chol_factor, **kwargs).sample(
@@ -844,13 +849,14 @@ class MarginalGP(BaseGP):
         >>> k = ExpQuad(np.array(1.))
         >>> noise = np.array(1e-8)
         >>> X = np.linspace(0, 1, 10)[:, np.newaxis]
+        >>> Xnew = np.linspace(0, 1, 20)[:, np.newaxis]
         >>> y = np.random.randn(X.shape[0])
         >>> gp = MarginalGP(cov_fn=k)
         >>> mu, cov = gp.predictt(X, given={"X": X, "y": y, "noise": noise})
         >>> print(tf.reduce_mean((y - mu)**2))
         tf.Tensor(0.45554812435872166, shape=(), dtype=float64)
 
-        If only the diagonal of the covariance matrix is desired, use:
+        To only evaluate the diagonal of the covariance matrix, use:
 
         >>> mu, cov = gp.predictt(Xnew, given={"X": X, "y": y, "noise": noise}, diag=True)
         """

@@ -32,11 +32,11 @@ class TestLatentGP:
             k = ExpQuad(length_scale=ls)
             gp = LatentGP(cov_fn=k)
             f = yield gp.prior("f", self.X.astype(np.float32))
-            fcond = yield gp.conditional(
-                "fcond",
-                self.Xnew.astype(np.float32),
-                given={"X": self.X.astype(np.float32), "f": f},
-            )
+            # fcond = yield gp.conditional(
+            #     "fcond",
+            #     self.Xnew.astype(np.float32),
+            #     given={"X": self.X.astype(np.float32), "f": f},
+            # )
 
         self.model = model
 
@@ -144,7 +144,7 @@ class TestMarginalGP:
             y_ = yield gp.marginal_likelihood(
                 "y_", self.X.astype(np.float32), self.y.astype(np.float32), noise=sigma, jitter=0
             )
-            y_pred = yield gp.conditional("y_pred", self.Xnew.astype(np.float32))
+            # y_pred = yield gp.conditional("y_pred", self.Xnew.astype(np.float32))
 
         self.model = model
 

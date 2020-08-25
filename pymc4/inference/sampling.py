@@ -69,6 +69,8 @@ def sample(
     ----------
     model : pymc4.Model
         Model to sample posterior for
+    sampler_type : Optional[str]
+        The step method type for the model
     num_samples : int
         Num samples in a chain
     num_chains : int
@@ -130,20 +132,22 @@ def sample(
     >>> trace = sample(conditioned, observed=new_observed)
     This will give a trace with new observed variables. This way is considered to be explicit.
     """
-    if sampler_type is None:
-        sampler_type = _auto_assign_sampler(model)
-    elif sampler_type == "compound":
-        _log.info("Working with Compound step")
+    # assign sampler is no sampler_type is passed``
+    sampler_type = auto_assign_sampler(model, sampler_type)
 
     try:
         sampler = reg_samplers[sampler_type]
     except KeyError:
-        print("The given sampler doesn't exist")
+        print(
+            "The given sampler doesn't exist. Please choose samplers from: {}".format(
+                list(reg_samplers.keys())
+            )
+        )
         raise
 
     # TODO: keep num_adaptation_steps for nuts/hmc with
     # adaptive step but later should be removed because of ambiguity
-    if "nuts" in sampler_type or "hmc" in sampler_type:
+    if any(x in sampler_type for x in ["nuts", "hmc"]):
         kwargs["num_adaptation_steps"] = burn_in
 
     sampler = sampler(model, **kwargs)
@@ -175,38 +179,26 @@ def sample(
 
 
 def auto_assign_sampler(
-    model: Model,
-    observed: Optional[Dict[str, Any]] = None,
-    state: Optional[flow.SamplingState] = None,
-) -> str:
+    model: Model, sampler_type: Optional[str] = None,
+):
     """
     The toy implementation of sampler assigner
     Parameters
     ----------
     model : pymc4.Model
         Model to sample posterior for
-    observed : Optional[Dict[str, Any]]
-        New observed values (optional)
-    state : Optional[pymc4.flow.SamplingState]
-        Alternative way to pass specify initial values and observed values
-
+    sampler_type : Optional[str]
+        The step method type for the model
     Returns
     -------
     sampler_type : str
         Sampler type name
     """
-    return _auto_assign_sampler(model, observed, state)
+    if sampler_type:
+        _log.info("Working with {} sampler".format(reg_samplers[sampler_type].__name__))
+        return sampler_type
 
-
-def _auto_assign_sampler(
-    model: Model,
-    observed: Optional[Dict[str, Any]] = None,
-    state: Optional[flow.SamplingState] = None,
-):
-    # TODO: This could be improved in the future?
-    _, _, free_disc_names, free_cont_names, _, _ = initialize_state(
-        model, observed=observed, state=state
-    )
+    _, _, free_disc_names, free_cont_names, _, _ = initialize_state(model)
     if not free_disc_names:
         _log.info("Auto-assigning NUTS sampler")
         return "nuts"

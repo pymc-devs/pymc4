@@ -29,7 +29,6 @@ console = logging.StreamHandler()
 _log = logging.getLogger("pymc4.sampling")
 if not MYPY:
     logging._warn_preinit_stderr = 0
-    # TODO: I'm not sure about the issue
     _log.root.handlers = []  # remove tf absl logging handlers
 _log.setLevel(logging.INFO)
 _log.addHandler(console)

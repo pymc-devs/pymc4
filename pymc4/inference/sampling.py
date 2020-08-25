@@ -133,10 +133,10 @@ def sample(
     This will give a trace with new observed variables. This way is considered to be explicit.
     """
     # assign sampler is no sampler_type is passed``
-    sampler_type = auto_assign_sampler(model, sampler_type)
+    sampler_assigned: str = auto_assign_sampler(model, sampler_type)
 
     try:
-        sampler = reg_samplers[sampler_type]
+        sampler = reg_samplers[sampler_assigned]
     except KeyError:
         print(
             "The given sampler doesn't exist. Please choose samplers from: {}".format(
@@ -147,20 +147,20 @@ def sample(
 
     # TODO: keep num_adaptation_steps for nuts/hmc with
     # adaptive step but later should be removed because of ambiguity
-    if any(x in sampler_type for x in ["nuts", "hmc"]):
+    if any(x in sampler_assigned for x in ["nuts", "hmc"]):
         kwargs["num_adaptation_steps"] = burn_in
 
     sampler = sampler(model, **kwargs)
 
     # If some distributions in the model have non default proposal
     # generation functions then we lanuch compound step instead of rwm
-    if sampler_type == "rwm":
+    if sampler_assigned == "rwm":
         compound_required = check_proposal_functions(model, state=state, observed=observed)
         if compound_required:
-            sampler_type = "compound"
-            sampler = reg_samplers[sampler_type](model, **kwargs)
+            sampler_assigned = "compound"
+            sampler = reg_samplers[sampler_assigned](model, **kwargs)
 
-    if sampler_type == "compound":
+    if sampler_assigned == "compound":
         sampler._assign_default_methods(
             sampler_methods=sampler_methods, state=state, observed=observed
         )

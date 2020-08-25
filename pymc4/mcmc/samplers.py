@@ -542,6 +542,10 @@ class CompoundStep(_BaseSampler):
         parents = list(range(num_vars))
         kernels = []
 
+        # Also can be done in O(nlogn) with sorting (maybe more clear solution)
+        # With dsu we have explicitly calculated parent indices that are used
+        # to sort variables later in logp function
+
         def cmp_(item1, item2):
             # hack to separetely compare proposal function and
             # the rest of the kwargs of the sampler kernel

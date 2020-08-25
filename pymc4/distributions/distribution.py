@@ -291,9 +291,6 @@ class BoundedDistribution(Distribution):
 
 
 class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
-    def _init_transform(self, transform):
-        return transform
-
     @property
     def _test_value(self):
         return tf.cast(tf.round(0.5 * (self.upper_limit() + self.lower_limit())), self.dtype)

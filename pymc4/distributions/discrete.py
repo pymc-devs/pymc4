@@ -6,7 +6,6 @@ from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
 )
-from pymc4.distributions import transforms
 
 from pymc4.distributions.state_functions import (
     categorical_uniform_fn,
@@ -365,12 +364,6 @@ class Geometric(BoundedDiscreteDistribution):
 
     # Another example for a wrong type used on the tensorflow side
     _test_value = 2.0  # type: ignore
-
-    def _init_transform(self, transform):
-        if transform is None:
-            return transforms.LowerBound(self.lower_limit())
-        else:
-            return transform
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)

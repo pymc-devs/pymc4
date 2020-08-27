@@ -121,3 +121,9 @@ def test_beta_sample():
 
     assert trace.posterior["model/beta"] is not None
     assert trace.posterior["model/__sigmoid_beta"] is not None
+
+
+def test_sampling_unknown_sampler(simple_model):
+    model = simple_model()
+    with pytest.raises(KeyError):
+        trace = pm.sample(model=model, sampler_type="unknown")

@@ -260,7 +260,9 @@ def test_posterior_predictive_executor(model_with_observed_fixture):
     assert len(ppc_state.observed_values) == 0
     for var, shape in core_ppc_shapes.items():
         assert (
-            collections.ChainMap(ppc_state.all_values, ppc_state.deterministics)[var].numpy().shape
+            collections.ChainMap(ppc_state.all_values, ppc_state.deterministics_values)[var]
+            .numpy()
+            .shape
             == shape
         )
         if var in observed:

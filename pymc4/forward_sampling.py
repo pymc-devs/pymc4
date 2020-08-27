@@ -175,7 +175,7 @@ def sample_prior_predictive(
     # Do a single forward pass to establish the distributions, deterministics and observeds
     _, state = evaluate_meta_model(model, state=state)
     distributions_names = list(state.untransformed_values)
-    deterministic_names = list(state.deterministics)
+    deterministic_names = list(state.deterministics_values)
     observed = None
     traced_observeds: Set[str] = set()
     if sample_from_observed:
@@ -203,7 +203,7 @@ def sample_prior_predictive(
     # If we don't have to auto-batch, then we can simply evaluate the model
     if not use_auto_batching:
         _, state = evaluate_model(model, observed=observed, sample_shape=sample_shape)
-        all_values = collections.ChainMap(state.all_values, state.deterministics)
+        all_values = collections.ChainMap(state.all_values, state.deterministics_values)
         return trace_to_arviz(prior_predictive={k: all_values[k].numpy() for k in var_names})
 
     # Setup the function that makes a single draw
@@ -213,7 +213,11 @@ def sample_prior_predictive(
         return tuple(
             state.untransformed_values[k]
             if k in state.untransformed_values
-            else (state.observed_values[k] if k in traced_observeds else state.deterministics[k])
+            else (
+                state.observed_values[k]
+                if k in traced_observeds
+                else state.deterministics_values[k]
+            )
             for k in var_names
         )
 
@@ -314,7 +318,7 @@ def sample_posterior_predictive(
         _, state = evaluate_model_posterior_predictive(
             model, values=values, observed=observed, sample_shape=sample_shape
         )
-        all_values = collections.ChainMap(state.all_values, state.deterministics)
+        all_values = collections.ChainMap(state.all_values, state.deterministics_values)
         if var_names is None:
             var_names = list(state.posterior_predictives)
         output = {k: all_values[k] for k in var_names}
@@ -345,7 +349,7 @@ def sample_posterior_predictive(
     if var_names is None:
         var_names = list(state.posterior_predictives)
     else:
-        defined_variables = set(state.all_values) | set(state.deterministics)
+        defined_variables = set(state.all_values) | set(state.deterministics_values)
         if not set(var_names) <= defined_variables:
             raise KeyError(
                 "The supplied var_names = {} are not defined in the model.\n"
@@ -365,7 +369,7 @@ def sample_posterior_predictive(
         try:
             core_shape = state.all_values[var_name].shape
         except KeyError:
-            if var_name in state.deterministics:
+            if var_name in state.deterministics_values:
                 # Remove the deterministics from the trace
                 del posterior[var_name]
                 continue
@@ -402,7 +406,9 @@ def sample_posterior_predictive(
                     st.untransformed_values[k]
                     if k in st.untransformed_values
                     else (
-                        st.deterministics[k] if k in st.deterministics else st.transformed_values[k]
+                        st.deterministics_values[k]
+                        if k in st.deterministics_values
+                        else st.transformed_values[k]
                     )
                 )
                 for k in var_names

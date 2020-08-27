@@ -129,9 +129,9 @@ class ModelTemplate:
         >>> print(sorted(state.untransformed_values))
         ['main_model/a/n', 'main_model/n']
 
-        The model return values are stored in ``state.deterministics``
+        The model return values are stored in ``state.deterministics_values``
 
-        >>> print(sorted(list(state.deterministics)))
+        >>> print(sorted(list(state.deterministics_values)))
         ['main_model', 'main_model/a']
 
         Setting :code`keep_return=False` for the nested model we can remove
@@ -143,7 +143,7 @@ class ModelTemplate:
         ...     result = yield nested_model(norm, name="a", keep_return=False)
         ...     return result
         >>> ret, state = pm.evaluate_model(main_model())
-        >>> print(sorted(state.deterministics))
+        >>> print(sorted(state.deterministics_values))
         ['main_model']
 
         We can also observe some variables setting :code:`observed=True` in a distribution

@@ -61,10 +61,10 @@ class Approximation(tf.Module):
             _, st = flow.evaluate_model_transformed(self.model, state=st)
             for transformed_name in st.transformed_values:
                 untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
-                st.deterministics[untransformed_name] = st.untransformed_values.pop(
+                st.deterministics_values[untransformed_name] = st.untransformed_values.pop(
                     untransformed_name
                 )
-            return st.deterministics
+            return st.deterministics_values
 
         def vectorize_function(function):
             def vectorizedfn(*q_samples):

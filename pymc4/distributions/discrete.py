@@ -1,9 +1,15 @@
 """PyMC4 discrete random variables."""
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
+from tensorflow_probability.python.internal import prefer_static
 from pymc4.distributions.distribution import (
     PositiveDiscreteDistribution,
     BoundedDiscreteDistribution,
+)
+
+from pymc4.distributions.state_functions import (
+    categorical_uniform_fn,
+    bernoulli_fn,
 )
 
 __all__ = [
@@ -60,9 +66,11 @@ class Bernoulli(BoundedDiscreteDistribution):
     probs : float
         Probability of success (0 < probs < 1).
     """
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        self._default_new_state_part = bernoulli_fn()
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
@@ -247,6 +255,7 @@ class DiscreteUniform(BoundedDiscreteDistribution):
     high : int
         Upper limit (high > low).
     """
+    _grad_support = False
 
     def __init__(self, name, low, high, **kwargs):
         super().__init__(name, low=low, high=high, **kwargs)
@@ -298,9 +307,12 @@ class Categorical(BoundedDiscreteDistribution):
     probs : array of floats
         probs > 0 and the elements of probs must sum to 1.
     """
+    _grad_support = False
 
     def __init__(self, name, probs, **kwargs):
         super().__init__(name, probs=probs, **kwargs)
+        classes = prefer_static.shape(probs)[-1]
+        self._default_new_state_part = categorical_uniform_fn(classes=classes)
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
@@ -312,7 +324,7 @@ class Categorical(BoundedDiscreteDistribution):
         return 0.0
 
     def upper_limit(self):
-        return self.conditions["probs"].shape[-1]
+        return float(tf.shape(self.conditions["probs"])[-1])
 
 
 class Geometric(BoundedDiscreteDistribution):
@@ -482,8 +494,6 @@ class Poisson(PositiveDiscreteDistribution):
     """
 
     # For some ridiculous reason, tfp needs poisson values to be floats...
-    _test_value = 0.0  # type: ignore
-
     def __init__(self, name, rate, **kwargs):
         super().__init__(name, rate=rate, **kwargs)
 
@@ -791,4 +801,4 @@ class OrderedLogistic(BoundedDiscreteDistribution):
         return 0.0
 
     def upper_limit(self):
-        return self.conditions["cutpoints"].shape[-1]
+        return prefer_static.shape(self.conditions["cutpoints"])[-1]

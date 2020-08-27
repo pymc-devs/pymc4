@@ -67,7 +67,12 @@ def test_mean_funcs(tf_seed, get_data, get_mean_func):
 def test_mean_combination(tf_seed, get_mean_func):
     """Test if the combination of various mean functions yield consistent results"""
     # Data to compute on.
-    batch_shape, sample_shape, feature_shape, X = (2,), (2,), (2,), tf.random.normal((2, 2, 2))
+    batch_shape, sample_shape, feature_shape, X = (
+        (2,),
+        (2,),
+        (2,),
+        tf.random.normal((2, 2, 2)),
+    )
     attr_name = get_mean_func[0]
     kwargs = get_mean_func[1]
     test_point = kwargs.pop("test_point", None)

@@ -45,14 +45,14 @@ class Scope(object):
     @classmethod
     def get_contexts(cls) -> List:
         """Get the ``Scope`` class's context stack list.
-        
+
         Returns
         -------
         contexts : List
             If this is made from outside of a ``with Scopes(...)`` statement,
             an empty list is returned. In any other case, it returns the
             nestedA ``list`` of ``Scope`` instances that are in the context of the
-            
+
         """
         # no race-condition here, cls.context is a thread-local object
         # be sure not to override contexts in a subclass however!
@@ -127,7 +127,7 @@ class Scope(object):
         ...     with Scope(var=3):
         ...         print(list(Scope.chain("name", leaf="leaf", drop_none=True)))
         ['A', 'leaf']
-        
+
         """
         for c in cls.get_contexts():
             if predicate(c):

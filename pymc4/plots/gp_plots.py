@@ -23,7 +23,7 @@ def plot_gp_dist(
     samples : trace or list of traces
         Trace(s) or posterior predictive sample from a GP.
     x : array
-        Grid of X values corresponding to the samples. 
+        Grid of X values corresponding to the samples.
     plot_samples: bool
         Plot the GP samples along with posterior (defaults True).
     palette: str

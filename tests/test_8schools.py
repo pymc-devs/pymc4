@@ -47,7 +47,7 @@ def test_model_logp():
     print(eight_schools.logp({'eta': np.zeros(8), 'mu': 0, 'tau_log__': 1}).astype(np.float32))
     ```
     """
-    logp, *_ = pm4.inference.sampling.build_logp_and_deterministic_functions(
+    logp, *_ = pm4.mcmc.samplers.build_logp_and_deterministic_functions(
         schools_pm4(), observed={"obs": y}, state=None
     )
     init_value = logp(
@@ -66,7 +66,12 @@ def test_sample_no_xla():
     #   for now it is only to verify it is runnable
     chains, samples = 4, 100
     trace = pm4.inference.sampling.sample(
-        schools_pm4(), step_size=0.28, num_chains=chains, num_samples=samples, burn_in=50, xla=False
+        schools_pm4(),
+        step_size=0.28,
+        num_chains=chains,
+        num_samples=samples,
+        burn_in=50,
+        xla=False,
     ).posterior
     for var_name in ("eta", "mu", "tau", "__log_tau"):
         assert f"schools_pm4/{var_name}" in trace.keys()

@@ -208,9 +208,18 @@ def test_sampler_merging(categorical_same_shape, categorical_different_shape):
     ]
 
     sampler_methods5 = [
-        ("var1", RandomWalkM,),
-        ("var2", RandomWalkM,),
-        ("var3", RandomWalkM,),
+        (
+            "var1",
+            RandomWalkM,
+        ),
+        (
+            "var2",
+            RandomWalkM,
+        ),
+        (
+            "var3",
+            RandomWalkM,
+        ),
     ]
 
     sampler_ = sampler(model_same)

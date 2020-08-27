@@ -331,7 +331,7 @@ class LKJCholesky(ContinuousDistribution):
 class MvNormalCholesky(ContinuousDistribution):
     r"""
     Multivariate normal random variable with cholesky reparametrization.
-    
+
     A Multivariate normal random variable parameterized by a
     lower triangular matrix, i.e., the Cholesky factor L of a covariance matrix
     that has real, positive entries on the diagonal.

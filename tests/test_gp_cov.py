@@ -223,9 +223,13 @@ def test_cov_funcs_point_eval_no_ard(get_cov_func):
     """Test the `evaluate_kernel` method of covariance functions"""
     attr_name = get_cov_func[0]
     kwargs = get_cov_func[1].copy()
-    (test_points, _, expected_point, feature_ndims, KernelClass,) = build_class_and_get_test_points(
-        attr_name, kwargs
-    )
+    (
+        test_points,
+        _,
+        expected_point,
+        feature_ndims,
+        KernelClass,
+    ) = build_class_and_get_test_points(attr_name, kwargs)
     kernel = KernelClass(**kwargs, feature_ndims=feature_ndims, ARD=False)
     try:
         point = kernel.evaluate_kernel(*test_points).numpy()
@@ -336,7 +340,8 @@ def test_cov_funcs_invalid_feature_ndims():
 def test_cov_funcs_invalid_active_dims():
     feature_ndims = 3
     with pytest.raises(
-        ValueError, match=r"active_dims' contain more entries than number of feature dimensions",
+        ValueError,
+        match=r"active_dims' contain more entries than number of feature dimensions",
     ):
         active_dims = [1, 2, 3, 4, 5]
         kernel = pm.gp.cov.ExpQuad(1.0, 1.0, feature_ndims, active_dims)

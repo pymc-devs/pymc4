@@ -49,7 +49,10 @@ class Distribution(Model):
         **kwargs,
     ):
         self.conditions, self.base_parameters = self.unpack_conditions(
-            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs,
+            dtype=dtype,
+            validate_args=validate_args,
+            allow_nan_stats=allow_nan_stats,
+            **kwargs,
         )
         self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
         self._default_new_state_part = None
@@ -106,7 +109,8 @@ class Distribution(Model):
     @property
     def test_value(self):
         return tf.cast(
-            tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape), self.dtype,
+            tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape),
+            self.dtype,
         )
 
     def sample(self, sample_shape=(), seed=None):

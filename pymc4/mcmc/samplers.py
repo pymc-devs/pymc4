@@ -798,7 +798,9 @@ def build_logp_and_deterministic_functions(
         _, st = flow.evaluate_model_transformed(model, state=st)
         for transformed_name in st.transformed_values:
             untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
-            st.deterministics_values[untransformed_name] = st.untransformed_values.pop(untransformed_name)
+            st.deterministics_values[untransformed_name] = st.untransformed_values.pop(
+                untransformed_name
+            )
         return st.deterministics_values.values()
 
     return (

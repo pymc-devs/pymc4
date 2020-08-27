@@ -159,7 +159,12 @@ class NameParts:
         match = cls.NAME_RE.match(name)
         return match is not None
 
-    def __init__(self, path: Sequence[str], transform_name: Optional[str], untransformed_name: str):
+    def __init__(
+        self,
+        path: Sequence[str],
+        transform_name: Optional[str],
+        untransformed_name: str,
+    ):
         """Initialize a ``NameParts`` instance from its parts.
 
         Parameters
@@ -209,7 +214,7 @@ class NameParts:
     @property
     def original_name(self) -> str:
         """Return the name of the distribution without its preceeding path.
-        
+
         Returns
         -------
         str
@@ -224,7 +229,7 @@ class NameParts:
     @property
     def full_original_name(self) -> str:
         """Return the full name of the distribution with all three parts.
-        
+
         Returns
         -------
         str
@@ -236,7 +241,7 @@ class NameParts:
     @property
     def full_untransformed_name(self) -> str:
         """Return the name of the distribution without its transform part.
-        
+
         Returns
         -------
         str
@@ -271,3 +276,9 @@ def get_data(filename):
     """
     data_pkg = "notebooks"
     return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join("data", filename)))
+
+
+def wrapped_partial(func: Callable, *args, **kwargs):
+    partial_func = functools.partial(func, *args, **kwargs)
+    functools.update_wrapper(partial_func, func)
+    return partial_func

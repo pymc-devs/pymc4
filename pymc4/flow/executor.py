@@ -24,9 +24,7 @@ MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES = (
 
 def _chain_map_iter(self):
     """Keep ordering of maps on Python3.6.
-
     See https://bugs.python.org/issue32792
-
     Once Python3.6 is not supported, this can be deleted.
     """
     d = {}
@@ -101,7 +99,8 @@ class SamplingState:
         "posterior_predictives",
         "all_values",
         "all_unobserved_values",
-        "distributions",
+        "discrete_distributions",
+        "continuous_distributions",
         "potentials",
         "deterministics",
         "deterministics_values",
@@ -112,7 +111,8 @@ class SamplingState:
         transformed_values: Dict[str, Any] = None,
         untransformed_values: Dict[str, Any] = None,
         observed_values: Dict[str, Any] = None,
-        distributions: Dict[str, distribution.Distribution] = None,
+        discrete_distributions: Dict[str, distribution.Distribution] = None,
+        continuous_distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
         deterministics: Dict[str, distribution.Deterministic] = None,
         posterior_predictives: Optional[Set[str]] = None,
@@ -131,10 +131,14 @@ class SamplingState:
             observed_values = dict()
         else:
             observed_values = observed_values.copy()
-        if distributions is None:
-            distributions = dict()
+        if discrete_distributions is None:
+            discrete_distributions = dict()
         else:
-            distributions = distributions.copy()
+            discrete_distributions = discrete_distributions.copy()
+        if continuous_distributions is None:
+            continuous_distributions = dict()
+        else:
+            continuous_distributions = continuous_distributions.copy()
         if potentials is None:
             potentials = list()
         else:
@@ -158,7 +162,8 @@ class SamplingState:
             self.untransformed_values, self.transformed_values, self.observed_values
         )
         self.all_unobserved_values = ChainMap(self.transformed_values, self.untransformed_values)
-        self.distributions = distributions
+        self.discrete_distributions = discrete_distributions
+        self.continuous_distributions = continuous_distributions
         self.potentials = potentials
         self.deterministics = deterministics
         self.posterior_predictives = posterior_predictives
@@ -166,7 +171,13 @@ class SamplingState:
 
     def collect_log_prob_elemwise(self):
         return itertools.chain(
-            (dist.log_prob(self.all_values[name]) for name, dist in self.distributions.items()),
+            (
+                dist.log_prob(self.all_values[name])
+                for name, dist in itertools.chain(
+                    self.discrete_distributions.items(),
+                    self.continuous_distributions.items(),
+                )
+            ),
             (p.value for p in self.potentials),
         )
 
@@ -185,8 +196,13 @@ class SamplingState:
         posterior_predictives = list(self.posterior_predictives)
         deterministics_values = list(self.deterministics_values)
         # format like dist:name
-        distributions = [
-            "{}:{}".format(d.__class__.__name__, k) for k, d in self.distributions.items()
+        discrete_distributions = [
+            "{}:{}".format(d.__class__.__name__, k) for k, d in self.discrete_distributions.items()
+        ]
+        # continuous case
+        continuous_distributions = [
+            "{}:{}".format(d.__class__.__name__, k)
+            for k, d in self.continuous_distributions.items()
         ]
         # be less verbose here
         num_potentials = len(self.potentials)
@@ -200,7 +216,9 @@ class SamplingState:
             + indent
             + "observed_values: {}\n"
             + indent
-            + "distributions: {}\n"
+            + "discrete_distributions: {}\n"
+            + indent
+            + "continuous_distributions: {}\n"
             + indent
             + "num_potentials={}\n"
             + indent
@@ -214,7 +232,8 @@ class SamplingState:
             untransformed_values,
             transformed_values,
             observed_values,
-            distributions,
+            discrete_distributions,
+            continuous_distributions,
             num_potentials,
             deterministics,
             deterministics_values,
@@ -243,7 +262,8 @@ class SamplingState:
             transformed_values=self.transformed_values,
             untransformed_values=self.untransformed_values,
             observed_values=self.observed_values,
-            distributions=self.distributions,
+            discrete_distributions=self.discrete_distributions,
+            continuous_distributions=self.continuous_distributions,
             potentials=self.potentials,
             deterministics=self.deterministics,
             posterior_predictives=self.posterior_predictives,
@@ -252,15 +272,13 @@ class SamplingState:
 
     def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":
         """Create a sampling state that should be used within MCMC sampling.
-
         There are some principles that hold for the state.
-
             1. Check there is at least one distribution
             2. Check all transformed distributions are autotransformed
             3. Remove untransformed values if transformed are present
             4. Remove all other irrelevant values
         """
-        if not self.distributions:
+        if not self.discrete_distributions and not self.continuous_distributions:
             raise TypeError(
                 "No distributions found in the state. "
                 "the model you evaluated is empty and does not yield any PyMC4 distribution"
@@ -270,7 +288,9 @@ class SamplingState:
         need_to_transform_after = list()
         observed_values = dict()
 
-        for name, dist in self.distributions.items():
+        for name, dist in itertools.chain(
+            self.discrete_distributions.items(), self.continuous_distributions.items()
+        ):
             namespec = utils.NameParts.from_name(name)
             if dist.transform is not None and name not in self.observed_values:
                 transformed_namespec = namespec.replace_transform(dist.transform.name)
@@ -314,7 +334,6 @@ class SamplingState:
 # noinspection PyMethodMayBeStatic
 class SamplingExecutor:
     """Base untransformed executor.
-
     This executor performs model evaluation in the untransformed space. Class structure is convenient since its
     subclass :class:`TransformedSamplingExecutor` will reuse some parts from parent class and extending functionality.
     """
@@ -323,9 +342,8 @@ class SamplingExecutor:
         if isinstance(return_object, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
             raise EvaluationError(
                 "Return values should not contain instances of "
-                "a `pm.coroutine_model.Model`, "
-                "`types.GeneratorType`, "
-                "`pm.distributions.Deterministic`, "
+                "apm.coroutine_model.Model`, "
+                "`types.GeneratorType` "
                 "and `pm.distributions.Potential`. "
                 "To fix the error you should change the return statement to something like\n"
                 "    ..."
@@ -503,7 +521,10 @@ class SamplingExecutor:
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
-                            dist, state=state, _validate_state=False, sample_shape=sample_shape
+                            dist,
+                            state=state,
+                            _validate_state=False,
+                            sample_shape=sample_shape,
                         )
                     else:
                         err = EvaluationError(
@@ -571,7 +592,11 @@ class SamplingExecutor:
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
-        if scoped_name in state.distributions or scoped_name in state.deterministics_values:
+        if (
+            scoped_name in state.discrete_distributions
+            or scoped_name in state.continuous_distributions
+            or scoped_name in state.deterministics_values
+        ):
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -619,7 +644,10 @@ class SamplingExecutor:
                 )
             else:
                 return_value = state.untransformed_values[scoped_name] = dist.sample()
-        state.distributions[scoped_name] = dist
+        if dist._grad_support:
+            state.continuous_distributions[scoped_name] = dist
+        else:
+            state.discrete_distributions[scoped_name] = dist
         return return_value, state
 
     def proceed_deterministic(
@@ -631,7 +659,11 @@ class SamplingExecutor:
         scoped_name = scopes.variable_name(deterministic.name)
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
-        if scoped_name in state.distributions or scoped_name in state.deterministics_values:
+        if (
+            scoped_name in state.discrete_distributions
+            or scoped_name in state.continuous_distributions
+            or scoped_name in state.deterministics_values
+        ):
             raise EvaluationError(
                 "Attempting to create a duplicate deterministic {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -646,7 +678,10 @@ class SamplingExecutor:
         return return_value, state
 
     def prepare_model_control_flow(
-        self, model: coroutine_model.Model, model_info: Dict[str, Any], state: SamplingState
+        self,
+        model: coroutine_model.Model,
+        model_info: Dict[str, Any],
+        state: SamplingState,
     ):
         control_flow: types.GeneratorType = model.control_flow()
         model_name = model_info["name"]
@@ -663,7 +698,10 @@ class SamplingExecutor:
         return control_flow
 
     def finalize_control_flow(
-        self, stop_iteration: StopIteration, model_info: Dict[str, Any], state: SamplingState
+        self,
+        stop_iteration: StopIteration,
+        model_info: Dict[str, Any],
+        state: SamplingState,
     ):
         if stop_iteration.args:
             return_value = stop_iteration.args[0]
@@ -690,10 +728,8 @@ def assert_values_compatible_with_distribution(
     scoped_name: str, values: Any, dist: distribution.Distribution
 ) -> None:
     """Assert if the Distribution's shape is compatible with the supplied values.
-    
     A distribution's shape, ``dist_shape``, is made up by the sum of
     the ``batch_shape`` and the ``event_shape``.
-
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
@@ -702,7 +738,6 @@ def assert_values_compatible_with_distribution(
     this means that we check if the righymost ``K`` axes of the values' shape
     match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
     the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
-
     Parameters
     ----------
     scoped_name: str
@@ -711,11 +746,9 @@ def assert_values_compatible_with_distribution(
         The supplied values
     dist: distribution.Distribution
         The ``Distribution`` instance.
-
     Returns
     -------
     None
-
     Raises
     ------
     EvaluationError
@@ -728,13 +761,14 @@ def assert_values_compatible_with_distribution(
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape
+    scoped_name: str,
+    values: Any,
+    batch_shape: tf.TensorShape,
+    event_shape: tf.TensorShape,
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
-
     A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of
     the ``batch_shape`` and the ``event_shape``.
-
     A value is considered to have a consistent shape with the distribution if
     two conditions are met.
     1) It has a greater or equal number of dimensions when compared to the
@@ -743,7 +777,6 @@ def assert_values_compatible_with_distribution_shape(
     this means that we check if the righymost ``K`` axes of the values' shape
     match the rightmost ``K`` dimensions of the ``dist_shape``, where ``K`` is
     the minimum between ``len(values.shape)`` and ``len(dist_shape)``.
-
     Parameters
     ----------
     scoped_name: str
@@ -754,11 +787,9 @@ def assert_values_compatible_with_distribution_shape(
         The ``tf.TensorShape`` batch_shape instance.
     event_shape: tf.TensorShape
         The ``tf.TensorShape`` event_shape instance.
-
     Returns
     -------
     None
-
     Raises
     ------
     EvaluationError
@@ -791,18 +822,15 @@ def assert_values_compatible_with_distribution_shape(
 
 def get_observed_tensor_shape(arr: Any) -> tf.TensorShape:
     """Extract the supplied arr's shape and return it as a ``tf.TensorShape``.
-
     Parameters
     ----------
     arr: Any
         Will be tf.convert_to_tensor and the resulting tensor's shape will be
         returned
-
     Returns
     -------
     output: tf.TensorShape
         The array's shape converted to a ``tf.TensorShape`` instance
-
     Raises
     ------
     TypeError

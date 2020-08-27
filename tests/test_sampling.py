@@ -8,7 +8,12 @@ import tensorflow as tf
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
     model = simple_model_with_deterministic()
     trace = pm.sample(
-        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+        model=model,
+        num_samples=10,
+        num_chains=4,
+        burn_in=100,
+        step_size=0.1,
+        xla=xla_fixture,
     )
     norm = "simple_model_with_deterministic/simple_model/norm"
     determ = "simple_model_with_deterministic/determ"
@@ -24,12 +29,10 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
         deterministics_callback,
         deterministic_names,
         state,
-    ) = pm.inference.sampling.build_logp_and_deterministic_functions(model)
+    ) = pm.mcmc.samplers.build_logp_and_deterministic_functions(model)
     for _ in range(len(batch_size)):
-        logpfn = pm.inference.sampling.vectorize_logp_function(logpfn)
-        deterministics_callback = pm.inference.sampling.vectorize_logp_function(
-            deterministics_callback
-        )
+        logpfn = pm.mcmc.samplers.vectorize_logp_function(logpfn)
+        deterministics_callback = pm.mcmc.samplers.vectorize_logp_function(deterministics_callback)
 
     # Test function inputs and initial values are as expected
     assert set(all_unobserved_values) <= {"unvectorized_model/norm"}
@@ -69,11 +72,18 @@ def test_sampling_with_deterministics_in_nested_models(
         deterministic_mapping,
     ) = deterministics_in_nested_models
     trace = pm.sample(
-        model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture
+        model=model(),
+        num_samples=10,
+        num_chains=4,
+        burn_in=100,
+        step_size=0.1,
+        xla=xla_fixture,
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
-            trace.posterior[deterministic], op(*[trace.posterior[i] for i in inputs]), rtol=1e-6
+            trace.posterior[deterministic],
+            op(*[trace.posterior[i] for i in inputs]),
+            rtol=1e-6,
         )
 
 
@@ -89,7 +99,7 @@ def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_ba
     num_chains = 4
     if not is_vectorized_model and not use_auto_batching_fixture:
         with pytest.raises(Exception):
-            pm.inference.sampling.sample(
+            pm.sample(
                 model=model(),
                 num_samples=num_samples,
                 num_chains=num_chains,
@@ -99,7 +109,7 @@ def test_sample_auto_batching(vectorized_model_fixture, xla_fixture, use_auto_ba
                 use_auto_batching=use_auto_batching_fixture,
             )
     else:
-        trace = pm.inference.sampling.sample(
+        trace = pm.sample(
             model=model(),
             num_samples=num_samples,
             num_chains=num_chains,
@@ -123,3 +133,9 @@ def test_beta_sample():
 
     assert trace.posterior["model/beta"] is not None
     assert trace.posterior["model/__sigmoid_beta"] is not None
+
+
+def test_sampling_unknown_sampler(simple_model):
+    model = simple_model()
+    with pytest.raises(KeyError):
+        trace = pm.sample(model=model, sampler_type="unknown")

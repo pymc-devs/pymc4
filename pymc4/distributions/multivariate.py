@@ -233,7 +233,10 @@ class VonMisesFisher(ContinuousDistribution):
 
     @staticmethod
     def _init_distribution(conditions, **kwargs):
-        mean_direction, concentration = conditions["mean_direction"], conditions["concentration"]
+        mean_direction, concentration = (
+            conditions["mean_direction"],
+            conditions["concentration"],
+        )
         return tfd.VonMisesFisher(
             mean_direction=mean_direction, concentration=concentration, **kwargs
         )
@@ -328,7 +331,7 @@ class LKJCholesky(ContinuousDistribution):
 class MvNormalCholesky(ContinuousDistribution):
     r"""
     Multivariate normal random variable with cholesky reparametrization.
-    
+
     A Multivariate normal random variable parameterized by a
     lower triangular matrix, i.e., the Cholesky factor L of a covariance matrix
     that has real, positive entries on the diagonal.

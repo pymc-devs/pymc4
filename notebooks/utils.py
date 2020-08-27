@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def plot_samples(x, batched_samples, labels, names, ylim=None):
     if not isinstance(batched_samples, np.ndarray):
         batched_samples = np.asarray(batched_samples)
@@ -8,8 +9,8 @@ def plot_samples(x, batched_samples, labels, names, ylim=None):
     if ylim is not None:
         ymin, ymax = ylim
     else:
-        ymin, ymax = batched_samples.min()-0.2, batched_samples.max()+0.2
-    fig, ax = plt.subplots(n_samples, 1, figsize=(14, n_samples*3))
+        ymin, ymax = batched_samples.min() - 0.2, batched_samples.max() + 0.2
+    fig, ax = plt.subplots(n_samples, 1, figsize=(14, n_samples * 3))
     if isinstance(labels, (list, tuple)):
         labels = [np.asarray(label) for label in labels]
     else:
@@ -29,6 +30,7 @@ def plot_samples(x, batched_samples, labels, names, ylim=None):
         axi.set_title(lab)
     plt.show()
 
+
 def plot_cov_matrix(k, X, labels, names, vlim=None, cmap="inferno", interpolation="none"):
     cov = k(X, X)
     cov = np.asarray(cov)
@@ -42,8 +44,9 @@ def plot_cov_matrix(k, X, labels, names, vlim=None, cmap="inferno", interpolatio
     else:
         labels = np.asarray(labels)
         n_samples = 1
-    fig, ax = plt.subplots(1, n_samples, figsize=(5*n_samples, 4))
-    if not isinstance(ax, np.ndarray): ax = np.asarray([ax])
+    fig, ax = plt.subplots(1, n_samples, figsize=(5 * n_samples, 4))
+    if not isinstance(ax, np.ndarray):
+        ax = np.asarray([ax])
     for i in range(ax.shape[0]):
         axi = ax[i]
         if isinstance(labels, (list, tuple)):

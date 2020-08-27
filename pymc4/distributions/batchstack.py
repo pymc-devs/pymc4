@@ -30,7 +30,8 @@ def _make_summary_statistic(attr):  # noqa
         shape = prefer_static.concat(
             [
                 prefer_static.ones(
-                    prefer_static.rank_from_shape(self.batch_stack), dtype=self.batch_stack.dtype
+                    prefer_static.rank_from_shape(self.batch_stack),
+                    dtype=self.batch_stack.dtype,
                 ),
                 self.distribution.batch_shape_tensor(),
                 self.distribution.event_shape_tensor(),
@@ -60,7 +61,7 @@ class BatchStacker(distribution_lib.Distribution):
 
     The probability function is,
 
-    .. math:: 
+    .. math::
         p(x) = prod{ p(x[i]) : i = 0, ..., (n - 1) }
 
     Examples
@@ -77,7 +78,7 @@ class BatchStacker(distribution_lib.Distribution):
     >>> lp = s.log_prob(x)
     >>> lp.shape.as_list()
     [5]
-    
+
     Example 2: `[5, 4]`-draws of a bivariate Normal.
 
     >>> s = BatchStacker(
@@ -149,7 +150,11 @@ class BatchStacker(distribution_lib.Distribution):
 
     def _batch_shape_tensor(self):
         return prefer_static.concat(
-            [self.batch_stack, self.distribution.batch_shape_tensor(),], axis=0
+            [
+                self.batch_stack,
+                self.distribution.batch_shape_tensor(),
+            ],
+            axis=0,
         )
 
     def _batch_shape(self):
@@ -186,7 +191,9 @@ class BatchStacker(distribution_lib.Distribution):
         x = tf.reshape(
             x,
             shape=tf.pad(
-                tf.shape(x), paddings=[[prefer_static.maximum(0, -d), 0]], constant_values=1
+                tf.shape(x),
+                paddings=[[prefer_static.maximum(0, -d), 0]],
+                constant_values=1,
             ),
         )
         # (2) Compute x's log_prob.

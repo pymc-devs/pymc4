@@ -226,7 +226,7 @@ def test_complex_model_keep_return():
     _, state = pm.evaluate_model(complex_model())
 
     assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
-    assert set(state.deterministics) == {"complex_model", "complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model", "complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
 
@@ -235,7 +235,7 @@ def test_complex_model_no_keep_return(complex_model):
     _, state = pm.evaluate_model(complex_model())
 
     assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
-    assert set(state.deterministics) == {"complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
 
@@ -317,7 +317,7 @@ def test_observed_are_passed_correctly(complex_model_with_observed):
     _, state = pm.evaluate_model(complex_model_with_observed())
 
     assert set(state.untransformed_values) == {"complex_model/n"}
-    assert set(state.deterministics) == {"complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert set(state.observed_values) == {"complex_model/a/n"}
     assert np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
@@ -331,7 +331,7 @@ def test_observed_are_set_to_none_for_posterior_predictive_correctly(
     )
 
     assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
-    assert set(state.deterministics) == {"complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
     assert not np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
@@ -457,8 +457,10 @@ def test_sampling_state_clone(deterministics_in_nested_models):
     clone = state.clone()
     assert set(state.all_values) == set(clone.all_values)
     assert all((state.all_values[k] == v for k, v in clone.all_values.items()))
-    assert set(state.deterministics) == set(clone.deterministics)
-    assert all((state.deterministics[k] == v for k, v in clone.deterministics.items()))
+    assert set(state.deterministics_values) == set(clone.deterministics_values)
+    assert all(
+        (state.deterministics_values[k] == v for k, v in clone.deterministics_values.items())
+    )
     assert state.posterior_predictives == clone.posterior_predictives
 
 
@@ -540,7 +542,7 @@ def test_unnamed_return():
         return (yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log()))
 
     _, state = pm.evaluate_model(a_model())
-    assert "a_model" in state.deterministics
+    assert "a_model" in state.deterministics_values
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model(name=None))
@@ -557,7 +559,7 @@ def test_unnamed_return_2():
         return (yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log()))
 
     _, state = pm.evaluate_model(a_model(name="b_model"))
-    assert "b_model" in state.deterministics
+    assert "b_model" in state.deterministics_values
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model())
@@ -630,14 +632,14 @@ def test_deterministics(model_with_deterministics):
     ) = model_with_deterministics
     _, state = pm.evaluate_model(model())
 
-    assert len(state.deterministics) == len(expected_deterministics)
-    assert set(expected_deterministics) <= set(state.deterministics)
+    assert len(state.deterministics_values) == len(expected_deterministics)
+    assert set(expected_deterministics) <= set(state.deterministics_values)
     for expected_deterministic, op, op_inputs in zip(
         expected_deterministics, expected_ops, expected_ops_inputs
     ):
         inputs = [v for k, v in state.all_values.items() if k in op_inputs]
         out = op(*inputs)
-        np.testing.assert_allclose(state.deterministics[expected_deterministic], out)
+        np.testing.assert_allclose(state.deterministics_values[expected_deterministic], out)
 
 
 def test_deterministic_with_distribution_name_fails():
@@ -674,10 +676,10 @@ def test_deterministics_in_nested_model(deterministics_in_nested_models):
     _, state = pm.evaluate_model_transformed(model())
     assert set(state.untransformed_values) == expected_untransformed
     assert set(state.transformed_values) == expected_transformed
-    assert set(state.deterministics) == expected_deterministics
+    assert set(state.deterministics_values) == expected_deterministics
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
-            state.deterministics[deterministic],
+            state.deterministics_values[deterministic],
             op(*[state.untransformed_values[i] for i in inputs]),
         )
 
@@ -740,10 +742,10 @@ def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
     _, state = pm.evaluate_meta_model(model(), sample_shape=fixture_batch_shapes)
     assert set(state.untransformed_values) == set(expected_untransformed)
     assert set(state.transformed_values) == set(expected_transformed)
-    assert set(state.deterministics) == set(expected_deterministics)
+    assert set(state.deterministics_values) == set(expected_deterministics)
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
-            state.deterministics[deterministic],
+            state.deterministics_values[deterministic],
             op(*[state.untransformed_values[i] for i in inputs]),
         )
     for rv_name, value in state.untransformed_values.items():

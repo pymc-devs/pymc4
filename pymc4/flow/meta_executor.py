@@ -39,7 +39,7 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
         if (
             scoped_name in state.discrete_distributions
             or scoped_name in state.continuous_distributions
-            or scoped_name in state.deterministics
+            or scoped_name in state.deterministics_values
         ):
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "

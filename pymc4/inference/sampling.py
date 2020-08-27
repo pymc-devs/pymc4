@@ -138,7 +138,7 @@ def sample(
     try:
         sampler = reg_samplers[sampler_assigned]
     except KeyError:
-        print(
+        _log.warning(
             "The given sampler doesn't exist. Please choose samplers from: {}".format(
                 list(reg_samplers.keys())
             )

@@ -28,10 +28,10 @@ def initialize_sampling_state(
     state: pymc4.flow.SamplingState
         The model's sampling state
     deterministic_names: List[str]
-        The list of names of the model's deterministics
+        The list of names of the model's deterministics_values
     """
     _, state = flow.evaluate_meta_model(model, observed=observed, state=state)
-    deterministic_names = list(state.deterministics)
+    deterministic_names = list(state.deterministics_values)
     state, transformed_names = state.as_sampling_state()
     return state, deterministic_names + transformed_names
 

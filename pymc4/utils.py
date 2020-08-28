@@ -109,10 +109,7 @@ class NameParts:
         return match is not None
 
     def __init__(
-        self,
-        path: Sequence[str],
-        transform_name: Optional[str],
-        untransformed_name: str,
+        self, path: Sequence[str], transform_name: Optional[str], untransformed_name: str,
     ):
         """Initialize a ``NameParts`` instance from its parts.
 
@@ -225,4 +222,3 @@ def get_data(filename):
     """
     data_pkg = "notebooks"
     return io.BytesIO(pkgutil.get_data(data_pkg, os.path.join("data", filename)))
-

@@ -5,7 +5,6 @@ import itertools
 
 import tensorflow as tf
 
-import pymc4 as pm
 from pymc4 import coroutine_model
 from pymc4 import scopes
 from pymc4 import utils

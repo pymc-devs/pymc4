@@ -5,7 +5,6 @@ import itertools
 
 import tensorflow as tf
 
-import pymc4 as pm
 from pymc4 import coroutine_model
 from pymc4 import scopes
 from pymc4 import utils
@@ -351,7 +350,7 @@ class SamplingExecutor:
             )
 
     def validate_return_value(self, return_value: Any):
-        pm.utils.map_nested(self.validate_return_object, return_value)
+        tf.nest.map_structure(self.validate_return_object, return_value)
 
     def evaluate_model(
         self,

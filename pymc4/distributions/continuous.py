@@ -13,7 +13,6 @@ from pymc4.distributions.distribution import (
     BoundedContinuousDistribution,
 )
 from pymc4.distributions import transforms
-from .half_student_t import HalfStudentT as TFPHalfStudentT
 
 
 __all__ = [
@@ -297,7 +296,7 @@ class HalfStudentT(PositiveContinuousDistribution):
     def _init_distribution(conditions, **kwargs):
         scale = conditions["scale"]
         df = conditions["df"]
-        return TFPHalfStudentT(df=df, loc=0, scale=scale, **kwargs)
+        return tfd.HalfStudentT(df=df, loc=0, scale=scale, **kwargs)
 
 
 class Beta(UnitContinuousDistribution):

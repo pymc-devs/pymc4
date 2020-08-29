@@ -6,13 +6,14 @@ import arviz as az
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tensorflow_probability.python.internal import dtype_util
 
 from pymc4 import flow
 from pymc4.coroutine_model import Model
-from pymc4.distributions.transforms import JacobianPreference
-from pymc4.inference.utils import initialize_sampling_state
+from pymc4.mcmc.utils import initialize_sampling_state
 from pymc4.utils import NameParts
 from pymc4.variational import updates
+from pymc4.variational.util import ArrayOrdering
 
 tfd = tfp.distributions
 tfb = tfp.bijectors
@@ -38,52 +39,52 @@ class Approximation(tf.Module):
                 f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
             )
 
+        self.order = ArrayOrdering(self.state.all_unobserved_values)
         self.unobserved_keys = self.state.all_unobserved_values.keys()
-        self.target_log_prob = self._build_logfn()
+        (
+            self.target_log_prob,
+            self.deterministics_callback,
+        ) = self._build_logp_and_deterministic_fn()
         self.approx = self._build_posterior()
 
-    def _build_logfn(self):
-        """Build vectorized logp function."""
+    def _build_logp_and_deterministic_fn(self):
+        """Build vectorized logp and deterministic functions."""
 
         @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(self.unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs)
-            _, st = flow.evaluate_model_transformed(self.model, state=st)
+        def logpfn(*values):
+            split_view = self.order.split(values[0])
+            _, st = flow.evaluate_meta_model(self.model, values=split_view)
             return st.collect_log_prob()
 
-        def vectorize_logp_function(logpfn):
-            def vectorized_logpfn(*q_samples):
-                return tf.vectorized_map(lambda samples: logpfn(*samples), q_samples)
+        @tf.function(autograph=False)
+        def deterministics_callback(q_samples):
+            st = flow.SamplingState.from_values(
+                q_samples, observed_values=self.state.observed_values
+            )
+            _, st = flow.evaluate_model_transformed(self.model, state=st)
+            for transformed_name in st.transformed_values:
+                untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
+                st.deterministics_values[untransformed_name] = st.untransformed_values.pop(
+                    untransformed_name
+                )
+            return st.deterministics_values
 
-            return vectorized_logpfn
+        def vectorize_function(function):
+            def vectorizedfn(*q_samples):
+                return tf.vectorized_map(lambda samples: function(*samples), q_samples)
 
-        return vectorize_logp_function(logpfn)
+            return vectorizedfn
+
+        return vectorize_function(logpfn), vectorize_function(deterministics_callback)
 
     def _build_posterior(self):
         raise NotImplementedError
 
-    def flatten_view(self):
-        """Flattened view of the variational parameters."""
-        pass
-
-    def sample(self, n):
+    def sample(self, n: int = 500) -> az.InferenceData:
         """Generate samples from posterior distribution."""
-        q_samples = dict(zip(self.unobserved_keys, self.approx.sample(n)))
-
-        # TODO - Account for deterministics as well.
-        # For all transformed_variables, apply inverse of bijector to sampled values to match support in constraint space.
-        _, st = flow.evaluate_model(self.model)
-        for transformed_name in self.state.transformed_values:
-            untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
-            transform = st.distributions[untransformed_name].transform
-            if transform.JacobianPreference == JacobianPreference.Forward:
-                q_samples[untransformed_name] = transform.forward(q_samples[transformed_name])
-            else:
-                q_samples[untransformed_name] = transform.inverse(q_samples[transformed_name])
+        samples = self.approx.sample(n)
+        q_samples = self.order.split_samples(samples, n)
+        q_samples = dict(**q_samples, **self.deterministics_callback(q_samples))
 
         # Add a new axis so as n_chains=1 for InferenceData: handles shape issues
         trace = {k: v.numpy()[np.newaxis] for k, v in q_samples.items()}
@@ -105,56 +106,59 @@ class MeanField(Approximation):
     Inference. arXiv preprint arXiv:1603.00788.
     """
 
-    def _build_loc(self, shape, dtype, name):
-        loc = tf.Variable(tf.random.normal(shape, seed=self._seed), name=f"{name}/mu", dtype=dtype)
-        return loc
-
-    def _build_cov_matrix(self, shape, dtype, name):
-        # As per `tfp.vi.fit_surrogate_posterior` docs, use `TransformedVariable` or `DeferredTensor`
-        # to ensure all ops invoke gradients while applying transformation.
-        scale = tfp.util.TransformedVariable(
-            tf.fill(shape, value=tf.constant(1, dtype=dtype)),
-            tfb.Softplus(),  # For positive values of scale
-            name=f"{name}/sigma",
-        )
-        return scale
-
     def _build_posterior(self):
-        def apply_normal(dist_name):
-            unobserved_value = self.state.all_unobserved_values[dist_name]
-            shape = unobserved_value.shape
-            dtype = unobserved_value.dtype
-            return tfd.Normal(
-                self._build_loc(shape, dtype, dist_name),
-                self._build_cov_matrix(shape, dtype, dist_name),
-            )
-
-        # Should we use `tf.nest.map_structure` or `pm.utils.map_structure`?
-        variational_params = tf.nest.map_structure(apply_normal, self.unobserved_keys)
-        return tfd.JointDistributionSequential(variational_params)
+        flattened_shape = self.order.size
+        dtype = dtype_util.common_dtype(
+            self.state.all_unobserved_values.values(), dtype_hint=tf.float64
+        )
+        loc = tf.Variable(tf.random.normal([flattened_shape], dtype=dtype), name="mu")
+        cov_param = tfp.util.TransformedVariable(
+            tf.ones(flattened_shape, dtype=dtype), tfb.Softplus(), name="sigma"
+        )
+        advi_approx = tfd.MultivariateNormalDiag(loc=loc, scale_diag=cov_param)
+        return advi_approx
 
 
 class FullRank(Approximation):
-    """Full Rank Automatic Differential Variational Inference(Full Rank ADVI)."""
+    """
+    Full Rank ADVI.
 
-    def _build_loc(self):
-        raise NotImplementedError
+    This class implements Full Rank Automatic Differentiation Variational Inference. It posits Multivariate
+    Gaussian family to fit posterior. And estimates a full covariance matrix. As a result, it comes with
+    higher computation costs.
 
-    def _build_cov_matrix(self):
-        raise NotImplementedError
+    References
+    ----------
+    -   Kucukelbir, A., Tran, D., Ranganath, R., Gelman, A.,
+    and Blei, D. M. (2016). Automatic Differentiation Variational
+    Inference. arXiv preprint arXiv:1603.00788.
+    """
 
     def _build_posterior(self):
-        raise NotImplementedError
+        flattened_shape = self.order.size
+        dtype = dtype_util.common_dtype(
+            self.state.all_unobserved_values.values(), dtype_hint=tf.float64
+        )
+        loc = tf.Variable(tf.random.normal([flattened_shape], dtype=dtype), name="mu")
+        scale_tril = tfb.FillScaleTriL(
+            diag_bijector=tfb.Chain(
+                [
+                    tfb.Shift(tf.cast(1e-3, dtype)),  # diagonal offset
+                    tfb.Softplus(),
+                    tfb.Shift(tf.cast(np.log(np.expm1(1.0)), dtype)),  # initial scale
+                ]
+            ),
+            diag_shift=None,
+        )
+
+        cov_matrix = tfp.util.TransformedVariable(
+            tf.eye(flattened_shape, dtype=dtype), scale_tril, name="sigma"
+        )
+        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=cov_matrix)
 
 
 class LowRank(Approximation):
     """Low Rank Automatic Differential Variational Inference(Low Rank ADVI)."""
-
-    def _build_loc(self):
-        raise NotImplementedError
-
-    def _build_cov_matrix(self):
-        raise NotImplementedError
 
     def _build_posterior(self):
         raise NotImplementedError
@@ -162,7 +166,7 @@ class LowRank(Approximation):
 
 def fit(
     model: Optional[Model] = None,
-    method: Union[str, MeanField] = "advi",
+    method: Union[str, MeanField, FullRank] = "advi",
     num_steps: int = 10000,
     sample_size: int = 1,
     random_seed: Optional[int] = None,
@@ -200,9 +204,7 @@ def fit(
     ADVIFit : collections.namedtuple
         Named tuple, including approximation, ELBO losses depending on the `trace_fn`
     """
-    _select = dict(
-        advi=MeanField,
-    )
+    _select = dict(advi=MeanField, fullrank_advi=FullRank)
 
     if isinstance(method, str):
         # Here we assume that `model` parameter is provided by the user.

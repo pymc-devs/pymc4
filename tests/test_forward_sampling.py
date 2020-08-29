@@ -125,7 +125,15 @@ def posterior_predictive_fixture(model_with_observed_fixture):
     num_chains = 3
     (model, observed, core_ppc_shapes, observed_in_RV) = model_with_observed_fixture
     trace = pm.sample(model(), num_samples=num_samples, num_chains=num_chains, observed=observed)
-    return model, observed, core_ppc_shapes, observed_in_RV, trace, num_samples, num_chains
+    return (
+        model,
+        observed,
+        core_ppc_shapes,
+        observed_in_RV,
+        trace,
+        num_samples,
+        num_chains,
+    )
 
 
 @pytest.fixture(scope="module", params=["unvectorized_model", "vectorized_model"], ids=str)
@@ -223,7 +231,10 @@ def test_sample_prior_predictive_var_names(model_fixture):
     # Assert we can get the values of observeds if we ask for them explicitly
     # even if sample_from_observed_fixture is False
     prior = pm.sample_prior_predictive(
-        model(), var_names=["model/x", "model/y"], sample_shape=(), sample_from_observed=False
+        model(),
+        var_names=["model/x", "model/y"],
+        sample_shape=(),
+        sample_from_observed=False,
     ).prior_predictive
     assert set(prior) == set(["model/x", "model/y"])
     assert np.all(prior["model/x"] == observed)
@@ -268,7 +279,9 @@ def test_posterior_predictive_executor(model_with_observed_fixture):
     assert len(ppc_state.observed_values) == 0
     for var, shape in core_ppc_shapes.items():
         assert (
-            collections.ChainMap(ppc_state.all_values, ppc_state.deterministics)[var].numpy().shape
+            collections.ChainMap(ppc_state.all_values, ppc_state.deterministics_values)[var]
+            .numpy()
+            .shape
             == shape
         )
         if var in observed:
@@ -301,7 +314,7 @@ def test_sample_posterior_predictive(posterior_predictive_fixture):
 
 def test_sample_ppc_var_names(model_fixture):
     model, observed = model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             "model/sd": tf.ones((10, 1), dtype="float32"),
             "model/y": tf.convert_to_tensor(observed[:, None]),
@@ -333,10 +346,13 @@ def test_sample_ppc_corrupt_trace():
         x = yield pm.Normal("x", tf.ones(5), 1, reinterpreted_batch_ndims=1)
         y = yield pm.Normal("y", x, 1)
 
-    trace1 = pm.inference.utils.trace_to_arviz({"model/x": tf.ones((7, 1), dtype="float32")})
+    trace1 = pm.mcmc.utils.trace_to_arviz({"model/x": tf.ones((7, 1), dtype="float32")})
 
-    trace2 = pm.inference.utils.trace_to_arviz(
-        {"model/x": tf.ones((1, 5), dtype="float32"), "model/y": tf.zeros((1, 1), dtype="float32")}
+    trace2 = pm.mcmc.utils.trace_to_arviz(
+        {
+            "model/x": tf.ones((1, 5), dtype="float32"),
+            "model/y": tf.zeros((1, 1), dtype="float32"),
+        }
     )
     with pytest.raises(EvaluationError):
         forward_sampling.sample_posterior_predictive(model(), trace1)
@@ -349,7 +365,9 @@ def test_vectorized_sample_prior_predictive(
 ):
     model, is_vectorized_model, core_shapes = vectorized_model_fixture
     prior = forward_sampling.sample_prior_predictive(
-        model(), sample_shape=sample_shape_fixture, use_auto_batching=use_auto_batching_fixture
+        model(),
+        sample_shape=sample_shape_fixture,
+        use_auto_batching=use_auto_batching_fixture,
     ).prior_predictive
     if not use_auto_batching_fixture and not is_vectorized_model and len(sample_shape_fixture) > 0:
         with pytest.raises(AssertionError):
@@ -378,7 +396,9 @@ def test_sample_prior_predictive_on_glm(
                 assert prior[k].shape == (1,) + sample_shape_fixture + v
     else:
         prior = forward_sampling.sample_prior_predictive(
-            model(), sample_shape=sample_shape_fixture, use_auto_batching=use_auto_batching_fixture
+            model(),
+            sample_shape=sample_shape_fixture,
+            use_auto_batching=use_auto_batching_fixture,
         ).prior_predictive
         for k, v in core_shapes.items():
             # The (1,) comes from trace_to_arviz imposed chain axis
@@ -389,7 +409,7 @@ def test_vectorized_sample_posterior_predictive(
     vectorized_model_fixture, use_auto_batching_fixture, sample_shape_fixture
 ):
     model, is_vectorized_model, core_shapes = vectorized_model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
@@ -422,7 +442,7 @@ def test_sample_posterior_predictive_on_glm(
     glm_model_fixture, use_auto_batching_fixture, sample_shape_fixture
 ):
     model, is_vectorized_model, core_shapes = glm_model_fixture
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             # The transposition of the first two axis comes from trace_to_arviz
             # that does this to the output of `sample` to get (num_chains, num_samples, ...)
@@ -480,10 +500,14 @@ def test_posterior_predictive_on_root_variable(use_auto_batching_fixture):
         bias = yield pm.Normal("bias", 0, 1, conditionally_independent=True)
         mu = beta[..., None] * x + bias[..., None]
         yield pm.Normal(
-            "obs", mu, 1, observed=np.ones(n_obs, dtype="float32"), reinterpreted_batch_ndims=1
+            "obs",
+            mu,
+            1,
+            observed=np.ones(n_obs, dtype="float32"),
+            reinterpreted_batch_ndims=1,
         )
 
-    trace = pm.inference.utils.trace_to_arviz(
+    trace = pm.mcmc.utils.trace_to_arviz(
         {
             "model/beta": tf.zeros((n_samples, n_chains), dtype="float32"),
             "model/bias": tf.zeros((n_samples, n_chains), dtype="float32"),
@@ -496,6 +520,10 @@ def test_posterior_predictive_on_root_variable(use_auto_batching_fixture):
         _, state = pm.evaluate_model_posterior_predictive(
             model(), sample_shape=(n_chains, n_samples)
         )
-        assert state.untransformed_values["model/x"].numpy().shape == (n_chains, n_samples, n_obs)
+        assert state.untransformed_values["model/x"].numpy().shape == (
+            n_chains,
+            n_samples,
+            n_obs,
+        )
     assert ppc["model/obs"].shape == (n_chains, n_samples, n_obs)
     assert ppc["model/x"].shape == (n_chains, n_samples, n_obs)

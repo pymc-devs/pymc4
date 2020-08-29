@@ -1,37 +1,68 @@
-import logging
-from typing import Optional, Dict, Any, List, Union
-import tensorflow as tf
-from tensorflow_probability import mcmc
+from typing import Optional, Dict, Any, List
 from pymc4.coroutine_model import Model
 from pymc4 import flow
-from pymc4.inference.utils import (
-    initialize_sampling_state,
-    trace_to_arviz,
-    tile_init,
-)
-from pymc4.utils import NameParts
-from pymc4.inference import smc
+from pymc4.mcmc.samplers import reg_samplers, _log
+from pymc4.mcmc.utils import initialize_state, scope_remove_transformed_part_if_required
+import logging
 
-_log = logging.getLogger("pymc4")
-_log.setLevel(logging.INFO)
+MYPY = False
+
+if not MYPY:
+    logging._warn_preinit_stderr = 0
+
+
+def check_proposal_functions(
+    model: Model,
+    state: Optional[flow.SamplingState] = None,
+    observed: Optional[dict] = None,
+) -> bool:
+    """
+    Check for the non-default proposal generation functions
+
+    Parameters
+    ----------
+    model : pymc4.Model
+        Model to sample posterior for
+    state : Optional[flow.SamplingState]
+        Current state
+    observed : Optional[Dict[str, Any]]
+        Observed values (optional)
+    """
+    (_, state, _, _, continuous_distrs, discrete_distrs) = initialize_state(
+        model, observed=observed, state=state
+    )
+    init = state.all_unobserved_values
+    init_state = list(init.values())
+    init_keys = list(init.keys())
+
+    for i, state_part in enumerate(init_state):
+        untrs_var, unscoped_tr_var = scope_remove_transformed_part_if_required(
+            init_keys[i], state.transformed_values
+        )
+        # get the distribution for the random variable name
+        distr = continuous_distrs.get(untrs_var, None)
+        if distr is None:
+            distr = discrete_distrs[untrs_var]
+        func = distr._default_new_state_part
+        if callable(func):
+            return True
+    return False
 
 
 def sample(
     model: Model,
+    sampler_type: Optional[str] = None,
     num_samples: int = 1000,
     num_chains: int = 10,
     burn_in: int = 100,
-    step_size: Union[List[float], float] = 0.1,
-    initialize_smc: bool = False,
     observed: Optional[Dict[str, Any]] = None,
     state: Optional[flow.SamplingState] = None,
-    nuts_kwargs: Optional[Dict[str, Any]] = None,
-    adaptation_kwargs: Optional[Dict[str, Any]] = None,
-    sample_chain_kwargs: Optional[Dict[str, Any]] = None,
-    smc_kwargs: Optional[Dict[str, Any]] = None,
     xla: bool = False,
     use_auto_batching: bool = True,
-    progressbar: bool = False,
+    sampler_methods: Optional[List] = None,
+    trace_discrete: Optional[List[str]] = None,
+    seed: Optional[int] = None,
+    **kwargs,
 ):
     """
     Perform MCMC sampling using NUTS (for now).
@@ -40,39 +71,27 @@ def sample(
     ----------
     model : pymc4.Model
         Model to sample posterior for
+    sampler_type : Optional[str]
+        The step method type for the model
     num_samples : int
         Num samples in a chain
     num_chains : int
         Num chains to run
     burn_in : int
         Length of burn-in period
-    step_size : float
-        Initial step size
-    initialize_smc : bool
-        Initialize NUTS with SMC samples
     observed : Optional[Dict[str, Any]]
         New observed values (optional)
     state : Optional[pymc4.flow.SamplingState]
         Alternative way to pass specify initial values and observed values
-    nuts_kwargs : Optional[Dict[str, Any]]
-        Pass non-default values for nuts kernel, see
-        ``tensorflow_probability.experimental.mcmc.NoUTurnSamplerUnrolled`` for options
-    adaptation_kwargs : Optional[Dict[str, Any]]
-        Pass non-default values for nuts kernel, see
-        ``tensorflow_probability.mcmc.dual_averaging_step_size_adaptation.DualAveragingStepSizeAdaptation`` for options
-    sample_chain_kwargs : Optional[Dict[str, Any]]
-        Pass non-default values for nuts kernel, see
-        ``tensorflow_probability.mcmc.sample_chain`` for options
-    smc_kwargs : Optional[Dict[str, Any] = None
-        Pass non-default values for SMC, see
-        ```pymc4.inference.smc.sample_smc```
     xla : bool
         Enable experimental XLA
+    **kwargs: Dict[str, Any]
+        All kwargs for kernel, adaptive_step_kernel, chain_sample method
     use_auto_batching : bool
         WARNING: This is an advanced user feature. If you are not sure how to use this, please use
         the default ``True`` value.
         If ``True``, the model's total ``log_prob`` will be automatically vectorized to work across
-        multiple independent chains using ``tf.vectorized_map``. If ``False``, the model is assumed
+        multiple indepedent chains using ``tf.vectorized_map``. If ``False``, the model is assumed
         be defined in vectorized way. This means that every distribution has the proper
         ``batch_shape`` and ``event_shape``s so that all the outputs from each distribution's
         ``log_prob`` will broadcast with each other, and that the forward passes through the model
@@ -80,222 +99,112 @@ def sample(
         ``batch_shape``. Achieving this is a hard task, but it enables the model to be safely
         evaluated in parallel across all chains in MCMC, so sampling will be faster than in the
         automatically batched scenario.
-
+    trace_discrete : Optional[List[str]]
+        INFO: This is an advanced user feature.
+        The pyhton list of variables that should be casted to tf.int32 after sampling is completed
+    seed : Optional[int]
+        A seed for reproducible sampling
     Returns
     -------
     Trace : InferenceDataType
         An ArviZ's InferenceData object with the groups: posterior, sample_stats and observed_data
-
     Examples
     --------
     Let's start with a simple model. We'll need some imports to experiment with it.
-
     >>> import pymc4 as pm
     >>> import numpy as np
-
     This particular model has a latent variable `sd`
-
     >>> @pm.model
     ... def nested_model(cond):
     ...     sd = yield pm.HalfNormal("sd", 1.)
     ...     norm = yield pm.Normal("n", cond, sd, observed=np.random.randn(10))
     ...     return norm
-
     Now, we may want to perform sampling from this model. We already observed some variables and we
     now need to fix the condition.
-
     >>> conditioned = nested_model(cond=2.)
-
     Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling.
     Nothing special is required but passing the model to ``pm.sample``, the rest configuration is
     held by PyMC4.
-
     >>> trace = sample(conditioned)
-
     Notes
     -----
     Things that are considered to be under discussion are overriding observed variables. The API
     for that may look like
-
     >>> new_observed = {"nested_model/n": np.random.randn(10) + 1}
     >>> trace = sample(conditioned, observed=new_observed)
-
     This will give a trace with new observed variables. This way is considered to be explicit.
-
     """
-    (
-        logpfn,
-        init,
-        _deterministics_callback,
-        deterministic_names,
-        state_,
-    ) = build_logp_and_deterministic_functions(
-        model,
-        num_chains=num_chains,
-        state=state,
-        observed=observed,
-        collect_reduced_log_prob=use_auto_batching,
-    )
-    init_state = list(init.values())
-    init_keys = list(init.keys())
-    if use_auto_batching:
-        parallel_logpfn = vectorize_logp_function(logpfn)
-        deterministics_callback = vectorize_logp_function(_deterministics_callback)
-        init_state = tile_init(init_state, num_chains)
-    else:
-        parallel_logpfn = logpfn
-        deterministics_callback = _deterministics_callback
-        init_state = tile_init(init_state, num_chains)
+    # assign sampler is no sampler_type is passed``
+    sampler_assigned: str = auto_assign_sampler(model, sampler_type)
 
-    def trace_fn(current_state, pkr):
-        return (
-            pkr.inner_results.target_log_prob,
-            pkr.inner_results.leapfrogs_taken,
-            pkr.inner_results.has_divergence,
-            pkr.inner_results.energy,
-            pkr.inner_results.log_accept_ratio,
-        ) + tuple(deterministics_callback(*current_state))
-
-    @tf.function(autograph=False)
-    def run_chains(init, step_size):
-        nuts_kernel = mcmc.NoUTurnSampler(
-            target_log_prob_fn=parallel_logpfn,
-            step_size=step_size,
-            **(nuts_kwargs or dict()),
-        )
-        adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
-            inner_kernel=nuts_kernel,
-            num_adaptation_steps=burn_in,
-            step_size_getter_fn=lambda pkr: pkr.step_size,
-            log_accept_prob_getter_fn=lambda pkr: pkr.log_accept_ratio,
-            step_size_setter_fn=lambda pkr, new_step_size: pkr._replace(step_size=new_step_size),
-            **(adaptation_kwargs or dict()),
-        )
-
-        results, sample_stats = mcmc.sample_chain(
-            num_samples,
-            current_state=init,
-            kernel=adapt_nuts_kernel,
-            num_burnin_steps=burn_in,
-            trace_fn=trace_fn,
-            **(sample_chain_kwargs or dict()),
-        )
-
-        return results, sample_stats
-
-    if initialize_smc is True:
-        _log.info("Posterior calculation with SMC")
-        final_state, _ = smc.sample_smc(model, xla=xla, **(smc_kwargs or dict()))
-        step_size = [tf.math.reduce_std(x) for x in final_state]
-        _log.info("Posterior samples are calculated")
-
-    if xla:
-        results, sample_stats = tf.xla.experimental.compile(
-            run_chains, inputs=[init_state, step_size]
-        )
-    else:
-        results, sample_stats = run_chains(init_state, step_size)
-
-    posterior = dict(zip(init_keys, results))
-    # Keep in sync with pymc3 naming convention
-    stat_names = ["lp", "tree_size", "diverging", "energy", "mean_tree_accept"]
-    if len(sample_stats) > len(stat_names):
-        deterministic_values = sample_stats[len(stat_names) :]
-        sample_stats = sample_stats[: len(stat_names)]
-    sampler_stats = dict(zip(stat_names, sample_stats))
-    if len(deterministic_names) > 0:
-        posterior.update(dict(zip(deterministic_names, deterministic_values)))
-
-    return trace_to_arviz(posterior, sampler_stats, observed_data=state_.observed_values)
-
-
-def build_logp_and_deterministic_functions(
-    model,
-    num_chains: Optional[int] = None,
-    observed: Optional[dict] = None,
-    state: Optional[flow.SamplingState] = None,
-    collect_reduced_log_prob: bool = True,
-):
-    if not isinstance(model, Model):
-        raise TypeError(
-            "`sample` function only supports `pymc4.Model` objects, but you've passed `{}`".format(
-                type(model)
+    try:
+        sampler = reg_samplers[sampler_assigned]
+    except KeyError:
+        _log.warning(
+            "The given sampler doesn't exist. Please choose samplers from: {}".format(
+                list(reg_samplers.keys())
             )
         )
-    if state is not None and observed is not None:
-        raise ValueError("Can't use both `state` and `observed` arguments")
+        raise
 
-    state, deterministic_names = initialize_sampling_state(model, observed=observed, state=state)
+    # TODO: keep num_adaptation_steps for nuts/hmc with
+    # adaptive step but later should be removed because of ambiguity
+    if any(x in sampler_assigned for x in ["nuts", "hmc"]):
+        kwargs["num_adaptation_steps"] = burn_in
 
-    if not state.all_unobserved_values:
-        raise ValueError(
-            f"Can not calculate a log probability: the model {model.name or ''} has no unobserved values."
+    sampler = sampler(model, **kwargs)
+
+    # If some distributions in the model have non default proposal
+    # generation functions then we lanuch compound step instead of rwm
+    if sampler_assigned == "rwm":
+        compound_required = check_proposal_functions(model, state=state, observed=observed)
+        if compound_required:
+            sampler_assigned = "compound"
+            sampler = reg_samplers[sampler_assigned](model, **kwargs)
+
+    if sampler_assigned == "compound":
+        sampler._assign_default_methods(
+            sampler_methods=sampler_methods, state=state, observed=observed
         )
 
-    observed_var = state.observed_values
-    unobserved_keys, unobserved_values = zip(*state.all_unobserved_values.items())
-
-    if collect_reduced_log_prob:
-
-        @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-            _, st = flow.evaluate_model_transformed(model, state=st)
-            return st.collect_log_prob()
-
-    else:
-        # When we use manual batching, we need to manually tile the chains axis
-        # to the left of the observed tensors
-        if num_chains is not None:
-            obs = state.observed_values
-            if observed is not None:
-                obs.update(observed)
-            else:
-                observed = obs
-            for k, o in obs.items():
-                o = tf.convert_to_tensor(o)
-                o = tf.tile(o[None, ...], [num_chains] + [1] * o.ndim)
-                observed[k] = o
-
-        @tf.function(autograph=False)
-        def logpfn(*values, **kwargs):
-            if kwargs and values:
-                raise TypeError("Either list state should be passed or a dict one")
-            elif values:
-                kwargs = dict(zip(unobserved_keys, values))
-            st = flow.SamplingState.from_values(kwargs, observed_values=observed)
-            _, st = flow.evaluate_model_transformed(model, state=st)
-            return st.collect_unreduced_log_prob()
-
-    @tf.function(autograph=False)
-    def deterministics_callback(*values, **kwargs):
-        if kwargs and values:
-            raise TypeError("Either list state should be passed or a dict one")
-        elif values:
-            kwargs = dict(zip(unobserved_keys, values))
-        st = flow.SamplingState.from_values(kwargs, observed_values=observed_var)
-        _, st = flow.evaluate_model_transformed(model, state=st)
-        for transformed_name in st.transformed_values:
-            untransformed_name = NameParts.from_name(transformed_name).full_untransformed_name
-            st.deterministics[untransformed_name] = st.untransformed_values.pop(untransformed_name)
-        return st.deterministics.values()
-
-    return (
-        logpfn,
-        dict(state.all_unobserved_values),
-        deterministics_callback,
-        deterministic_names,
-        state,
+    return sampler(
+        num_samples=num_samples,
+        num_chains=num_chains,
+        burn_in=burn_in,
+        observed=observed,
+        state=state,
+        use_auto_batching=use_auto_batching,
+        xla=xla,
+        seed=seed,
+        trace_discrete=trace_discrete,
     )
 
 
-def vectorize_logp_function(logpfn):
-    # TODO: vectorize with dict
-    def vectorized_logpfn(*state):
-        return tf.vectorized_map(lambda mini_state: logpfn(*mini_state), state)
+def auto_assign_sampler(
+    model: Model,
+    sampler_type: Optional[str] = None,
+):
+    """
+    The toy implementation of sampler assigner
+    Parameters
+    ----------
+    model : pymc4.Model
+        Model to sample posterior for
+    sampler_type : Optional[str]
+        The step method type for the model
+    Returns
+    -------
+    sampler_type : str
+        Sampler type name
+    """
+    if sampler_type:
+        _log.info("Working with {} sampler".format(reg_samplers[sampler_type].__name__))
+        return sampler_type
 
-    return vectorized_logpfn
+    _, _, free_disc_names, free_cont_names, _, _ = initialize_state(model)
+    if not free_disc_names:
+        _log.info("Auto-assigning NUTS sampler")
+        return "nuts"
+    else:
+        _log.info("The model contains discrete distributions. " "\nCompound step is chosen.")
+        return "compound"

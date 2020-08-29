@@ -97,11 +97,6 @@ class LKJ(ContinuousDistribution):
         "Generating random correlation matrices based on vines and
         extended onion method." Journal of multivariate analysis,
         100(9), pp.1989-2001.
-
-    Developer Notes
-    ---------------
-    Unlike PyMC3's implementation, the LKJ distribution in PyMC4 returns fully
-    populated covariance matrices, rather than upper triangle matrices.
     """
 
     def __init__(self, name, dimension, concentration, **kwargs):
@@ -148,6 +143,7 @@ class Multinomial(DiscreteDistribution):
         Probability of each one of the different outcomes. Elements must
         be non-negative and sum to 1 along the last axis.
     """
+
     # For some ridiculous reason, tfp needs multinomial values to be floats...
     _test_value = 0.0  # type: ignore
 
@@ -177,26 +173,19 @@ class MvNormal(ContinuousDistribution):
 
     Parameters
     ----------
-    loc : array
+    loc : array_like
         Vector of means.
-    covariance_matrix : array
+    covariance_matrix : array_like
         Covariance matrix.
 
     Examples
     --------
     Define a multivariate normal variable for a given covariance
-    matrix::
+    matrix.
 
-        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
-        mu = np.zeros(2)
-        vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
-
-    Developer Notes
-    ---------------
-    ``MvNormal`` is based on TensorFlow Probability's
-    ``MultivariateNormalTriL``, in which the lower triangular cholesky
-    decomposition of the full covariance matrix is used but full covariance
-    must be specified.
+    >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
+    >>> mu = np.zeros(2)
+    >>> vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
     """
 
     def __init__(self, name, loc, covariance_matrix, **kwargs):
@@ -205,11 +194,9 @@ class MvNormal(ContinuousDistribution):
     @staticmethod
     def _init_distribution(conditions, **kwargs):
         loc, covariance_matrix = conditions["loc"], conditions["covariance_matrix"]
-        try:
-            chol_cov_matrix = tf.linalg.cholesky(covariance_matrix)
-        except tf.errors.InvalidArgumentError:
-            raise ValueError("Cholesky decomposition failed! Check your `covariance_matrix`.")
-        return tfd.MultivariateNormalTriL(loc=loc, scale_tril=chol_cov_matrix, **kwargs)
+        return tfd.MultivariateNormalFullCovariance(
+            loc=loc, covariance_matrix=covariance_matrix, **kwargs
+        )
 
 
 class VonMisesFisher(ContinuousDistribution):
@@ -301,8 +288,8 @@ class Wishart(ContinuousDistribution):
 
 
 class LKJCholesky(ContinuousDistribution):
-    r"""The LKJ (Lewandowski, Kurowicka and Joe) distribution
-    on Cholesky factors of correlation matrices.
+    r"""
+    The LKJ (Lewandowski, Kurowicka and Joe) distribution on Cholesky factors of correlation matrices.
 
     The LKJ distribution is a prior distribution over correlation matrices.
     The LKJCholesky is a distribution over the Cholesky factor L of a correlation
@@ -322,7 +309,7 @@ class LKJCholesky(ContinuousDistribution):
 
     References
     ----------
-    .. [LKJ2009] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
+    .. [1] Lewandowski, D., Kurowicka, D. and Joe, H. (2009).
         "Generating random correlation matrices based on vines and
         extended onion method." Journal of multivariate analysis,
         100(9), pp.1989-2001.
@@ -343,7 +330,9 @@ class LKJCholesky(ContinuousDistribution):
 
 class MvNormalCholesky(ContinuousDistribution):
     r"""
-    Multivariate normal random variable parameterized by a
+    Multivariate normal random variable with cholesky reparametrization.
+
+    A Multivariate normal random variable parameterized by a
     lower triangular matrix, i.e., the Cholesky factor L of a covariance matrix
     that has real, positive entries on the diagonal.
 
@@ -360,26 +349,21 @@ class MvNormalCholesky(ContinuousDistribution):
 
     Parameters
     ----------
-    loc : array
+    loc : array_like
         Vector of means.
-    scale_tril : array
+    scale_tril : array_like
         Lower triangular matrix, such that scale @ scale.T is positive
-        semi-definite
+        semi-definite.
 
     Examples
     --------
-    Define a multivariate normal variable for a given covariance
-    matrix::
+    Define a multivariate normal variable for a given cholesky
+    factor of the full covariance matrix (scale_tril).
 
-        covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
-        chol_factor = np.linalg.cholesky(covariance_matrix)
-        mu = np.zeros(2)
-        vals = pm.MvNormalCholesky('vals', loc=loc, scale=chol_factor)
-
-    Developer Notes
-    ---------------
-    ``MvNormalCholesky`` is based on TensorFlow Probability's
-    ``MultivariateNormalTriL``.
+    >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
+    >>> chol_factor = np.linalg.cholesky(covariance_matrix)
+    >>> mu = np.zeros(2)
+    >>> vals = pm.MvNormalCholesky('vals', loc=loc, scale_tril=chol_factor)
     """
 
     def __init__(self, name, loc, scale_tril, **kwargs):

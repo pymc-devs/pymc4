@@ -110,7 +110,10 @@ def deterministics_in_nested_models():
     deterministic_mapping = {
         "outer_model/dcond": (["outer_model/__log_cond"], lambda x: np.exp(x) * 2),
         "outer_model/ddx": (["outer_model/nested_model/dx"], lambda x: x),
-        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model/dx": (
+            ["outer_model/nested_model/x"],
+            lambda x: x + 1,
+        ),
     }
 
     return (

@@ -12,7 +12,7 @@ from pymc4.distributions.distribution import (
     UnitContinuousDistribution,
     BoundedContinuousDistribution,
 )
-from .half_student_t import HalfStudentT as TFPHalfStudentT
+from pymc4.distributions import transforms
 
 
 __all__ = [
@@ -97,10 +97,10 @@ class Normal(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.Normal('x', loc=0, scale=10)
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     x = yield pm.Normal('x', loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -158,10 +158,10 @@ class GeneralizedNormal(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.GeneralizedNormal('x', loc=0, scale=10, power=4)
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     x = yield pm.GeneralizedNormal('x', loc=0, scale=10, power=4)
     """
 
     def __init__(self, name, loc, scale, power, **kwargs):
@@ -223,11 +223,10 @@ class HalfNormal(PositiveContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-
-        @pm.model
-        def model():
-            x = pm.HalfNormal('x', scale=10)
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     x = yield pm.HalfNormal('x', scale=10)
     """
 
     def __init__(self, name, scale, **kwargs):
@@ -282,11 +281,10 @@ class HalfStudentT(PositiveContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-
-        @pm.model
-        def model():
-            x = pm.HalfStudentT('x', scale=10, df=10)
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     x = yield pm.HalfStudentT('x', scale=10, df=10)
 
     In PyMC3, HalfStudentT's location was always zero. However, in a future PR, this can be changed.
     """
@@ -298,7 +296,7 @@ class HalfStudentT(PositiveContinuousDistribution):
     def _init_distribution(conditions, **kwargs):
         scale = conditions["scale"]
         df = conditions["df"]
-        return TFPHalfStudentT(df=df, loc=0, scale=scale, **kwargs)
+        return tfd.HalfStudentT(df=df, loc=0, scale=scale, **kwargs)
 
 
 class Beta(UnitContinuousDistribution):
@@ -654,10 +652,6 @@ class HalfCauchy(PositiveContinuousDistribution):
     ----------
     scale : float
         Scale parameter (scale > 0).
-
-    Developer Notes
-    ----------------
-    In PyMC3, HalfCauchy's location was always zero. However, in a future PR, this can be changed.
     """
 
     def __init__(self, name, scale, **kwargs):
@@ -976,10 +970,10 @@ class LogNormal(PositiveContinuousDistribution):
 
     Example
     -------
-    .. code-block:: python
-        @pm.model
-        def model():
-            x = pm.Lognormal('x', loc=2, scale=30)
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     x = yield pm.Lognormal('x', loc=2, scale=30)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -1037,7 +1031,7 @@ class Moyal(ContinuousDistribution):
     >>> import pymc4 as pm
     >>> @pm.model
     ... def model():
-    ...     x = pm.Moyal('x', loc=0, scale=10)
+    ...     x = yield pm.Moyal('x', loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, **kwargs):
@@ -1097,6 +1091,12 @@ class Pareto(BoundedContinuousDistribution):
         Scale parameter (scale > 0).
     """
 
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.LowerBound(self.lower_limit())
+        else:
+            return transform
+
     def __init__(self, name, concentration, scale, **kwargs):
         super().__init__(name, concentration=concentration, scale=scale, **kwargs)
 
@@ -1109,13 +1109,13 @@ class Pareto(BoundedContinuousDistribution):
         return float("inf")
 
     def lower_limit(self):
-        return self._distribution.scale
+        return self.conditions["scale"]
 
     @property
     def test_value(self):
         return (
             tf.zeros(self.batch_shape + self.event_shape, dtype=self.dtype)
-            + self._distribution.scale
+            + self.conditions["scale"]
             + 1
         )
 
@@ -1170,11 +1170,10 @@ class StudentT(ContinuousDistribution):
 
     Examples
     --------
-    .. code-block:: python
-
-        @pm.model
-        def model():
-            x = pm.StudentT('x', df=15, loc=0, scale=10)
+    >>> import pymc4 as pm
+    >>> @pm.model
+    ... def model():
+    ...     x = yield pm.StudentT('x', df=15, loc=0, scale=10)
     """
 
     def __init__(self, name, loc, scale, df, **kwargs):
@@ -1248,10 +1247,10 @@ class Triangular(BoundedContinuousDistribution):
         return tfd.Triangular(low=low, high=high, peak=peak, **kwargs)
 
     def lower_limit(self):
-        return self._distribution.low
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self._distribution.high
+        return self.conditions["high"]
 
 
 class Uniform(BoundedContinuousDistribution):
@@ -1305,14 +1304,16 @@ class Uniform(BoundedContinuousDistribution):
 
     # FIXME should we rename this functions as well?
     def lower_limit(self):
-        return self._distribution.low
+        return self.conditions["low"]
 
     def upper_limit(self):
-        return self._distribution.high
+        return self.conditions["high"]
 
 
 class Flat(ContinuousDistribution):
-    r"""A uniform distribution with support :math:`(-\inf, \inf)`.
+    r"""
+    A uniform distribution with support :math:`(-\inf, \inf)`.
+
     Used as a uninformative log-likelihood that returns
     zeros regardless of the passed values.
     """
@@ -1351,9 +1352,7 @@ class Flat(ContinuousDistribution):
         return tf.reduce_sum(expected, axis=range(-len(self._distribution.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
-        """Raises ValueError as it is not possible to sample
-        from flat distribution.
-        """
+        """Raise a ValueError as it is not possible to sample from flat distribution."""
         raise TypeError("cannot sample from a flat distribution")
 
 
@@ -1396,9 +1395,7 @@ class HalfFlat(PositiveContinuousDistribution):
         return tf.reduce_sum(expected, axis=range(-len(self.event_shape), 0))
 
     def sample(self, shape=(), seed=None):
-        """Raises ValueError as it is not possible to sample
-        from half flat distribution.
-        """
+        """Raise a ValueError as it is not possible to sample from half flat distribution."""
         raise TypeError("cannot sample from a half flat distribution")
 
 

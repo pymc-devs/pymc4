@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 from pymc4.coroutine_model import Model, unpack
 from pymc4.distributions.batchstack import BatchStacker
-from . import transforms
+from pymc4.distributions import transforms
 
 NameType = Union[str, int]
 
@@ -29,6 +29,7 @@ __all__ = (
 class Distribution(Model):
     """Statistical distribution."""
 
+    _grad_support: bool = True
     _test_value = 0.0
     _base_parameters = ["dtype", "validate_args", "allow_nan_stats"]
 
@@ -54,6 +55,7 @@ class Distribution(Model):
             **kwargs,
         )
         self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
+        self._default_new_state_part = None
         super().__init__(
             self.unpack_distribution, name=name, keep_return=True, keep_auxiliary=False
         )
@@ -106,7 +108,10 @@ class Distribution(Model):
 
     @property
     def test_value(self):
-        return tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape)
+        return tf.cast(
+            tf.broadcast_to(self._test_value, self.batch_shape + self.event_shape),
+            self.dtype,
+        )
 
     def sample(self, sample_shape=(), seed=None):
         """
@@ -138,7 +143,8 @@ class Distribution(Model):
         return self.sample(sample_shape, seed).numpy()
 
     def get_test_sample(self, sample_shape=(), seed=None):
-        """Get the test value using a function signature similar to meth:`~.sample`
+        """
+        Get the test value using a function signature similar to meth:`~.sample`.
 
         Parameters
         ----------
@@ -295,6 +301,12 @@ class BoundedDiscreteDistribution(DiscreteDistribution, BoundedDistribution):
 
 
 class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution):
+    def _init_transform(self, transform):
+        if transform is None:
+            return transforms.Interval(self.lower_limit(), self.upper_limit())
+        else:
+            return transform
+
     @property
     def _test_value(self):
         return 0.5 * (self.upper_limit() + self.lower_limit())

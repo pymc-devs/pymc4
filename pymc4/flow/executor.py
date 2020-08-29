@@ -96,9 +96,8 @@ class SamplingExecutor:
         if isinstance(return_object, MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES):
             raise EvaluationError(
                 "Return values should not contain instances of "
-                "a `pm.coroutine_model.Model`, "
-                "`types.GeneratorType`, "
-                "`pm.distributions.Deterministic`, "
+                "apm.coroutine_model.Model`, "
+                "`types.GeneratorType` "
                 "and `pm.distributions.Potential`. "
                 "To fix the error you should change the return statement to something like\n"
                 "    ..."
@@ -106,7 +105,7 @@ class SamplingExecutor:
             )
 
     def validate_return_value(self, return_value: Any):
-        pm.utils.map_nested(self.validate_return_object, return_value)
+        tf.nest.map_structure(self.validate_return_object, return_value)
 
     def _dist_get_sampling_func(self, dist):
         """
@@ -521,7 +520,7 @@ class SamplingExecutor:
                     "Attempting to create unnamed return variable *after* making a check"
                 )
 
-            state.deterministics[return_name] = return_value
+            state.deterministics_values[return_name] = return_value
         return return_value, state
 
 

@@ -7,7 +7,7 @@ from tensorflow_probability.python.internal import dtype_util
 
 from .util import ArrayLike, TfTensor, _inherit_docs
 
-__all__ = ["Zero", "Constant"]
+__all__ = ["Mean", "Zero", "Constant"]
 
 
 class Mean:
@@ -37,7 +37,7 @@ class Mean:
         Returns
         -------
         mu : tensorflow.Tensor
-            Mean evaluated at points `X`.
+            Mean evaluated at points ``X``.
         """
         raise NotImplementedError("Your mean function should override this method.")
 

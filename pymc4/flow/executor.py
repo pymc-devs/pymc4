@@ -2,7 +2,6 @@ import types
 from typing import Any, Tuple, Dict, Union, Mapping, Callable
 
 import tensorflow as tf
-import pymc4 as pm
 from pymc4 import coroutine_model
 from pymc4 import scopes
 from pymc4.distributions import distribution

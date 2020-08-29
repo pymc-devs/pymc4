@@ -5,7 +5,6 @@ from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.inference.utils import initialize_sampling_state_smc, tile_init
 
-import tensorflow_probability
 from tensorflow_probability.python.internal import vectorization_util
 
 from tensorflow_probability.python.experimental.mcmc.sample_sequential_monte_carlo import (
@@ -146,6 +145,4 @@ def _build_logp_smc(
 
 
 def vectorize_logp_function(logpfn, core_ndims):
-    return vectorization_util.make_rank_polymorphic(
-        logpfn, core_ndims=core_ndims
-    )
+    return vectorization_util.make_rank_polymorphic(logpfn, core_ndims=core_ndims)

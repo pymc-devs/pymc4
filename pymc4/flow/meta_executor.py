@@ -13,7 +13,7 @@ __all__ = ["MetaSamplingExecutor", "MetaPosteriorPredictiveSamplingExecutor"]
 
 class MetaSamplingExecutor(TransformedSamplingExecutor):
     """
-        Do a forward pass through the model only using distribution test values.
+    Do a forward pass through the model only using distribution test values.
     """
 
     def _dist_get_sampling_func(self, dist):
@@ -24,8 +24,8 @@ class MetaPosteriorPredictiveSamplingExecutor(
     MetaSamplingExecutor, PosteriorPredictiveSamplingExecutor
 ):
     """
-        Do a forward pass through the model only using distribution test values.
-        Also modify the distributions to make them suitable for posterior predictive sampling.
+    Do a forward pass through the model only using distribution test values.
+    Also modify the distributions to make them suitable for posterior predictive sampling.
     """
 
     pass

@@ -7,7 +7,9 @@ from pymc4 import Model, flow
 
 
 def initialize_sampling_state(
-    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
+    model: Model,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initialize the model provided state and/or observed variables.
@@ -108,8 +110,8 @@ def trace_to_arviz(
 
 def tile_init(init, num_repeats, expand_ind=0):
     """
-        expand_ind: For SMC we are tiling the second dim, so we can have
-        zero `replicas` dim
+    expand_ind: For SMC we are tiling the second dim, so we can have
+    zero `replicas` dim
     """
     return [
         tf.tile(

@@ -254,7 +254,8 @@ _distribution_conditions = {
         "multidim_parameters": {
             "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
             "covariance_matrix": np.array(
-                [[[0.36, 0.12], [0.12, 0.36]], [[0.36, 0.12], [0.12, 0.36]]], dtype="float32",
+                [[[0.36, 0.12], [0.12, 0.36]], [[0.36, 0.12], [0.12, 0.36]]],
+                dtype="float32",
             ),
             "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
         },
@@ -268,7 +269,8 @@ _distribution_conditions = {
         "multidim_parameters": {
             "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
             "scale_tril": np.array(
-                [[[1.0, 0.0], [0.5, 0.866025]], [[1.0, 0.0], [0.5, 0.866025]]], dtype="float32",
+                [[[1.0, 0.0], [0.5, 0.866025]], [[1.0, 0.0], [0.5, 0.866025]]],
+                dtype="float32",
             ),
             "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
         },
@@ -446,7 +448,9 @@ def distribution(request):
 
 
 @pytest.fixture(
-    scope="function", params=["scalar_parameters", "multidim_parameters"], ids=str,
+    scope="function",
+    params=["scalar_parameters", "multidim_parameters"],
+    ids=str,
 )
 def distribution_conditions(distribution, request):
     conditions = _distribution_conditions[distribution][request.param]

@@ -42,7 +42,13 @@ class HalfStudentT(distribution.Distribution):
     """
 
     def __init__(
-        self, df, loc, scale, validate_args=False, allow_nan_stats=True, name="HalfStudentT",
+        self,
+        df,
+        loc,
+        scale,
+        validate_args=False,
+        allow_nan_stats=True,
+        name="HalfStudentT",
     ):
         """Construct a half-Student's t distribution with `df`, `loc` and `scale`.
 
@@ -89,7 +95,10 @@ class HalfStudentT(distribution.Distribution):
     @staticmethod
     def _param_shapes(sample_shape):
         return dict(
-            zip(("df", "loc", "scale"), ([tf.convert_to_tensor(sample_shape, dtype=tf.int32)] * 3),)
+            zip(
+                ("df", "loc", "scale"),
+                ([tf.convert_to_tensor(sample_shape, dtype=tf.int32)] * 3),
+            )
         )
 
     @classmethod
@@ -246,7 +255,9 @@ class HalfStudentT(distribution.Distribution):
         )
         if self.allow_nan_stats:
             return tf.where(
-                df > 1.0, result_where_defined, dtype_util.as_numpy_dtype(self.dtype)(np.nan),
+                df > 1.0,
+                result_where_defined,
+                dtype_util.as_numpy_dtype(self.dtype)(np.nan),
             )
         else:
             return distribution_util.with_dependencies(

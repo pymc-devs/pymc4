@@ -5,16 +5,16 @@ from .state import SamplingState
 
 class SMCSamplingState(SamplingState):
     """
-        Subclass of `SamplingState` which adds the support of
-        log probability collection separately for likelihood and
-        prior.
+    Subclass of `SamplingState` which adds the support of
+    log probability collection separately for likelihood and
+    prior.
     """
 
     __slots__ = ()
 
     def _collect_log_prob_elemwise(self, distrs):
         """
-            Collects log probabilities for prior/likelihood variables in sMC
+        Collects log probabilities for prior/likelihood variables in sMC
         """
         return [
             prefer_static.reduce_sum(dist.log_prob(self.all_values[name]))
@@ -23,10 +23,10 @@ class SMCSamplingState(SamplingState):
 
     def collect_log_prob_smc(self, is_prior):
         """
-            Collects log probabilities for likelihood variables in sMC.
-            Since sMC requires the `draws` dimension to be kept explicitly
-            while the graph is evaluated, we can't combine sMC prbability
-            collection with the NUTS log probability collection.
+        Collects log probabilities for likelihood variables in sMC.
+        Since sMC requires the `draws` dimension to be kept explicitly
+        while the graph is evaluated, we can't combine sMC prbability
+        collection with the NUTS log probability collection.
         """
         if is_prior is True:
             distrs = self.prior_distributions

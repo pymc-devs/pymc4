@@ -159,7 +159,9 @@ def sample(
     @tf.function(autograph=False)
     def run_chains(init, step_size):
         nuts_kernel = mcmc.NoUTurnSampler(
-            target_log_prob_fn=parallel_logpfn, step_size=step_size, **(nuts_kwargs or dict()),
+            target_log_prob_fn=parallel_logpfn,
+            step_size=step_size,
+            **(nuts_kwargs or dict()),
         )
         adapt_nuts_kernel = mcmc.DualAveragingStepSizeAdaptation(
             inner_kernel=nuts_kernel,

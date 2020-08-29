@@ -5,6 +5,9 @@ from pymc4.coroutine_model import Model
 from pymc4 import flow
 from pymc4.inference.utils import initialize_sampling_state_smc, tile_init
 
+import tensorflow_probability
+from tensorflow_probability.python.internal import vectorization_util
+
 from tensorflow_probability.python.experimental.mcmc.sample_sequential_monte_carlo import (
     make_rwmh_kernel_fn,
 )
@@ -42,7 +45,10 @@ def sample_smc(
         Posterior samples
     """
     (logpfn_prior, logpfn_lkh, init, state_,) = _build_logp_smc(
-        model, replicas=replicas, state=state, observed=observed,
+        model,
+        replicas=replicas,
+        state=state,
+        observed=observed,
     )
     state_keys = list(init.keys())
 
@@ -55,9 +61,12 @@ def sample_smc(
     # add chain dim
     init_state = tile_init(init_state, num_chains, 1)
 
+    # collect unvectorized shape ranks
+    core_ndims = [x.shape.ndims - 2 for x in init_state]
+
     # vectorize alongside both replicas and chains dim
-    parallel_logpfn_prior = vectorize_logp_function(logpfn_prior)
-    parallel_logpfn_lkh = vectorize_logp_function(logpfn_lkh)
+    parallel_logpfn_prior = vectorize_logp_function(logpfn_prior, core_ndims)
+    parallel_logpfn_lkh = vectorize_logp_function(logpfn_lkh, core_ndims)
 
     @tf.function(autograph=False)
     def run_smc(init):
@@ -80,7 +89,10 @@ def sample_smc(
 
 
 def _build_logp_smc(
-    model, replicas, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
+    model,
+    replicas,
+    observed: Optional[dict] = None,
+    state: Optional[flow.SamplingState] = None,
 ):
     if not isinstance(model, Model):
         raise TypeError(
@@ -133,13 +145,7 @@ def _build_logp_smc(
     )
 
 
-def vectorize_logp_function(logpfn):
-    def vectorized_logpfn(*state):
-        # vectorize the list of tensors on the `replicas` dimension
-        def separete_chains(mini_state):
-            # vectorize the list of tensors on the `chains` dimension
-            return tf.vectorized_map(lambda mini_state_chain: logpfn(*mini_state_chain), mini_state)
-
-        return tf.vectorized_map(separete_chains, state)
-
-    return vectorized_logpfn
+def vectorize_logp_function(logpfn, core_ndims):
+    return vectorization_util.make_rank_polymorphic(
+        logpfn, core_ndims=core_ndims
+    )

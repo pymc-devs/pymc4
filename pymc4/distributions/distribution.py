@@ -48,7 +48,10 @@ class Distribution(Model):
         **kwargs,
     ):
         self.conditions, self.base_parameters = self.unpack_conditions(
-            dtype=dtype, validate_args=validate_args, allow_nan_stats=allow_nan_stats, **kwargs,
+            dtype=dtype,
+            validate_args=validate_args,
+            allow_nan_stats=allow_nan_stats,
+            **kwargs,
         )
         self._distribution = self._init_distribution(self.conditions, **self.base_parameters)
         super().__init__(

@@ -110,7 +110,7 @@ class SamplingExecutor:
 
     def _dist_get_sampling_func(self, dist):
         """
-            Determines the type of sampling function used in forward.
+        Determines the type of sampling function used in forward.
         """
         return dist.sample
 
@@ -277,7 +277,10 @@ class SamplingExecutor:
                     elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(
-                                dist, state, sample_shape=sample_shape, replicas=replicas,
+                                dist,
+                                state,
+                                sample_shape=sample_shape,
+                                replicas=replicas,
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
@@ -439,7 +442,9 @@ class SamplingExecutor:
                         )
                     )
                 assert_values_compatible_with_distribution(
-                    scoped_name, observed_variable, dist,
+                    scoped_name,
+                    observed_variable,
+                    dist,
                 )
                 return_value = state.observed_values[scoped_name] = observed_variable
             state.likelihood_distributions[scoped_name] = dist
@@ -448,7 +453,12 @@ class SamplingExecutor:
             state.prior_distributions[scoped_name] = dist
         else:
             state, return_value = self._sample_unobserved(
-                dist, state, scoped_name, sample_func, sample_shape=sample_shape, replicas=replicas,
+                dist,
+                state,
+                scoped_name,
+                sample_func,
+                sample_shape=sample_shape,
+                replicas=replicas,
             )
             state.prior_distributions[scoped_name] = dist
         state.distributions[scoped_name] = dist
@@ -468,7 +478,10 @@ class SamplingExecutor:
         return return_value, state
 
     def prepare_model_control_flow(
-        self, model: coroutine_model.Model, model_info: Dict[str, Any], state: SamplingState,
+        self,
+        model: coroutine_model.Model,
+        model_info: Dict[str, Any],
+        state: SamplingState,
     ):
         control_flow: types.GeneratorType = model.control_flow()
         model_name = model_info["name"]
@@ -485,7 +498,10 @@ class SamplingExecutor:
         return control_flow
 
     def finalize_control_flow(
-        self, stop_iteration: StopIteration, model_info: Dict[str, Any], state: SamplingState,
+        self,
+        stop_iteration: StopIteration,
+        model_info: Dict[str, Any],
+        state: SamplingState,
     ):
         if stop_iteration.args:
             return_value = stop_iteration.args[0]
@@ -545,7 +561,10 @@ def assert_values_compatible_with_distribution(
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape,
+    scoped_name: str,
+    values: Any,
+    batch_shape: tf.TensorShape,
+    event_shape: tf.TensorShape,
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
     A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of

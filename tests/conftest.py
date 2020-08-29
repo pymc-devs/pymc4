@@ -6,7 +6,14 @@ import tensorflow as tf
 import itertools
 
 # Tensor shapes on which the GP model will be tested
-BATCH_AND_FEATURE_SHAPES = [(1,), (2,), (2, 2,)]
+BATCH_AND_FEATURE_SHAPES = [
+    (1,),
+    (2,),
+    (
+        2,
+        2,
+    ),
+]
 SAMPLE_SHAPE = [(1,), (3,)]
 
 
@@ -137,7 +144,11 @@ def vectorized_model_fixture(request):
         @pm.model
         def model():
             mu = yield pm.Normal(
-                "mu", tf.zeros(4), 1, conditionally_independent=True, reinterpreted_batch_ndims=1,
+                "mu",
+                tf.zeros(4),
+                1,
+                conditionally_independent=True,
+                reinterpreted_batch_ndims=1,
             )
             scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
             x = yield pm.Normal(

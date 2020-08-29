@@ -92,7 +92,11 @@ def vectorized_model_fixture(request):
         @pm.model
         def model():
             mu = yield pm.Normal(
-                "mu", tf.zeros(4), 1, conditionally_independent=True, reinterpreted_batch_ndims=1,
+                "mu",
+                tf.zeros(4),
+                1,
+                conditionally_independent=True,
+                reinterpreted_batch_ndims=1,
             )
             scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
             x = yield pm.Normal(
@@ -152,7 +156,11 @@ def glm_model_fixture(request):
             scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
             mu = tf.linalg.matvec(regressors, beta) + bias[..., None]
             y = yield pm.Normal(
-                "y", mu, scale[..., None], observed=observed, reinterpreted_batch_ndims=1,
+                "y",
+                mu,
+                scale[..., None],
+                observed=observed,
+                reinterpreted_batch_ndims=1,
             )
 
     else:

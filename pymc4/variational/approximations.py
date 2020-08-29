@@ -95,7 +95,7 @@ class MeanField(Approximation):
     """
     Mean Field ADVI.
 
-    This class implements Mean Field Automatic Differentiation Variational Inference. It posits spherical 
+    This class implements Mean Field Automatic Differentiation Variational Inference. It posits spherical
     Gaussian family to fit posterior. And assumes the parameters to be uncorrelated.
 
     References
@@ -200,7 +200,9 @@ def fit(
     ADVIFit : collections.namedtuple
         Named tuple, including approximation, ELBO losses depending on the `trace_fn`
     """
-    _select = dict(advi=MeanField,)
+    _select = dict(
+        advi=MeanField,
+    )
 
     if isinstance(method, str):
         # Here we assume that `model` parameter is provided by the user.

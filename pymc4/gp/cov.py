@@ -406,7 +406,10 @@ class ExpQuad(Stationary):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super(ExpQuad, self).__init__(
-            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
+            feature_ndims=feature_ndims,
+            active_dims=active_dims,
+            scale_diag=scale_diag,
+            **kwargs,
         )
 
     def _init_kernel(
@@ -495,7 +498,10 @@ class Constant(Stationary):
     ):
         self._coef = coef
         super(Constant, self).__init__(
-            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
+            feature_ndims=feature_ndims,
+            active_dims=active_dims,
+            scale_diag=scale_diag,
+            **kwargs,
         )
 
     def _init_kernel(self, feature_ndims, **kwargs):
@@ -573,7 +579,10 @@ class WhiteNoise(Stationary):
     ):
         self._noise = noise
         super(WhiteNoise, self).__init__(
-            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
+            feature_ndims=feature_ndims,
+            active_dims=active_dims,
+            scale_diag=scale_diag,
+            **kwargs,
         )
 
     def _init_kernel(self, feature_ndims, **kwargs):

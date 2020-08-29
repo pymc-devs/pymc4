@@ -112,7 +112,12 @@ class LatentGP(BaseGP):
         return X, f, cov_total, mean_total
 
     def _build_conditional(
-        self, Xnew: ArrayLike, X: ArrayLike, f: FreeRV, cov_total: Covariance, mean_total: Mean,
+        self,
+        Xnew: ArrayLike,
+        X: ArrayLike,
+        f: FreeRV,
+        cov_total: Covariance,
+        mean_total: Mean,
     ) -> tuple:
         # raise an error if the prior ``f`` is not a tensor or numpy array
         if not tf.is_tensor(f):

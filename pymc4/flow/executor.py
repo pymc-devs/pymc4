@@ -409,7 +409,11 @@ class SamplingExecutor:
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if (
+            scoped_name in state.discrete_distributions
+            or scoped_name in state.continuous_distributions
+            or scoped_name in state.deterministics_values
+        ):
             raise EvaluationError(EvaluationError.DUPLICATE_VARIABLE.format(scoped_name))
 
         if scoped_name in state.observed_values or dist.is_observed:
@@ -480,6 +484,7 @@ class SamplingExecutor:
             or scoped_name in state.deterministics_values
         ):
             raise EvaluationError(EvaluationError.DUPLICATE_VARIABLE.format(scoped_name))
+        state.deterministics_values[scoped_name] = return_value = deterministic.get_value()
         state.deterministics[scoped_name] = return_value = deterministic.get_value()
         return return_value, state
 

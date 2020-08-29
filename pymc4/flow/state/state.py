@@ -38,6 +38,7 @@ class SamplingState:
         "likelihood_distributions",
         "potentials",
         "deterministics",
+        "deterministics_values",
     )
 
     def __init__(
@@ -48,10 +49,11 @@ class SamplingState:
         discrete_distributions: Dict[str, distribution.Distribution] = None,
         continuous_distributions: Dict[str, distribution.Distribution] = None,
         potentials: List[distribution.Potential] = None,
-        deterministics: Dict[str, Any] = None,
+        deterministics: Dict[str, distribution.Deterministic] = None,
         posterior_predictives: Optional[Set[str]] = None,
         transformed_values_batched: Dict[str, Any] = None,
         untransformed_values_batched: Dict[str, Any] = None,
+        deterministics_values: Dict[str, Any] = None,
     ) -> None:
         # TODO: verbose __init__
         if transformed_values is None:
@@ -94,6 +96,10 @@ class SamplingState:
             posterior_predictives = set()
         else:
             posterior_predictives = posterior_predictives.copy()
+        if deterministics_values is None:
+            deterministics_values = dict()
+        else:
+            deterministics_values = deterministics_values.copy()
         self.transformed_values = transformed_values
         self.untransformed_values = untransformed_values
         self.observed_values = observed_values
@@ -118,6 +124,7 @@ class SamplingState:
         self.potentials = potentials
         self.deterministics = deterministics
         self.posterior_predictives = posterior_predictives
+        self.deterministics_values = deterministics_values
 
     def collect_log_prob_elemwise(self):
         return itertools.chain(
@@ -147,6 +154,7 @@ class SamplingState:
         observed_values = list(self.observed_values)
         deterministics = list(self.deterministics)
         posterior_predictives = list(self.posterior_predictives)
+        deterministics_values = list(self.deterministics_values)
         # format like dist:name prior_distribution, likelihood_distribution
         prior_distributions = get_distribution_class_names(self.prior_distributions)
         likelihood_distributions = get_distribution_class_names(self.likelihood_distributions)
@@ -184,6 +192,8 @@ class SamplingState:
             + indent
             + "deterministics: {}\n"
             + indent
+            + "deterministics_values: {}\n"
+            + indent
             + "posterior_predictives: {})"
         ).format(
             self.__class__.__name__,
@@ -196,6 +206,7 @@ class SamplingState:
             likelihood_distributions,
             num_potentials,
             deterministics,
+            deterministics_values,
             posterior_predictives,
         )
 
@@ -232,6 +243,7 @@ class SamplingState:
             potentials=self.potentials,
             deterministics=self.deterministics,
             posterior_predictives=self.posterior_predictives,
+            deterministics_values=self.deterministics_values,
         )
 
     def as_sampling_state(self) -> Tuple["SamplingState", List[str]]:

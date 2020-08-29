@@ -461,7 +461,10 @@ class SamplingExecutor:
                 replicas=replicas,
             )
             state.prior_distributions[scoped_name] = dist
-        state.distributions[scoped_name] = dist
+        if dist._grad_support:
+            state.continuous_distributions[scoped_name] = dist
+        else:
+            state.discrete_distributions[scoped_name] = dist
         return return_value, state
 
     def proceed_deterministic(
@@ -472,7 +475,11 @@ class SamplingExecutor:
         scoped_name = scopes.variable_name(deterministic.name)
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if (
+            scoped_name in state.discrete_distributions
+            or scoped_name in state.continuous_distributions
+            or scoped_name in state.deterministics_values
+        ):
             raise EvaluationError(EvaluationError.DUPLICATE_VARIABLE.format(scoped_name))
         state.deterministics[scoped_name] = return_value = deterministic.get_value()
         return return_value, state

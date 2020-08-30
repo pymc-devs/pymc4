@@ -102,7 +102,7 @@ class TestLatentGP:
 
     def test_sampling(self, tf_seed):
         m = self.model()
-        trace = pm.sample(m, num_samples=10, num_chains=1, burn_in=10)
+        trace = pm.sample(m, num_samples=10, num_chains=2, burn_in=10)
         f_samples = np.asarray(trace.posterior["model/f"])
         fcond_samples = np.asarray(trace.posterior["model/fcond"])
         assert f_samples is not None
@@ -213,7 +213,7 @@ class TestMarginalGP:
 
     def test_sampling(self, tf_seed):
         m = self.model()
-        trace = pm.sample(m, num_samples=10, num_chains=1, burn_in=10)
+        trace = pm.sample(m, num_samples=10, num_chains=2, burn_in=10)
         ppc = pm.sample_posterior_predictive(m, trace, ["model/y_", "model/y_pred"])
         y_samples = np.asarray(ppc.posterior_predictive["model/y_"])
         y_pred_samples = np.asarray(ppc.posterior_predictive["model/y_pred"])

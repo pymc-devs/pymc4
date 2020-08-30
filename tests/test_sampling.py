@@ -8,12 +8,7 @@ import tensorflow as tf
 def test_sample_deterministics(simple_model_with_deterministic, xla_fixture):
     model = simple_model_with_deterministic()
     trace = pm.sample(
-        model=model,
-        num_samples=10,
-        num_chains=4,
-        burn_in=100,
-        step_size=0.1,
-        xla=xla_fixture,
+        model=model, num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture,
     )
     norm = "simple_model_with_deterministic/simple_model/norm"
     determ = "simple_model_with_deterministic/determ"
@@ -72,18 +67,11 @@ def test_sampling_with_deterministics_in_nested_models(
         deterministic_mapping,
     ) = deterministics_in_nested_models
     trace = pm.sample(
-        model=model(),
-        num_samples=10,
-        num_chains=4,
-        burn_in=100,
-        step_size=0.1,
-        xla=xla_fixture,
+        model=model(), num_samples=10, num_chains=4, burn_in=100, step_size=0.1, xla=xla_fixture,
     )
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
-            trace.posterior[deterministic],
-            op(*[trace.posterior[i] for i in inputs]),
-            rtol=1e-6,
+            trace.posterior[deterministic], op(*[trace.posterior[i] for i in inputs]), rtol=1e-6,
         )
 
 

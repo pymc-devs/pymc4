@@ -196,8 +196,7 @@ def sample_prior_predictive(
         raise ValueError(
             "Some of the supplied var_names are not defined in the supplied "
             "model {}.\nList of unknown var_names: {}".format(
-                model,
-                list(set(var_names) - set(distributions_names + deterministic_names)),
+                model, list(set(var_names) - set(distributions_names + deterministic_names)),
             )
         )
 

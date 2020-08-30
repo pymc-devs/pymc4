@@ -173,8 +173,7 @@ class SamplingState:
             (
                 dist.log_prob(self.all_values[name])
                 for name, dist in itertools.chain(
-                    self.discrete_distributions.items(),
-                    self.continuous_distributions.items(),
+                    self.discrete_distributions.items(), self.continuous_distributions.items(),
                 )
             ),
             (p.value for p in self.potentials),
@@ -520,10 +519,7 @@ class SamplingExecutor:
                             raise StopExecution(StopExecution.NOT_HELD_ERROR_MESSAGE) from error
                     elif isinstance(dist, MODEL_TYPES):
                         return_value, state = self.evaluate_model(
-                            dist,
-                            state=state,
-                            _validate_state=False,
-                            sample_shape=sample_shape,
+                            dist, state=state, _validate_state=False, sample_shape=sample_shape,
                         )
                     else:
                         err = EvaluationError(
@@ -677,10 +673,7 @@ class SamplingExecutor:
         return return_value, state
 
     def prepare_model_control_flow(
-        self,
-        model: coroutine_model.Model,
-        model_info: Dict[str, Any],
-        state: SamplingState,
+        self, model: coroutine_model.Model, model_info: Dict[str, Any], state: SamplingState,
     ):
         control_flow: types.GeneratorType = model.control_flow()
         model_name = model_info["name"]
@@ -697,10 +690,7 @@ class SamplingExecutor:
         return control_flow
 
     def finalize_control_flow(
-        self,
-        stop_iteration: StopIteration,
-        model_info: Dict[str, Any],
-        state: SamplingState,
+        self, stop_iteration: StopIteration, model_info: Dict[str, Any], state: SamplingState,
     ):
         if stop_iteration.args:
             return_value = stop_iteration.args[0]
@@ -760,10 +750,7 @@ def assert_values_compatible_with_distribution(
 
 
 def assert_values_compatible_with_distribution_shape(
-    scoped_name: str,
-    values: Any,
-    batch_shape: tf.TensorShape,
-    event_shape: tf.TensorShape,
+    scoped_name: str, values: Any, batch_shape: tf.TensorShape, event_shape: tf.TensorShape,
 ) -> None:
     """Assert if a supplied values are compatible with a distribution's TensorShape.
     A distribution's ``TensorShape``, ``dist_shape``, is made up by the sum of

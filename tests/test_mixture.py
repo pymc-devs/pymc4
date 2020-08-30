@@ -89,10 +89,7 @@ def test_wrong_distribution_argument_in_list_fails():
         pm.Mixture(
             "mix",
             p=[0.5, 0.5],
-            distributions=[
-                pm.Normal("comp1", loc=0.0, scale=1.0),
-                "not a distribution",
-            ],
+            distributions=[pm.Normal("comp1", loc=0.0, scale=1.0), "not a distribution",],
         )
 
 

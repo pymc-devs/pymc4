@@ -26,12 +26,7 @@ def _target_log_prob_fn_part_gibbs(*state_part, idx, len_, state, target_log_pro
 
 
 def kernel_create_object(
-    sampleri,
-    curr_indx,
-    setli,
-    current_state,
-    target_log_prob_fn,
-    target_log_prob_fn_part,
+    sampleri, curr_indx, setli, current_state, target_log_prob_fn, target_log_prob_fn_part,
 ):
     mkf = sampleri[0]
     kernel = mkf.kernel(
@@ -51,11 +46,7 @@ def kernel_create_object(
 
 class _CompoundGibbsStepTF(kernel_base.TransitionKernel):
     def __init__(
-        self,
-        target_log_prob_fn,
-        compound_samplers,
-        compound_set_lengths,
-        name=None,
+        self, target_log_prob_fn, compound_samplers, compound_set_lengths, name=None,
     ):
         """
         Initializes the compound step transition kernel
@@ -139,9 +130,7 @@ class _CompoundGibbsStepTF(kernel_base.TransitionKernel):
 
             init_results = []
             for sampleri, setli, curri in zip(
-                self._compound_samplers,
-                self._compound_set_lengths,
-                self._cumulative_lengths,
+                self._compound_samplers, self._compound_set_lengths, self._cumulative_lengths,
             ):
                 kernel = self.kernel_create_object(
                     sampleri, curri, setli, init_state, self._target_log_prob_fn
@@ -158,8 +147,7 @@ class _CompoundStepTF(_CompoundGibbsStepTF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.kernel_create_object = functools.partial(
-            kernel_create_object,
-            target_log_prob_fn_part=_target_log_prob_fn_part_compound,
+            kernel_create_object, target_log_prob_fn_part=_target_log_prob_fn_part_compound,
         )
 
 

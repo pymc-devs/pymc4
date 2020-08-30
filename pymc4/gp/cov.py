@@ -434,10 +434,7 @@ class ExpQuad(Stationary):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super(ExpQuad, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -511,10 +508,7 @@ class Constant(Stationary):
     ):
         self._coef = coef
         super(Constant, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims, **kwargs):
@@ -583,10 +577,7 @@ class WhiteNoise(Stationary):
     ):
         self._noise = noise
         super(WhiteNoise, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims, **kwargs):
@@ -653,10 +644,7 @@ class RatQuad(Stationary):
         self._length_scale = length_scale
         self._scale_mixture_rate = scale_mixture_rate
         super(RatQuad, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -736,10 +724,7 @@ class Matern12(Stationary):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super(Matern12, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -807,10 +792,7 @@ class Matern32(Stationary):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super(Matern32, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -879,10 +861,7 @@ class Matern52(Stationary):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super(Matern52, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -960,10 +939,7 @@ class Linear(Covariance):
         self._slope_variance = slope_variance
         self._shift = shift
         super(Linear, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -1050,10 +1026,7 @@ class Polynomial(Covariance):
         self._shift = shift
         self._exponent = exponent
         super(Polynomial, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -1148,10 +1121,7 @@ class Periodic(Covariance):
         self._length_scale = length_scale
         self._period = period
         super(Periodic, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -1213,10 +1183,7 @@ class Exponential(Stationary):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super(Exponential, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -1291,10 +1258,7 @@ class Gibbs(Covariance):
             fn_args = tuple()
         self._fn_args = fn_args
         super(Gibbs, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs):
@@ -1353,10 +1317,7 @@ class Cosine(Covariance):
         self._amplitude = amplitude
         self._length_scale = length_scale
         super(Cosine, self).__init__(
-            feature_ndims=feature_ndims,
-            active_dims=active_dims,
-            scale_diag=scale_diag,
-            **kwargs,
+            feature_ndims=feature_ndims, active_dims=active_dims, scale_diag=scale_diag, **kwargs,
         )
 
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -1409,11 +1370,7 @@ class ScaledCov(Covariance):
     """
 
     def __init__(
-        self,
-        kernel: Covariance,
-        scaling_fn: Callable,
-        fn_args: Optional[tuple] = None,
-        **kwargs,
+        self, kernel: Covariance, scaling_fn: Callable, fn_args: Optional[tuple] = None, **kwargs,
     ):
         self._kernel = kernel
         self._scaling_fn = scaling_fn
@@ -1472,11 +1429,7 @@ class WarpedInput(Covariance):
     """
 
     def __init__(
-        self,
-        kernel: Covariance,
-        warp_fn: Callable,
-        fn_args: Optional[tuple] = None,
-        **kwargs,
+        self, kernel: Covariance, warp_fn: Callable, fn_args: Optional[tuple] = None, **kwargs,
     ):
         self._kernel = kernel
         self._warp_fn = warp_fn

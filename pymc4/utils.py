@@ -109,10 +109,7 @@ class NameParts:
         return match is not None
 
     def __init__(
-        self,
-        path: Sequence[str],
-        transform_name: Optional[str],
-        untransformed_name: str,
+        self, path: Sequence[str], transform_name: Optional[str], untransformed_name: str,
     ):
         """Initialize a ``NameParts`` instance from its parts.
 

@@ -43,9 +43,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
     _grad = False
 
     def __init__(
-        self,
-        model: Model,
-        **kwargs,
+        self, model: Model, **kwargs,
     ):
         if not isinstance(model, Model):
             raise TypeError(
@@ -128,8 +126,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
 
         if xla:
             results, sample_stats = tf.xla.experimental.compile(
-                self._run_chains,
-                inputs=[init_state, burn_in],
+                self._run_chains, inputs=[init_state, burn_in],
             )
         else:
             results, sample_stats = self._run_chains(init_state, burn_in)
@@ -713,9 +710,7 @@ class CompoundStep(_BaseSampler):
             kernel, kwargs = kernel_kwargsi
             vars_ = var_keys[curr_indx : curr_indx + set_leni]
             log_output += ("\n" if i > 0 else "") + " -- {}[vars={}, proposal_function={}]".format(
-                kernel._name,
-                [item.split("/")[1] for item in vars_],
-                (func_names[curr_indx]),
+                kernel._name, [item.split("/")[1] for item in vars_], (func_names[curr_indx]),
             )
             curr_indx += set_leni
         _log.info(log_output)

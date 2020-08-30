@@ -12,9 +12,7 @@ if not MYPY:
 
 
 def check_proposal_functions(
-    model: Model,
-    state: Optional[flow.SamplingState] = None,
-    observed: Optional[dict] = None,
+    model: Model, state: Optional[flow.SamplingState] = None, observed: Optional[dict] = None,
 ) -> bool:
     """
     Check for the non-default proposal generation functions
@@ -181,8 +179,7 @@ def sample(
 
 
 def auto_assign_sampler(
-    model: Model,
-    sampler_type: Optional[str] = None,
+    model: Model, sampler_type: Optional[str] = None,
 ):
     """
     The toy implementation of sampler assigner

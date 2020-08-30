@@ -32,8 +32,7 @@ class _Constant(PositiveSemidefiniteKernel):
 
     def _apply(self, x1, x2, example_ndims=0):
         shape = tf.broadcast_dynamic_shape(
-            x1.shape[: -(self.feature_ndims)],
-            x2.shape[: -(self.feature_ndims)],
+            x1.shape[: -(self.feature_ndims)], x2.shape[: -(self.feature_ndims)],
         )
         expected = tf.ones(shape, dtype=self._dtype)
         if self.coef is not None:
@@ -86,8 +85,7 @@ class _WhiteNoise(PositiveSemidefiniteKernel):
 
     def _matrix(self, x1, x2):
         shape = tf.broadcast_dynamic_shape(
-            x1.shape[: -(1 + self.feature_ndims)],
-            x2.shape[: -(1 + self.feature_ndims)],
+            x1.shape[: -(1 + self.feature_ndims)], x2.shape[: -(1 + self.feature_ndims)],
         )
         expected = tf.linalg.eye(
             x1.shape[-(1 + self.feature_ndims)],

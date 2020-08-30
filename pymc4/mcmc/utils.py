@@ -12,9 +12,7 @@ from pymc4.distributions import distribution
 
 
 def initialize_sampling_state(
-    model: Model,
-    observed: Optional[dict] = None,
-    state: Optional[flow.SamplingState] = None,
+    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
 ) -> Tuple[flow.SamplingState, List[str]]:
     """
     Initialize the model provided state and/or observed variables.
@@ -37,9 +35,7 @@ def initialize_sampling_state(
 
 
 def initialize_state(
-    model: Model,
-    observed: Optional[dict] = None,
-    state: Optional[flow.SamplingState] = None,
+    model: Model, observed: Optional[dict] = None, state: Optional[flow.SamplingState] = None,
 ) -> Tuple[
     flow.SamplingState,
     flow.SamplingState,

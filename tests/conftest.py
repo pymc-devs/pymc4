@@ -9,10 +9,7 @@ import itertools
 BATCH_AND_FEATURE_SHAPES = [
     (1,),
     (2,),
-    (
-        2,
-        2,
-    ),
+    (2, 2,),
 ]
 SAMPLE_SHAPE = [(1,), (3,)]
 
@@ -110,10 +107,7 @@ def deterministics_in_nested_models():
     deterministic_mapping = {
         "outer_model/dcond": (["outer_model/__log_cond"], lambda x: np.exp(x) * 2),
         "outer_model/ddx": (["outer_model/nested_model/dx"], lambda x: x),
-        "outer_model/nested_model/dx": (
-            ["outer_model/nested_model/x"],
-            lambda x: x + 1,
-        ),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1,),
     }
 
     return (
@@ -147,11 +141,7 @@ def vectorized_model_fixture(request):
         @pm.model
         def model():
             mu = yield pm.Normal(
-                "mu",
-                tf.zeros(4),
-                1,
-                conditionally_independent=True,
-                reinterpreted_batch_ndims=1,
+                "mu", tf.zeros(4), 1, conditionally_independent=True, reinterpreted_batch_ndims=1,
             )
             scale = yield pm.HalfNormal("scale", 1, conditionally_independent=True)
             x = yield pm.Normal(

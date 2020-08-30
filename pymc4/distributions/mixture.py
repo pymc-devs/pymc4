@@ -94,10 +94,7 @@ class Mixture(Distribution):
                 )
             distr = [el._distribution for el in d]
             return tfd.Mixture(
-                tfd.Categorical(probs=p, **kwargs),
-                distr,
-                **kwargs,
-                use_static_graph=True,
+                tfd.Categorical(probs=p, **kwargs), distr, **kwargs, use_static_graph=True,
             )
         # else if 'd' is a pymc distribution with batch_size > 1
         elif isinstance(d, Distribution):

@@ -175,14 +175,8 @@ def deterministics_in_nested_models():
     deterministic_mapping = {
         "outer_model/dcond": (["outer_model/cond"], lambda x: x * 2),
         "outer_model/ddx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model/dx": (
-            ["outer_model/nested_model/x"],
-            lambda x: x + 1,
-        ),
-        "outer_model/nested_model/dx": (
-            ["outer_model/nested_model/x"],
-            lambda x: x + 1,
-        ),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1,),
+        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1,),
         "outer_model/nested_model": (["outer_model/nested_model/x"], lambda x: x + 1),
         "outer_model": (["outer_model/nested_model/x"], lambda x: x + 1),
     }
@@ -323,9 +317,7 @@ def test_observed_are_passed_correctly(complex_model_with_observed):
     assert np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
 
 
-def test_observed_are_set_to_none_for_posterior_predictive_correctly(
-    complex_model_with_observed,
-):
+def test_observed_are_set_to_none_for_posterior_predictive_correctly(complex_model_with_observed,):
     _, state = pm.evaluate_model(
         complex_model_with_observed(), observed={"complex_model/a/n": None}
     )
@@ -344,18 +336,14 @@ def test_observed_do_not_produce_transformed_values(transformed_model_with_obser
     assert not state.untransformed_values
 
 
-def test_observed_do_not_produce_transformed_values_case_programmatic(
-    transformed_model,
-):
+def test_observed_do_not_produce_transformed_values_case_programmatic(transformed_model,):
     _, state = pm.evaluate_model_transformed(transformed_model(), observed=dict(n=1.0))
     assert set(state.observed_values) == {"n"}
     assert not state.transformed_values
     assert not state.untransformed_values
 
 
-def test_observed_do_not_produce_transformed_values_case_override(
-    transformed_model_with_observed,
-):
+def test_observed_do_not_produce_transformed_values_case_override(transformed_model_with_observed,):
     _, state = pm.evaluate_model_transformed(
         transformed_model_with_observed(), observed=dict(n=None)
     )
@@ -376,9 +364,7 @@ def test_observed_do_not_produce_transformed_values_case_override_with_set_value
     np.testing.assert_allclose(state.all_values["__log_n"], 0.0)
 
     _, state = pm.evaluate_model_transformed(
-        transformed_model_with_observed(),
-        values=dict(__log_n=0.0),
-        observed=dict(n=None),
+        transformed_model_with_observed(), values=dict(__log_n=0.0), observed=dict(n=None),
     )
     assert not state.observed_values
     assert set(state.transformed_values) == {"__log_n"}
@@ -406,9 +392,7 @@ def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_untransfo
     assert e.match("'n' from untransformed values")
 
 
-def test_observed_cant_mix_with_transformed_and_raises_an_error(
-    transformed_model_with_observed,
-):
+def test_observed_cant_mix_with_transformed_and_raises_an_error(transformed_model_with_observed,):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         _, state = pm.evaluate_model_transformed(
             transformed_model_with_observed(), values=dict(__log_n=0.0)
@@ -624,12 +608,7 @@ def test_log_prob_elemwise(fixture_model_with_stacks):
 
 
 def test_deterministics(model_with_deterministics):
-    (
-        model,
-        expected_deterministics,
-        expected_ops,
-        expected_ops_inputs,
-    ) = model_with_deterministics
+    (model, expected_deterministics, expected_ops, expected_ops_inputs,) = model_with_deterministics
     _, state = pm.evaluate_model(model())
 
     assert len(state.deterministics_values) == len(expected_deterministics)

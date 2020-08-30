@@ -47,7 +47,6 @@ class ArrayOrdering:
         for param in self.free_rvs.keys():
             _, slc, shp, dtype = self.by_name[param]
             q_samples[param] = tf.cast(
-                tf.reshape(samples[..., slc], tf.TensorShape([n] + shp.as_list())),
-                dtype,
+                tf.reshape(samples[..., slc], tf.TensorShape([n] + shp.as_list())), dtype,
             )
         return q_samples

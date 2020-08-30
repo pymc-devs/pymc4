@@ -106,10 +106,10 @@ class TestLatentGP:
         f_samples = np.asarray(trace.posterior["model/f"])
         fcond_samples = np.asarray(trace.posterior["model/fcond"])
         assert f_samples is not None
-        assert f_samples.shape == (1, 10, 10)
+        assert f_samples.shape == (2, 10, 10)
         assert not np.isnan(f_samples).any()
         assert fcond_samples is not None
-        assert fcond_samples.shape == (1, 10, 20)
+        assert fcond_samples.shape == (2, 10, 20)
         assert not np.isnan(fcond_samples).any()
 
 
@@ -218,10 +218,10 @@ class TestMarginalGP:
         y_samples = np.asarray(ppc.posterior_predictive["model/y_"])
         y_pred_samples = np.asarray(ppc.posterior_predictive["model/y_pred"])
         assert y_samples is not None
-        assert y_samples.shape == (1, 10, 10)
+        assert y_samples.shape == (2, 10, 10)
         assert not np.isnan(y_samples).any()
         assert y_pred_samples is not None
-        assert y_pred_samples.shape == (1, 10, 20)
+        assert y_pred_samples.shape == (2, 10, 20)
         assert not np.isnan(y_pred_samples).any()
 
     def test_predict(self, tf_seed):

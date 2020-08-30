@@ -1,7 +1,5 @@
 """Execute graph with test values to extract a model's meta-information.
-
 Specifically, we wish to extract:
-
 - All variable's core shapes
 - All observed, deterministic, and unobserved variables (both transformed and
 untransformed.
@@ -38,7 +36,11 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
         if scoped_name is None:
             raise EvaluationError("Attempting to create an anonymous Distribution")
 
-        if scoped_name in state.distributions or scoped_name in state.deterministics:
+        if (
+            scoped_name in state.discrete_distributions
+            or scoped_name in state.continuous_distributions
+            or scoped_name in state.deterministics_values
+        ):
             raise EvaluationError(
                 "Attempting to create a duplicate variable {!r}, "
                 "this may happen if you forget to use `pm.name_scope()` when calling same "
@@ -88,7 +90,10 @@ class MetaSamplingExecutor(TransformedSamplingExecutor):
                 )
             else:
                 return_value = state.untransformed_values[scoped_name] = dist.get_test_sample()
-        state.distributions[scoped_name] = dist
+        if dist._grad_support:
+            state.continuous_distributions[scoped_name] = dist
+        else:
+            state.discrete_distributions[scoped_name] = dist
         return return_value, state
 
 
@@ -96,7 +101,6 @@ class MetaPosteriorPredictiveSamplingExecutor(
     MetaSamplingExecutor, PosteriorPredictiveSamplingExecutor
 ):
     """Do a forward pass through the model only using distribution test values.
-    
     Also modify the distributions to make them suitable for posterior predictive sampling.
     """
 

@@ -7,57 +7,6 @@ import pkgutil
 import os
 
 
-def map_nested(fn, structure, cond=lambda obj: True):  # noqa
-    r"""Structure preserving nested map.
-
-    Apply fn to an object in a possibly nested data structure and returns
-    same structure with every element changed if condition satisfied.
-    """
-
-    def inner_map(obj):
-        if isinstance(obj, (tuple, list)) and len(obj) > 0:
-            return type(obj)(map(inner_map, obj))
-        if isinstance(obj, dict) and len(obj) > 0:
-            return dict(map(inner_map, obj.items()))
-        if cond(obj):
-            return fn(obj)
-        return obj
-
-    # After map_nested is called, an inner_map cell will exist. This cell
-    # has a reference to the actual function inner_map, which has references
-    # to a closure that has a reference to the inner_map cell (because
-    # inner_map is a recursive function). To avoid this reference cycle, we set the function to
-    # None, clearing the cell.
-    try:
-        return inner_map(structure)
-    finally:
-        inner_map = None
-
-
-def merge_dicts(*dicts: dict, **kwargs: dict):
-    """Merge dicts and assert their keys do not overlap.
-
-    Parameters
-    ----------
-    dicts : dict
-        Arbitrary number of dicts
-    kwargs : dict
-        Dict with keyword args for
-
-    Returns
-    -------
-    dict
-        Merged dict
-    """
-    for mappable in dicts:
-        if set(mappable) & set(kwargs):
-            raise ValueError(
-                "Found duplicate keys in merge: {}".format(set(mappable) & set(kwargs))
-            )
-        kwargs.update(mappable)
-    return kwargs
-
-
 def biwrap(wrapper) -> Callable:  # noqa
     """Allow for optional keyword arguments in lower level decoratrors.
 
@@ -159,7 +108,12 @@ class NameParts:
         match = cls.NAME_RE.match(name)
         return match is not None
 
-    def __init__(self, path: Sequence[str], transform_name: Optional[str], untransformed_name: str):
+    def __init__(
+        self,
+        path: Sequence[str],
+        transform_name: Optional[str],
+        untransformed_name: str,
+    ):
         """Initialize a ``NameParts`` instance from its parts.
 
         Parameters
@@ -209,7 +163,7 @@ class NameParts:
     @property
     def original_name(self) -> str:
         """Return the name of the distribution without its preceeding path.
-        
+
         Returns
         -------
         str
@@ -224,7 +178,7 @@ class NameParts:
     @property
     def full_original_name(self) -> str:
         """Return the full name of the distribution with all three parts.
-        
+
         Returns
         -------
         str
@@ -236,7 +190,7 @@ class NameParts:
     @property
     def full_untransformed_name(self) -> str:
         """Return the name of the distribution without its transform part.
-        
+
         Returns
         -------
         str

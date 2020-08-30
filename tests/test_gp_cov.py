@@ -339,7 +339,8 @@ def test_cov_funcs_invalid_feature_ndims():
 def test_cov_funcs_invalid_active_dims():
     feature_ndims = 3
     with pytest.raises(
-        ValueError, match=r"active_dims' contain more entries than number of feature dimensions"
+        ValueError,
+        match=r"active_dims' contain more entries than number of feature dimensions",
     ):
         active_dims = [1, 2, 3, 4, 5]
         kernel = pm.gp.cov.ExpQuad(np.float64(1.0), np.float64(1.0), feature_ndims, active_dims)

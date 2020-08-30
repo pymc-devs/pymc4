@@ -64,7 +64,7 @@ def adagrad(learning_rate: float = 1.0, epsilon: float = 1e-6, **kwargs) -> tf.o
         Learning rate
     epsilon : float or symbolic scalar
         Small value added for numerical stability
-    
+
     Returns
     -------
     tf.optimizers.Adagrad
@@ -112,7 +112,7 @@ def adam(
         Exponential decay rate for the second moment estimates
     epsilon : float
         Constant for numerical stability
-    
+
     Returns
     -------
     tf.optimizers.Adam
@@ -130,7 +130,11 @@ def adam(
            arXiv preprint arXiv:1412.6980.
     """
     return tf.optimizers.Adam(
-        learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, epsilon=epsilon, **kwargs
+        learning_rate=learning_rate,
+        beta_1=beta_1,
+        beta_2=beta_2,
+        epsilon=epsilon,
+        **kwargs,
     )
 
 
@@ -153,7 +157,7 @@ def adamax(
         Exponential decay rate for the second moment estimates
     epsilon : float
         Constant for numerical stability
-    
+
     Returns
     -------
     tf.optimizers.Adamax
@@ -165,7 +169,11 @@ def adamax(
            arXiv preprint arXiv:1412.6980.
     """
     return tf.optimizers.Adamax(
-        learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, epsilon=epsilon, **kwargs
+        learning_rate=learning_rate,
+        beta_1=beta_1,
+        beta_2=beta_2,
+        epsilon=epsilon,
+        **kwargs,
     )
 
 

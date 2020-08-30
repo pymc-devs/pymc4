@@ -8,7 +8,6 @@ import tensorflow as tf
 
 import pymc4 as pm
 
-
 _expected_log_prob = defaultdict(lambda: defaultdict(lambda: None))
 _check_broadcast = {
     "Flat": {
@@ -74,7 +73,10 @@ _distribution_conditions = {
         },
     },
     "Categorical": {
-        "scalar_parameters": {"probs": np.array([0.1, 0.5, 0.4], dtype="float32"), "sample": 2},
+        "scalar_parameters": {
+            "probs": np.array([0.1, 0.5, 0.4], dtype="float32"),
+            "sample": 2,
+        },
         "multidim_parameters": {
             "probs": np.array([[0.1, 0.5, 0.4], [0.1, 0.5, 0.4]], dtype="float32"),
             "sample": np.array([2, 2], dtype="int32"),
@@ -103,7 +105,8 @@ _distribution_conditions = {
     },
     "DiscreteUniform": {
         "scalar_parameters": {"low": 2.0, "high": 10.0, "sample": 5.0},
-        "multidim_parameters": None,  # DiscreteUniform is derived from FiniteDiscrete, which can only have 1-D outcome tensors
+        "multidim_parameters": None,
+        # DiscreteUniform is derived from FiniteDiscrete, which can only have 1-D outcome tensors
     },
     "Exponential": {
         "scalar_parameters": {"rate": 1.0},
@@ -254,7 +257,8 @@ _distribution_conditions = {
         "multidim_parameters": {
             "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
             "covariance_matrix": np.array(
-                [[[0.36, 0.12], [0.12, 0.36]], [[0.36, 0.12], [0.12, 0.36]]], dtype="float32",
+                [[[0.36, 0.12], [0.12, 0.36]], [[0.36, 0.12], [0.12, 0.36]]],
+                dtype="float32",
             ),
             "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
         },
@@ -268,7 +272,8 @@ _distribution_conditions = {
         "multidim_parameters": {
             "loc": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
             "scale_tril": np.array(
-                [[[1.0, 0.0], [0.5, 0.866025]], [[1.0, 0.0], [0.5, 0.866025]]], dtype="float32",
+                [[[1.0, 0.0], [0.5, 0.866025]], [[1.0, 0.0], [0.5, 0.866025]]],
+                dtype="float32",
             ),
             "sample": np.array([[1.0, 2.0], [2.0, 3.0]], dtype="float32"),
         },
@@ -373,19 +378,32 @@ _distribution_conditions = {
             "sample": np.array([[[1.0]], [[1.0]]], dtype="float32"),
         },
     },
-    # "ZeroInflatedBinomial": {
-    #     "scalar_parameters": {"psi": 0.2, "total_count": 10, "p": 0.5, "sample": 0.0},
-    #     "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"), "total_count": np.array([10, 10], dtype="float32"), "p": np.array([0.5, 0.25], dtype="float32"), "sample": np.array([0.0, 0.0], dtype="float32")},
-    # },
-    #
-    # "ZeroInflatedNegativeBinomial": {
-    #     "scalar_parameters": {"psi": 0.2, "mu": 10, "alpha": 3, "sample": 0},
-    #     "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"), "mu": np.array([10, 10], dtype="float32"), "alpha": np.array([3, 3], dtype="float32"), "sample": np.array([0, 0], dtype="float32")},
-    # },
-    # "ZeroInflatedPoisson": {
-    #     "scalar_parameters": {"psi": 0.2, "theta": 2, "sample": 0},
-    #     "multidim_parameters": {"psi": np.array([0.2, 0.2], dtype="float32"), "theta": np.array([2, 2], dtype="float32"), "sample": np.array([0, 0], dtype="float32")},
-    # },
+    "ZeroInflatedBinomial": {
+        "scalar_parameters": {"psi": 0.2, "n": 10.0, "p": 0.5, "sample": 0.0},
+        "multidim_parameters": {
+            "psi": np.array([0.2, 0.2], dtype="float32"),
+            "n": np.array([10.0, 10.0], dtype="float32"),
+            "p": np.array([0.5, 0.25], dtype="float32"),
+            "sample": np.array([0.0, 0.0], dtype="float32"),
+        },
+    },
+    "ZeroInflatedNegativeBinomial": {
+        "scalar_parameters": {"psi": 0.2, "mu": 10.0, "alpha": 3.0, "sample": 0.0},
+        "multidim_parameters": {
+            "psi": np.array([0.2, 0.2], dtype="float32"),
+            "mu": np.array([10.0, 10.0], dtype="float32"),
+            "alpha": np.array([3.0, 3.0], dtype="float32"),
+            "sample": np.array([0.0, 0.0], dtype="float32"),
+        },
+    },
+    "ZeroInflatedPoisson": {
+        "scalar_parameters": {"psi": 0.2, "theta": 2.0, "sample": 0},
+        "multidim_parameters": {
+            "psi": np.array([0.2, 0.2], dtype="float32"),
+            "theta": np.array([2.0, 2.0], dtype="float32"),
+            "sample": np.array([0.0, 0.0], dtype="float32"),
+        },
+    },
     "Zipf": {
         "scalar_parameters": {"power": 2.0},
         "multidim_parameters": {"power": np.array([3, 2.0], dtype="float32")},
@@ -406,8 +424,10 @@ _distribution_conditions = {
     },
 }
 
-
 unsupported_dtype_distributions = [
+    "ZeroInflatedPoisson",
+    "ZeroInflatedNegativeBinomial",
+    "ZeroInflatedBinomial",
     "Poisson",
     "NegativeBinomial",
     "Multinomial",
@@ -446,7 +466,9 @@ def distribution(request):
 
 
 @pytest.fixture(
-    scope="function", params=["scalar_parameters", "multidim_parameters"], ids=str,
+    scope="function",
+    params=["scalar_parameters", "multidim_parameters"],
+    ids=str,
 )
 def distribution_conditions(distribution, request):
     conditions = _distribution_conditions[distribution][request.param]
@@ -528,7 +550,12 @@ def test_flat_halfflat_broadcast(tf_seed, check_broadcast):
 
 
 def test_extra_parameters(tf_seed, distribution_extra_parameters):
-    distribution_name, arg_name, conditions, extra_parameters = distribution_extra_parameters
+    (
+        distribution_name,
+        arg_name,
+        conditions,
+        extra_parameters,
+    ) = distribution_extra_parameters
     if extra_parameters is None:
         pytest.skip(
             f"Distribution '{distribution_name}' does not support configurable '{arg_name}'"

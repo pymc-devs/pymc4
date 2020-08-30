@@ -15,16 +15,12 @@ from pymc4.distributions.distribution import Distribution
 class Mixture(Distribution):
     r"""
     Mixture random variable.
-
     Often used to model subpopulation heterogeneity
-
     .. math:: f(x \mid w, \theta) = \sum_{i = 1}^n w_i f_i(x \mid \theta_i)
-
     ========  ============================================
     Support   :math:`\cap_{i = 1}^n \textrm{support}(f_i)`
     Mean      :math:`\sum_{i = 1}^n w_i \mu_i`
     ========  ============================================
-
     Parameters
     ----------
     p : tf.Tensor
@@ -98,7 +94,10 @@ class Mixture(Distribution):
                 )
             distr = [el._distribution for el in d]
             return tfd.Mixture(
-                tfd.Categorical(probs=p, **kwargs), distr, **kwargs, use_static_graph=True
+                tfd.Categorical(probs=p, **kwargs),
+                distr,
+                **kwargs,
+                use_static_graph=True,
             )
         # else if 'd' is a pymc distribution with batch_size > 1
         elif isinstance(d, Distribution):

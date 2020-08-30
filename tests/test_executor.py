@@ -175,8 +175,14 @@ def deterministics_in_nested_models():
     deterministic_mapping = {
         "outer_model/dcond": (["outer_model/cond"], lambda x: x * 2),
         "outer_model/ddx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
-        "outer_model/nested_model/dx": (["outer_model/nested_model/x"], lambda x: x + 1),
+        "outer_model/nested_model/dx": (
+            ["outer_model/nested_model/x"],
+            lambda x: x + 1,
+        ),
+        "outer_model/nested_model/dx": (
+            ["outer_model/nested_model/x"],
+            lambda x: x + 1,
+        ),
         "outer_model/nested_model": (["outer_model/nested_model/x"], lambda x: x + 1),
         "outer_model": (["outer_model/nested_model/x"], lambda x: x + 1),
     }
@@ -220,7 +226,7 @@ def test_complex_model_keep_return():
     _, state = pm.evaluate_model(complex_model())
 
     assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
-    assert set(state.deterministics) == {"complex_model", "complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model", "complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
 
@@ -229,7 +235,7 @@ def test_complex_model_no_keep_return(complex_model):
     _, state = pm.evaluate_model(complex_model())
 
     assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
-    assert set(state.deterministics) == {"complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
 
@@ -293,14 +299,14 @@ def test_executor_logp_tensorflow(transformed_model):
 
 
 def test_single_distribution():
-    _, state = pm.evaluate_model(pm.distributions.Normal("n", 0, 1))
+    _, state = pm.evaluate_model(pm.Normal("n", 0, 1))
     assert "n" in state.all_values
 
 
 def test_raise_if_return_distribution():
     def invalid_model():
-        yield pm.distributions.Normal("n1", 0, 1)
-        return pm.distributions.Normal("n2", 0, 1)
+        yield pm.Normal("n1", 0, 1)
+        return pm.Normal("n2", 0, 1)
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(invalid_model())
@@ -311,19 +317,21 @@ def test_observed_are_passed_correctly(complex_model_with_observed):
     _, state = pm.evaluate_model(complex_model_with_observed())
 
     assert set(state.untransformed_values) == {"complex_model/n"}
-    assert set(state.deterministics) == {"complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert set(state.observed_values) == {"complex_model/a/n"}
     assert np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
 
 
-def test_observed_are_set_to_none_for_posterior_predictive_correctly(complex_model_with_observed):
+def test_observed_are_set_to_none_for_posterior_predictive_correctly(
+    complex_model_with_observed,
+):
     _, state = pm.evaluate_model(
         complex_model_with_observed(), observed={"complex_model/a/n": None}
     )
 
     assert set(state.untransformed_values) == {"complex_model/n", "complex_model/a/n"}
-    assert set(state.deterministics) == {"complex_model/a"}
+    assert set(state.deterministics_values) == {"complex_model/a"}
     assert not state.transformed_values  # we call untransformed executor
     assert not state.observed_values
     assert not np.allclose(state.all_values["complex_model/a/n"], np.ones(10))
@@ -336,14 +344,18 @@ def test_observed_do_not_produce_transformed_values(transformed_model_with_obser
     assert not state.untransformed_values
 
 
-def test_observed_do_not_produce_transformed_values_case_programmatic(transformed_model):
+def test_observed_do_not_produce_transformed_values_case_programmatic(
+    transformed_model,
+):
     _, state = pm.evaluate_model_transformed(transformed_model(), observed=dict(n=1.0))
     assert set(state.observed_values) == {"n"}
     assert not state.transformed_values
     assert not state.untransformed_values
 
 
-def test_observed_do_not_produce_transformed_values_case_override(transformed_model_with_observed):
+def test_observed_do_not_produce_transformed_values_case_override(
+    transformed_model_with_observed,
+):
     _, state = pm.evaluate_model_transformed(
         transformed_model_with_observed(), observed=dict(n=None)
     )
@@ -364,7 +376,9 @@ def test_observed_do_not_produce_transformed_values_case_override_with_set_value
     np.testing.assert_allclose(state.all_values["__log_n"], 0.0)
 
     _, state = pm.evaluate_model_transformed(
-        transformed_model_with_observed(), values=dict(__log_n=0.0), observed=dict(n=None)
+        transformed_model_with_observed(),
+        values=dict(__log_n=0.0),
+        observed=dict(n=None),
     )
     assert not state.observed_values
     assert set(state.transformed_values) == {"__log_n"}
@@ -392,7 +406,9 @@ def test_observed_cant_mix_with_untransformed_and_raises_an_error_case_untransfo
     assert e.match("'n' from untransformed values")
 
 
-def test_observed_cant_mix_with_transformed_and_raises_an_error(transformed_model_with_observed):
+def test_observed_cant_mix_with_transformed_and_raises_an_error(
+    transformed_model_with_observed,
+):
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         _, state = pm.evaluate_model_transformed(
             transformed_model_with_observed(), values=dict(__log_n=0.0)
@@ -441,8 +457,10 @@ def test_sampling_state_clone(deterministics_in_nested_models):
     clone = state.clone()
     assert set(state.all_values) == set(clone.all_values)
     assert all((state.all_values[k] == v for k, v in clone.all_values.items()))
-    assert set(state.deterministics) == set(clone.deterministics)
-    assert all((state.deterministics[k] == v for k, v in clone.deterministics.items()))
+    assert set(state.deterministics_values) == set(clone.deterministics_values)
+    assert all(
+        (state.deterministics_values[k] == v for k, v in clone.deterministics_values.items())
+    )
     assert state.posterior_predictives == clone.posterior_predictives
 
 
@@ -453,7 +471,7 @@ def test_as_sampling_state_failure_on_empty():
 
 
 def test_as_sampling_state_failure_on_dangling_distribution():
-    st = pm.flow.executor.SamplingState(distributions={"bla": pm.Normal("bla", 0, 1)})
+    st = pm.flow.executor.SamplingState(continuous_distributions={"bla": pm.Normal("bla", 0, 1)})
     with pytest.raises(TypeError):
         st.as_sampling_state()
 
@@ -487,28 +505,28 @@ def test_proceed_deterministic_failure_on_unnamed_deterministic():
 
 
 def test_unnamed_distribution():
-    f = lambda: (yield pm.distributions.Normal.dist(0, 1))
+    f = lambda: (yield pm.Normal.dist(0, 1))
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(f())
     assert e.match("anonymous Distribution")
 
 
 def test_unnamed_distribution_to_prior():
-    f = lambda: (yield pm.distributions.Normal.dist(0, 1).prior("n"))
+    f = lambda: (yield pm.Normal.dist(0, 1).prior("n"))
     _, state = pm.evaluate_model(f())
     assert "n" in state.untransformed_values
 
 
 def test_initialized_distribution_cant_be_transformed_into_a_new_prior():
     with pytest.raises(TypeError) as e:
-        pm.distributions.Normal("m", 0, 1).prior("n")
+        pm.Normal("m", 0, 1).prior("n")
     assert e.match("already not anonymous")
 
 
 def test_unable_to_create_duplicate_variable():
     def invdalid_model():
-        yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
-        yield pm.distributions.Normal("n", 0, 1)
+        yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+        yield pm.Normal("n", 0, 1)
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(invdalid_model())
@@ -521,12 +539,10 @@ def test_unable_to_create_duplicate_variable():
 def test_unnamed_return():
     @pm.model
     def a_model():
-        return (
-            yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
-        )
+        return (yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log()))
 
     _, state = pm.evaluate_model(a_model())
-    assert "a_model" in state.deterministics
+    assert "a_model" in state.deterministics_values
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model(name=None))
@@ -540,12 +556,10 @@ def test_unnamed_return():
 def test_unnamed_return_2():
     @pm.model(name=None)
     def a_model():
-        return (
-            yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
-        )
+        return (yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log()))
 
     _, state = pm.evaluate_model(a_model(name="b_model"))
-    assert "b_model" in state.deterministics
+    assert "b_model" in state.deterministics_values
 
     with pytest.raises(pm.flow.executor.EvaluationError) as e:
         pm.evaluate_model(a_model())
@@ -563,7 +577,7 @@ def test_uncatched_exception_works():
             yield 1
         except:
             pass
-        yield pm.distributions.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
+        yield pm.HalfNormal("n", 1, transform=pm.distributions.transforms.Log())
 
     with pytest.raises(pm.flow.executor.StopExecution) as e:
         pm.evaluate_model(a_model())
@@ -597,7 +611,10 @@ def test_log_prob_elemwise(fixture_model_with_stacks):
     model, expected_rv_shapes = fixture_model_with_stacks
     _, state = pm.evaluate_model(model())
     log_prob_elemwise = dict(
-        zip(state.distributions, state.collect_log_prob_elemwise())
+        zip(
+            {**state.continuous_distributions, **state.discrete_distributions},
+            state.collect_log_prob_elemwise(),
+        )
     )  # This will discard potentials in log_prob_elemwise
     log_prob = state.collect_log_prob()
     assert len(log_prob_elemwise) == len(expected_rv_shapes)
@@ -607,17 +624,22 @@ def test_log_prob_elemwise(fixture_model_with_stacks):
 
 
 def test_deterministics(model_with_deterministics):
-    model, expected_deterministics, expected_ops, expected_ops_inputs = model_with_deterministics
+    (
+        model,
+        expected_deterministics,
+        expected_ops,
+        expected_ops_inputs,
+    ) = model_with_deterministics
     _, state = pm.evaluate_model(model())
 
-    assert len(state.deterministics) == len(expected_deterministics)
-    assert set(expected_deterministics) <= set(state.deterministics)
+    assert len(state.deterministics_values) == len(expected_deterministics)
+    assert set(expected_deterministics) <= set(state.deterministics_values)
     for expected_deterministic, op, op_inputs in zip(
         expected_deterministics, expected_ops, expected_ops_inputs
     ):
         inputs = [v for k, v in state.all_values.items() if k in op_inputs]
         out = op(*inputs)
-        np.testing.assert_allclose(state.deterministics[expected_deterministic], out)
+        np.testing.assert_allclose(state.deterministics_values[expected_deterministic], out)
 
 
 def test_deterministic_with_distribution_name_fails():
@@ -654,10 +676,10 @@ def test_deterministics_in_nested_model(deterministics_in_nested_models):
     _, state = pm.evaluate_model_transformed(model())
     assert set(state.untransformed_values) == expected_untransformed
     assert set(state.transformed_values) == expected_transformed
-    assert set(state.deterministics) == expected_deterministics
+    assert set(state.deterministics_values) == expected_deterministics
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
-            state.deterministics[deterministic],
+            state.deterministics_values[deterministic],
             op(*[state.untransformed_values[i] for i in inputs]),
         )
 
@@ -720,14 +742,16 @@ def test_meta_executor(deterministics_in_nested_models, fixture_batch_shapes):
     _, state = pm.evaluate_meta_model(model(), sample_shape=fixture_batch_shapes)
     assert set(state.untransformed_values) == set(expected_untransformed)
     assert set(state.transformed_values) == set(expected_transformed)
-    assert set(state.deterministics) == set(expected_deterministics)
+    assert set(state.deterministics_values) == set(expected_deterministics)
     for deterministic, (inputs, op) in deterministic_mapping.items():
         np.testing.assert_allclose(
-            state.deterministics[deterministic],
+            state.deterministics_values[deterministic],
             op(*[state.untransformed_values[i] for i in inputs]),
         )
     for rv_name, value in state.untransformed_values.items():
-        dist = state.distributions[rv_name]
+        dist = state.continuous_distributions.get(rv_name, None)
+        if dist is None:
+            dist = state.discrete_distributions[rv_name]
         sample_shape = fixture_batch_shapes if dist.is_root else ()
         np.testing.assert_allclose(
             value.numpy(), dist.get_test_sample(sample_shape=sample_shape).numpy()

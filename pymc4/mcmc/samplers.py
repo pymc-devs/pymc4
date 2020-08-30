@@ -109,7 +109,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         init_state = list(init.values())
         init_keys = list(init.keys())
 
-        if is_compound:
+        if (num_chains > 1) & is_compound:
             init_state = [init_state[i] for i in self.parent_inds]
             init_keys = [init_keys[i] for i in self.parent_inds]
 

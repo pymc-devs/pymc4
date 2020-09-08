@@ -62,6 +62,7 @@ def sample(
     sampler_methods: Optional[List] = None,
     trace_discrete: Optional[List[str]] = None,
     seed: Optional[int] = None,
+    include_log_likelihood: bool = False,
     **kwargs,
 ):
     """
@@ -104,6 +105,8 @@ def sample(
         The pyhton list of variables that should be casted to tf.int32 after sampling is completed
     seed : Optional[int]
         A seed for reproducible sampling
+    include_log_likelihood : bool, default=False
+       Include log likelihood in trace
     Returns
     -------
     Trace : InferenceDataType
@@ -177,6 +180,7 @@ def sample(
         xla=xla,
         seed=seed,
         trace_discrete=trace_discrete,
+        include_log_likelihood=include_log_likelihood,
     )
 
 

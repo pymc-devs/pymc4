@@ -91,7 +91,7 @@ EXIT /B %ERRORLEVEL%
 
 :docstyle
 echo.Checking documentation with pydocstyle...
-%PYTHON% -m pydocstyle %PACKAGE_DIR%
+%PYTHON% -m pydocstyle --convention=numpy %PACKAGE_DIR%
 if %ERRORLEVEL%==0 (
     echo.Pydocstyle passes!
 ) else (

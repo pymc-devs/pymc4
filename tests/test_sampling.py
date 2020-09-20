@@ -139,3 +139,29 @@ def test_sampling_unknown_sampler(simple_model):
     model = simple_model()
     with pytest.raises(KeyError):
         trace = pm.sample(model=model, sampler_type="unknown")
+
+
+def test_sampling_log_likelihood(vectorized_model_fixture):
+    model, is_vectorized_model, core_shapes = vectorized_model_fixture
+    num_samples = 10
+    num_chains = 4
+    trace = pm.sample(
+        model=model(),
+        num_samples=num_samples,
+        num_chains=num_chains,
+        burn_in=1,
+        step_size=0.1,
+        include_log_likelihood=True,
+    )
+
+    if is_vectorized_model:
+        # only one log likeliood matrix
+        assert trace.log_likelihood["model/x"].shape == (num_chains, num_samples)
+
+    else:
+        state, _ = pm.initialize_sampling_state(model())
+        assert trace.log_likelihood["model/x"].shape == (
+            num_chains,
+            num_samples,
+            *state.observed_values["model/x"].shape,
+        )

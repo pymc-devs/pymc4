@@ -1,6 +1,7 @@
 import pytest
 import pymc4 as pm
 import numpy as np
+from scipy.stats import norm
 
 
 @pytest.fixture(scope="function")
@@ -24,14 +25,15 @@ def conjugate_normal_model():
         ll = yield pm.Normal("ll", mu, known_sigma, observed=data)
         return ll
 
-    return dict(data_points=data_points, data=data, estimated_mean=estimated_mean, model=model)
+    return dict(estimated_mean=estimated_mean, known_sigma=known_sigma, data=data, model=model)
 
 
 # fmt: off
 _test_kwargs = {
     "ADVI": {
-        "method": pm.MeanField, 
-        "fit_kwargs": {}
+        "method": pm.MeanField,
+        "fit_kwargs": {},
+        "sample_kwargs": {"n": 500, "include_log_likelihood": True},
     },
     "FullRank ADVI": {
         "method": pm.FullRank,
@@ -43,7 +45,7 @@ _test_kwargs = {
     }
 }
 
-
+# fmt: on
 @pytest.fixture(scope="function", params=list(_test_kwargs), ids=str)
 def approximation(request):
     return request.param
@@ -54,15 +56,22 @@ def test_fit(approximation, conjugate_normal_model):
     approx = _test_kwargs[approximation]
     advi = pm.fit(method=approx["method"](model), **approx["fit_kwargs"])
     assert advi is not None
-    assert advi.losses.numpy().shape == (approx["fit_kwargs"].get("num_steps") or 10000,)
+    assert advi.losses.numpy().shape == (approx["fit_kwargs"].get("num_steps", 10000),)
 
-    q_samples = advi.approximation.sample(10000)
-    estimated_mean = conjugate_normal_model["estimated_mean"]
-    np.testing.assert_allclose(
-        np.mean(np.squeeze(q_samples.posterior["model/mu"].values, axis=0)),
-        estimated_mean,
-        rtol=0.05,
-    )
+    q_samples = advi.approximation.sample(**approx.get("sample_kwargs", {"n": 1000}))
+
+    # Calculating mean from all draws and comparing to the actual one
+    calculated_mean = q_samples.posterior["model/mu"].mean(dim=("chain", "draw"))
+    np.testing.assert_allclose(calculated_mean, conjugate_normal_model["estimated_mean"], rtol=0.05)
+
+    if "sample_kwargs" in approx and approx["sample_kwargs"].get("include_log_likelihood"):
+        sample_mean = q_samples.posterior["model/mu"].sel(chain=0, draw=0)  # Single draw
+        ll_from_scipy = norm.logpdf(
+            conjugate_normal_model["data"], sample_mean, conjugate_normal_model["known_sigma"]
+        )
+        ll_from_pymc4 = q_samples.log_likelihood["model/ll"].sel(chain=0, draw=0)
+        assert ll_from_scipy.shape == ll_from_pymc4.shape
+        np.testing.assert_allclose(ll_from_scipy, ll_from_pymc4, rtol=1e-4)
 
 
 @pytest.fixture(scope="function")
@@ -80,7 +89,7 @@ def bivariate_gaussian():
 
 def test_bivariate_shapes(bivariate_gaussian):
     advi = pm.fit(bivariate_gaussian(), num_steps=5000)
-    assert advi.losses.numpy().shape == (5000, )
+    assert advi.losses.numpy().shape == (5000,)
 
     samples = advi.approximation.sample(5000)
     assert samples.posterior["bivariate_gaussian/density"].values.shape == (1, 5000, 2)

@@ -81,7 +81,7 @@ class Approximation(tf.Module):
     def _build_posterior(self):
         raise NotImplementedError
 
-    def sample(self, n: int = 500, include_log_likelihood=False) -> az.InferenceData:
+    def sample(self, n: int = 500, include_log_likelihood: bool = False) -> az.InferenceData:
         """Generate samples from posterior distribution."""
         samples = self.approx.sample(n)
         q_samples = self.order.split_samples(samples, n)

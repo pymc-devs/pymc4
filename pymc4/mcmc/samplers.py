@@ -1,7 +1,7 @@
 import abc
 import itertools
 import inspect
-from typing import Optional, List, Union, Any
+from typing import Optional, List, Union, Any, Dict
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.mcmc.utils import (
@@ -829,7 +829,11 @@ def tile_init(init, num_repeats):
     return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]
 
 
-def calculate_log_likelihood(model, posterior, sampling_state):
+def calculate_log_likelihood(
+    model: Model, posterior: Dict[str, tf.Tensor], sampling_state: flow.SamplingState
+) -> Dict[str, tf.Tensor]:
+    """Compute log likelihood by vectorizing chains and draws."""
+
     def extract_log_likelihood(values, observed_rv):
         st = flow.SamplingState.from_values(values, observed_values=sampling_state.observed_values)
         _, st = flow.evaluate_model_transformed(model, state=st)

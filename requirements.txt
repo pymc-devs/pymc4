@@ -1,4 +1,5 @@
 arviz>=0.5.1
+xarray<=0.16.0 # because the version 0.16.1 throws an error when imported by arviz
 gast>=0.3.2
 tf-nightly
 tfp-nightly

@@ -183,9 +183,11 @@ class MvNormal(ContinuousDistribution):
     Define a multivariate normal variable for a given covariance
     matrix.
 
+    >>> import numpy as np
+    >>> import pymc4 as pm
     >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
     >>> mu = np.zeros(2)
-    >>> vals = pm.MvNormal('vals', loc=loc, covariance_matrix=covariance_matrix, shape=(5, 2))
+    >>> vals = pm.MvNormal('vals', loc=mu, covariance_matrix=covariance_matrix, shape=(5, 2))
     """
 
     def __init__(self, name, loc, covariance_matrix, **kwargs):
@@ -360,10 +362,12 @@ class MvNormalCholesky(ContinuousDistribution):
     Define a multivariate normal variable for a given cholesky
     factor of the full covariance matrix (scale_tril).
 
+    >>> import numpy as np
+    >>> import pymc4 as pm
     >>> covariance_matrix = np.array([[1., 0.5], [0.5, 2]])
     >>> chol_factor = np.linalg.cholesky(covariance_matrix)
     >>> mu = np.zeros(2)
-    >>> vals = pm.MvNormalCholesky('vals', loc=loc, scale_tril=chol_factor)
+    >>> vals = pm.MvNormalCholesky('vals', loc=mu, scale_tril=chol_factor)
     """
 
     def __init__(self, name, loc, scale_tril, **kwargs):

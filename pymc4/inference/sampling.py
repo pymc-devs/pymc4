@@ -113,26 +113,27 @@ def sample(
     Let's start with a simple model. We'll need some imports to experiment with it.
     >>> import pymc4 as pm
     >>> import numpy as np
-    This particular model has a latent variable `sd`
+    >>> # This particular model has a latent variable `sd`
     >>> @pm.model
     ... def nested_model(cond):
     ...     sd = yield pm.HalfNormal("sd", 1.)
     ...     norm = yield pm.Normal("n", cond, sd, observed=np.random.randn(10))
     ...     return norm
-    Now, we may want to perform sampling from this model. We already observed some variables and we
+    >>> # Now, we may want to perform sampling from this model. We already observed some variables and we
     now need to fix the condition.
     >>> conditioned = nested_model(cond=2.)
-    Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling.
+    >>> # Passing ``cond=2.`` we condition our model for future evaluation. Now we go to sampling.
     Nothing special is required but passing the model to ``pm.sample``, the rest configuration is
     held by PyMC4.
     >>> trace = sample(conditioned)
+
     Notes
     -----
     Things that are considered to be under discussion are overriding observed variables. The API
     for that may look like
     >>> new_observed = {"nested_model/n": np.random.randn(10) + 1}
     >>> trace = sample(conditioned, observed=new_observed)
-    This will give a trace with new observed variables. This way is considered to be explicit.
+    >>> # This will give a trace with new observed variables. This way is considered to be explicit.
     """
     # assign sampler is no sampler_type is passed``
     sampler_assigned: str = auto_assign_sampler(model, sampler_type)

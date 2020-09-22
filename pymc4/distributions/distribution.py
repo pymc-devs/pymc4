@@ -5,6 +5,8 @@ from typing import Optional, Union, Any, Tuple
 
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
+from tensorflow_probability.python.internal import prefer_static
+
 from pymc4.coroutine_model import Model, unpack
 from pymc4.distributions.batchstack import BatchStacker
 from pymc4.distributions import transforms
@@ -77,6 +79,12 @@ class Distribution(Model):
             self._distribution = BatchStacker(self._distribution, batch_stack=batch_stack)
         if event_stack is not None:
             self._distribution = tfd.Sample(self._distribution, sample_shape=self.event_stack)
+
+        if self.transform is not None and self.transform.event_ndims is None:
+            event_ndims = prefer_static.rank_from_shape(
+                self._distribution.event_shape_tensor, self._distribution.event_shape
+            )
+            self.transform.event_ndims = event_ndims
 
     @property
     def dtype(self):

@@ -1,4 +1,4 @@
-.PHONY: help venv conda docker docstyle format style types black test lint check notebooks
+ .PHONY: help venv conda docker docstyle format style types black test lint check notebooks
 .DEFAULT_GOAL = help
 
 PYTHON = python
@@ -62,8 +62,9 @@ types:
 black:  # Format code in-place using black.
 	black pymc4/ tests/
 
+
 notebooks: notebooks/*
-	jupyter nbconvert --config nbconfig.py --execute --ExecutePreprocessor.kernel_name="pymc4-dev" --ExecutePreprocessor.timeout=1200
+	jupyter nbconvert --config nbconfig.py --execute --ExecutePreprocessor.kernel_name="pymc4-dev" --ExecutePreprocessor.timeout=1200 --to 'html'
 	rm notebooks/*.html
 
 test:  # Test code using pytest.

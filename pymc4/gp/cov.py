@@ -66,7 +66,7 @@ _common_doc = """feature_ndims : int, optional
         entry of the list, the leftmost ``n`` dimensions of ``i'th`` ``feature_ndims`` column
         are considered for evaluation.
     scale_diag : {Number, array_like}, optional
-        Scaling parameter of the lenght scales of stationary kernels. When not `None`,
+        Scaling parameter of the length scales of stationary kernels. When not `None`,
         transforms the kernel to `FeatureTransformed` kernel. Defaults to `None`."""
 
 _note_doc = """ARD (automatic relevance determination) is not implemented. Vector length scales

@@ -11,6 +11,7 @@ from tensorflow_probability.python.internal import dtype_util
 from pymc4 import flow
 from pymc4.coroutine_model import Model
 from pymc4.mcmc.utils import initialize_sampling_state
+from pymc4.mcmc.samplers import calculate_log_likelihood
 from pymc4.utils import NameParts
 from pymc4.variational import updates
 from pymc4.variational.util import ArrayOrdering
@@ -80,7 +81,7 @@ class Approximation(tf.Module):
     def _build_posterior(self):
         raise NotImplementedError
 
-    def sample(self, n: int = 500) -> az.InferenceData:
+    def sample(self, n: int = 500, include_log_likelihood: bool = False) -> az.InferenceData:
         """Generate samples from posterior distribution."""
         samples = self.approx.sample(n)
         q_samples = self.order.split_samples(samples, n)
@@ -88,7 +89,15 @@ class Approximation(tf.Module):
 
         # Add a new axis so as n_chains=1 for InferenceData: handles shape issues
         trace = {k: v.numpy()[np.newaxis] for k, v in q_samples.items()}
-        trace = az.from_dict(trace, observed_data=self.state.observed_values)
+        log_likelihood_dict = dict()
+        if include_log_likelihood:
+            log_likelihood_dict = calculate_log_likelihood(self.model, trace, self.state)
+
+        trace = az.from_dict(
+            trace,
+            observed_data=self.state.observed_values,
+            log_likelihood=log_likelihood_dict if include_log_likelihood else None,
+        )
         return trace
 
 

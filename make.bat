@@ -139,7 +139,7 @@ EXIT /B %ERRORLEVEL%
 
 
 :notebooks
-jupyter nbconvert --config nbconfig.py --execute --ExecutePreprocessor.kernel_name="pymc4-dev" --ExecutePreprocessor.timeout=1200
+jupyter nbconvert --config nbconfig.py --execute --ExecutePreprocessor.kernel_name="pymc4-dev" --ExecutePreprocessor.timeout=1200 --to html
 del %ROOT_DIR%notebooks\*.html
 EXIT /B %ERRORLEVEL%
 

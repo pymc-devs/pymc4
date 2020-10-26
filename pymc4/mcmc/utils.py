@@ -98,6 +98,7 @@ def trace_to_arviz(
     observed_data=None,
     prior_predictive=None,
     posterior_predictive=None,
+    log_likelihood=None,
     inplace=True,
 ):
     """
@@ -111,6 +112,7 @@ def trace_to_arviz(
     observed_data : dict
     prior_predictive : dict
     posterior_predictive : dict
+    log_likelihood : dict
     inplace : bool
     Returns
     -------
@@ -127,12 +129,17 @@ def trace_to_arviz(
             return trace + az.from_dict(posterior_predictive=posterior_predictive)
         else:
             trace = None
+    if log_likelihood is not None and isinstance(log_likelihood, dict):
+        log_likelihood = {
+            k: np.swapaxes(v.numpy(), 1, 0) for k, v in log_likelihood.items() if "/" in k
+        }
 
     return az.from_dict(
         posterior=trace,
         sample_stats=sample_stats,
         prior_predictive=prior_predictive,
         posterior_predictive=posterior_predictive,
+        log_likelihood=log_likelihood,
         observed_data=observed_data,
     )
 

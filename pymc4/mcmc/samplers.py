@@ -1,7 +1,7 @@
 import abc
 import itertools
 import inspect
-from typing import Optional, List, Union, Any
+from typing import Optional, List, Union, Any, Dict
 import tensorflow as tf
 from tensorflow_probability import mcmc
 from pymc4.mcmc.utils import (
@@ -88,6 +88,7 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         seed: Optional[int] = None,
         is_compound: bool = False,
         trace_discrete: Optional[List[str]] = None,
+        include_log_likelihood=False,
     ):
         if state is not None and observed is not None:
             raise ValueError("Can't use both `state` and `observed` arguments")
@@ -158,10 +159,14 @@ class _BaseSampler(metaclass=abc.ABCMeta):
         if len(deterministic_names) > 0:
             posterior.update(dict(zip(deterministic_names, deterministic_values)))
 
+        log_likelihood_dict = dict()
+        if include_log_likelihood:
+            log_likelihood_dict = calculate_log_likelihood(self.model, posterior, state_)
         return trace_to_arviz(
             posterior,
             sampler_stats if is_compound is False else None,
             observed_data=state_.observed_values,
+            log_likelihood=log_likelihood_dict if include_log_likelihood else None,
         )
 
     @tf.function(autograph=False)
@@ -822,3 +827,28 @@ def vectorize_logp_function(logpfn):
 
 def tile_init(init, num_repeats):
     return [tf.tile(tf.expand_dims(tens, 0), [num_repeats] + [1] * tens.ndim) for tens in init]
+
+
+def calculate_log_likelihood(
+    model: Model, posterior: Dict[str, tf.Tensor], sampling_state: flow.SamplingState
+) -> Dict[str, tf.Tensor]:
+    """Compute log likelihood by vectorizing chains and draws."""
+
+    def extract_log_likelihood(values, observed_rv):
+        st = flow.SamplingState.from_values(values, observed_values=sampling_state.observed_values)
+        _, st = flow.evaluate_model_transformed(model, state=st)
+        try:
+            dist = st.continuous_distributions[observed_rv]
+        except KeyError:
+            dist = st.discrete_distributions[observed_rv]
+        return dist.log_prob(dist.model_info["observed"])
+
+    # First vectorizing chains and then draws, but ultimately, draws and chains get
+    # swapped for mcmc trace while passing to `trace_to_arviz`.
+    log_likelihood_dict = dict()
+    for observed_rv in sampling_state.observed_values:
+        extract_log_likelihood = partial(extract_log_likelihood, observed_rv=observed_rv)
+        vectorized_chains = vectorize_logp_function(extract_log_likelihood)
+        vectorized_draws = vectorize_logp_function(vectorized_chains)
+        log_likelihood_dict[observed_rv] = vectorized_draws(posterior)
+    return log_likelihood_dict

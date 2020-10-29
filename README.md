@@ -1,4 +1,4 @@
-# NOTICE: Official development of this project has ceased, and it is no longer intended to become the next version of PyMC. 
+# NOTICE: Official development of this project has ceased, and it is no longer intended to become the next major version of PyMC. Ongoing development will continue on the PyMC3 project, therefore we refer users to that repository (pymc3-devs/pymc3).
 
 [![Build Status](https://dev.azure.com/pymc-devs/pymc4/_apis/build/status/pymc-devs.pymc4?branchName=master)](https://dev.azure.com/pymc-devs/pymc4/_build/latest?definitionId=1&branchName=master)
 [![Coverage Status](https://codecov.io/gh/pymc-devs/pymc4/branch/master/graph/badge.svg)](https://codecov.io/gh/pymc-devs/pymc4)

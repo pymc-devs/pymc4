@@ -1,3 +1,4 @@
+"""Transformations to match support while performing inference with MCMC or Variational Inference."""
 import enum
 from typing import Optional
 
@@ -114,7 +115,7 @@ class Invert(Transform):
 
 
 class BackwardTransform(Transform):
-    """Base class for Transforms with Jacobian Preference as Backward"""
+    """Base class for Transforms with Jacobian Preference as Backward."""
 
     JacobianPreference = JacobianPreference.Backward
 
@@ -135,6 +136,8 @@ class BackwardTransform(Transform):
 
 
 class Log(BackwardTransform):
+    """Transformation to R+."""
+
     name = "log"
 
     def __init__(self):
@@ -144,6 +147,8 @@ class Log(BackwardTransform):
 
 
 class Sigmoid(BackwardTransform):
+    """Transformation to interval (0, 1)."""
+
     name = "sigmoid"
 
     def __init__(self):
@@ -152,7 +157,7 @@ class Sigmoid(BackwardTransform):
 
 
 class LowerBound(BackwardTransform):
-    """"Transformation to interval [lower_limit, inf]"""
+    """Transformation to interval [lower_limit, inf)."""
 
     name = "lowerbound"
 
@@ -162,7 +167,7 @@ class LowerBound(BackwardTransform):
 
 
 class UpperBound(BackwardTransform):
-    """"Transformation to interval [-inf, upper_limit]"""
+    """Transformation to interval (-inf, upper_limit]."""
 
     name = "upperbound"
 
@@ -172,7 +177,7 @@ class UpperBound(BackwardTransform):
 
 
 class Interval(BackwardTransform):
-    """"Transformation to interval [lower_limit, upper_limit]"""
+    """Transformation to interval [lower_limit, upper_limit]."""
 
     name = "interval"
 

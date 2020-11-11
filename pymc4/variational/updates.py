@@ -4,6 +4,8 @@ These optimizers wrap tf.optimizers with defaults from PyMC3.
 """
 import tensorflow as tf
 
+__all__ = ["adadelta", "adagrad", "adam", "adamax", "sgd"]
+
 
 def adadelta(
     learning_rate: float = 1.0, rho: float = 0.95, epsilon: float = 1e-6, **kwargs

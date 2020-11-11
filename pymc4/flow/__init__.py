@@ -1,8 +1,10 @@
 """Functions for evaluating log probabilities."""
-from .executor import SamplingExecutor, SamplingState
+from .state import SamplingState, SMCSamplingState
+from .executor import SamplingExecutor
 from .transformed_executor import TransformedSamplingExecutor
 from .posterior_predictive_executor import PosteriorPredictiveSamplingExecutor
 from .meta_executor import MetaSamplingExecutor, MetaPosteriorPredictiveSamplingExecutor
+from .smc_executor import SMCSamplingExecutor
 
 __all__ = [
     "SamplingExecutor",
@@ -10,6 +12,7 @@ __all__ = [
     "PosteriorPredictiveSamplingExecutor",
     "MetaSamplingExecutor",
     "MetaPosteriorPredictiveSamplingExecutor",
+    "SMCSamplingExecutor",
     "evaluate_model",
     "evaluate_model_transformed",
     "evaluate_model_posterior_predictive",
@@ -22,3 +25,4 @@ evaluate_model_transformed = TransformedSamplingExecutor()
 evaluate_model_posterior_predictive = PosteriorPredictiveSamplingExecutor()
 evaluate_meta_model = MetaSamplingExecutor()
 evaluate_meta_posterior_predictive_model = MetaPosteriorPredictiveSamplingExecutor()
+evaluate_model_smc = SMCSamplingExecutor()

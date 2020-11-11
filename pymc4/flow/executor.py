@@ -1,14 +1,12 @@
 import types
-from typing import Any, Tuple, Dict, Union, List, Optional, Set, Mapping
-from collections import ChainMap
-import itertools
+from typing import Any, Tuple, Dict, Union, Mapping, Callable
 
 import tensorflow as tf
-
 from pymc4 import coroutine_model
 from pymc4 import scopes
-from pymc4 import utils
 from pymc4.distributions import distribution
+
+from pymc4.flow import SamplingState
 
 
 ModelType = Union[types.GeneratorType, coroutine_model.Model]
@@ -19,20 +17,6 @@ MODEL_POTENTIAL_AND_DETERMINISTIC_TYPES = (
     distribution.Potential,
     distribution.Deterministic,
 )
-
-
-def _chain_map_iter(self):
-    """Keep ordering of maps on Python3.6.
-    See https://bugs.python.org/issue32792
-    Once Python3.6 is not supported, this can be deleted.
-    """
-    d = {}
-    for mapping in reversed(self.maps):
-        d.update(mapping)  # reuses stored hash values if possible
-    return iter(d)
-
-
-ChainMap.__iter__ = _chain_map_iter  # type: ignore
 
 
 class EvaluationError(RuntimeError):
@@ -66,6 +50,13 @@ class EvaluationError(RuntimeError):
         "    value_shape[(len(values.shape) - len(dist_shape)):]"
         ")"
     )
+    DUPLICATE_VARIABLE = (
+        "Attempting to create a duplicate variable {!r}, "
+        "this may happen if you forget to use `pm.name_scope()` when calling same "
+        "model/function twice without providing explicit names. If you see this "
+        "error message and the function being called is not wrapped with "
+        "`pm.model`, you should better wrap it to provide explicit name for this model"
+    )
     ...
 
 
@@ -88,243 +79,6 @@ class StopExecution(StopIteration):
 
 class EarlyReturn(StopIteration):
     ...
-
-
-class SamplingState:
-    __slots__ = (
-        "transformed_values",
-        "untransformed_values",
-        "observed_values",
-        "posterior_predictives",
-        "all_values",
-        "all_unobserved_values",
-        "discrete_distributions",
-        "continuous_distributions",
-        "potentials",
-        "deterministics",
-        "deterministics_values",
-    )
-
-    def __init__(
-        self,
-        transformed_values: Dict[str, Any] = None,
-        untransformed_values: Dict[str, Any] = None,
-        observed_values: Dict[str, Any] = None,
-        discrete_distributions: Dict[str, distribution.Distribution] = None,
-        continuous_distributions: Dict[str, distribution.Distribution] = None,
-        potentials: List[distribution.Potential] = None,
-        deterministics: Dict[str, distribution.Deterministic] = None,
-        posterior_predictives: Optional[Set[str]] = None,
-        deterministics_values: Dict[str, Any] = None,
-    ) -> None:
-        # verbose __init__
-        if transformed_values is None:
-            transformed_values = dict()
-        else:
-            transformed_values = transformed_values.copy()
-        if untransformed_values is None:
-            untransformed_values = dict()
-        else:
-            untransformed_values = untransformed_values.copy()
-        if observed_values is None:
-            observed_values = dict()
-        else:
-            observed_values = observed_values.copy()
-        if discrete_distributions is None:
-            discrete_distributions = dict()
-        else:
-            discrete_distributions = discrete_distributions.copy()
-        if continuous_distributions is None:
-            continuous_distributions = dict()
-        else:
-            continuous_distributions = continuous_distributions.copy()
-        if potentials is None:
-            potentials = list()
-        else:
-            potentials = potentials.copy()
-        if deterministics is None:
-            deterministics = dict()
-        else:
-            deterministics = deterministics.copy()
-        if posterior_predictives is None:
-            posterior_predictives = set()
-        else:
-            posterior_predictives = posterior_predictives.copy()
-        if deterministics_values is None:
-            deterministics_values = dict()
-        else:
-            deterministics_values = deterministics_values.copy()
-        self.transformed_values = transformed_values
-        self.untransformed_values = untransformed_values
-        self.observed_values = observed_values
-        self.all_values = ChainMap(
-            self.untransformed_values, self.transformed_values, self.observed_values
-        )
-        self.all_unobserved_values = ChainMap(self.transformed_values, self.untransformed_values)
-        self.discrete_distributions = discrete_distributions
-        self.continuous_distributions = continuous_distributions
-        self.potentials = potentials
-        self.deterministics = deterministics
-        self.posterior_predictives = posterior_predictives
-        self.deterministics_values = deterministics_values
-
-    def collect_log_prob_elemwise(self):
-        return itertools.chain(
-            (
-                dist.log_prob(self.all_values[name])
-                for name, dist in itertools.chain(
-                    self.discrete_distributions.items(),
-                    self.continuous_distributions.items(),
-                )
-            ),
-            (p.value for p in self.potentials),
-        )
-
-    def collect_log_prob(self):
-        return sum(map(tf.reduce_sum, self.collect_log_prob_elemwise()))
-
-    def collect_unreduced_log_prob(self):
-        return sum(self.collect_log_prob_elemwise())
-
-    def __repr__(self):
-        # display keys only
-        untransformed_values = list(self.untransformed_values)
-        transformed_values = list(self.transformed_values)
-        observed_values = list(self.observed_values)
-        deterministics = list(self.deterministics)
-        posterior_predictives = list(self.posterior_predictives)
-        deterministics_values = list(self.deterministics_values)
-        # format like dist:name
-        discrete_distributions = [
-            "{}:{}".format(d.__class__.__name__, k) for k, d in self.discrete_distributions.items()
-        ]
-        # continuous case
-        continuous_distributions = [
-            "{}:{}".format(d.__class__.__name__, k)
-            for k, d in self.continuous_distributions.items()
-        ]
-        # be less verbose here
-        num_potentials = len(self.potentials)
-        indent = 4 * " "
-        return (
-            "{}(\n"
-            + indent
-            + "untransformed_values: {}\n"
-            + indent
-            + "transformed_values: {}\n"
-            + indent
-            + "observed_values: {}\n"
-            + indent
-            + "discrete_distributions: {}\n"
-            + indent
-            + "continuous_distributions: {}\n"
-            + indent
-            + "num_potentials={}\n"
-            + indent
-            + "deterministics: {}\n"
-            + indent
-            + "deterministics_values: {}\n"
-            + indent
-            + "posterior_predictives: {})"
-        ).format(
-            self.__class__.__name__,
-            untransformed_values,
-            transformed_values,
-            observed_values,
-            discrete_distributions,
-            continuous_distributions,
-            num_potentials,
-            deterministics,
-            deterministics_values,
-            posterior_predictives,
-        )
-
-    @classmethod
-    def from_values(
-        cls, values: Dict[str, Any] = None, observed_values: Dict[str, Any] = None
-    ) -> "SamplingState":
-        if values is None:
-            return cls(observed_values=observed_values)
-        transformed_values = dict()
-        untransformed_values = dict()
-        # split by `nest/name` or `nest/__transform_name`
-        for fullname in values:
-            namespec = utils.NameParts.from_name(fullname)
-            if namespec.is_transformed:
-                transformed_values[fullname] = values[fullname]
-            else:
-                untransformed_values[fullname] = values[fullname]
-        return cls(transformed_values, untransformed_values, observed_values)
-
-    def clone(self) -> "SamplingState":
-        return self.__class__(
-            transformed_values=self.transformed_values,
-            untransformed_values=self.untransformed_values,
-            observed_values=self.observed_values,
-            discrete_distributions=self.discrete_distributions,
-            continuous_distributions=self.continuous_distributions,
-            potentials=self.potentials,
-            deterministics=self.deterministics,
-            posterior_predictives=self.posterior_predictives,
-            deterministics_values=self.deterministics_values,
-        )
-
-    def as_sampling_state(self) -> "Tuple[SamplingState, List[str]]":
-        """Create a sampling state that should be used within MCMC sampling.
-        There are some principles that hold for the state.
-            1. Check there is at least one distribution
-            2. Check all transformed distributions are autotransformed
-            3. Remove untransformed values if transformed are present
-            4. Remove all other irrelevant values
-        """
-        if not self.discrete_distributions and not self.continuous_distributions:
-            raise TypeError(
-                "No distributions found in the state. "
-                "the model you evaluated is empty and does not yield any PyMC4 distribution"
-            )
-        untransformed_values = dict()
-        transformed_values = dict()
-        need_to_transform_after = list()
-        observed_values = dict()
-
-        for name, dist in itertools.chain(
-            self.discrete_distributions.items(), self.continuous_distributions.items()
-        ):
-            namespec = utils.NameParts.from_name(name)
-            if dist.transform is not None and name not in self.observed_values:
-                transformed_namespec = namespec.replace_transform(dist.transform.name)
-                if transformed_namespec.full_original_name not in self.transformed_values:
-                    raise TypeError(
-                        "Transformed value {!r} is not found for {} distribution with name {!r}. "
-                        "You should evaluate the model using the transformed executor to get "
-                        "the correct sampling state.".format(
-                            transformed_namespec.full_original_name, dist, name
-                        )
-                    )
-                else:
-                    transformed_values[
-                        transformed_namespec.full_original_name
-                    ] = self.transformed_values[transformed_namespec.full_original_name]
-                    need_to_transform_after.append(transformed_namespec.full_untransformed_name)
-            else:
-                if name in self.observed_values:
-                    observed_values[name] = self.observed_values[name]
-                elif name in self.untransformed_values:
-                    untransformed_values[name] = self.untransformed_values[name]
-                else:
-                    raise TypeError(
-                        "{} distribution with name {!r} does not have the corresponding value "
-                        "in the state. This may happen if the current "
-                        "state was modified in the wrong way."
-                    )
-        return (
-            self.__class__(
-                transformed_values=transformed_values,
-                untransformed_values=untransformed_values,
-                observed_values=observed_values,
-            ),
-            need_to_transform_after,
-        )
 
 
 # when we make changes in a subclass we usually call super() that will require self to be present in signature
@@ -352,6 +106,12 @@ class SamplingExecutor:
     def validate_return_value(self, return_value: Any):
         tf.nest.map_structure(self.validate_return_object, return_value)
 
+    def _dist_get_sampling_func(self, dist):
+        """
+        Determines the type of sampling function used in forward.
+        """
+        return dist.sample
+
     def evaluate_model(
         self,
         model: ModelType,
@@ -360,7 +120,9 @@ class SamplingExecutor:
         _validate_state: bool = True,
         values: Dict[str, Any] = None,
         observed: Dict[str, Any] = None,
-        sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
+        sample_shape: Union[Tuple[int], tf.TensorShape] = (),
+        replicas: int = 1,
+        kd=0,
     ) -> Tuple[Any, SamplingState]:
         # this will be dense with comments as all interesting stuff is composed in here
 
@@ -513,7 +275,10 @@ class SamplingExecutor:
                     elif isinstance(dist, distribution.Distribution):
                         try:
                             return_value, state = self.proceed_distribution(
-                                dist, state, sample_shape=sample_shape
+                                dist,
+                                state,
+                                sample_shape=sample_shape,
+                                replicas=replicas,
                             )
                         except EvaluationError as error:
                             control_flow.throw(error)
@@ -524,6 +289,8 @@ class SamplingExecutor:
                             state=state,
                             _validate_state=False,
                             sample_shape=sample_shape,
+                            replicas=replicas,
+                            kd=kd + 1,
                         )
                     else:
                         err = EvaluationError(
@@ -556,7 +323,8 @@ class SamplingExecutor:
                 return e.args, state
             except StopIteration as stop_iteration:
                 self.validate_return_value(stop_iteration.args[:1])
-                return self.finalize_control_flow(stop_iteration, model_info, state)
+                add = self.finalize_control_flow(stop_iteration, model_info, state)
+                return add
         return return_value, state
 
     __call__ = evaluate_model
@@ -578,13 +346,62 @@ class SamplingExecutor:
     ) -> ModelType:
         return dist
 
+    def _sample_unobserved(
+        self,
+        dist: distribution.Distribution,
+        state: SamplingState,
+        scoped_name: str,
+        sample_func: Callable,
+        *,
+        sample_shape: Union[Tuple[int], tf.TensorShape] = (),
+        replicas: int = 1,
+    ) -> Tuple[SamplingState, Any]:
+        # For the first run of the graph execution we are sampling values
+        # from the distribution `dist` and save it to the `state` object.
+        # `sample_func` is the the sampler function used to sample variables.
+        # For meta execution we are usin test values that are defined separately
+        # for each type of distribution.
+        if dist.is_root:
+            return_value = state.untransformed_values[scoped_name] = sample_func(sample_shape)
+        else:
+            return_value = state.untransformed_values[scoped_name] = sample_func()
+        return state, return_value
+
     def proceed_distribution(
         self,
         dist: distribution.Distribution,
         state: SamplingState,
-        sample_shape: Union[int, Tuple[int], tf.TensorShape] = None,
+        sample_shape: Union[int, Tuple[int], tf.TensorShape] = (),
+        replicas: int = 1,
     ) -> Tuple[Any, SamplingState]:
-        # TODO: docs
+        """
+        Process the ``Distribution`` instance by sampling the variable
+        and adding it to the current state.
+        Parameters
+        ----------
+        dist: ModelType
+            The yielded ``Distribution`` instance which is used to sample variables
+        state: pymc4.flow.SamplingState
+            The current ``SamplingState`` state of the model
+        sample_shape: Union[int, Tuple[int], tf.TensorShape]
+            The sample shape for the sampled variable. We can manually pass
+            `is_root` argument to the ``Distribution`` instance to have control
+            over the variable shape.
+        replicas: int
+            The number of replicas for the variable. Used by SMC to avoid singularity
+            of sampled points when applying tiling over the first dimension.
+
+        Returns
+        ------
+        return_value : Any
+            The sampled value
+        state : SamplingState
+            The current state after sampled variable from `dist` is added to the state
+        """
+        # TODO: not sure if this should be documented. But if we give opportunity to the
+        # final user to add custom executors, then sure.
+        sample_func = self._dist_get_sampling_func(dist)
+
         if dist.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Distribution")
         scoped_name = scopes.variable_name(dist.name)
@@ -596,28 +413,22 @@ class SamplingExecutor:
             or scoped_name in state.continuous_distributions
             or scoped_name in state.deterministics_values
         ):
-            raise EvaluationError(
-                "Attempting to create a duplicate variable {!r}, "
-                "this may happen if you forget to use `pm.name_scope()` when calling same "
-                "model/function twice without providing explicit names. If you see this "
-                "error message and the function being called is not wrapped with "
-                "`pm.model`, you should better wrap it to provide explicit name for this model".format(
-                    scoped_name
-                )
-            )
+            raise EvaluationError(EvaluationError.DUPLICATE_VARIABLE.format(scoped_name))
+
         if scoped_name in state.observed_values or dist.is_observed:
             observed_variable = observed_value_in_evaluation(scoped_name, dist, state)
             if observed_variable is None:
                 # None indicates we pass None to the state.observed_values dict,
                 # might be posterior predictive or programmatically override to exchange observed variable to latent
                 if scoped_name not in state.untransformed_values:
-                    # posterior predictive
-                    if dist.is_root:
-                        return_value = state.untransformed_values[scoped_name] = dist.sample(
-                            sample_shape=sample_shape
-                        )
-                    else:
-                        return_value = state.untransformed_values[scoped_name] = dist.sample()
+                    state, return_value = self._sample_unobserved(
+                        dist,
+                        state,
+                        scoped_name,
+                        sample_func,
+                        sample_shape=sample_shape,
+                        replicas=replicas,
+                    )
                 else:
                     # replace observed variable with a custom one
                     return_value = state.untransformed_values[scoped_name]
@@ -632,17 +443,26 @@ class SamplingExecutor:
                             scoped_name
                         )
                     )
-                assert_values_compatible_with_distribution(scoped_name, observed_variable, dist)
+                assert_values_compatible_with_distribution(
+                    scoped_name,
+                    observed_variable,
+                    dist,
+                )
                 return_value = state.observed_values[scoped_name] = observed_variable
+            state.likelihood_distributions[scoped_name] = dist
         elif scoped_name in state.untransformed_values:
             return_value = state.untransformed_values[scoped_name]
+            state.prior_distributions[scoped_name] = dist
         else:
-            if dist.is_root:
-                return_value = state.untransformed_values[scoped_name] = dist.sample(
-                    sample_shape=sample_shape
-                )
-            else:
-                return_value = state.untransformed_values[scoped_name] = dist.sample()
+            state, return_value = self._sample_unobserved(
+                dist,
+                state,
+                scoped_name,
+                sample_func,
+                sample_shape=sample_shape,
+                replicas=replicas,
+            )
+            state.prior_distributions[scoped_name] = dist
         if dist._grad_support:
             state.continuous_distributions[scoped_name] = dist
         else:
@@ -652,7 +472,6 @@ class SamplingExecutor:
     def proceed_deterministic(
         self, deterministic: distribution.Deterministic, state: SamplingState
     ) -> Tuple[Any, SamplingState]:
-        # TODO: docs
         if deterministic.is_anonymous:
             raise EvaluationError("Attempting to create an anonymous Deterministic")
         scoped_name = scopes.variable_name(deterministic.name)
@@ -663,17 +482,9 @@ class SamplingExecutor:
             or scoped_name in state.continuous_distributions
             or scoped_name in state.deterministics_values
         ):
-            raise EvaluationError(
-                "Attempting to create a duplicate deterministic {!r}, "
-                "this may happen if you forget to use `pm.name_scope()` when calling same "
-                "model/function twice without providing explicit names. If you see this "
-                "error message and the function being called is not wrapped with "
-                "`pm.model`, you should better wrap it to provide explicit name for this model".format(
-                    scoped_name
-                )
-            )
+            raise EvaluationError(EvaluationError.DUPLICATE_VARIABLE.format(scoped_name))
         state.deterministics_values[scoped_name] = return_value = deterministic.get_value()
-        state.deterministics[scoped_name] = deterministic
+        state.deterministics[scoped_name] = return_value = deterministic.get_value()
         return return_value, state
 
     def prepare_model_control_flow(
@@ -798,6 +609,7 @@ def assert_values_compatible_with_distribution_shape(
     dist_shape = batch_shape + event_shape
     value_rank = value_shape.rank
     dist_rank = dist_shape.rank
+
     # TODO: Make the or condition less ugly but at the same time compatible with
     # tf.function. tf.math.maximum makes things kind of weird and raises errors
     if (

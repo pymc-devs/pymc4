@@ -18,6 +18,8 @@ from .forward_sampling import sample_prior_predictive, sample_posterior_predicti
 from .inference.sampling import sample
 from .mcmc.samplers import *
 from . import gp
+from .inference.smc import sample_smc
+from .inference import smc
 from . import mcmc
 from .variational import *
 

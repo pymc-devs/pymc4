@@ -66,28 +66,29 @@ _common_doc = """feature_ndims : int, optional
         entry of the list, the leftmost ``n`` dimensions of ``i'th`` ``feature_ndims`` column
         are considered for evaluation.
     scale_diag : {Number, array_like}, optional
-        Scaling parameter of the lenght_scale parameter of stationary kernels for
-        performing Automatic Relevance Detection (ARD). Ignored if keyword argument ``ARD=False``."""
+        Scaling parameter of the length scales of stationary kernels. When not `None`,
+        transforms the kernel to `FeatureTransformed` kernel. Defaults to `None`."""
 
-_note_doc = """ARD (automatic relevance detection) is performed if the parameter ``length_scale``
-    is a vector or a tensor. To disable this behaviour, a keyword argument
-    ``ARD=False`` needs to be passed. Other keyword arguments that can be passed are:
+_note_doc = """ARD (automatic relevance determination) is not implemented. Vector length scales
+    will be treated as a batch of length scales.
+
+    Other keyword arguments that can be passed are:
     validate_args : bool
         A boolean indicating whether or not to validate arguments. Incurs a little
         overhead when set to ``True``. Its default value is ``False``.
-    name:
+    name : str
         You can optionally give a name to the kernels. All the operations will be
         preformed under the name "<name>/<operation_name>:0"."""
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class Covariance:
     r"""
     Base class of all Covariance functions for Gaussian Process.
 
     Parameters
     ----------
-    %(_common_doc)
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -96,7 +97,7 @@ class Covariance:
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -148,14 +149,12 @@ class Covariance:
         self._feature_ndims = feature_ndims
         self._active_dims = active_dims
         self._scale_diag = scale_diag
-        self._ard = kwargs.pop("ARD", True)
         # Initialize Kernel.
         self._kernel = self._init_kernel(feature_ndims=self.feature_ndims, **kwargs)
         # Wrap the kernel in FeatureScaled kernel for ARD.
-        if self._ard:
-            if self._scale_diag is None:
-                self._scale_diag = tf.constant(1, dtype=self._kernel.dtype)
-            self._kernel = FeatureScaled(self._kernel, scale_diag=self._scale_diag)
+        if self._scale_diag is None:
+            self._scale_diag = tf.constant(1, dtype=self._kernel.dtype)
+        self._kernel = FeatureScaled(self._kernel, scale_diag=self._scale_diag)
 
     @abstractmethod
     def _init_kernel(self, feature_ndims: int, **kwargs) -> PositiveSemidefiniteKernel:
@@ -179,12 +178,14 @@ class Covariance:
                 X2 = tf.gather(X2, indices=ind, axis=ax - self._feature_ndims)
         return X1, X2
 
-    def _diag(self, X1: ArrayLike, X2: ArrayLike, to_dense=True) -> ArrayLike:
+    def _diag(self, X1: ArrayLike, X2: ArrayLike) -> TfTensor:
         """Evaluate only the diagonal part of the full covariance matrix."""
-        cov = self(X1, X2)
-        if to_dense:
+        try:
+            cov = self.evaluate_kernel(X1, X2)
             return cov
-        return tf.linalg.diag_part(cov)
+        except NotImplementedError:
+            cov = self(X1, X2)
+            return tf.linalg.diag_part(cov)
 
     def evaluate_kernel(self, X1: ArrayLike, X2: ArrayLike, **kwargs) -> TfTensor:
         r"""
@@ -222,11 +223,10 @@ class Covariance:
     @property
     def ard(self) -> bool:
         r"""Weather ARD is enabled or not."""
-        return self._ard
+        # ARD is not implemented.
+        return False
 
-    def __call__(
-        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
-    ) -> TfTensor:
+    def __call__(self, X1: ArrayLike, X2: ArrayLike, diag: bool = False, **kwargs) -> TfTensor:
         r"""
         Evaluate the covariance matrix between the points ``X1`` and ``X2``.
 
@@ -239,10 +239,6 @@ class Covariance:
         diag : bool, optional
             If true, only evaluates the diagonal of the full covariance matrix.
             (default=False)
-        to_dense : bool, optional
-            If True, returns full covariance matrix with non-diagonal entries zero
-            when ``diag=True``. Otherwise, only the diagonal component of the matrix
-            is returned. Ignored if ``diag=False``. (default=True)
 
         Other Parameters
         ----------------
@@ -252,7 +248,7 @@ class Covariance:
 
         Returns
         -------
-        cov : tensorflow.Tensor
+        cov : Tensor
             A covariance matrix with the last ``feature_ndims``
             dimensions absorbed to compute the covariance.
         """
@@ -260,15 +256,8 @@ class Covariance:
             X1 = tf.convert_to_tensor(X1, dtype_hint=self._kernel.dtype)
             X2 = tf.convert_to_tensor(X2, dtype_hint=self._kernel.dtype)
             X1, X2 = self._slice(X1, X2)
-            # if self._ard and not diag:
-            #     X1 = util.pad_shape_with_ones(X1, ndims=1, start=-(self.feature_ndims + 1))
-            #     X2 = util.pad_shape_with_ones(X2, ndims=1, start=-(self.feature_ndims + 2))
-            #     try:
-            #         return self._kernel._apply(X1, X2, example_ndims=0)
-            #     except NotImplementedError:
-            #         return self._kernel.matrix(X1, X2, **kwargs)
             if diag:
-                return self._diag(X1, X2, to_dense=to_dense)
+                return self._diag(X1, X2)
             return self._kernel.matrix(X1, X2, **kwargs)
 
     def __add__(self, cov2):
@@ -289,7 +278,7 @@ class Covariance:
 
         for i in range(result.size):
             left_array[i] = result[i].factors[1]
-        left_array = left_array.reshape(original_shape)
+        left_array = tf.cast(left_array.reshape(original_shape), result[0].factors[0]._kernel.dtype)
 
         if isinstance(result[0], _Add):
             return result[0].factors[0] + left_array
@@ -322,18 +311,13 @@ class Combination(Covariance):
             factor._active_dims if isinstance(factor, Covariance) else None for factor in factors
         ]
 
-    def _eval_factor(self, factor, X1, X2, diag=False, to_dense=False):
+    def _eval_factor(self, factor, X1, X2, diag=False):
         if isinstance(factor, Covariance):
-            return factor(X1, X2, diag=diag, to_dense=to_dense)
-        if diag:
-            return tf.linalg.diag(tf.linalg.diag_part(factor))
-        else:
-            return factor
+            return factor(X1, X2, diag=diag)
+        return factor
 
-    def merge_factors(
-        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True
-    ) -> List[TfTensor]:
-        fn = partial(self._eval_factor, X1=X1, X2=X2, diag=diag, to_dense=to_dense)
+    def merge_factors(self, X1: ArrayLike, X2: ArrayLike, diag=False) -> List[TfTensor]:
+        fn = partial(self._eval_factor, X1=X1, X2=X2, diag=diag)
         return tf.nest.map_structure(fn, self.factors)
 
 
@@ -349,10 +333,8 @@ class _Add(Combination):
     """
 
     @_inherit_docs(Covariance.__call__)
-    def __call__(
-        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
-    ) -> TfTensor:
-        return reduce(operator.add, self.merge_factors(X1, X2, diag=diag, to_dense=to_dense))
+    def __call__(self, X1: ArrayLike, X2: ArrayLike, diag=False, **kwargs) -> TfTensor:
+        return reduce(operator.add, self.merge_factors(X1, X2, diag=diag))
 
 
 class _Prod(Combination):
@@ -367,10 +349,8 @@ class _Prod(Combination):
     """
 
     @_inherit_docs(Covariance.__call__)
-    def __call__(
-        self, X1: ArrayLike, X2: ArrayLike, diag=False, to_dense=True, **kwargs
-    ) -> TfTensor:
-        return reduce(operator.mul, self.merge_factors(X1, X2, diag=diag, to_dense=to_dense))
+    def __call__(self, X1: ArrayLike, X2: ArrayLike, diag=False, **kwargs) -> TfTensor:
+        return reduce(operator.mul, self.merge_factors(X1, X2, diag=diag))
 
 
 class Stationary(Covariance):
@@ -395,7 +375,7 @@ _ls_amp_doc = """length_scale : array_like
         (default=1)"""
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class ExpQuad(Stationary):
     r"""
     Exponentiated Quadratic Stationary Covariance Function.
@@ -414,8 +394,8 @@ class ExpQuad(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -439,7 +419,7 @@ class ExpQuad(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -474,7 +454,7 @@ class ExpQuad(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class Constant(Stationary):
     r"""
     A Constant Stationary Covariance Function.
@@ -496,7 +476,7 @@ class Constant(Stationary):
         The constant coefficient indicating the covariance
         between any two points. It is the constant ``c`` in
         the equation above.
-    %(_common_doc)
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -518,7 +498,7 @@ class Constant(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -545,7 +525,7 @@ class Constant(Stationary):
         return self._coef
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class WhiteNoise(Stationary):
     r"""
     White-noise kernel function.
@@ -565,7 +545,7 @@ class WhiteNoise(Stationary):
     ----------
     noise : array_like
         The ``noise_level`` of the kernel.
-    %(_common_doc)
+    %(_common_doc)s
 
     Other Parameters
     ----------------
@@ -590,7 +570,7 @@ class WhiteNoise(Stationary):
     Hence, the ``pymc4.gp.cov.WhiteNoise.evaluate_kernel`` method
     raises a ``NotImplementedError`` when called.
 
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -617,7 +597,7 @@ class WhiteNoise(Stationary):
         return self._noise
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class RatQuad(Stationary):
     r"""
     Rational Quadratic Kernel.
@@ -636,12 +616,12 @@ class RatQuad(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
+    %(_ls_amp_doc)s
     scale_mixture_rate: array_like, optional
         The mixture of length-scales to use. Equivalent to adding ``ExpQuad``
         kernels with different ``length_scale``s. When this parameter approaches
         infinity, it becomes equivalent to the ``ExpQuad`` kernel. (default=1)
-    %(_common_doc)
+    %(_common_doc)s
 
     Examples
     --------
@@ -656,7 +636,7 @@ class RatQuad(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -706,12 +686,14 @@ _matern_doc = r"""Matern family of kernels is a generalization over the RBF fami
     there."""
 
 
-@_build_docs
+@_build_docs(
+    _matern_doc=_matern_doc, _ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Matern12(Stationary):
     r"""
     Matern 1/2 kernel.
 
-    %(_matern_doc)
+    %(_matern_doc)s
 
     This kernel has the value of :math:`nu = 0.5`.
 
@@ -723,8 +705,8 @@ class Matern12(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -739,7 +721,7 @@ class Matern12(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -774,12 +756,14 @@ class Matern12(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(
+    _matern_doc=_matern_doc, _ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Matern32(Stationary):
     r"""
     Matern 3/2 kernel.
 
-    %(_matern_doc)
+    %(_matern_doc)s
 
     This kernel has the value of :math:`nu = 1.5`.
 
@@ -792,8 +776,8 @@ class Matern32(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -808,7 +792,7 @@ class Matern32(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -843,12 +827,14 @@ class Matern32(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(
+    _matern_doc=_matern_doc, _ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Matern52(Stationary):
     r"""
     Matern 5/2 kernel.
 
-    %(_matern_doc)
+    %(_matern_doc)s
 
     This kernel has the value of :math:`nu = 2.5`.
 
@@ -862,8 +848,8 @@ class Matern52(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -878,7 +864,7 @@ class Matern52(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -924,7 +910,7 @@ _linear_doc = """bias_variance : array_like
         This parameter brings all the input values closer to origin by ``shift`` units."""
 
 
-@_build_docs
+@_build_docs(_linear_doc=_linear_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Linear(Covariance):
     r"""
     Linear Kernel.
@@ -941,8 +927,8 @@ class Linear(Covariance):
 
     Parameters
     ----------
-    %(_linear_doc)
-    %(_common_doc)
+    %(_linear_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -957,7 +943,7 @@ class Linear(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1005,7 +991,7 @@ class Linear(Covariance):
         return self._shift
 
 
-@_build_docs
+@_build_docs(_linear_doc=_linear_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Polynomial(Covariance):
     r"""
     Polynomial Kernel.
@@ -1027,10 +1013,10 @@ class Polynomial(Covariance):
 
     Parameters
     ----------
-    %(_linear_doc)
+    %(_linear_doc)s
     exponent : array_like
         Exponent (degree) of the underlying polynomial function.
-    %(_common_doc)
+    %(_common_doc)s
 
     Examples
     --------
@@ -1045,7 +1031,7 @@ class Polynomial(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1108,7 +1094,9 @@ _period_doc = """period : array_like, optional
         of the respective feature dimension. (default=1)"""
 
 
-@_build_docs
+@_build_docs(
+    _ls_amp_doc=_ls_amp_doc, _period_doc=_period_doc, _common_doc=_common_doc, _note_doc=_note_doc
+)
 class Periodic(Covariance):
     r"""
     Periodic aka Exponential Sine Squared Kernel.
@@ -1126,9 +1114,9 @@ class Periodic(Covariance):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_period_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_period_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -1143,7 +1131,7 @@ class Periodic(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1185,7 +1173,7 @@ class Periodic(Covariance):
         return self._period
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Exponential(Stationary):
     r"""Exponential Kernel.
 
@@ -1194,8 +1182,8 @@ class Exponential(Stationary):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -1210,7 +1198,7 @@ class Exponential(Stationary):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1245,7 +1233,7 @@ class Exponential(Stationary):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(_common_doc=_common_doc, _note_doc=_note_doc)
 class Gibbs(Covariance):
     r"""
     Gibbs Non-Stationary kernel.
@@ -1271,7 +1259,7 @@ class Gibbs(Covariance):
     fn_args : tuple, optional
         A tuple of other arguments to be passed to the function. If None,
         defaults to passing no extra arguments.
-    %(_common_doc)
+    %(_common_doc)s
 
     Examples
     --------
@@ -1286,7 +1274,7 @@ class Gibbs(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1318,7 +1306,7 @@ class Gibbs(Covariance):
         )
 
 
-@_build_docs
+@_build_docs(_ls_amp_doc=_ls_amp_doc, _common_doc=_common_doc, _note_doc=_note_doc)
 class Cosine(Covariance):
     r"""
     Cosine kernel.
@@ -1334,8 +1322,8 @@ class Cosine(Covariance):
 
     Parameters
     ----------
-    %(_ls_amp_doc)
-    %(_common_doc)
+    %(_ls_amp_doc)s
+    %(_common_doc)s
 
     Examples
     --------
@@ -1350,7 +1338,7 @@ class Cosine(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1385,7 +1373,7 @@ class Cosine(Covariance):
         return self._amplitude
 
 
-@_build_docs
+@_build_docs(_note_doc=_note_doc)
 class ScaledCov(Covariance):
     r"""
     Scaled Covariance Kernel.
@@ -1417,7 +1405,7 @@ class ScaledCov(Covariance):
 
     Notes
     -----
-    %(_note_doc)
+    %(_note_doc)s
     """
 
     def __init__(
@@ -1477,10 +1465,6 @@ class WarpedInput(Covariance):
         TensorFlow function of ``X`` and additional optional arguments.
     fn_args : tuple, optional
         Additional inputs (besides X or Xs) to warp_func.
-
-    Examples
-    --------
-    TODO
 
     Notes
     -----

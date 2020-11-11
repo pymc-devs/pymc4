@@ -1,6 +1,3 @@
-import inspect
-import warnings
-import re
 from typing import Union
 
 import tensorflow as tf
@@ -34,24 +31,12 @@ def _inherit_docs(frommeth):
     return inherit
 
 
-def _build_docs(meth_or_cls):
+def _build_docs(**doc_strings):
     r"""Decorate a method or class to build its doc strings."""
-    pattern = re.compile("\%\(.*\)")
-    modname = inspect.getmodule(meth_or_cls)
-    docs = meth_or_cls.__doc__
-    while pattern.search(docs) is not None:
-        docname = pattern.search(docs).group(0)[2:-1]
-        try:
-            docstr = getattr(modname, docname)
-        except AttributeError:
-            warnings.warn(
-                f"While documenting {meth_or_cls.__name__}, arrtibute {docname} not found.",
-                SyntaxWarning,
-            )
-            # FIXME: This should continue execution by skipping
-            # the docs not found. Instead, currently, it just stops
-            # execution!
-            break
-        docs = pattern.sub(docstr, docs, count=1)
-    meth_or_cls.__doc__ = docs
-    return meth_or_cls
+
+    def _builder(meth_or_cls):
+        docs = meth_or_cls.__doc__
+        meth_or_cls.__doc__ = docs % doc_strings
+        return meth_or_cls
+
+    return _builder

@@ -1,4 +1,4 @@
-# NOTICE: Official development of this project has ceased, and it is no longer intended to become the next major version of PyMC. Ongoing development will continue on the PyMC3 project (pymc3-devs/pymc3).
+# NOTICE: Official development of this project has ceased, and it is no longer intended to become the next major version of PyMC. Ongoing development will continue on the PyMC3 project (pymc-devs/pymc).
 
 See [the announcement](https://pymc-devs.medium.com/the-future-of-pymc3-or-theano-is-dead-long-live-theano-d8005f8a0e9b) for more details on the future of PyMC and Theano.
 

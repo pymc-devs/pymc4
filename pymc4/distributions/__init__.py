@@ -2,7 +2,7 @@ from .continuous import *
 from .discrete import *
 from .multivariate import *
 from .timeseries import *
-from .distribution import Potential, Deterministic
+from .distribution import Potential, Deterministic, Bound
 from .mixture import Mixture
 from . import transforms
 from .mixture import *

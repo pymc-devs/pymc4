@@ -8,6 +8,27 @@ import tensorflow as tf
 
 import pymc4 as pm
 
+
+def test_bound_distribution_transforms():
+    base_distribution = pm.Normal.dist(0, 1)
+
+    lower_bounded = pm.Bound("lower_bounded", base_distribution, lower=0)
+    upper_bounded = pm.Bound("upper_bounded", base_distribution, upper=2)
+    interval_bounded = pm.Bound("interval_bounded", base_distribution, lower=0, upper=2)
+
+    assert isinstance(lower_bounded.transform, pm.distributions.transforms.LowerBound)
+    assert isinstance(upper_bounded.transform, pm.distributions.transforms.UpperBound)
+    assert isinstance(interval_bounded.transform, pm.distributions.transforms.Interval)
+    assert lower_bounded.test_value.numpy() == 1
+    assert upper_bounded.test_value.numpy() == 1
+    assert interval_bounded.test_value.numpy() == 1
+
+
+def test_bound_distribution_requires_a_bound():
+    with pytest.raises(ValueError, match="At least one of `lower` or `upper`"):
+        pm.Bound("unbounded", pm.Normal.dist(0, 1))
+
+
 _expected_log_prob = defaultdict(lambda: defaultdict(lambda: None))
 _check_broadcast = {
     "Flat": {

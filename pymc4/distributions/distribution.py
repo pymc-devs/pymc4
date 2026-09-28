@@ -21,6 +21,7 @@ __all__ = (
     "BoundedDistribution",
     "BoundedDiscreteDistribution",
     "BoundedContinuousDistribution",
+    "Bound",
     "UnitContinuousDistribution",
     "SimplexContinuousDistribution",
 )
@@ -310,6 +311,56 @@ class BoundedContinuousDistribution(ContinuousDistribution, BoundedDistribution)
     @property
     def _test_value(self):
         return 0.5 * (self.upper_limit() + self.lower_limit())
+
+
+class Bound(BoundedContinuousDistribution):
+    """Apply support bounds to a continuous distribution without renormalizing it.
+
+    `distribution` should be an anonymous distribution created with `.dist`.
+    For example, `Bound("x", Normal.dist(0, 1), lower=0)` creates a lower-bounded
+    normal variable.
+    """
+
+    def __init__(self, name, distribution, lower=None, upper=None, **kwargs):
+        if not isinstance(distribution, ContinuousDistribution):
+            raise TypeError("`distribution` must be a continuous PyMC4 distribution")
+        if lower is None and upper is None:
+            raise ValueError("At least one of `lower` or `upper` must be specified")
+        super().__init__(name, distribution=distribution, lower=lower, upper=upper, **kwargs)
+
+    @staticmethod
+    def _init_distribution(conditions, **kwargs):
+        return conditions["distribution"]._distribution
+
+    def _init_transform(self, transform):
+        if transform is not None:
+            return transform
+        lower, upper = self.conditions["lower"], self.conditions["upper"]
+        if lower is None:
+            return transforms.UpperBound(upper)
+        if upper is None:
+            return transforms.LowerBound(lower)
+        return transforms.Interval(lower, upper)
+
+    def lower_limit(self):
+        lower = self.conditions["lower"]
+        return float("-inf") if lower is None else lower
+
+    def upper_limit(self):
+        upper = self.conditions["upper"]
+        return float("inf") if upper is None else upper
+
+    @property
+    def test_value(self):
+        lower, upper = self.conditions["lower"], self.conditions["upper"]
+        if lower is None:
+            value = upper - 1
+        elif upper is None:
+            value = lower + 1
+        else:
+            value = (lower + upper) / 2
+        value = tf.convert_to_tensor(value, dtype=self.dtype)
+        return tf.broadcast_to(value, self.batch_shape + self.event_shape)
 
 
 class UnitContinuousDistribution(BoundedContinuousDistribution):

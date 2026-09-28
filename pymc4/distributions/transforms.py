@@ -55,7 +55,7 @@ class Transform:
         """
         raise NotImplementedError
 
-    def forward_log_det_jacobian(self, x):
+    def forward_log_det_jacobian(self, x, event_ndims=0):
         """
         Calculate logarithm of the absolute value of the Jacobian determinant for input `x`.
 
@@ -71,7 +71,7 @@ class Transform:
         """
         raise NotImplementedError
 
-    def inverse_log_det_jacobian(self, z):
+    def inverse_log_det_jacobian(self, z, event_ndims=0):
         """
         Calculate logarithm of the absolute value of the Jacobian determinant for output `z`.
 
@@ -106,11 +106,11 @@ class Invert(Transform):
     def inverse(self, z):
         return self._transform.forward(z)
 
-    def forward_log_det_jacobian(self, x):
-        return self._transform.inverse_log_det_jacobian(x)
+    def forward_log_det_jacobian(self, x, event_ndims=0):
+        return self._transform.inverse_log_det_jacobian(x, event_ndims)
 
-    def inverse_log_det_jacobian(self, z):
-        return self._transform.forward_log_det_jacobian(z)
+    def inverse_log_det_jacobian(self, z, event_ndims=0):
+        return self._transform.forward_log_det_jacobian(z, event_ndims)
 
 
 class BackwardTransform(Transform):
@@ -127,11 +127,13 @@ class BackwardTransform(Transform):
     def inverse(self, z):
         return self._transform.forward(z)
 
-    def forward_log_det_jacobian(self, x):
-        return self._transform.inverse_log_det_jacobian(x, self._transform.inverse_min_event_ndims)
+    def forward_log_det_jacobian(self, x, event_ndims=0):
+        event_ndims = max(event_ndims, self._transform.inverse_min_event_ndims)
+        return self._transform.inverse_log_det_jacobian(x, event_ndims)
 
-    def inverse_log_det_jacobian(self, z):
-        return self._transform.forward_log_det_jacobian(z, self._transform.forward_min_event_ndims)
+    def inverse_log_det_jacobian(self, z, event_ndims=0):
+        event_ndims = max(event_ndims, self._transform.forward_min_event_ndims)
+        return self._transform.forward_log_det_jacobian(z, event_ndims)
 
 
 class Log(BackwardTransform):

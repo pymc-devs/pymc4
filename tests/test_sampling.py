@@ -61,6 +61,30 @@ def test_vectorize_log_prob_det_function(unvectorized_model):
     np.testing.assert_allclose(logpfn_output, expected_log_prob, rtol=1e-5)
 
 
+def test_transformed_vectorized_event_log_prob():
+    observed = np.zeros((3, 10), dtype="float32")
+
+    @pm.model
+    def model():
+        means = yield pm.HalfNormal("means", 0, 10, event_stack=3)
+        means = tf.repeat(tf.expand_dims(means, axis=-1), repeats=10, axis=-1)
+        yield pm.Normal(
+            "likeli",
+            means,
+            5,
+            observed=observed,
+            reinterpreted_batch_ndims=2,
+        )
+
+    logpfn, initial_values, _, _, _ = pm.mcmc.samplers.build_logp_and_deterministic_functions(
+        model(), num_chains=2, collect_reduced_log_prob=False
+    )
+    transformed_value = next(iter(initial_values.values()))
+    log_prob = logpfn(tf.zeros((2, 3), dtype=transformed_value.dtype))
+
+    assert log_prob.shape == (2,)
+
+
 def test_sampling_with_deterministics_in_nested_models(
     deterministics_in_nested_models, xla_fixture
 ):

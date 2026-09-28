@@ -53,12 +53,16 @@ def make_untransformed_model(dist, transform, state):
     # 2. increment the potential
     if transform.jacobian_preference == JacobianPreference.Forward:
         potential_fn = functools.partial(
-            transform.forward_log_det_jacobian, sampled_untransformed_value
+            transform.forward_log_det_jacobian,
+            sampled_untransformed_value,
+            event_ndims=dist.event_shape.rank,
         )
         coef = -1.0
     else:
         potential_fn = functools.partial(
-            transform.inverse_log_det_jacobian, sampled_transformed_value
+            transform.inverse_log_det_jacobian,
+            sampled_transformed_value,
+            event_ndims=dist.event_shape.rank,
         )
         coef = 1.0
     yield distributions.Potential(potential_fn, coef=coef)
@@ -89,13 +93,16 @@ def make_transformed_model(dist, transform, state):
     # we postpone the computation of logdet as it might have some overhead
     if transform.jacobian_preference == JacobianPreference.Forward:
         potential_fn = functools.partial(
-            transform.forward_log_det_jacobian, state.untransformed_values[scoped_name]
+            transform.forward_log_det_jacobian,
+            state.untransformed_values[scoped_name],
+            event_ndims=dist.event_shape.rank,
         )
         coef = -1.0
     else:
         potential_fn = functools.partial(
             transform.inverse_log_det_jacobian,
             state.transformed_values[transformed_scoped_name],
+            event_ndims=dist.event_shape.rank,
         )
         coef = 1.0
     yield distributions.Potential(potential_fn, coef=coef)

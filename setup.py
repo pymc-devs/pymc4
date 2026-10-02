@@ -40,7 +40,7 @@ def get_long_description():
     with codecs.open(README_FILE, "rt") as buff:
         return buff.read()
 
-
+## version define here
 def get_version():
     lines = open(VERSION_FILE, "rt").readlines()
     version_regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
